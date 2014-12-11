@@ -1,0 +1,103 @@
+
+
+\chapter{Pol}
+Em reuniões em nov/2014 com Moser, Bednarski e Alex, ficou decidido:
+\begin{itemize}
+    \item Cada estrela (alvo ou padrão) terá um PREFIXO único de observação.
+Essa lista é gerada da seguinte forma: copia-se a coluna no arquivo \textit{
+planejamento\_LNA.xls} num arquivo de texto, que será lido pelas rotinas
+(arquivo pyhdust/pol/alvos.txt). Destaca-se que a identificação do alvo é feita
+desta forma, não importando o prefixo dos arquivos fits. 
+    \item A estrutura de diretórios ``local'' é \textit{noite/prefixoalvo\_n}.
+Assim, todo sub-diretório da noite é considerado um alvo, exceto \textit{calib}. 
+Caso uma estrela tenha sido observada em mais de uma sequencia, adicionar
+\textit{\_n}, onde pode ser um número (e.g., 2) ou um descritivo (e.g., $a2$).
+Tudo o que está em subdiretórios dos alvos é ignorado.
+    \item A estrutura de diretórios será \textit{dadospuros/noite/alvo} e
+\textit{reduzidos/noite/alvo}. O script \textit{pur2red} limpa o resultado da
+redução dos dados puros. O script \textit{red2pur} copia os resultados da
+redução em reduzidos para a pasta dos dados puros.
+    \item O critério para a escolha do(s) arquivos \textit{out(s)} será o de
+minimizar os erros em blocos de 16 ou 8+8 posições, mantendo o máximo de pontos
+independentes possível. Os detalhes estarão no manual das rotinas.
+%o
+%seguinte: (a) se somente 8 posições, menor \textit{sigma}; (b) Se $8<n<24$,
+%menor erro entre sequências de 8 e a de maior $n\leq16$; (c) se bloco for
+%múltiplo de 16, usa blocos de 16 ou 8+8 de menor erro. Se for múltiplo de 8,
+%usa blocos de 16 ou 8+8, iniciando ou terminando com 8. (d) Se não for
+%últiplo de 8 ou 16, desloca o início da sequência a fim de minimizar o erro.
+    \item As rotinas \textsc{python} propostas são as seguintes: (i)
+\textit{genStdLog}, (ii) \textit{genObjLog}, (iii) \textit{genStdDat}, 
+(iv) \textit{genTarget}, (v) \textit{pur2red}, (vi) \textit{red2pur} e (vii)
+\textit{listNights}. Consultar o manual das rotinas para a lista completa e
+detalhes.
+    \item É possivel demonstrar que $P=\sqrt{Q^2+P^2}$ e $\sigma_P=\sigma_{QU}$.
+\end{itemize}
+
+Passos da redução: 
+\begin{enumerate}
+    \item Obtem-se a lista de noites do objeto (ou via página Beacon, ou via
+rotina \textit{listNights} caso tenha acesso a pasta \textit{puros}).
+    \item Gera-se os arquivos de calibração-padrão (rotina \textsc{iraf}
+\textit{calib}).
+    \item Reduz-se as padrões da noite no \textsc{iraf}. Roda-se 
+\textit{genStdLog}. A rotina imprime alertas
+de dados de padrões não reduzidos. Colunas da saída de \textit{genStdLog}:
+MJD|target|filt|calc|out|flags| (um \textit{out} por filtro/padrão). 
+    \item Reduz-se os alvos da noite (\textsc{iraf}). Roda-se \textit{genObjLog}
+ e imprime alertas de dados não reduzidos/estrelas fora da nomenclatura.
+Colunas da saída de \textit{genObjLog}: MJD|target|filt|calc|out\_n|flags| (pode
+ haver mais de um \textit{out} por filtro/alvo; registro em nova linha). 
+    \item Roda-se \textit{genStdDat}.
+A rotina faz: (i) olha na saída de \textit{genObjLog} os filtros/calcitas dos 
+alvos utilizados, (ii) e espera encontrar as padrões
+correspondentes; (iii) caso não encontre uma padrão, faz interpolação (de
+filtros). Se faltou para toda a calcita, pede para o usuário fazer a
+ referência a saída de outro \textit{genStdLog}.
+
+    \item Reduz-se todas as noites (de interesse). Roda-se
+\textit{genTarget} para um, múltiplos ou todos os alvos. Procura noite à noite
+o alvo na saída de \textit{genObjLog}, calibrado com \textit{genStdDat} da
+noite correspondente (detalhe: nesta configuração, os arquivos \textit{outs}
+serão lindos neste momento. Ou seja, o usuário depois dos passos 1, 2 e 3, ainda
+ precisa ter acesso a estes arquivos). Neste momento, o usuário confirma qual
+ângulo de
+referência da padrão será utilizado (padrão é o ``publicado''). Caso exista
+mais de uma padrão para o filtro/calcita, faz uma média do $\Delta\theta$.
+Colunas da saída de \textit{genTarget} (saída individual para cada estrela):
+\newline MJD|noite|filt|calc|ang.ref|del.th|P|Q|U|th|sigP|sigth|flags|.
+\end{enumerate}
+    
+Outras definições sugeridas:
+\begin{itemize}
+    \item No caso de um alvo observado com duas calcitas (como padrões), não
+colocar no mesmo diretório. Isso complica muito o desflexibiliza muito as
+rotinas que gerenciam os artivos \textit{*.out}. A regra é criar uma nova pasta
+com o sufixo ``\_a2'' contendo os arquivos fits. A raiz destes arquivos é
+arbitrária.
+    \item Além disso, outra situação é necessária para se abrir outra pasta:
+ao se iniciar uma nova sequência temporal.
+    \item Nomenclatura de observação \textit{target\_a0\_g1\_f.fits} onde $a0$
+e $g1$ são argumentos opcionais (calcita e ganho/config$.$ do CCD) e $f$ é o
+filtro. Na ausência destes parâmetros, assume-se valor padrão (ou lê-se no
+\textit{header} dos fits).
+    \item Os avisos em tela \textit{Warning} avisa o usuário que uma informação
+foi registrada, mas ela não é a otimizada. Por exemplo, na ausência de uma das
+versões de redução (.1 ou .2) ou do agrupamento de posições da lâmina (08 ou
+16).
+    \item Os avisos em tela \textit{Error} avisa o usuário que uma informação
+foi perdida. Dependendo o erro, o script será interrompido (não gerando nenhum
+output parcial).
+\end{itemize}
+
+Definições das flags.
+\begin{itemize}
+    \item[0] As flags são cumulativas. Se estiver 0, significa que tudo ocorreu
+bem (nenhuma decisão ou aproximação no processo de redução foi feita).
+Se ocorreram, terá uma ou mais das flags abaixo.
+    \item[pA] Estrela sem padrão para calibração de $dth$ (output é salvo mesmo
+assim).
+    \item[pB] A correção $dth$ foi feita usando uma estrela de outra noite.
+    \item[pC] A correção $dth$ foi feita usando duas ou mais estrelas.
+\end{itemize}
+
