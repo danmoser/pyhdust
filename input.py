@@ -10,9 +10,10 @@ import os
 from glob import glob
 from itertools import product
 import pyhdust.phc as phc
+import pyhdust as hdt
     
-def makeDiskGrid(modn, mals, mhvals, hvals, rdvals, sig0vals, doFVDD, alpha=.5,\
-    mu=.5, R0r=300):
+def makeDiskGrid(modn, mvals, mhvals, hvals, rdvals, sig0vals, doFVDD, \
+    selsources, alpha=.5,mu=.5, R0r=300):
     """
     ###CONFIG. OPTIONS
     #MODEL NUMBER
@@ -56,13 +57,13 @@ def makeDiskGrid(modn, mals, mhvals, hvals, rdvals, sig0vals, doFVDD, alpha=.5,\
         f0 = open(file)
         lines = f0.readlines()
         f0.close()
-        
-        M = float(lines[3].split()[2])
-        Rp = float(lines[4].split()[2])
-        ob = float(file.split('ob')[1].split('_H')[0])
-        Req = Rp*ob
-        
-        return M,Req,ob
+
+        n = int(phc.fltTxtOccur('STAR =',lines,n=1))
+        M = phc.fltTxtOccur('M =',lines,n=n)
+        Rp = phc.fltTxtOccur('R_pole =',lines,n=n)
+        ob = phc.fltTxtOccur('R_eq/R_pole =',lines,n=1)
+        Tp = phc.fltTxtOccur('Teff_pole =',lines,n=1)
+        return M,Rp*ob,Tp
             
     def doPL(prodI):
         '''
@@ -70,21 +71,15 @@ def makeDiskGrid(modn, mals, mhvals, hvals, rdvals, sig0vals, doFVDD, alpha=.5,\
         input
         '''
         src,sig0,rd,h,m,mh = prodI
-        M,Req,ob = readscr(src)
+        M,Req,Tp = readscr(src)
         Mstr = str(M)
         M *= Msun
         Req *= Rsun
-        
-        M0,Req0,ob0 = readscr(src.replace('ob{0:.2f}'.format(ob),'ob1.10'))
-        Req0 *= Rsun
-        
-        Tp = Tps[Mstr]    
-        a0 = (kB*h/100.*Tp/mu/mH)**.5
-        a = a0*Req0*Req**.25/Req/Req0**.25
-        
+
+        Th = h*Tp/100.
+        a = (kB*Th/mu/mH)**.5
         n0 = (G*M/2./np.pi)**.5*sig0/mu/mH/a/Req**1.5
-        Th = a**2*mu*mH/kB
-        
+
         srcname = src.replace('source/','').replace('.txt','')
         suffix = '_PLn{0:.1f}_sig{1:.2f}_h{2:03.0f}_Rd{3:05.1f}_{4}'.format(\
         (m+mh),sig0,h,rd,srcname)
@@ -107,22 +102,17 @@ def makeDiskGrid(modn, mals, mhvals, hvals, rdvals, sig0vals, doFVDD, alpha=.5,\
         input
         '''
         src,sig0,rd,h,m,mh = prodI
-        M,Req,ob = readscr(src)
+        M,Req,Tp = readscr(src)
         Mstr = str(M)
         M *= Msun
         Req *= Rsun
-        
-        M0,Req0,ob0 = readscr(src.replace('ob{0:.2f}'.format(ob),'ob1.10'))
-        Req0 *= Rsun
-        
-        Tp = Tps[Mstr]    
-        a0 = (kB*h/100*Tp/mu/mH)**.5
-        a = a0*Req0*Req**.25/Req/Req**.25
+
+        Th = h*Tp/100.
+        a = (kB*Th/mu/mH)**.5
         
         R0 = R0r*Req
         Mdot = sig0*Req**2*3*np.pi*alpha*a**2/(G*M*R0)**.5   #SI units
         Mdot = Mdot/Msun*yr
-        Th = a**2*mu*mH/kB
         
         srcname = src.replace('source/','').replace('.txt','')
         #suffix = '_NI_Mdot{:.1e}_Rd{:.1f}_R0{:.1f}_alp{:.1f}_h{:.1f}_{}'.\
@@ -145,17 +135,6 @@ def makeDiskGrid(modn, mals, mhvals, hvals, rdvals, sig0vals, doFVDD, alpha=.5,\
         f0.writelines(wmod)
         f0.close()
         return
-        
-    
-    ###SETUP Tpole = REF of a (scale height)
-    Ms = np.array([14.6, 12.5, 10.8, 9.6, 8.6, 7.7, 6.4, 5.5, 4.8, 4.2,\
-    3.8, 3.4],dtype=str)
-    
-    Tp11 = np.array([28905.8,26945.8,25085.2,23629.3,22296.1,20919.7,\
-    18739.3,17063.8,15587.7,14300.3,13329.9,12307.1])
-    
-    Tps = dict(zip(Ms, Tp11))
-    
     
     ###PROGRAM BEGINS
     #Check modN folder
@@ -179,9 +158,10 @@ def makeDiskGrid(modn, mals, mhvals, hvals, rdvals, sig0vals, doFVDD, alpha=.5,\
     ###END PROGRAM    
     return
 
+
 def makeInpJob(modn, clusters, nodes, walltime, wcheck, email, chkout, st1max,\
-st1refmax, scrid, docases, sim1, sim2, simulations, images, composition,\
-controls, gridcells, observers, ctrM=False, touch=False):
+st1refmax, docases, sim1, sim2, simulations, images, composition,\
+controls, gridcells, observers, ctrM=False, touch=False, srcNf=False):
     """
     ### Start edit here ###
     modn = '02'
@@ -280,8 +260,8 @@ controls, gridcells, observers, ctrM=False, touch=False):
             case1[0] = case1[0].replace('suffix',suf)
             case1[1] = case1[1].replace('pureH',composition)
             if ctrM:
-                i = suf.find('_M')
-                M = suf[i:i+7]
+                j = suf.find('_M')
+                M = suf[j:j+7]
                 case1[2] = case1[2].replace('controls',controls+M)
             else:
                 case1[2] = case1[2].replace('controls',controls)
@@ -289,11 +269,11 @@ controls, gridcells, observers, ctrM=False, touch=False):
             case1[5] = case1[5].replace('source',src)
             if simulations[i] == 'SED':
                 sig = suf[suf.find('_sig')+4:suf.find('_sig')+8]
-                if isFloat(sig):
+                if isFloat(sig) and srcNf:
                     case1[4] = case1[4].replace('step1','SED_sig{0}'.format(sig))
                 else:
                     case1[4] = case1[4].replace('step1',simulations[i])
-            elif simulations[i] in ['Brg','Ha']:
+            elif simulations[i] in ['Brg','Ha'] and srcNf:
                 case1[4] = case1[4].replace('step1','{0}_{1}'.format(\
                 simulations[i],src))
             else:
@@ -310,7 +290,7 @@ controls, gridcells, observers, ctrM=False, touch=False):
         
     def doJobs(mod, sel, addtouch='\n'):
         #load Ref
-        f0 = open('tables/REF.{0}'.format(sel))
+        f0 = open('{0}/refs/REF.{1}'.format(hdt.hdtpath(),sel))
         wout = f0.readlines()
         f0.close()
         
@@ -334,7 +314,7 @@ controls, gridcells, observers, ctrM=False, touch=False):
         elif sel == 'oar':
             wout[2]  = wout[2].replace('12','{0}'.format(nodes))
             wout[2]  = wout[2].replace('24:0:0','{0}'.format(walltime))
-            wout[8] = wout[8].replace('hdust_bestar2.02.inp','{0}/{1}'.\
+            wout[10] = wout[10].replace('hdust_bestar2.02.inp','{0}/{1}'.\
             format(proj,mod.replace('.txt','.inp')))
             f0.writelines('chmod a+x {0}/{1}s/{2}\n'.format(proj,sel,outname))
             f0.writelines('oarsub -S ./{0}/{1}s/{2}\n'.format(proj,sel,outname))      
@@ -349,6 +329,7 @@ controls, gridcells, observers, ctrM=False, touch=False):
         
         f0 = open('{0}s/{1}'.format(sel,outname),'w')
         f0.writelines(wout)
+        print('# Saved: {0}s/{1}'.format(sel,outname))
         f0.close()
         return
     
@@ -369,7 +350,7 @@ controls, gridcells, observers, ctrM=False, touch=False):
     mods = glob('mod{0}/mod{0}*.txt'.format(modn))
     
     #load REF_inp
-    f0 = open('tables/REF_inp.txt')
+    f0 = open('{0}/refs/REF_inp.txt'.format(hdt.hdtpath()))
     inp = f0.readlines()
     f0.close()
     
@@ -384,7 +365,7 @@ controls, gridcells, observers, ctrM=False, touch=False):
         cases = docases[:]
         #Do the touch thing
         addtouch = '\n'
-        if touch and (1 in cases or 2 in cases):
+        if touch and ( (1 in cases) or (2 in cases) ):
             addtouch += 'touch {0}\n'.format(mod.replace('.txt','.log'))
         if touch and 3 in cases:
             for sim in simulations:
@@ -500,33 +481,6 @@ def makeNoDiskGrid(modn, selsources):
     print('# {:.0f} arquivos foram gerados !!'.format(len(sources)))    
     ###END PROGRAM
     return
-    
-def makeSimulDens(dbase, basesim):
-    """
-    dbase = np.logspace(np.log10(0.02),np.log10(4.0),7)
-    basesim = 'simulation/sed.txt'
-    """
-    f0 = open(basesim)
-    mod = f0.readlines()
-    f0.close()
-    
-    #fact = 2.  Tempo execucao = d/1e13*fact
-    #Nf0 = 500000000
-    for d in dbase:
-        srcid = 'sig{0:.2f}'.format(d)
-        #alpha = .39794
-        #beta =  13.87219
-        alpha = 0.34588
-        beta =  8.50927
-        newd = int(10**(-alpha*np.log10(d)+beta))
-        print('{}, N_f = {:.2f}e+9'.format(srcid, newd/1e9))
-        nmod = mod[:]
-        nmod[9]=nmod[9].replace('500000000','{}'.format(newd))
-        f0 = open(basesim.replace('.txt','_{}.txt'.format(srcid)),'w')
-        f0.writelines(nmod)
-        f0.close()
-    #a = raw_input('asdads')
-    return 
 
 def makeSimulLine(vrots, basesims, Rs, hwidth, Ms, Obs, suffix):
     """

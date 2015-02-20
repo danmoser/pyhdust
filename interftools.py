@@ -24,12 +24,14 @@ Todas as leituras binarias baseiam-se no struct
 
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mtick
 import struct
 import pyhdust.phc as phc
 import pyhdust.oifits as oifits
 import os
 from glob import glob
 from pyhdust.spectools import linfit
+#from pyhdust import hdtpath
 
 colors = ["red","green","blue","black"]
 
@@ -216,16 +218,19 @@ def setspacecoords(nx, ny, rad_per_pixel, xc=0., yc=0.):
     yy = np.repeat(y, nx).reshape(-1, nx)*rad_per_pixel
     return  xx, yy
 
-def fastnumvis(img, lbd, Bproj, PA, rad_per_pixel):
+def fastnumvis(img, lbd, Bproj, PA, rad_per_pixel, PAdisk=90.):
     """
     For a given image (in phys.units = rad_per_pixel) and a interf. setup,
         it returns the visibility and phase.
+
+    PA and PAdisk in degrees.
     """
+    PA = PA+PAdisk
     idx = np.where(img > 0)
     
     u = Bproj*np.double(np.sin(PA/phc.ra2deg)/lbd)
     v = Bproj*np.double(np.cos(PA/phc.ra2deg)/lbd)
-    print PA,phc.ra2deg,lbd,Bproj,v
+    #print PA,phc.ra2deg,lbd,Bproj,v
 
     ny = len(img)
     nx = len(img[0])
@@ -234,7 +239,7 @@ def fastnumvis(img, lbd, Bproj, PA, rad_per_pixel):
     arg = -2*np.pi*(xx[idx]*u + yy[idx]*v)
     TF_z_re = np.sum(img[idx]*np.cos(arg))
     TF_z_im = np.sum(img[idx]*np.sin(arg))
-    print TF_z_re,TF_z_im
+    #print TF_z_re,TF_z_im
 
     TF_z = complex(TF_z_re, TF_z_im)
     TF_z0 = np.sum(img[idx])
@@ -257,8 +262,169 @@ def fastnumvis4():
     """
     return
 
+def plot_pionier(oidata, ffile='last_run', fmt=['png'], legend=True):
+    """  Standard observational log for PIONIER """
+    fig = plt.figure()#figsize=(5.6,8))
+    alp = .75
+    ms = 3 #markersize
+    #xloc = plt.MaxNLocator(6)
+    #ax0 = display info
+    #~ ax0 = fig.add_subplot(211)
+    #~ ax0.axis('off')
+    #~ hdrinfo = oidata.hdrinfo.returninfo()
+    #~ for i in range(4):
+        #~ ax0.text(0., .8-.2*i, hdrinfo[i])
+    #ax1 = uvplane/lambda
+    ax1 = fig.add_subplot(321)
+    colorid = 0
+    names = []
+    for vis2 in oidata.vis2:
+        ulbd = vis2.ucoord/vis2.wavelength.eff_wave
+        vlbd = vis2.vcoord/vis2.wavelength.eff_wave
+        if (vis2.station[0] and vis2.station[1]):
+            label = vis2.station[0].sta_name + vis2.station[1].sta_name
+        else:
+            label = 'unnamed'
+        if label not in names:
+            names+= [label]
+        color = phc.colors[names.index(label)]
+        #~ colorid = np.mod(colorid+1, len(phc.colors))
+        #[u,-u] = W > E
+        #[-u,u] = E < W
+        ax1.plot([ulbd,-ulbd],[vlbd,-vlbd], '.', color=color)#label=label,
+    ax1.get_xaxis().set_ticklabels([])
+    #~ ax1.xaxis.tick_top()
+    #~ ax1.xaxis.set_major_formatter(mtick.FormatStrFormatter('%.2e'))
+    #~ names = list(np.unique(names))
+    ax1.set_ylabel(u'B$_{proj}$/$\lambda$')
+    ax1.axis('equal')
+    plt.grid(b=True, linestyle=':', alpha=alp)
+    #~ if legend: ax1.legend(prop={'size':8},numpoints=1,bbox_to_anchor=(-0.25, 1.0))
+    #ax2 = uvplane
+    ax2 = fig.add_subplot(322)
+    colorid = 0
+    leg = []
+    for vis2 in oidata.vis2:
+        u = vis2.ucoord
+        v = vis2.vcoord
+        if (vis2.station[0] and vis2.station[1]):
+            label = vis2.station[0].sta_name + vis2.station[1].sta_name
+        else:
+            label = 'unnamed'
+        color = phc.colors[names.index(label)]
+        #~ color = phc.colors[colorid]
+        #~ colorid = np.mod(colorid+1, len(phc.colors))
+        #[u,-u] = W > E
+        #[-u,u] = E < W
+        if label not in leg:
+            ax2.plot([u,-u],[v,-v], '.', label=label, color=color)
+            leg.append(label)
+        else:
+            ax2.plot([u,-u],[v,-v], '.', color=color)#label=label, 
+        #~ names.append(vis2.target.target)
+    #~ names = list(np.unique(names))
+    ax2.xaxis.tick_top()
+    ax2.set_ylabel(u'B$_{proj}$ (m)')
+    ax2.axis('equal')
+    plt.grid(b=True, linestyle=':', alpha=alp)
+    if legend: ax2.legend(prop={'size':8},numpoints=1,bbox_to_anchor=(1.05, 1.0))
+    #ax3 = VIS2 vs. B
+    #ax4 = VIS2 vs. PA
+    #~ names = []
+    colorid = 0
+    plotid = 323
+    ax3 = fig.add_subplot(plotid)
+    plotid = 324
+    ax4 = fig.add_subplot(plotid)
+    for vis2 in oidata.vis2:
+        u = vis2.ucoord/vis2.wavelength.eff_wave
+        v = vis2.vcoord/vis2.wavelength.eff_wave
+        if (vis2.station[0] and vis2.station[1]):
+            label = vis2.station[0].sta_name + vis2.station[1].sta_name
+        else:
+            label = 'unnamed'
+        color = phc.colors[names.index(label)]
+        #~ color = phc.colors[colorid]
+        #~ colorid = np.mod(colorid + 1, len(phc.colors))
+        line = ax3.errorbar(np.sqrt(u**2 + v**2), \
+        vis2.vis2data, yerr=vis2.vis2err, color=color, fmt='o', markersize=ms)#, label=label)
+        #np.arctan(self.ucoord / self.vcoord) * 180.0 / np.pi % 180.0
+        PAobs = np.arctan2(u,v)*180.0/np.pi
+        #~ idx = np.where(PAobs < 0)
+        #~ PAobs[idx] = PAobs[idx]+180
+        line = ax4.errorbar(PAobs, \
+        vis2.vis2data, yerr=vis2.vis2err, color=color, fmt='o', markersize=ms)#, label=label)
+    #~ ax1.xaxis.get_major_formatter().set_useOffset(False)
+    ax3.xaxis.set_major_formatter(mtick.FormatStrFormatter('%.2e'))
+    #~ ax3.get_xaxis().set_visible(False)
+    #~ ax4.get_xaxis().set_visible(False)
+    ax3.get_xaxis().set_ticklabels([])
+    Blim = ax3.get_xlim()
+    PAlim = ax4.get_xlim()
+    ax3.set_ylim([0,1.1])
+    ax3.set_ylabel(u'$V$ $^2$')
+    ax3.grid(b=True, linestyle=':', alpha=alp)
+    ax4.set_ylim([0,1.1])
+    ax4.get_xaxis().set_ticklabels([])
+    ax4.set_ylabel(u'$V$ $^2$')
+    ax4.grid(b=True, linestyle=':', alpha=alp)
+    #ax5 = T3PHI vs. B
+    #ax6 = T3PHI vs. PA
+    #~ names = []
+    colorid = 0
+    plotid = 325
+    ax5 = fig.add_subplot(plotid)
+    plotid = 326
+    ax6 = fig.add_subplot(plotid)
+    ax5.plot(Blim, [0,0], ls='--')
+    ax6.plot(PAlim, [0,0], ls='--')
+    for t3 in oidata.t3:
+        u1 = t3.u1coord/t3.wavelength.eff_wave
+        v1 = t3.v1coord/t3.wavelength.eff_wave
+        u2 = t3.u2coord/t3.wavelength.eff_wave
+        v2 = t3.v2coord/t3.wavelength.eff_wave
+        B = np.append(np.sqrt(u1**2 + v1**2), np.sqrt(u2**2 + v2**2))
+        PA = np.append(np.arctan2(u1,v1)*180.0/np.pi, np.arctan2(u2,v2)*180.0/np.pi)
+        #~ idx = np.where(PA < 0)
+        #~ PA[idx] = PA[idx]+180
+        #~ if (t3.station[0] and t3.station[1]):
+            #~ label = t3.station[0].sta_name + t3.station[1].sta_name
+        #~ else:
+            #~ label = 'unnamed'
+        #~ color = names.index(label)
+        #~ color = phc.colors[colorid]
+        #~ colorid = np.mod(colorid + 1, len(phc.colors))
+        color = 'Black'
+        y = np.repeat(t3.t3phi, len(B)/len(t3.wavelength.eff_wave))
+        yerr = np.repeat(t3.t3phierr, len(B)/len(t3.wavelength.eff_wave))
+        line = ax5.errorbar(B, y, yerr=yerr, color=color, fmt='o', markersize=ms)#, label=label)
+        line = ax6.errorbar(PA, y, yerr=yerr, color=color, fmt='o', markersize=ms)#, label=label)
+    #~ ax5.get_xaxis().set_ticklabels([])
+    ax5.set_xlim(Blim)
+    ax6.set_xlim(PAlim)
+    ymax = np.max(np.abs(ax5.get_ylim()))
+    ax5.set_ylim([-1.05*ymax,1.05*ymax])
+    ax6.set_ylim([-1.05*ymax,1.05*ymax])
+    ax5.set_xlabel(u'B$_{proj}$/$\lambda$')
+    ax5.set_ylabel(u'$\phi_{123}$ (deg.)')
+    ax5.grid(b=True, linestyle=':', alpha=alp)
+    ax6.set_xlabel(u'$PA$ (deg.)')
+    ax6.set_ylabel(u'$\phi_{123}$ (deg.)')
+    ax6.grid(b=True, linestyle=':', alpha=alp)
+    #SAVING
+    dir, name = phc.trimpathname(ffile)
+    name = phc.rmext(name)
+    #plt.savefig('hdt/{}_{}.png'.format(hdrinfo[0], hdrinfo[2]), transparent=True)
+    #plt.locator_params(axis = 'x', nbins = 7)
+    plt.subplots_adjust(left=0.12, right=0.95, top=0.96, bottom=0.09, hspace=.009, wspace=.32)
+    for suf in fmt:
+        plt.savefig('{0}.{1}'.format(name,suf), transparent=True)
+    plt.close()
+    return
+    
+
 def plot_oifits(oidata, ffile='last_run', fmt=['png'], xrange=None, legend=True):
-    """ Standard observational log
+    """ Standard observational log for AMBER
 
     If the file starts with "PRODUCT_", it searchs for the specs in the "AVG"
     folder.
@@ -438,7 +604,8 @@ def plot_oifits(oidata, ffile='last_run', fmt=['png'], xrange=None, legend=True)
             color = colors[colorid]
             #x,y,yerr = linfit(1e6*spec.wavelength.eff_wave, spec.spectrum, yerr=spec.spectrumerr)
             #ax1.errorbar(x, y, yerr, label=label, color=color)
-            x,y = linfit(1e6*spec.wavelength.eff_wave, spec.spectrum)
+            x = 1e6*spec.wavelength.eff_wave
+            y = linfit(1e6*spec.wavelength.eff_wave, spec.spectrum)
             ax1.plot(x,y, label=label, color=color)
             colorid = np.mod(colorid+1, len(colors))
             #[-u,u] = W > E
@@ -504,6 +671,33 @@ def readesoquery(file):
     f0.writelines(outlines)
     f0.close()
     return 
+
+def checkESOdownload(path=None):
+    """ check ESO download """
+    if path == None:
+        path = os.getcwd()
+    sh = glob(path+'/*.sh')
+    f0 = open(sh[0])
+    lines = f0.readlines()
+    f0.close()
+    count = 0
+    count = len(glob(path+'/*.Z'))
+    count+= len(glob(path+'/*.txt'))
+    count+= len(glob(path+'/notused/*'))
+    print(path,len(lines),count)
+    return
+
+def printinfo(file):
+    """ Print OIFITS observational log, as appendix of Faes, D. M. (2015)
+
+    DATE-OBS    MJD PA  B   PA  B   PA  B"""
+    oidata = oifits.open(file, quiet='True')
+    info = list(oidata.hdrinfo.returninfo())
+    info2 = []
+    for vis in oidata.vis:
+        info2+= ['{0:.1f}'.format(np.sqrt(vis.ucoord**2 + vis.vcoord**2))]
+        info2+= ['{0:.1f}'.format(np.arctan(vis.ucoord / vis.vcoord) * 180.0 / np.pi % 180.0)]
+    return [info[2][:10], '{0:.7f}'.format(info[1])] + info2 
 
 ### MAIN ###
 if __name__ == "__main__":

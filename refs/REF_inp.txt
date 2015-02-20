@@ -1,0 +1,6 @@
+SUFFIX      = 'suffix'
+COMPOSITION = 'pureH'
+CONTROLS    = 'controls'
+GRIDCELLS   = 'grid'
+SIMULATION  = 'step1'
+SOURCE      = 'source'

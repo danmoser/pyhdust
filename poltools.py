@@ -22,9 +22,25 @@ except:
     print('# Warning! matplotlib and/or pyfits module not installed!!!')
 
 filters = ['u','b','v','r','i']
+
+def stdchk(stdname):
+    """ Check it the standard star name contains an known name, and return
+    its position in `padroes.txt` """
+    lstds = list(np.loadtxt('{0}/pol/padroes.txt'.format(hdtpath()), dtype=str,\
+    usecols=[0]))
+    chk = False
+    i = -1
+    for std in lstds:
+        if stdname.find(std) > -1:
+            chk = True
+            i = lstds.index(std)
+    return chk, i
     
+
 def readout(out):
     """
+    Read the *.out file from IRAF reduction and return a float array
+
     Q   U        SIGMA   P       THETA  SIGMAtheor.  APERTURE  STAR
     """
     f0 = open(out)
@@ -33,8 +49,12 @@ def readout(out):
     data = data[1].split() 
     return [float(x) for x in data]
 
+
 def readoutMJD(out):
     """
+    Read the *.out file from IRAF reduction and return a float array + str(MJD
+    date) + float(angle) of the beams from calcite on the CDD. 
+
     readoutMJD
     """
     data = readout(out)
@@ -123,6 +143,7 @@ def minErrBlk16(night,f,i):
     j = np.where(err == np.min(err))[0]
     return err[j], out[j]
 
+
 def chooseout(night,f):
     """
     Olha na noite, qual(is) *.OUT(s) de um filtro que tem o menor erro.
@@ -169,7 +190,7 @@ def chooseout(night,f):
         outs = []
         while i+16-1 <= npos:
             outi = minErrBlk16(night,f,i)[1][0]
-            if outi.find('_{0}_16'.format(f)) > -1: 
+            if outi.find('_{0}_16'.format(f)) > -1:
                 outs += [outi]
             else:
                 for j in [i,i+8]:
@@ -194,7 +215,8 @@ def chooseout(night,f):
         if i <= npos-8+1:
             outi = glob('{0}/*_{1}_08{2:03d}*.out'.format(night,f,i))
             if len(outi) == 0:
-                print('# ERROR! Strange *.out selection!')
+                print('# ERROR! Strange *.out selection! Case 1')
+                print('# Probably 08pos files missing.')
                 print('{0}/*_{1}_08{2:03d}*.out'.format(night,f,i))
                 print i,npos,npos-8+1,night,f
                 raise SystemExit(1)
@@ -206,8 +228,12 @@ def chooseout(night,f):
                     if float(readout(outi[1])[2]) < err1:
                         err1 = float(readout(outi[1])[2])
                         outi = outi[1]
+                    else:
+                        err1 = float(readout(outi[0])[2])
+                        outi = outi[0]                
                 else:
-                    print('# ERROR! Strange *.out selection!')
+                    print('# ERROR! Strange *.out selection! Case 2')
+                    print('# Probably there is position-excluded POLRAP *.out...')
                     print('{0}/*_{1}_08{2:03d}*.out'.format(night,f,i))
                     print i,npos,npos-8+1,outi,night,f
                     raise SystemExit(1)
@@ -216,45 +242,59 @@ def chooseout(night,f):
                 #print j, npos+1-8+1, len(tmp), tmp
                 if len(tmp) == 1:
                     tmp = tmp[0]
+                elif len(tmp) == 2:
+                    if float(readout(tmp[1])[2]) < float(readout(tmp[0])[2]):
+                        tmp = tmp[1]
+                    else:
+                        tmp = tmp[0]
                 else:
-                    print('# ERROR! Strange *.out selection!')
+                    print('# ERROR! Strange *.out selection! Case 3')
+                    print('# Probably there is position-excluded POLRAP *.out...')
                     print('{0}/*_{1}_08{2:03d}*.out'.format(night,f,j))
                     print i,npos,npos-8+1,tmp,outi
                     raise SystemExit(1)                
-                if readout(tmp)[2] < err1:
+                if float(readout(tmp)[2]) < err1:
                     err1 = float(readout(tmp)[2])
                     outi = tmp
             outs += [outi]
     return outs
     
 
-def plotfrompollog(path, star):
+def plotfrompollog(path, star, filters=None, colors=None):
     """ Plot default including civil dates
     """
-    tab = np.loadtxt('{0}/{1}/{1}.txt'.format(path,star), dtype=str,\
-    delimiter=' ')
+    tab = np.genfromtxt('{0}/{1}.log'.format(path,star), dtype=str, autostrip=True)
 
-    date = tab[:,0]
-    JD = tab[:,1].astype(float)
-    filterlist = tab[:,2]
-    P = tab[:,3].astype(float)
-    sig = tab[:,4].astype(float)
-    
-    filters = ['b','v','r','i']
-    colors = ['b','y','r','brown']
+    MJD = tab[:,0].astype(float)
+    nights = tab[:,1]
+    filt = tab[:,2]
+    calc = tab[:,3]
+    ang_ref = tab[:,4].astype(float)
+    dth = tab[:,5].astype(float)
+    P = tab[:,6].astype(float)
+    Q = tab[:,7].astype(float)
+    U = tab[:,8].astype(float)
+    th = tab[:,9].astype(float)
+    sigP = tab[:,10].astype(float)
+    sigth = tab[:,11].astype(float)
+
+    if colors == None:
+        colors = phc.colors
+    if filters == None:
+        filters = ['b','v','r','i']
+        colors = ['b','y','r','brown']
     leg = ()
     fig, ax = plt.subplots()
     for f in filters:
         i = [i for i,x in enumerate(filters) if x == f][0]
         leg += (f.upper()+' band',)
-        ind = np.where(filterlist == f)
-        x = JD[ind]-2400000.5
+        ind = np.where(filt == f)
+        x = MJD[ind]
         y = P[ind]
-        yerr = sig[ind].astype(float)
+        yerr = sigP[ind]
         ax.errorbar(x, y, yerr, marker='o', color=colors[i], fmt='--')
     ax.legend(leg,'upper left', fontsize='small')    
     #ax.legend(leg,'lower left', fontsize='small')  
-    ax.set_xlabel('Julian day')
     ax.set_ylabel('Polarization (%)')
     ax.plot(ax.get_xlim(),[0,0],'k--')
     ylim = ax.get_ylim()
@@ -271,8 +311,8 @@ def plotfrompollog(path, star):
     ax2.set_xticklabels([date.strftime("%d %b %y") for date in ticks])
     plt.setp( ax2.xaxis.get_majorticklabels(), rotation=45 )
     plt.subplots_adjust(left=0.1, right=0.95, top=0.84, bottom=0.1)
-    plt.savefig('{0}/{1}/{1}.png'.format(path,star))
-    plt.savefig('{0}/{1}/{1}.eps'.format(path,star))
+    plt.savefig('{0}/{1}.png'.format(path,star))
+    plt.savefig('{0}/{1}.eps'.format(path,star))
     plt.close()
     
     bres = 20
@@ -280,12 +320,11 @@ def plotfrompollog(path, star):
     leg = ()
     fig, ax = plt.subplots()
     for f in filters:
-        ind = np.where(filterlist == f)
-        x, y, yerr = phc.bindata(JD[ind]-2400000.5, P[ind], sig[ind], bres)
+        ind = np.where(filt == f)
+        x, y, yerr = phc.bindata(MJD[ind], P[ind], sigP[ind], bres)
         leg += (f.upper()+' band',)
         ax.errorbar(x, y, yerr, marker='o', color=colors[filters.index(f)], fmt='-')
     ax.legend(leg,'upper left', fontsize='small')            
-    ax.set_xlabel('Julian day')
     ax.set_ylabel('Polarization (%) (binned)')
     ax.plot(ax.get_xlim(),[0,0],'k--')
     ax.set_ylim(ylim)
@@ -302,20 +341,21 @@ def plotfrompollog(path, star):
     ax2.set_xticklabels([date.strftime("%d %b %y") for date in ticks])
     plt.setp( ax2.xaxis.get_majorticklabels(), rotation=45 )
     plt.subplots_adjust(left=0.1, right=0.95, top=0.84, bottom=0.1)
-    plt.savefig('{0}/{1}/{1}_binned.png'.format(path,star))
-    plt.savefig('{0}/{1}/{1}_binned.eps'.format(path,star))
+    plt.savefig('{0}/{1}_binned.png'.format(path,star))
+    plt.savefig('{0}/{1}_binned.eps'.format(path,star))
     plt.close()       
     
     for f in filters:
-        ind = np.where(filterlist == f)
-        avg,sigm = phc.wg_avg_and_std(P[ind], sig[ind])
+        ind = np.where(filt == f)
+        avg,sigm = phc.wg_avg_and_std(P[ind], sigP[ind])
         print('# Averaged {} band is {:.3f} +/- {:.3f} %'.format(f.upper(),avg,\
         sigm))
     return
 
+
 def grafpol():
     """
-    Program to plot the best adjust and its residuals
+    Program to plot the best adjust and its residuals of IRAF reduction
     
     Author: Moser, August 2013
     Version modified by Bednarski, July 2014
@@ -462,7 +502,8 @@ def grafpol():
     
     print('\n# Fim da rotina de plot! Ver arquivo '+filenamef.replace('.log','.png'))
     return
-    
+
+   
 def genStdLog(path=None):
     """
     Generate Standards Log
@@ -491,6 +532,7 @@ def genStdLog(path=None):
     f0.writelines(lines)
     f0.close()
     return
+
 
 def chkStdLog(path=None):
     """
@@ -528,6 +570,7 @@ def chkStdLog(path=None):
             'calc. {1} in {2}!').format(f, calc, path))
             allinfo = False
     return allinfo
+
 
 def genObjLog(path=None):
     """
@@ -571,6 +614,7 @@ def genObjLog(path=None):
             format(tgt))
     return
 
+
 def corObjStd(target, night, f, calc, path=None):
     """
     Correlaciona um alvo (`target`) num dado filtro e calcita (`f` e `calc`) e
@@ -589,35 +633,40 @@ def corObjStd(target, night, f, calc, path=None):
     thstd = 0.
     if os.path.exists('{0}/{1}/std.log'.format(path,night)):
         stds = np.loadtxt('{0}/{1}/std.log'.format(path,night), dtype=str)
+        if len(stds) > 0 and len(stds[-1]) != 5:
+            stds = stds.reshape(-1,5)
         k = 0
         angref = []
         thstd = []
+        sigs = []
         for stdinf in stds:
-            if stdinf[1] in std[:,0] and stdinf[2] == f and \
+            if stdchk(stdinf[1])[0] and stdinf[2] == f and \
             abs(float(stdinf[3])-calc) <= 2.5:
                 Q, U, sig, P, th, sigT, tmp, tmp2 = readout('{0}/{1}/{2}'.\
-                format(night,stdinf[1],stdinf[4]))
-                thstd += [float(th)]
+                format(path+night,stdinf[1],stdinf[4]))
+                thstd += [ float(th) ]
                 if thstd == 0.:
                     thstd = 0.01
-                sig = float(sig)*100
+                sigs += [ float(sig)*100 ]
                 sigth = 28.6*sig
-                i = np.where(std[:,0] == stdinf[1])[0]
+                i = stdchk(stdinf[1])[1]
                 j = filters.index(f)+1 #+1 devido aos nomes na 1a coluna
-                angref += [ float(std[i,j][0]) ]
-        if len(angref) == 1 and len(thstd) == 1:
-            thstd = thstd[0]
-            angref = angref[0]
-        else:
-            if len(angref) == len(thstd) and len(angref) > 1:
-                thstd = thstd[-1]
-                angref = angref[-1]
-            print(thstd, angref)
-            print('# ERROR! More than one std for {0}!'.format(night))
-            #raise SystemExit(1)
+                angref += [ float(std[i,j]) ]
+        if angref != []:
+            if len(angref) == 1 and len(thstd) == 1:
+                thstd = thstd[0]
+                angref = angref[0]
+            else:
+                if len(angref) == len(thstd) and len(angref) > 1:
+                    idx = sigs.index(np.min(sigs))
+                    thstd = thstd[idx]
+                    angref = angref[idx]
+                #print('# ERROR! More than one std for {0}!'.format(night))
+                #raise SystemExit(1)
     else:
         print('# ERROR! `std.log` not found for {0}'.format(night))
     return thstd, angref
+
 
 def genTarget(target, path=None, PAref=None, skipdth=False):
     """ Gen. target
@@ -651,6 +700,7 @@ def genTarget(target, path=None, PAref=None, skipdth=False):
     if target not in np.hstack((std[:,0],obj)):
         print('# Warning! Target {0} is not a default target or standard!!'.\
         format(target))
+        tmp = raw_input('# Type something to continue...')
     #define noites
     nights = [fld for fld in os.listdir(path) if \
     os.path.isdir(os.path.join(path, fld))]
@@ -662,35 +712,39 @@ def genTarget(target, path=None, PAref=None, skipdth=False):
             #verifica se std tem mais de uma linha. Caso nao, aplica reshape
             if np.size(objs) == 5:
                 objs = objs.reshape(-1,5)
-            elif np.size(objs) < 5:
+            elif np.size(objs) % 5 != 0:
                 print('# ERROR! Check {0}/{1}/obj.log'.format(path,night))
+                raise SystemExit(1)
             for objinf in objs:
                 thstd = 0.
-                if objinf[1] == target:
+                if objinf[1].find(target) > -1:
                     MJD, tmp, f, calc, out = objinf
                     Q, U, sig, P, th, sigT, tmp, tmp2 = readout('{0}/{1}/{2}'.\
-                    format(night,objinf[1],out))
+                    format(path+night,objinf[1],out))
                     P = float(P)*100
                     th = float(th)
                     sig = float(sig)*100
                     sigth = 28.6*sig
-                    sigQU = sig #implementar aqui
-                    thstd, angref = corObjStd(target, night, f, calc)
+                    thstd, angref = corObjStd(target, night, f, calc, path=path)
                     #print f,  thstd, angref
                     if thstd==[] or angref==[]:
                         thstd = 0
                         angref = 0
-                        print('# ERROR with thstd ou angref!')
-                        print(night, f, calc)
+                        ##print('# ERROR with thstd ou angref!')
+                        ##print(night, f, calc)
                     dth = 180.-thstd-angref
                     th = -th+thstd+angref
+                    if th > 180:
+                        th-= 180
+                    if th < 0:
+                        th+= 180
                     Q = P*np.cos(2*th*np.pi/180)
                     U = P*np.sin(2*th*np.pi/180)
                     if thstd != 0 or skipdth:
-                        lines += ('{:12s} {:>7s} {:1s} {:>5s} {:>5.1f} {:>5.1f} '+
-                        '{:>5.3f} {:>6.3f} {:>6.3f} {:>5.1f} {:>5.3f} {:>5.3f} '+
+                        lines += ('{:12s} {:>7s} {:1s} {:>5s} {:>5.1f} {:>6.1f} '+
+                        '{:>5.3f} {:>6.3f} {:>6.3f} {:>6.1f} {:>5.3f} '+
                         '{:>5.1f}\n').format(MJD,\
-                        night, f, calc, angref, dth, P, Q, U, th, sig, sigQU, sigth)
+                        night, f, calc, angref, dth, P, Q, U, th, sig, sigth)
                     else:
                         print('# ERROR! No std found for {0} filter {1} in {2}'.\
                 format(target,f,night))
@@ -700,14 +754,14 @@ def genTarget(target, path=None, PAref=None, skipdth=False):
     if lines != '':
         print('# Output written: {0}/{1}.log'.format(path,target))
         f0 = open('{0}/{1}.log'.format(path,target),'w')
-        lines = ('{:12s} {:>5s} {:1s} {:>4s} {:>5s} {:>3s} {:>5s} {:>7s} '+\
-        '{:>6s} {:>5s} {:>5s} {:>5s} {:>5s}\n').format('#MJD','night','filt',\
-        'calc','ang.ref','dth','P','Q','U','th','sigP','sigQU','sigth')+lines
+        lines = ('#MJD       night filt calc ang.ref dth    P      Q      U'+\
+        '    th    sigP  sigth\n')+lines
         f0.writelines(lines)
         f0.close()
     else:
         ('# ERROR! No observation was found for target {0}'.format(target))
     return
+
 
 def pur2red():
     """
@@ -715,11 +769,13 @@ def pur2red():
     """
     return
 
+
 def red2pur():
     """
     Reduced to Pure
     """
     return
+
 
 def genJD(path=None):
     """Generate de JD file for the fits inside the folder
@@ -759,6 +815,7 @@ def genJD(path=None):
             f0.close()
     return
 
+
 def listNights(path, tgt):
     """
     List Nights
@@ -786,6 +843,7 @@ def listNights(path, tgt):
 
     return lnights
 
+
 def plotMagStar(tgt, path=None):
     """ Function doc
 
@@ -802,8 +860,8 @@ def plotMagStar(tgt, path=None):
 
     data = np.loadtxt('{0}/{1}.log'.format(path,tgt), dtype=str)
     data = np.core.records.fromarrays(data.transpose(), names='MJD,night,filt,\
-    calc,ang.ref,dth,P,Q,U,th,sigP,sigQU,sigth', formats='f8,a7,a1,f8,f8,f8,f8,\
-    f8,f8,f8,f8,f8,f8')
+    calc,ang.ref,dth,P,Q,U,th,sigP,sigth', formats='f8,a7,a1,f8,f8,f8,f8,\
+    f8,f8,f8,f8,f8')
     
     if False:
         fig = plt.figure()#figsize=(5.6,8))
@@ -856,4 +914,28 @@ def plotMagStar(tgt, path=None):
     #plt.show()
     return
 
-    
+def sortLog(file):
+    """ Sort the *.out file """
+    f0 = open(file)
+    lines = f0.readlines()
+    f0.close()
+    log = np.loadtxt(file, dtype=str)
+    log = log[log[:,0].argsort()]
+    fmt = '%12s %7s %1s %5s %5s %6s %5s %6s %6s %6s %5s %5s'
+    np.savetxt(file.replace('.log','.txt'), log, fmt=fmt, header=lines[0])
+    return
+
+def filtra_obs(n,obs):
+    """ ### FILTER OBSERV. ### """
+    nobs = [ ]
+    for i in range(len(obs)):
+        if obs[i][5]/obs[i][3] > n:
+            nobs = nobs+[obs[i]]
+    return np.array(nobs)
+
+def filtraobs(data, r=20):
+    """ filtro! """
+    idx = data['P']/data['sigP'] > r
+    return data[idx]
+
+

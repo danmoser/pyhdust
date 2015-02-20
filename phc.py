@@ -11,9 +11,8 @@ includes *basicfuncs*
 import numpy as np
 import pyhdust.jdcal as jdcal
 import datetime as dt
-import os
+import os, re
 from glob import glob
-
 
 class Constant(object):
     """ Class for a physical/astronomical constant
@@ -27,6 +26,17 @@ class Constant(object):
     def __repr__(self):
         return str('{:.7e} in {} (cgs)'.format(self.cgs, self.cgsunits))
 
+
+def fltTxtOccur(s,block,n=1):
+    """ Return the first float of the line in 'block' with the n-th
+    occurrence of 's' """
+    regex=r'[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?'
+    occur = [x for x in block if x.find(s) > -1]
+    out = np.NaN
+    if len(occur) >= n:
+        occur = occur[n-1]
+        out = re.findall(regex, occur)[0]
+    return float(out)
 
 def outfld(fold='hdt'):
     """
@@ -69,16 +79,24 @@ def find_nearest(array,value):
     idx = (np.abs(array-value)).argmin()
     return array[idx]
 
-def bindata(x, y, yerr, nbins):
+def bindata(x, y, yerr, nbins, xrange=None):
     """
     Return the weighted binned data.
+
+    if yerr == None:
+        yerr = np.ones(shape=np.shape(x))
 
     x, y, err - Numpy arrays with the same shape.
     They don't need to be sorted.
     nbins - integer
     """
-    shift = (np.max(x)-np.min(x)) / (nbins-1)
-    tmpx = np.arange(nbins)*shift+np.min(x)
+    if xrange == None:
+        max = np.max(x)
+        min = np.min(x)
+    else:
+        min,max = xrange
+    shift = (max-min) / (nbins-1)
+    tmpx = np.arange(nbins)*shift+min
     tmpy = np.zeros(nbins)
     tmpyerr = np.zeros(nbins)
     idx = np.zeros(nbins, dtype=bool)
@@ -240,6 +258,46 @@ def gentkdates(mjd0, mjd1, fact, step, dtstart=None):
         raise SystemExit(1)
     return dates
 
+def cart2sph(x,y,z):
+    """ ### GEOMETRY ### """
+    r = np.sqrt(x**2+y**2+z**2)
+    th = np.arccos(z/r)
+    phi = np.arctan2(y,x)
+    #ind = (y<0) & (x<0)
+    #phi[ind] = phi+np.pi
+    return r,th,phi
+    
+def sph2cart(r,th,phi):
+    """ ### GEOMETRY ### """
+    x = r*np.sin(th)*np.cos(phi)
+    y = r*np.sin(th)*np.sin(phi)
+    z = r*np.cos(th)
+    return x,y,z
+
+def cart_rot(x,y,z,ang_xy,ang_yz,ang_zx):
+    """ ### GEOMETRY ### """
+    rotmtx = np.array([ 
+    [np.cos(ang_zx)*np.cos(ang_xy), -np.cos(ang_yz)*np.sin(ang_xy)+np.sin(ang_yz)*np.sin(ang_zx)*np.cos(ang_xy),    np.sin(ang_yz)*np.sin(ang_xy)+np.cos(ang_yz)*np.sin(ang_zx)*np.cos(ang_xy) ],
+    [np.cos(ang_zx)*np.sin(ang_xy),    np.cos(ang_yz)*np.cos(ang_xy)+np.sin(ang_yz)*np.sin(ang_zx)*np.sin(ang_xy), -np.sin(ang_yz)*np.cos(ang_xy)+np.cos(ang_yz)+np.sin(ang_zx)*np.sin(ang_xy) ],
+    [-np.sin(ang_zx), np.sin(ang_yz)*np.cos(ang_zx), np.cos(ang_yz)*np.cos(ang_zx) ]
+    ])
+    vec = np.array([x,y,z])
+    return np.dot(rotmtx,vec)
+
+def readrange(file, i0, ie):
+    """ Read a specific range of lines with minimal memory use.
+
+    Note that i == n-1 for the nth line."""
+    lines = []
+    fp = open(file)
+    for i, line in enumerate(fp):
+        if i >= i0:
+            lines += [line]
+        if i >= ie:
+            break
+    fp.close()
+    return lines
+
 #Physical constants
 c = Constant(2.99792458e10, 299792458., 'cm s-1', 'speed of light in vacuum')
 h = Constant(6.6260755e-27, 6.62606957e-34, 'erg s-1', 'Planck constant')
@@ -276,4 +334,6 @@ ra2deg = np.double(180./np.pi)
 colors = ['Black','Blue','Green','red','orange','brown','purple','gray',
     'dodgerblue','lightgreen','tomato','yellow','peru','MediumVioletRed',
     'LightSteelBlue','cyan','darkred','olive']
+
+ls = ['-','--',':','-.']
 

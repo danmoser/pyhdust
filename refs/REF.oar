@@ -1,0 +1,11 @@
+#!/bin/bash
+#OAR -n hdust_dmf
+#OAR -l core=12,walltime=24:0:0
+#OAR -p gpu='NO'
+#OAR -O log/out.%jobid%
+#OAR -E log/err.%jobid%
+
+source /softs/env_default.sh
+mpiexec.hydra  -machinefile $OAR_FILE_NODES \
+-bootstrap ssh -bootstrap-exec /usr/bin/oarsh \
+-envall ./hdustparv2.02.bc input = hdust_bestar2.02.inp

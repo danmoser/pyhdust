@@ -16,6 +16,20 @@ import os, time
 import pyhdust.phc as phc
 import pyhdust.jdcal as jdcal
 
+def n0toSigma0(n0,M,Req,f,Tp,mu):
+    """ From n0 to sigma0 """
+    rho0 = n0*mu*phc.mH.cgs
+    a = (phc.kB.cgs*f*Tp/mu/phc.mH.cgs)**.5
+    sig0 = (2*np.pi)**.5*a/(phc.G.cgs*M/Req)**.5*Req*rho0
+    return sig0
+
+def n0toMdot(n0,M,Req,f,Tp,mu,alpha,R0):
+    """ From n0 to Mdot """
+    rho0 = n0*mu*phc.mH.cgs
+    a = (phc.kB.cgs*f*Tp/mu/phc.mH.cgs)**.5
+    Mdot = 3*np.pi*(2*np.pi)**.5*alpha*a**3./(phc.G.cgs*M/Req)*rho0*Req**2.*((R0/Req)**.5-1)**-1.
+    return Mdot/phc.Msun.cgs*phc.yr.cgs
+
 def plotMJDdates(spec=None, pol=None, interf=None, limits=None):
     """
     Plot dates from spec (Class), pol (routines) and interf (ESO query)
@@ -86,7 +100,7 @@ def doFilterConv(x0, y0, filter):
     Return the convolved filter total flux for a given flux y0,
     at wavelengths x0.
     """
-    fdat = np.loadtxt('{}/filters/{}.dat'.format(hdtpath(),filter),\
+    fdat = np.loadtxt('{}/filters/{}.dat'.format(hdtpath(),filter.lower()),\
     skiprows=1)
     fdat[:,0] /= 10000 #from Angs to microns
     #interpfunc = interpolate.interp1d(fdat[:,0], fdat[:,1], kind='linear')
@@ -212,7 +226,7 @@ def chkObsLog(path=None, nights=None, badweath=None):
             print('# Probably it is a spec night.')            
     return
 
-def mergesed2(models, Vrots):
+def mergesed2(models, Vrots, path=None):
     """
     Merge all mod#/*.sed2 files into the fullsed file.
     
@@ -228,17 +242,18 @@ def mergesed2(models, Vrots):
     Output: files written.
     Print status.
     """
-    
+
     sufbands = ['SED', 'UV', 'IR', 'NIR', 'BALMER', 'PASCHEN', 'CM', 'MM', #0-7
     'J', 'H', 'K', 'L', 'M', 'N', 'Q1', 'Q2'] #8-14
     #wavelength in microns
     suflines = {'Hb':.486268, 'Ha':.656461, 'Br15':1.641, 'Brg':2.166}
     
-    if os.path.exists('fullsed') == False:
-        os.system('mkdir fullsed')
-    
     for model in models:
         modfld, modelname = phc.trimpathname(model)
+        path = phc.trimpathname(modfld[:-1])[0]
+        if os.path.exists('{0}/fullsed'.format(path)) == False:
+            os.system('mkdir {0}/fullsed'.format(path))
+        #
         modelname = modelname.replace('.txt','.inp')
         sed2data = np.empty(0)
         sfound = []
@@ -323,24 +338,33 @@ def mergesed2(models, Vrots):
             'SCT FLUX','EMIT FLUX','TRANS FLUX','Q','U','Sig FLUX','Sig FLUX',\
             'Sig SCT FLUX','Sig EMIT FLUX','Sig TRANS FLUX','Sig Q','Sig U')
         
-            np.savetxt('fullsed/fullsed_'+modelname.replace('.inp','.sed2'),\
+            np.savetxt(path+'/fullsed/fullsed_'+modelname.replace('.inp','.sed2'),\
             fullsed2, header=hd, comments="", fmt='%13.6f', delimiter='')
         else:
             print('# WARNING: No SED2 found for {}'.format(model))
     return
 
+
 ### STARS ###
-def calcTeff(fundline):
+def calcTeff(Lum, size, M=None):
     """
-    STARS:
-    Calculate Teff
+    Calculate Teff for the non-rotating case. `size` variable is assumed to be
+    the stellar radius (M==None). If M is given, size is assumed to be log(g).
+
+    log(g) in cgs units.
+
+    Lum, Radius and Mass in Solar units.
     """
-    M, Rp, Lum = fundline
-    Rp = Rp*phc.Rsun.cgs
+    #~ M, Rp, Lum = fundline
+    if M == None:
+        Rp = size*phc.Rsun.cgs
+    else:
+        Rp = (M*phc.Msun.cgs*phc.G.cgs/10**size)**.5
     L = Lum*phc.Lsun.cgs
     #Lum = 4*np.pi*Rp**2*phc.sigma*Teff**4
     Teff = (L/(4*np.pi*Rp**2*phc.sigma.cgs))**.25
     return Teff
+
 
 def calclogg(fundline):
     """
@@ -372,13 +396,14 @@ def genlog(path=None, extrainfo=None):
     #    proj = raw_input('Type the project name: ')
     #    modfld = glob('{0}/mod*'.format(proj))
     modfld.sort()
-    
+
     #MODN, steps, sed2, maps, extrainfo
     tab = np.zeros((5000,5), dtype='|S127')
     i = 0
     
     for modn in modfld:
-        mods = glob('{0}/{0}_*.txt'.format(modn))
+        modnn = phc.trimpathname(modn)[1]
+        mods = glob('{0}/{1}_*.txt'.format(modn,modnn))
         print('# Catalogue of {0}'.format(modn))
         for mod in mods:
             #if mod.find('aeri') > 0:
@@ -404,8 +429,8 @@ def genlog(path=None, extrainfo=None):
                     mout+=mapi[mapi.rfind('/')+1:mapi.find('_')]+'+'
 
                 if extrainfo != None:
-                    if modn in extrainfo:
-                        extra = extrainfo[modn]
+                    if modnn in extrainfo:
+                        extra = extrainfo[modnn]
                     else:
                         extra = ''
     
@@ -413,7 +438,7 @@ def genlog(path=None, extrainfo=None):
                 i+=1
     
         if len(mods) == 0:
-            print('# NO model found in {0}'.format(modm))
+            print('# NO model found in {0}'.format(modn))
     
     #tab = tab[:i,:]
     #tab = tab[tab[:,0].argsort()]
@@ -619,7 +644,6 @@ def diskcalcs(M, R, Tpole, T, alpha, R0, mu, rho0, Rd):
     print('MdiskG= {:.2e} Msun'.format(MdiskG/phc.Msun.cgs))
     print('PS: Mdisk for both isothermal Sigma(r) and H(r)')
     return
-
 
 ### MAIN ###
 if __name__ == "__main__":

@@ -16,6 +16,8 @@ import glob
 import pyfits
 from scipy.interpolate import interp1d
 import pyhdust.jdcal as jdcal
+import pyhdust as hdt
+from pyhdust import hdtpath
 
 outfold = 'hdt/'
 
@@ -181,7 +183,8 @@ class Spec(object):
             path, file = phc.trimpathname(self.file)
             outname = phc.rmext(file)
         #Normalization:
-        (wl, flux) = linfit(self.wl, self.flux)
+        flux = linfit(self.wl, self.flux)
+        wl = self.wl
         fig = plt.figure()
         ax = fig.add_subplot(111)
         ax.plot(wl, flux)
@@ -192,7 +195,8 @@ class Spec(object):
         if self.lbc > 0:
             vels = (self.wl-self.lbc)/self.lbc*phc.c.cgs*1e-5
             idx = np.where(np.abs(vels) <= self.hwidth)
-            (vels, flux) = linfit(vels[idx], flux[idx])
+            flux = linfit(vels[idx], flux[idx])
+            vels = vels[idx]
             plt.clf()
             ax = fig.add_subplot(111)
             ax.plot(vels, flux)
@@ -245,6 +249,44 @@ def extractfromsplot(file, splot):
                 pass
     return out
 
+def check_dtobs(dtobs):
+    """ Check if the dtobs fits the float format. Required for MJD calc. """
+    if 'T' in dtobs:
+        dtobs = dtobs.replace('.','')
+        tobs, dtobs = dtobs.split('T')
+        if len(tobs) == 10:
+            dtobs, tobs = tobs, dtobs
+        tobs = tobs.split(':')
+        tobs = float(tobs[0])*3600+float(tobs[1])*60+float(tobs[2])
+        tobs /= (24*3600)
+    else:
+        tobs = 0.
+    if dtobs[4] == '-':
+        dtobs = dtobs.split('-')
+    elif dtobs[2] == '/':
+        dtobs = dtobs.split('/')[::-1]
+    else:
+        print('# ERROR! Wrong "DATE-OBS" in header! {}'.format(fitsfile))
+        raise systemExit(1)
+    dtobs = np.array(dtobs, dtype='int32')
+    return dtobs, tobs
+
+def shiftfits(fitsfile, newsh=''):
+    """ Update FITS spec header for a given shift value. """
+    imfits = pyfits.open(fitsfile, mode='update')
+    if 'WLSHIFT' in imfits[0].header:
+        print('# WLSHIFT = {0} for {1}'.format(imfits[0].header['WLSHIFT'], \
+        phc.trimpathname(fitsfile)[1]))
+    else:
+        print('# No WLSHIFT available for {0}'.format( \
+        phc.trimpathname(fitsfile)[1]))
+    if newsh == '':
+        newsh = raw_input('Type the new shift: ')
+    if newsh != '':
+        imfits[0].header['WLSHIFT'] = newsh
+        imfits.close()
+    return
+
 def loadfits(fitsfile):
     """load FITS spec
 
@@ -263,21 +305,7 @@ def loadfits(fitsfile):
         MJD = float(imfits[0].header['JD'])-2400000.5
     elif 'DATE-OBS' in imfits[0].header:
         dtobs = imfits[0].header['DATE-OBS']
-        if 'T' in dtobs:
-            tobs, dtobs = dtobs.split('T')
-            tobs = tobs.split(':')
-            tobs = tobs[0]*3600+tobs[1]*60+tobs[2]
-            tobs /= (24*3600)
-        else:
-            tobs = 0.
-        if dtobs[4] == '-':
-            dtobs = dtobs.split('-')
-        elif dtobs[2] == '/':
-            dtobs = dtobs.split('/')[::-1]
-        else:
-            print('# ERROR! Wrong "DATE-OBS" in header! {}'.format(fitsfile))
-            raise systemExit(1)
-        dtobs = np.array(dtobs, dtype='int32')
+        dtobs,tobs = check_dtobs(dtobs)
         MJD = jdcal.gcal2jd(*dtobs)[1]+tobs
     else:
         MJD = 0.
@@ -289,6 +317,9 @@ def loadfits(fitsfile):
         datereduc = imfits[0].header['IRAF-TLM']
     elif 'DATE' in imfits[0].header:
         datereduc = imfits[0].header['DATE']
+    if 'WLSHIFT' in imfits[0].header:
+        shift = float(imfits[0].header['WLSHIFT'])
+        wl += shift
     return wl, flux, MJD, dateobs, datereduc, fitsfile
 
 def vac2air(wl):
@@ -341,7 +372,8 @@ def checksubdirs(path, star, lbc, hwidth=1000, showleg=True, plots=False):
                                 spdtb.plotspec()
                             vels = (spdtb.wl-lbc)/lbc*phc.c.cgs*1e-5
                             idx = np.where(np.abs(vels) <= hwidth)
-                            (vels, flux) = linfit(vels[idx], spdtb.flux[idx])
+                            flux = linfit(vels[idx], spdtb.flux[idx])
+                            vels = vels[idx]
                             leg = spdtb.MJD
                             ax.plot(vels, flux, label=leg, alpha=0.7, color=\
                             phc.colors[np.mod(spdtb.count, len(phc.colors))])
@@ -361,7 +393,7 @@ def checksubdirs(path, star, lbc, hwidth=1000, showleg=True, plots=False):
 def hydrogenlinewl(ni, nf):
     """Generate H line transitions wavelengths in meters for VACUUM
 
-    Rydberg constant `R` manually adjusted to fit Halpha and Hbeta lines.
+    Rydberg constant `R` was manually adjusted to fit Halpha and Hbeta lines.
     """
     return (10967850.*(1./nf**2-1./ni**2))**-1.
 
@@ -386,6 +418,23 @@ def calcres_nbins(R=12000, hwidth=1350):
     # nbins = R*width/phc.c
     """
     return round(R*hwidth*1e5/phc.c.cgs)
+
+def lineProf(x, flx, lbc, flxerr=np.empty(0), hwidth=1000., ssize=0.05):
+    '''
+    lineProf() - retorna um array (flx) normalizado e um array x em VELOCIDADES.
+    `lbc` deve fornecido em mesma unidade de x para conversão lambda -> vel.
+    Se vetor x jah esta em vel., usar funcao linfit().
+
+    x eh importante, pois y pode ser nao igualmente amostrado.
+    x e y devem estar em ordem crescente.
+
+    ssize = % do tamanho de y; numero de pontos usados nas extremidades
+    para a media do contínuo. 'ssize' de .5 à 0 (exclusive).
+    '''    
+    x = (x-lbc)/lbc*phc.c.cgs*1e-5 #km/s
+    idx = np.where(np.abs(x) <= hwidth)
+    flux = linfit(x[idx], flx[idx], yerr=flxerr, ssize=ssize)
+    return x[idx], flux
 
 def linfit(x, y, ssize=0.05, yerr=np.empty(0)):
     '''
@@ -412,10 +461,10 @@ def linfit(x, y, ssize=0.05, yerr=np.empty(0)):
     idx = np.where(new_y != 0)
     y[idx] = y[idx]/new_y[idx]
     if len(yerr) == 0.:
-        return x, y
+        return y
     else:
         yerr = yerr/np.average(new_y)
-        return x, y, yerr
+        return y, yerr
 
 def EWcalc(vels, flux, vw=1000):
     """
@@ -544,7 +593,7 @@ def analline(lbd, flux, lbdc, hwidth=1000, verb=True):
     vels = vels[idx]
     flux = flux[idx]
     #Normalization:
-    (vels, flux) = linfit(vels, flux)
+    flux = linfit(vels, flux)
     #Output:
     EW = EWcalc(vels, flux, vw=hwidth)
     EC, velEC = ECcalc(vels, flux)
@@ -1086,6 +1135,401 @@ def overplotsubdirs2(path, star, limits=(6540,6600)):
     # xlabel('vel. (km/s)')
     print('# Plot done!')
     return
+
+def overPlotLineSeries(fullseds, obsers=[0], lbc=.6564606, formats=['png']):
+    """Generate overplot spec. line from a HDUST mod list, separated by
+    observers.
+
+    Observers config. must be the same between models in `fullseds` list.
+    """
+    for obs in obsers:
+        fig, ax = plt.subplots()
+        k = obsers.index(obs)
+        for file in fullseds:
+            i = fullseds.index(file)
+            sed2data = hdt.readfullsed2(file)
+            obsdegs = (np.arccos(sed2data[:,0,0])*180/np.pi)[obsers]
+            obsdegs = list(obsdegs)
+            (x,y) = lineProf(sed2data[obs,:,2], sed2data[obs,:,3], lbc=lbc)
+            if file == fullseds[0]:
+                ax.plot(x, y, label='{0:02.1f} deg.'.format(obsdegs[k]), \
+                color=phc.colors[np.mod(i, len(phc.colors))])
+            else:
+                ax.plot(x, y, color=phc.colors[np.mod(i, len(phc.colors))])
+        ax.set_title(u'lbc = {0:.5f} $\mu$m'.format(lbc))
+        ax.legend()
+        for fmt in formats:
+            fig.savefig('modsover_lbc{2:.4f}_obs{0:02.1f}.{1}'.format(obsdegs[k], fmt,\
+            lbc), transparent=True)
+        plt.close()
+    return
+
+def overPlotLineFits(specs, lbc=.6564606, formats=['png'], hwidth=1500., \
+    ylim=None, yzero=False, addsuf=''):
+    """Generate overplot spec. line from a FITS file list.
+    """
+    fig, ax = plt.subplots()
+    for spec in specs:
+        i = specs.index(spec)
+        print("# Reading {0}...".format(phc.trimpathname(spec)[1]))
+        wl, flux, MJD, dateobs, datereduc, fitsfile = loadfits(spec)
+        (x,y) = lineProf(wl, flux, lbc=lbc, hwidth=hwidth)
+        if dateobs.find('-') > 0:
+            dateobs = dateobs[:10]
+        elif dateobs.find('/') > 0:
+            dtobs = dateobs.split('/')[::-1]
+            dateobs = "-".join(dtobs)
+        ax.plot(x, y, label='{0}'.format(dateobs), \
+        color=phc.colors[np.mod(i, len(phc.colors))])
+    if ylim != None:
+        ax.set_ylim(ylim)
+    if yzero:
+        ylim = ax.get_ylim()
+        ax.plot([0,0], ylim, ls='-', color='Gray')
+    ax.set_title(u'lbc = {0:.5f} $\mu$m'.format(lbc))
+    ax.set_ylabel('Spec - Ref.')
+    legend = ax.legend(loc=(1.05, .01), labelspacing=0.1)
+    plt.setp(legend.get_texts(),  fontsize='small')
+    plt.subplots_adjust(left=0.1, right=0.78, top=0.9, bottom=0.1)#, hspace=0.3, wspace=.3)   
+    for fmt in formats:
+        fig.savefig('fitsover_lbc{1:.4f}{2}.{0}'.format(\
+        fmt, lbc, addsuf), transparent=True)
+    plt.close()
+    return
+
+def incrPlotLineSeries(fullseds, obsers=[0], lbc=.6564606, formats=['png']):
+    """Generate incremented spec. line from a HDUST mod list, separated by
+    observers. The increment is 0.1 for each file in fullseds sequence.
+
+    Observers config. must be the same between models in `fullseds` list.
+    """
+    for obs in obsers:
+        fig, ax = plt.subplots()
+        k = obsers.index(obs)
+        for file in fullseds:
+            i = fullseds.index(file)
+            sed2data = hdt.readfullsed2(file)
+            obsdegs = (np.arccos(sed2data[:,0,0])*180/np.pi)[obsers]
+            obsdegs = list(obsdegs)
+            (x,y) = lineProf(sed2data[obs,:,2], sed2data[obs,:,3], lbc=lbc)
+            if file == fullseds[0]:
+                ax.plot(x, y+0.1*i, label='{0:02.1f} deg.'.format(obsdegs[k]), \
+                color=phc.colors[np.mod(i, len(phc.colors))])
+            else:
+                ax.plot(x, y+0.1*i, color=phc.colors[np.mod(i, len(phc.colors))])
+        ax.set_title(u'lbc = {0:.5f} $\mu$m'.format(lbc))
+        ax.legend()
+        for fmt in formats:
+            fig.savefig('modsincr_lbc{2:.4f}_obs{0:02.1f}.{1}'.format(obsdegs[k], fmt,\
+            lbc), transparent=True)
+        plt.close()
+    return
+
+def incrPlotLineFits(specs, lbc=.6564606, formats=['png'], hwidth=1500., \
+    yzero=False, addsuf=''):
+    """Generate incremented spec. line from FITS files list.
+    The increment is 0.1 for each file in sequence.
+    """
+    fig, ax = plt.subplots()
+    for spec in specs:
+        i = specs.index(spec)
+        print("# Reading {0}...".format(phc.trimpathname(spec)[1]))
+        wl, flux, MJD, dateobs, datereduc, fitsfile = loadfits(spec)
+        (x,y) = lineProf(wl, flux, lbc=lbc, hwidth=hwidth)
+        if dateobs.find('-') > 0:
+            dateobs = dateobs[:10]
+        elif dateobs.find('/') > 0:
+            dtobs = dateobs.split('/')[::-1]
+            dateobs = "-".join(dtobs)
+        ax.plot(x, y+0.1*i, label='{0}'.format(dateobs), \
+        color=phc.colors[np.mod(i, len(phc.colors))])
+    if yzero:
+        ylim = ax.get_ylim()
+        ax.plot([0,0], ylim, ls='-', color='Gray')
+    ax.set_title(u'lbc = {0:.5f} $\mu$m'.format(lbc))
+    ax.set_ylabel('Spec - Ref.')
+    legend = ax.legend(loc=(1.05, .01), labelspacing=0.1)
+    plt.setp(legend.get_texts(),  fontsize='small')
+    plt.subplots_adjust(left=0.1, right=0.78, top=0.9, bottom=0.1)#, hspace=0.3, wspace=.3)   
+    for fmt in formats:
+        fig.savefig('fitsincr_lbc{1:.4f}{2}.{0}'.format(\
+        fmt, lbc, addsuf), transparent=True)
+    plt.close()
+    return
+
+def diffPlotLineSeries(fullseds, obsers=[0], lbc=.6564606, formats=['png'], \
+    rvel=None, rflx=None, hwidth=1000.):
+    """Generate overplot of DIFFERENCE spec. line from a HDUST mod list.
+    The model will be linearly interpolated
+    with the reference spec. If none is given as reference, 
+    then it assumes the first of the list.
+
+    It is recommend to run first (rvel, rflx) =  spt.lineProf(rvel, rflx,
+    lbc=lbc, hwidth=hwidth).
+
+    Observers config. must be the same between models in
+    `fullseds` list.
+    """
+    for obs in obsers:
+        fig, ax = plt.subplots()
+        k = obsers.index(obs)
+        for file in fullseds:
+            i = fullseds.index(file)
+            sed2data = hdt.readfullsed2(file)
+            obsdegs = (np.arccos(sed2data[:,0,0])*180/np.pi)[obsers]
+            obsdegs = list(obsdegs)
+            (x,y) = lineProf(sed2data[obs,:,2], sed2data[obs,:,3], lbc=lbc, \
+            hwidth=hwidth)
+            if rvel == None or rflx == None:
+                refspec = hdt.readfullsed2(fullseds[0])
+                (vel,flx) = lineProf(refspec[obs,:,2], refspec[obs,:,3], lbc=lbc, \
+                hwidth=hwidth)
+            else:
+                flx = np.interp(x, rvel, rflx)
+            if file == fullseds[0]:
+                ax.plot(x, y-flx, label='{0:02.1f} deg.'.format(obsdegs[k]), \
+                color=phc.colors[np.mod(i, len(phc.colors))])
+            else:
+                ax.plot(x, y-flx, color=phc.colors[np.mod(i, len(phc.colors))])
+        ax.set_title(u'lbc = {0:.5f} $\mu$m'.format(lbc))
+        ax.set_ylabel('Spec - Ref.')
+        ax.legend()
+        for fmt in formats:
+            fig.savefig('modsdiff_lbc{2:.4f}_obs{0:02.1f}.{1}'.format(obsdegs[k], fmt,\
+            lbc), transparent=True)
+        plt.close()
+    return
+
+def diffPlotLineFits(specs, lbc=.6564606, formats=['png'], \
+    rvel=None, rflx=None, hwidth=1500., addsuf=''):
+    """Generate overplot of DIFFERENCE spec. line from a FITS files list.
+    The observations will be linearly interpolated
+    with the reference spec. If none is given as reference, 
+    then it assumes the first of the list.
+
+    It is recommend to run first (rvel, rflx) =  spt.lineProf(rvel, rflx,
+    lbc=lbc, hwidth=hwidth).
+    """
+    fig, ax = plt.subplots()
+    for spec in specs:
+        i = specs.index(spec)
+        print("# Reading {0}...".format(phc.trimpathname(spec)[1]))
+        wl, flux, MJD, dateobs, datereduc, fitsfile = loadfits(spec)
+        (x,y) = lineProf(wl, flux, lbc=lbc, hwidth=hwidth)
+        if rvel == None or rflx == None:
+            wl0, flux0, MJD, dateobs0, datereduc, fitsfile = loadfits(specs[0])
+            (rvel,flx) = lineProf(wl0, flux0, lbc=lbc, hwidth=hwidth)
+            flx = np.interp(x, rvel, rflx)
+        else:
+            flx = np.interp(x, rvel, rflx)
+        #~ if spec == specs[0]:
+            #~ ax.plot(x, y-flx, label='{0}'.format(dateobs), \
+            #~ color=phc.colors[np.mod(i, len(phc.colors))])
+        #~ else:
+            #~ ax.plot(x, y-flx, color=phc.colors[np.mod(i, len(phc.colors))])
+        if dateobs.find('-') > 0:
+            dateobs = dateobs[:10]
+        elif dateobs.find('/') > 0:
+            dtobs = dateobs.split('/')[::-1]
+            dateobs = "-".join(dtobs)
+        ax.plot(x, y-flx, label='{0}'.format(dateobs), \
+        color=phc.colors[np.mod(i, len(phc.colors))])
+    ax.set_title(u'lbc = {0:.5f} $\mu$m'.format(lbc))
+    ax.set_ylabel('Spec - Ref.')
+    legend = ax.legend(loc=(1.05, .01), labelspacing=0.1)
+    plt.setp(legend.get_texts(),  fontsize='small')
+    plt.subplots_adjust(left=0.1, right=0.78, top=0.9, bottom=0.1)#, hspace=0.3, wspace=.3)   
+    for fmt in formats:
+        fig.savefig('fitsdiff_lbc{1:.4f}{2}.{0}'.format(\
+        fmt, lbc, addsuf), transparent=True)
+    plt.close()
+    return
+
+
+def diffPlotLineObs(fullseds, obsers=[0], lbc=.6564606, formats=['png'], \
+    rvel=None, rflx=None, hwidth=1000.):
+    """Generate overplot of DIFFERENCE spec. line from a HDUST OBSERVERS list.
+    The model will be linearly interpolated
+    with the reference spec. If none is given as reference, 
+    then it assumes the first observer of the list.
+
+    It is recommend to run first (rvel, rflx) =  spt.lineProf(rvel, rflx,
+    lbc=lbc, hwidth=hwidth).
+
+    Observers config. must be the same between models in
+    `fullseds` list.
+    """
+    for file in fullseds:
+        fig, ax = plt.subplots()
+        sed2data = hdt.readfullsed2(file)
+        obsdegs = (np.arccos(sed2data[:,0,0])*180/np.pi)[obsers]
+        obsdegs = list(obsdegs)
+        for obs in obsers:
+            i = obsers.index(obs)
+            (x,y) = lineProf(sed2data[obs,:,2], sed2data[obs,:,3], lbc=lbc, \
+            hwidth=hwidth)
+            if rvel == None or rflx == None:
+                (vel,flx) = lineProf(sed2data[obsers[0],:,2], \
+                sed2data[obsers[0],:,3], lbc=lbc, hwidth=hwidth)
+            else:
+                flx = np.interp(x, rvel, rflx)
+            ax.plot(x, y-flx, label='{0:02.1f} deg.'.format(obsdegs[i]), \
+            color=phc.colors[np.mod(i, len(phc.colors))])
+        ax.set_title(u'lbc={0:.5f}$\mu$m, {1}'.format(lbc, \
+        phc.trimpathname(file)[1]))
+        ax.set_ylabel('Spec - Ref.')
+        ax.legend()
+        for fmt in formats:
+            fig.savefig('modsdiff_lbc{2:.4f}_{0}.{1}'.format(phc.trimpathname(file)[1], \
+            fmt, lbc), transparent=True)
+        plt.close()
+    return
+
+
+def kurlog(file=None, output=None):
+    """ Generate a list of teff and logg present in a Kurucz file.
+
+    If output is not specified, it is saved as `file`+.log """
+    if file == None:
+        file = '{0}/refs/fp00k0.pck'.format(hdtpath())
+    teffs = []
+    loggs = []
+    fp = open(file)
+    for i, line in enumerate(fp):
+        if line.find('TEFF') > -1:
+            teffs+= [float(line.split()[1])]
+            loggs+= [float(line.split()[3])]
+    fp.close()
+    return teffs, loggs
+
+
+def kuruczflux(teff, logg, range=None):
+    """ Return fluxes from a Kurucz model.
+
+    Fluxes are in ergs/cm**2/s/hz/ster and wavelength in nm (range must be in
+    nm)."""
+    kurfile = '{0}/refs/fp00k0.pck'.format(hdtpath())
+    kurwvlines = (174-22)
+    kurflxcol = 10
+    #wave
+    read = phc.readrange(kurfile, 22, 22+kurwvlines)
+    wave = np.array([val for line in read for val in line.split()], dtype=float)
+    #choose best
+    bestT = np.inf
+    bestg = np.inf
+    fp = open(kurfile)
+    for i, line in enumerate(fp):
+        if line.find('TEFF') > -1:
+            readT = float(line.split()[1])
+            if np.abs(readT-teff) <= np.abs(bestT-teff):
+                bestT = readT
+                readg = float(line.split()[3])
+                if np.abs(readg-logg) <= np.abs(bestg-logg):
+                    bestg = readg
+                    i0 = i+1
+    fp.close()
+    best = [bestT, bestg]
+    #read best flux
+    read = phc.readrange(kurfile, i0, i0+kurwvlines)
+    flux = np.array([val for line in read for val in \
+    (line[i:i+kurflxcol] for i in xrange(0, len(line)-1, kurflxcol))], \
+    dtype=float)
+    #cut range
+    if range == None:
+        return wave, flux, best
+    else:
+        idx = np.where((wave > range[0]) & (wave < range[1]))
+        return wave[idx], flux[idx], best    
+
+
+def plotSed2(files, obslist, tags=None, fmt='png', obsls=False, xlog=False,\
+    ylog=False, xlim=None, ylim=None, norm=False, pol=False):
+    """ Plot flux from Hdust models.
+
+    `files` works as following: it must be (outs,,) matrix, where `n`
+    controls the linestyle type  (i.e., how many files on the graph) and `m`
+    the models which will make use of it.
+
+    `obsls` [==True] sets observers as colors. Set it to False to observers as
+    linestyles.
+
+    `tags` is the output name for each list entry in `files`.
+    """
+    #
+    if isinstance(files[0], list) == False:
+        files = [files]
+    if isinstance(fmt, list) == False:
+        fmt = [fmt]
+    if isinstance(obslist, list) == False:
+        obslist = [obslist]
+    obslist = list(obslist)
+    counter = 0
+    lflc = 0
+    #~ color=phc.colors[np.mod(spdtb.count, len(phc.colors))
+    for lfiles in files:
+        flc = 0
+        if tags is not None:
+            outname = tags[lflc]
+            lflc+= 1
+        else:
+            outname = phc.trimpathname(lfiles[0])[1].replace('.sed2','')
+        if pol:
+            outname='pol_'+outname
+        fig, ax = plt.subplots()
+        ax.set_title(outname)
+        for file in lfiles:
+            obsc = 0
+            flc+= 1
+            sed2data = readfullsed2(file)
+            legname = phc.trimpathname(file)[1].replace('.sed2','')
+            obsdeg = list(np.arccos(sed2data[:,0,0][obslist])*180/np.pi)
+            for obs in obslist:
+                obsc+= 1
+                if obsls:
+                    i = phc.colors[np.mod(flc-1,  len(phc.colors))]
+                    j = phc.ls[np.mod(obsc-1, len(phc.ls))]
+                else:
+                    i = phc.colors[np.mod(obsc-1, len(phc.colors))]
+                    j = phc.ls[np.mod(flc-1,  len(phc.ls))]
+                #
+                if pol:
+                    k = 7
+                    yk = 100.
+                    ax.set_ylabel(r'$Q$(%)')
+                else:
+                    k = 3
+                    yk = 1.
+                    ax.set_ylabel(r'Flux')
+                if norm and (xlim is not None):
+                    idx = np.where( (sed2data[obs,:,2] >= xlim[0]) & \
+                    (sed2data[obs,:,2] <= xlim[1]) )
+                    x = sed2data[obs,:,2][idx]
+                    y = linfit(x, sed2data[obs,:,k][idx]*yk)
+                else:
+                    x = sed2data[obs,:,2]
+                    y = sed2data[obs,:,k]*yk
+                ax.plot( x, y, \
+                label='{0:.1f}o. {1}'.format(obsdeg[obslist.index(obs)],legname), \
+                color=i, ls=j )
+            #ax.set_title(file)
+        ax.legend(prop={'size':6}, bbox_to_anchor=(1.7, 1.1))
+        ax.set_xlabel(r'wavelength ($\mu$m)')
+        if xlog:
+            ax.set_xscale('log')
+        if ylog:
+            ax.set_yscale('log')
+        if xlim is not None:
+            ax.set_xlim(xlim)
+        if ylim is not None:
+            ax.set_ylim(ylim)
+        plt.subplots_adjust(left=0.05, right=0.6, top=0.9, bottom=0.1)#, hspace=0.3, wspace=.3)
+        for ifmt in fmt:
+            fig.savefig('{0}.{1}'.format(outname,ifmt), transparent=True)
+        plt.close()
+        counter += 1
+    print('# {0} file generated!'.format(outname))
+    return
+
 
 ### MAIN ###
 if __name__ == "__main__":

@@ -1327,7 +1327,16 @@ def open(filename, quiet=False):
         header = hdu.header
         data = hdu.data
         if hdu == hdulist[0]:
-            newobj.hdrinfo = HDRINFO(header['OBJECT'], header['MJD-OBS'], header['DATE-OBS'], header['DATE'])
+            hdrobj, hdrmjd, hdrobs, hdrdat = ('', '', '', '')
+            if 'OBJECT' in header:
+                hdrobj = header['OBJECT']
+            if 'MJD-OBS' in header:
+                hdrmjd = header['MJD-OBS']
+            if 'DATE-OBS' in header:
+                hdrobs = header['DATE-OBS']
+            if 'DATE' in header:
+                hdrdat = header['DATE']
+            newobj.hdrinfo = HDRINFO(hdrobj, hdrmjd, hdrobs, hdrdat)
         if hdu.name == 'OI_WAVELENGTH':
             if newobj.wavelength == None: newobj.wavelength = {}
             insname = header['INSNAME']
