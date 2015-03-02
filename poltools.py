@@ -293,7 +293,7 @@ def plotfrompollog(path, star, filters=None, colors=None):
         y = P[ind]
         yerr = sigP[ind]
         ax.errorbar(x, y, yerr, marker='o', color=colors[i], fmt='--')
-    ax.legend(leg,'upper left', fontsize='small')    
+    ax.legend(leg,'upper left')#, fontsize='small')    
     #ax.legend(leg,'lower left', fontsize='small')  
     ax.set_ylabel('Polarization (%)')
     ax.plot(ax.get_xlim(),[0,0],'k--')
@@ -510,19 +510,72 @@ def genStdLog(path=None):
     """
     if path == None:
         path = os.getcwd()
+
+    # bednarski: security condition
+    if os.path.exists('{0}/std.log'.format(path)):
+        print('\nCAUTION: std.log file already exists for {0} night. '.\
+        format(path) + 'Are you sure to continue, overwriting all manual' + \
+        'changes on this file? (y/n):')
+        while True:
+            verif = raw_input('  ')
+            if verif in ['y', 'Y']:
+                break
+            elif verif in ['n', 'N']:
+                print('Aborted!')
+                return
+            else:
+               print('Value not valid. Please, type \'y\' ou \'n\':')
+
+    ltgts = np.loadtxt('{0}/pol/alvos.txt'.format(hdtpath()), dtype=str)
     lstds = np.loadtxt('{0}/pol/padroes.txt'.format(hdtpath()), dtype=str,\
     usecols=[0])
     tgts = [fld for fld in os.listdir('{0}'.format(path)) if \
     os.path.isdir(os.path.join('{0}'.format(path), fld))]
     lines = ''
-    for prod in product(lstds,tgts,filters):
-        std,tgt,f = prod
+    rtgts=[]
+    
+    # Bednarski: I added below to verify and query correct standard names.
+    # I changed to work on directories with suffix also (like 'eaql_a0').
+    for tgt in tgts:
+        if tgt.split('_')[0] not in np.hstack((ltgts,lstds,np.array(['calib']))):
+            print('Target {0} is not a known standard or target!!\n'.\
+            format(tgt.split('_')[0]) + '  If it\'s a standard, type the ' + \
+            'common name. Otherwise, press -Enter- to skip:')
+            while True:
+                tgt_real = raw_input('  ')
+                if tgt_real == '':
+                    rtgts.append(tgt.split('_')[0])
+                    break
+                elif tgt_real in np.hstack((lstds,np.array(['calib']))):
+                    rtgts.append(tgt_real)
+                    break
+                else:
+                    print('{0} is not a known standard. '.format(tgt_real) + \
+                    '(Wouldn\'t it be a target?)\n  Write again or just ' + \
+                    'press -Enter- to skip:')
+        else:
+            rtgts.append(tgt.split('_')[0])
+
+    i=0
+    for prod in product(rtgts,lstds,filters):
+        tgt,std,f = prod
+#        print tgt, i, i/(len(lstds)*len(filters))
+        # num var is necessary to correct work when a target has more
+        # than one directory in the same night
+        tgtindex=i/(len(lstds)*len(filters))
+        i+=1
+#        if tgt.find(std) != 0:
+#            print('teste {0}'.format(std))
         if tgt.find(std) == 0:
-            outs = chooseout('{0}/{1}'.format(path,tgt),f)
+            outs = chooseout('{0}/{1}'.format(path,tgts[tgtindex]),f)
             for out in outs:
                 Q,U,sig,P,th,sigT,ap,star,MJD,calc = readoutMJD(out)
-                lines += '{:12.6f} {:>10s} {:1s} {:>5.1f} {:64s}\n'.format(\
-                float(MJD), tgt, f, float(calc), phc.trimpathname(out)[1])
+                # Bednarski: I replaced the column concerning to the .out
+                #    by the .out PATH.
+                lines += '{0:12.6f} {1:>10s} {2:1s} {3:>5.1f} {4:>40s}\n'.\
+                format(float(MJD), tgt, f, float(calc), \
+                os.path.relpath(out, path))
+                
     if lines == '':
         print('# ERROR! No valid standards were found!')
     else:
@@ -534,9 +587,13 @@ def genStdLog(path=None):
     return
 
 
-def chkStdLog(path=None):
+# Bednarski: I added delta variable to (calc-calcst) tolerance
+def chkStdLog(path=None, delta=2.5):
     """
     Generate Standards Data
+
+    delta is the allowed variation for the angles between the two
+    beams for one same calcite.
     """
     allinfo = True
     if path == None:
@@ -562,7 +619,7 @@ def chkStdLog(path=None):
         for stdi in std:
             fst = stdi[2]
             calcst = float(stdi[3])
-            if f == fst and abs(calc-calcst) < 2.5:
+            if f == fst and abs(calc-calcst) < delta:
                 foundstd = True
         if foundstd == False:
             #implementar ajuste de filtro e apontamento para outro std.log
@@ -572,26 +629,81 @@ def chkStdLog(path=None):
     return allinfo
 
 
-def genObjLog(path=None):
+# Bednarski: I added delta variable to (calc-calcst) tolerance
+def genObjLog(path=None, delta=2.5):
     """
-    Generate Objects Log
+    Generate Objects Log.
+    Must be runned after genStdLog.
+
+    delta is the allowed variation for the angles between the two
+    beams for one same calcite.
     """
     if path == None:
         path = os.getcwd()
+
+    # bednarski: security condition
+    if os.path.exists('{0}/obj.log'.format(path)):
+        print('\nCAUTION: obj.log file already exists for {0} night. '.\
+        format(path) + 'Are you sure to continue, overwriting all manual' + \
+        'changes on this file? (y/n):')
+        while True:
+            verif = raw_input('  ')
+            if verif in ['y', 'Y']:
+                break
+            elif verif in ['n', 'N']:
+                print('Aborted!')
+                return
+            else:
+               print('Value not valid. Please, type \'y\' ou \'n\':')
+
     ltgts = np.loadtxt('{0}/pol/alvos.txt'.format(hdtpath()), dtype=str)
     tgts = [fld for fld in os.listdir('{0}'.format(path)) if \
     os.path.isdir(os.path.join('{0}'.format(path), fld))]
+    lstds = np.loadtxt('{0}/pol/padroes.txt'.format(hdtpath()), dtype=str,\
+    usecols=[0])
     lines = ''
-    for prod in product(ltgts,tgts,filters):
-        star,tgt,f = prod
+    rtgts=[]
+    
+    # Bednarski: I added below to verify and query correct target names.
+    # I changed to work on directories with suffix also (like 'dsco_a0').
+    for tgt in tgts:
+        if tgt.split('_')[0] not in np.hstack((ltgts,lstds,np.array(['calib']))):
+            print('Target {0} is not a known target either standard!!\n'.\
+            format(tgt.split('_')[0]) + '  Type the common name ' + \
+            'case it be a target or press -Enter- to skip:')
+            while True:
+                tgt_real = raw_input('  ')
+                if tgt_real == '':
+                    rtgts.append(tgt.split('_')[0])
+                    break
+                elif tgt_real in np.hstack((ltgts,np.array(['calib']))):
+                    rtgts.append(tgt_real)
+                    break
+                else:
+                    print('{0} is not a known target. '.format(tgt_real) + \
+                    '(Wouldn\'t it be a standard?)\n  Write again or just ' + \
+                    'press -Enter- to skip:')
+        else:
+            rtgts.append(tgt.split('_')[0])
+
+    i=0
+    for prod in product(rtgts,ltgts,filters):
+        tgt,star,f = prod
+#        print tgt, i, i/(len(lstds)*len(filters))
+        # num var is necessary to correct work when a target has more
+        # than one directory in the same night
+        tgtindex=i/(len(ltgts)*len(filters))
+        i+=1
         if tgt.find(star) == 0:
-            outs = chooseout('{0}/{1}'.format(path,tgt),f)
+            outs = chooseout('{0}/{1}'.format(path,tgts[tgtindex]),f)
             for out in outs:
                 if out != '': #Erro bizarro... Nao deveria acontecer
                     Q,U,sig,P,th,sigT,ap,nstar,MJD,calc = readoutMJD(out)
-                    lines += '{0:12.6f} {1:>10s} {2:1s} {3:>5.1f} {4:64s}\n'.\
+                    # Bednarski: I replaced the column concerning to the .out
+                    #    by the .out PATH.
+                    lines += '{0:12.6f} {1:>10s} {2:1s} {3:>5.1f} {4:>40s}\n'.\
                     format(float(MJD), tgt, f, float(calc), \
-                    phc.trimpathname(out)[1])
+                    os.path.relpath(out, path))
     if lines == '':
         print('# ERROR! No valid targets were found!')
     else:
@@ -603,24 +715,24 @@ def genObjLog(path=None):
     f0 = open('{0}/obj.log'.format(path), 'w')
     f0.writelines(lines)
     f0.close()
-    if chkStdLog(path=path) == False:
+    if chkStdLog(path=path, delta=delta) == False:
         print('# ERROR! Missing information in the `std.log` file!!')
 
-    lstds = np.loadtxt('{0}/pol/padroes.txt'.format(hdtpath()), dtype=str,\
-    usecols=[0])
-    for tgt in tgts: #implementar aqui
-        if tgt not in np.hstack((ltgts,lstds,np.array(['calib']))):
-            print('# Warning! Target {0} is not a known target or standard!!'.\
-            format(tgt))
+    # Bednarski: changed here  tgt  ->  tgt.split('_')[0]
+    for tgt in rtgts: #implementar aqui
+        if tgt.split('_')[0] not in np.hstack((ltgts,lstds,np.array(['calib']))):
+            print('# Warning! Target {0} is not a known target!! '.\
+            format(tgt) + 'Change manually if it isn\'t a standard.')
     return
 
 
-def corObjStd(target, night, f, calc, path=None):
+# Bednarski: I added delta variable to (calc-calcst) tolerance
+def corObjStd(target, night, f, calc, path=None, delta=2.5):
     """
     Correlaciona um alvo (`target`) num dado filtro e calcita (`f` e `calc`) e
     retorna o valor da(s) padrao(oes) correspondente(s) em `std.log`.
 
-    Tolerancia da calcita: +/-2.5 graus
+    Tolerancia da calcita default: +/-2.5 graus
 
     Input: target, f, calc, stds
     Output: angref, thstd
@@ -641,9 +753,10 @@ def corObjStd(target, night, f, calc, path=None):
         sigs = []
         for stdinf in stds:
             if stdchk(stdinf[1])[0] and stdinf[2] == f and \
-            abs(float(stdinf[3])-calc) <= 2.5:
-                Q, U, sig, P, th, sigT, tmp, tmp2 = readout('{0}/{1}/{2}'.\
-                format(path+night,stdinf[1],stdinf[4]))
+            abs(float(stdinf[3])-calc) <= delta:
+                # Bednarski: I changed below to work correctly
+                Q, U, sig, P, th, sigT, tmp, tmp2 = readout('{0}/{1}'.\
+                format(path+'/'+night,stdinf[4]))
                 thstd += [ float(th) ]
                 if thstd == 0.:
                     thstd = 0.01
@@ -719,8 +832,9 @@ def genTarget(target, path=None, PAref=None, skipdth=False):
                 thstd = 0.
                 if objinf[1].find(target) > -1:
                     MJD, tmp, f, calc, out = objinf
-                    Q, U, sig, P, th, sigT, tmp, tmp2 = readout('{0}/{1}/{2}'.\
-                    format(path+night,objinf[1],out))
+                    # Bednarski: I changed below to work correctly
+                    Q, U, sig, P, th, sigT, tmp, tmp2 = readout('{0}/{1}'.\
+                    format(path+'/'+night,out))
                     P = float(P)*100
                     th = float(th)
                     sig = float(sig)*100
