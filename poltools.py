@@ -1,6 +1,7 @@
 ##!/usr/bin/env python
 #-*- coding:utf-8 -*-
 #Modified by D. Moser in 2014-11-13
+#Modified by D. Bednarski in 2015 March
 
 """
 POLARIMETRY tools
@@ -271,12 +272,12 @@ def plotfrompollog(path, star, filters=None, colors=None):
     calc = tab[:,3]
     ang_ref = tab[:,4].astype(float)
     dth = tab[:,5].astype(float)
-    P = tab[:,6].astype(float)
-    Q = tab[:,7].astype(float)
-    U = tab[:,8].astype(float)
-    th = tab[:,9].astype(float)
-    sigP = tab[:,10].astype(float)
-    sigth = tab[:,11].astype(float)
+    P = tab[:,7].astype(float)
+    Q = tab[:,8].astype(float)
+    U = tab[:,9].astype(float)
+    th = tab[:,10].astype(float)
+    sigP = tab[:,11].astype(float)
+    sigth = tab[:,12].astype(float)
 
     if colors == None:
         colors = phc.colors
@@ -579,7 +580,7 @@ def genStdLog(path=None):
     if lines == '':
         print('# ERROR! No valid standards were found!')
     else:
-        lines = '{:12s} {:>8s} {:1s} {:5s} {:64s}\n'.format('#MJD','target',\
+        lines = '{:12s} {:>8s} {:1s} {:5s} {:>35s}\n'.format('#MJD','target',\
         'filt','calc','out')+lines
     f0 = open('{0}/std.log'.format(path), 'w')
     f0.writelines(lines)
@@ -707,7 +708,7 @@ def genObjLog(path=None, delta=2.5):
     if lines == '':
         print('# ERROR! No valid targets were found!')
     else:
-        lines = '{:12s} {:>8s} {:1s} {:5s} {:64s}\n'.format('#MJD','target',\
+        lines = '{:12s} {:>8s} {:1s} {:5s} {:>35s}\n'.format('#MJD','target',\
         'filt','calc','out')+lines
     #check std info. Only if it is okay the `obj.log` will be written
     stdchk = False
@@ -727,11 +728,14 @@ def genObjLog(path=None, delta=2.5):
 
 
 # Bednarski: I added delta variable to (calc-calcst) tolerance
+# It's really necessary the parameter target here?
 def corObjStd(target, night, f, calc, path=None, delta=2.5):
     """
     Correlaciona um alvo (`target`) num dado filtro e calcita (`f` e `calc`) e
     retorna o valor da(s) padrao(oes) correspondente(s) em `std.log`.
 
+    O angulo retornado eh o mesmo theta do .out e nao 180-theta!
+    
     Tolerancia da calcita default: +/-2.5 graus
 
     Input: target, f, calc, stds
@@ -743,6 +747,7 @@ def corObjStd(target, night, f, calc, path=None, delta=2.5):
     calc = float(calc)
     angref = 0.
     thstd = 0.
+    stdname = ''
     if os.path.exists('{0}/{1}/std.log'.format(path,night)):
         stds = np.loadtxt('{0}/{1}/std.log'.format(path,night), dtype=str)
         if len(stds) > 0 and len(stds[-1]) != 5:
@@ -750,6 +755,7 @@ def corObjStd(target, night, f, calc, path=None, delta=2.5):
         k = 0
         angref = []
         thstd = []
+        stdname = []
         sigs = []
         for stdinf in stds:
             if stdchk(stdinf[1])[0] and stdinf[2] == f and \
@@ -757,31 +763,37 @@ def corObjStd(target, night, f, calc, path=None, delta=2.5):
                 # Bednarski: I changed below to work correctly
                 Q, U, sig, P, th, sigT, tmp, tmp2 = readout('{0}/{1}'.\
                 format(path+'/'+night,stdinf[4]))
+                stdname += [ stdinf[1] ]
                 thstd += [ float(th) ]
                 if thstd == 0.:
                     thstd = 0.01
                 sigs += [ float(sig)*100 ]
-                sigth = 28.6*sig
+                sigth = 28.65*sig/P   # Nao faltava dividir por P?
                 i = stdchk(stdinf[1])[1]
                 j = filters.index(f)+1 #+1 devido aos nomes na 1a coluna
                 angref += [ float(std[i,j]) ]
-        if angref != []:
-            if len(angref) == 1 and len(thstd) == 1:
-                thstd = thstd[0]
-                angref = angref[0]
-            else:
-                if len(angref) == len(thstd) and len(angref) > 1:
-                    idx = sigs.index(np.min(sigs))
-                    thstd = thstd[idx]
-                    angref = angref[idx]
+# Bednarski: Comentei abaixo pra retornar todas padrões
+#        if angref != []:
+#            if len(angref) == 1 and len(thstd) == 1:
+#                thstd = thstd[0]
+#                angref = angref[0]
+#            else:
+#            if len(angref) == len(thstd):
+#                idx = sigs.index(np.min(sigs))
+#                thstd = thstd[idx]
+#                angref = angref[idx]
                 #print('# ERROR! More than one std for {0}!'.format(night))
                 #raise SystemExit(1)
+                # AQUI fazer algoritmo pra quando houverem mais que uma padrão
     else:
         print('# ERROR! `std.log` not found for {0}'.format(night))
-    return thstd, angref
+#    print stdname, thstd, angref
+    return stdname, thstd, angref
 
 
-def genTarget(target, path=None, PAref=None, skipdth=False):
+# Bednarski: epssig define dentro de quantos sigmas uma polarizacao medida pode ser
+# compativel com zero (e nao depender de dados de padrao polarizada)
+def genTarget(target, path=None, PAref=None, skipdth=False, delta=2.5, epssig=2.0):
     """ Gen. target
 
     PAref deve ser do formato `pyhdust/pol/padroes.txt`.
@@ -801,7 +813,7 @@ def genTarget(target, path=None, PAref=None, skipdth=False):
     # padroes
     if PAref is not None:
         for line in PAref:
-            if len(line) != 6:
+            if len(line) != 6 and len(line) != 10:
                 print('# ERROR! Wrong PAref matrix format')
                 raise SystemExit(1)
     else:
@@ -829,8 +841,13 @@ def genTarget(target, path=None, PAref=None, skipdth=False):
                 print('# ERROR! Check {0}/{1}/obj.log'.format(path,night))
                 raise SystemExit(1)
             for objinf in objs:
-                thstd = 0.
-                if objinf[1].find(target) > -1:
+#                thstd = 0.
+                dth = []
+                stdnames = ''
+                # Existe algum motivo abaixo para encontrar se objinf[1] CONTEM target e nao
+                # se eh de fato IGUAL a target? Comentei e mudei.
+#                if objinf[1].find(target) > -1:
+                if objinf[1] == target:
                     MJD, tmp, f, calc, out = objinf
                     # Bednarski: I changed below to work correctly
                     Q, U, sig, P, th, sigT, tmp, tmp2 = readout('{0}/{1}'.\
@@ -838,42 +855,59 @@ def genTarget(target, path=None, PAref=None, skipdth=False):
                     P = float(P)*100
                     th = float(th)
                     sig = float(sig)*100
-                    sigth = 28.6*sig
-                    thstd, angref = corObjStd(target, night, f, calc, path=path)
+                    sigth = 28.65*sig/P  # Nao precisava dividir por P ainda?
+                    stdname, thstd, angref = corObjStd(target, night, f, calc, path=path, delta=delta)
                     #print f,  thstd, angref
+                    # Bednarski: reorganizei esses ifs abaixo pra funcionar agora com
+                    #     mais de uma padrao
                     if thstd==[] or angref==[]:
-                        thstd = 0
-                        angref = 0
+                        thstd = []
+                        angref = []
+                        mdth = 0.
+                        devth = 0.
+                        stdnames = 'no-stdstar'
                         ##print('# ERROR with thstd ou angref!')
                         ##print(night, f, calc)
-                    dth = 180.-thstd-angref
-                    th = -th+thstd+angref
-                    if th > 180:
+                    else:
+                        for i in range(0,len(thstd)):
+                            dth += [ -thstd[i]-angref[i] ]
+                            while dth[i] >= 180:
+                                dth[i]-= 180
+                            while dth[i] < 0:
+                                dth[i]+= 180
+                            if i != 0:
+                                stdnames += ','
+                            stdnames += stdname[i]
+                        mdth=sum(dth)/len(dth)  # evalute the mean dth
+                        devth=np.std(dth)
+                    th = -th-mdth
+                    # Bednarski: I changed 'if' for 'while' because it can be necessary more than once
+                    while th >= 180:
                         th-= 180
-                    if th < 0:
+                    while th < 0:
                         th+= 180
                     Q = P*np.cos(2*th*np.pi/180)
                     U = P*np.sin(2*th*np.pi/180)
-                    if thstd != 0 or skipdth:
-                        lines += ('{:12s} {:>7s} {:1s} {:>5s} {:>5.1f} {:>6.1f} '+
-                        '{:>5.3f} {:>6.3f} {:>6.3f} {:>6.1f} {:>5.3f} '+
+                    if thstd != [] or skipdth or P/sig <= epssig:
+                        lines += ('{:12s} {:>7s} {:1s} {:>5s} {:>12s} {:>6.1f} {:>4.1f}'+
+                        '{:>7.3f} {:>6.3f} {:>6.3f} {:>6.1f} {:>5.3f} '+
                         '{:>5.1f}\n').format(MJD,\
-                        night, f, calc, angref, dth, P, Q, U, th, sig, sigth)
+                        night, f, calc, stdnames, mdth, devth, P, Q, U, th, sig, sigth)
                     else:
-                        print('# ERROR! No std found for {0} filter {1} in {2}'.\
-                format(target,f,night))
+                        print('# ERROR! No std found for non-null polarization of ' + \
+                        '{0}, filter {1}, in {2}'.format(target,f,night))
         else:
             print('# ERROR! `obj.log` not found for {0}'.format(night))
     #arquivo de saida
     if lines != '':
         print('# Output written: {0}/{1}.log'.format(path,target))
         f0 = open('{0}/{1}.log'.format(path,target),'w')
-        lines = ('#MJD       night filt calc ang.ref dth    P      Q      U'+\
+        lines = ('#MJD       night filt calc  stdstars  dth devdth   P      Q      U'+\
         '    th    sigP  sigth\n')+lines
         f0.writelines(lines)
         f0.close()
     else:
-        ('# ERROR! No observation was found for target {0}'.format(target))
+        print('# ERROR! No observation was found for target {0}'.format(target))
     return
 
 
