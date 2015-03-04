@@ -1,25 +1,41 @@
-##!/usr/bin/env python
 #-*- coding:utf-8 -*-
-#Modified by D. Moser in 2014-10-17
 
 """
-SPECTROSCOPY tools
+PyHdust *spectools* module: spectroscopy tools
 
-includes None
+Algumas definicoes: para todas as rotinas funcionarem, todos os espectros devem
+estar agrupados num mesmo caminho (`path`), em estrutura de
+noite/estrelas/espec.
+
+Neste momento, as rotinas somente leem arquivos `*.cal.fits`. Para receber este
+sufixo `.cal`, algumas informacoes no header sao necessarias:
+
+    * 'MJD-OBS' ou 'MJD' ou 'JD' ou 'DATE-OBS'
+    * 'CRVAL1' + 'CDELT1'
+
+:license: GNU GPL v3.0 (https://github.com/danmoser/pyhdust/blob/master/LICENSE)
 """
+import os as _os
+import numpy as _np
+from glob import glob as _glob
+import pyhdust.phc as _phc
+import pyhdust.jdcal as _jdcal
+import pyhdust as _hdt
 
-import matplotlib.pyplot as plt
-import numpy as np
-import pyhdust.phc as phc
-import os
-import glob
-import pyfits
-from scipy.interpolate import interp1d
-import pyhdust.jdcal as jdcal
-import pyhdust as hdt
-from pyhdust import hdtpath
+try:
+    import pyfits as _pyfits
+    import matplotlib.pyplot as _plt
+    from scipy.interpolate import interp1d as _interp1d
+except:
+    print('# Warning! matplotlib, scipy and/or pyfits module not installed!!!')
 
-outfold = 'hdt/'
+__author__ = "Daniel Moser"
+__email__ = "dmfaes@gmail.com"
+__date__ ='1 March 2015'
+__version__ = '0.9'
+
+
+_outfold = ''
 
 class Spec(object):
     """Definicao de classe espectro para conter toda a informacao util
@@ -54,18 +70,18 @@ class Spec(object):
 
     >>> spdtb = spt.Spec()
     >>> #(...) read new specs and then join with previous ones
-    >>> spdtb.data = np.vstack(( spdtb.data, np.loadtxt('hdt/datafile.txt') ))
-    >>> spdtb.metadata = np.vstack(( spdtb.metadata, \\
-    >>> np.loadtxt('hdt/metafile.txt') ))
+    >>> spdtb.data = _np.vstack(( spdtb.data, _np.loadtxt('hdt/datafile.txt') ))
+    >>> spdtb.metadata = _np.vstack(( spdtb.metadata, \\
+    >>> _np.loadtxt('hdt/metafile.txt') ))
     >>> spdtb.updatecount() #to update the counter
 
     Ou simplesmente (nome de arquivos default):
 
     >>> spdtb.loaddata()
     """
-    def __init__(self, wl=None, flux=None, lbc=None, hwidth=None, EW=np.NaN,
-        EC=np.NaN, VR=np.NaN,
-        peaksep=np.NaN, depthcent=np.NaN, F0=np.NaN, dateobs='', MJD=0.,
+    def __init__(self, wl=None, flux=None, lbc=None, hwidth=None, EW=_np.NaN,
+        EC=_np.NaN, VR=_np.NaN,
+        peaksep=_np.NaN, depthcent=_np.NaN, F0=_np.NaN, dateobs='', MJD=0.,
         datereduc='', file=''):
         self.wl = wl
         self.flux = flux
@@ -82,20 +98,20 @@ class Spec(object):
         self.dateobs = dateobs
         self.MJD= MJD
         self.count = 0
-        self.data = np.empty(0)
-        self.metadata = np.empty(0)
+        self.data = _np.empty(0)
+        self.metadata = _np.empty(0)
 
     def reset(self):
         """Reset the class parameters
         """
         self.wl = None
         self.flux = None
-        self.EW = np.NaN
-        self.EC = np.NaN
-        self.VR = np.NaN
-        self.peaksep = np.NaN
-        self.depthcent = np.NaN
-        self.F0 = np.NaN
+        self.EW = _np.NaN
+        self.EC = _np.NaN
+        self.VR = _np.NaN
+        self.peaksep = _np.NaN
+        self.depthcent = _np.NaN
+        self.F0 = _np.NaN
         self.file = ''
         self.datereduc = ''
         self.dateobs = ''
@@ -111,11 +127,11 @@ class Spec(object):
         """
         self.count += 1
         if self.count == 1:
-            self.data = np.array( self.lastinfo() )
-            self.metadata = np.array( self.lastmeta() )
+            self.data = _np.array( self.lastinfo() )
+            self.metadata = _np.array( self.lastmeta() )
         else:
-            self.data = np.vstack(( self.data, self.lastinfo() ))
-            self.metadata = np.vstack(( self.metadata, self.lastmeta() ))
+            self.data = _np.vstack(( self.data, self.lastinfo() ))
+            self.metadata = _np.vstack(( self.metadata, self.lastmeta() ))
         #if self.flux != None and self.wl != None and self.lbc != None:
         #    self.savespec()
 
@@ -130,24 +146,24 @@ class Spec(object):
         """
         return self.MJD, self.dateobs, self.datereduc, self.file
 
-    def savedata(self, datafile=outfold+'/datafile.txt',\
-        metafile=outfold+'/metafile.txt'):
+    def savedata(self, datafile=_outfold+'/datafile.txt',\
+        metafile=_outfold+'/metafile.txt'):
         """Save current table
         """
-        np.savetxt(datafile, self.data, fmt='%12.6f')
-        np.savetxt(metafile, self.metadata, fmt='%s', delimiter=',')
+        _np.savetxt(datafile, self.data, fmt='%12.6f')
+        _np.savetxt(metafile, self.metadata, fmt='%s', delimiter=',')
         return
 
-    def loaddata(self,  datafile=outfold+'/datafile.txt',\
-        metafile=outfold+'/metafile.txt'):
+    def loaddata(self,  datafile=_outfold+'/datafile.txt',\
+        metafile=_outfold+'/metafile.txt'):
         """Function to load a previous table
         Usage:
 
         >>> spdtb = Spec()
         >>> spdtb.loaddata()
         """
-        self.data = np.loadtxt(datafile)
-        self.metadata = np.loadtxt(metafile, fmt='%s', delimiter=',')
+        self.data = _np.loadtxt(datafile)
+        self.metadata = _np.loadtxt(metafile, fmt='%s', delimiter=',')
         self.updatecount()
         return
 
@@ -180,32 +196,32 @@ class Spec(object):
             print('# ERROR: wrong Spec() parameters! {}'.format(self.file))
             return
         if outname == '':
-            path, file = phc.trimpathname(self.file)
-            outname = phc.rmext(file)
+            path, file = _phc.trimpathname(self.file)
+            outname = _phc.rmext(file)
         #Normalization:
         flux = linfit(self.wl, self.flux)
         wl = self.wl
-        fig = plt.figure()
+        fig = _plt.figure()
         ax = fig.add_subplot(111)
         ax.plot(wl, flux)
         ax.set_ylabel('norm. flux')
         ax.set_xlabel('wavelength (arb. units)')
         ax.set_title(outname)
-        plt.savefig('{}/{:.2f}_{}.png'.format(outfold,self.MJD,outname))
+        _plt.savefig('{}/{:.2f}_{}.png'.format(_outfold,self.MJD,outname))
         if self.lbc > 0:
-            vels = (self.wl-self.lbc)/self.lbc*phc.c.cgs*1e-5
-            idx = np.where(np.abs(vels) <= self.hwidth)
+            vels = (self.wl-self.lbc)/self.lbc*_phc.c.cgs*1e-5
+            idx = _np.where(_np.abs(vels) <= self.hwidth)
             flux = linfit(vels[idx], flux[idx])
             vels = vels[idx]
-            plt.clf()
+            _plt.clf()
             ax = fig.add_subplot(111)
             ax.plot(vels, flux)
             ax.set_ylabel('norm. flux')
             ax.set_xlabel('vel. (km/s)')
             ax.set_title('{:.2f} {} {:.2f}'.format(self.MJD,outname,self.lbc))
-            plt.savefig('{}/{:.2f}_{}_{:.2f}.png'.format(outfold,self.MJD,\
+            _plt.savefig('{}/{:.2f}_{}_{:.2f}.png'.format(_outfold,self.MJD,\
             outname,self.lbc))
-        plt.close()
+        _plt.close()
         return
 
 ###
@@ -213,7 +229,7 @@ def extractfromsplot(file, splot):
     """Ce = center; Co = core
     #LcCe, LcCo, lcGW, lcEW, lvCe, lcCo, lvEW, lrCe, LrCo, lrEW
     """
-    out = np.array(10*[np.NaN])
+    out = _np.array(10*[_np.NaN])
     readflag = False
     for line in splot:
         if line.find(']:') > 0 and readflag:
@@ -222,10 +238,10 @@ def extractfromsplot(file, splot):
             readflag = True
         if readflag:
             info = line.split()
-            #if re.match("^\d+?\.\d+?$", info[0]) is not None:
+            #if _re.match("^\d+?\.\d+?$", info[0]) is not None:
             try:
                 float(info[0])
-                info = np.array(info, dtype=float)
+                info = _np.array(info, dtype=float)
                 if info[0] > 6556 and info[0] < 6556+4.33:
                     if len(info) == 4:
                         out[6] = float(info[3])
@@ -268,18 +284,18 @@ def check_dtobs(dtobs):
     else:
         print('# ERROR! Wrong "DATE-OBS" in header! {}'.format(fitsfile))
         raise systemExit(1)
-    dtobs = np.array(dtobs, dtype='int32')
+    dtobs = _np.array(dtobs, dtype='int32')
     return dtobs, tobs
 
 def shiftfits(fitsfile, newsh=''):
     """ Update FITS spec header for a given shift value. """
-    imfits = pyfits.open(fitsfile, mode='update')
+    imfits = _pyfits.open(fitsfile, mode='update')
     if 'WLSHIFT' in imfits[0].header:
         print('# WLSHIFT = {0} for {1}'.format(imfits[0].header['WLSHIFT'], \
-        phc.trimpathname(fitsfile)[1]))
+        _phc.trimpathname(fitsfile)[1]))
     else:
         print('# No WLSHIFT available for {0}'.format( \
-        phc.trimpathname(fitsfile)[1]))
+        _phc.trimpathname(fitsfile)[1]))
     if newsh == '':
         newsh = raw_input('Type the new shift: ')
     if newsh != '':
@@ -292,9 +308,9 @@ def loadfits(fitsfile):
 
     Out: wl, flux, MJD, dateobs, datereduc, fitsfile
     """
-    imfits = pyfits.open(fitsfile)
+    imfits = _pyfits.open(fitsfile)
     flux = imfits[0].data
-    wl = np.arange(len(flux))*imfits[0].header['CDELT1']+\
+    wl = _np.arange(len(flux))*imfits[0].header['CDELT1']+\
         imfits[0].header['CRVAL1']
     (MJD, dateobs, datereduc) = (0., '', '')
     if 'MJD-OBS' in imfits[0].header:
@@ -306,7 +322,7 @@ def loadfits(fitsfile):
     elif 'DATE-OBS' in imfits[0].header:
         dtobs = imfits[0].header['DATE-OBS']
         dtobs,tobs = check_dtobs(dtobs)
-        MJD = jdcal.gcal2jd(*dtobs)[1]+tobs
+        MJD = _jdcal.gcal2jd(*dtobs)[1]+tobs
     else:
         MJD = 0.
         print('# ERROR! No DATE-OBS information is available! {}'.\
@@ -346,48 +362,48 @@ def checksubdirs(path, star, lbc, hwidth=1000, showleg=True, plots=False):
     """
     Faz o que tem que fazer.
     """
-    if os.path.exists('{}/{}'.format(path,star)) == False:
-        os.system('mkdir {}/{}'.format(path,star))
+    if _os.path.exists('{}/{}'.format(path,star)) == False:
+        _os.system('mkdir {}/{}'.format(path,star))
 
-    nights = [o for o in os.listdir(path) if os.path.isdir('{}/{}'.format(path,\
+    nights = [o for o in _os.listdir(path) if _os.path.isdir('{}/{}'.format(path,\
     o))]
 
-    fig = plt.figure()
+    fig = _plt.figure()
     ax = fig.add_subplot(111)
     spdtb = Spec()
     spdtb.lbc = lbc
     spdtb.hwidth = 1000.
     for night in nights:
-        targets = [o for o in os.listdir('%s/%s' % (path,night)) if
-            os.path.isdir('%s/%s/%s' % (path,night,o))]
+        targets = [o for o in _os.listdir('%s/%s' % (path,night)) if
+            _os.path.isdir('%s/%s/%s' % (path,night,o))]
         for target in targets:
             if target.find(star)>-1:
-                scal = glob.glob('%s/%s/%s/*.cal.fits' % (path,night,target))
+                scal = _glob('%s/%s/%s/*.cal.fits' % (path,night,target))
                 if len(scal) > 0:
                     for cal in scal:
                         spdtb.loadspec(cal)
                         spdtb.addspec()
-                        if np.isnan(spdtb.EW) == False:
+                        if _np.isnan(spdtb.EW) == False:
                             if plots:
                                 spdtb.plotspec()
-                            vels = (spdtb.wl-lbc)/lbc*phc.c.cgs*1e-5
-                            idx = np.where(np.abs(vels) <= hwidth)
+                            vels = (spdtb.wl-lbc)/lbc*_phc.c.cgs*1e-5
+                            idx = _np.where(_np.abs(vels) <= hwidth)
                             flux = linfit(vels[idx], spdtb.flux[idx])
                             vels = vels[idx]
                             leg = spdtb.MJD
                             ax.plot(vels, flux, label=leg, alpha=0.7, color=\
-                            phc.colors[np.mod(spdtb.count, len(phc.colors))])
+                            _phc.colors[_np.mod(spdtb.count, len(_phc.colors))])
                 else:   
                     print('# Data not reduced for %s at %s!' % (star,night))
     ax.set_xlim([-hwidth,hwidth])
     ax.set_ylim([-1,5])
     if showleg:
-        legend = plt.legend(loc=(0.75, .05), labelspacing=0.1)
-        plt.setp(legend.get_texts(),  fontsize='small')    
-    plt.savefig('{}/{}_at_{}.png'.format(outfold,star,lbc))
-    plt.close()
-    spdtb.savedata(datafile='{}/{}.txt'.format(outfold,star),\
-    metafile='{}/meta_{}.txt'.format(outfold,star))
+        legend = _plt.legend(loc=(0.75, .05), labelspacing=0.1)
+        _plt.setp(legend.get_texts(),  fontsize='small')    
+    _plt.savefig('{}/{}_at_{}.png'.format(_outfold,star,lbc))
+    _plt.close()
+    spdtb.savedata(datafile='{}/{}.txt'.format(_outfold,star),\
+    metafile='{}/meta_{}.txt'.format(_outfold,star))
     return
 
 def hydrogenlinewl(ni, nf):
@@ -401,25 +417,25 @@ def calcres_R(hwidth=1350, nbins=108):
     """
     (h)Width in km/s.
     *WARNING*: `width` in HDUST input is only half.
-    To HDUST effective R, multiple the input width by 2 here.
+    To HDUST effective R, multiple the input width by 2 he_re.
 
-    # R = lbd/Dlbd = phc.c/Dv = phc.c*nbins/width 
-    # nbins = R*width/phc.c
+    # R = lbd/Dlbd = _phc.c/Dv = _phc.c*nbins/width 
+    # nbins = R*width/_phc.c
     """
-    return round(phc.c.cgs*nbins/hwidth/1e5)
+    return round(_phc.c.cgs*nbins/hwidth/1e5)
 
 def calcres_nbins(R=12000, hwidth=1350):
     """
     (h)Width in km/s.
     *WARNING*: `width` in HDUST input is only half.
-    To HDUST effective R, multiple the input width by 2 here.
+    To HDUST effective R, multiple the input width by 2 he_re.
 
-    # R = lbd/Dlbd = phc.c/Dv = phc.c*nbins/width 
-    # nbins = R*width/phc.c
+    # R = lbd/Dlbd = _phc.c/Dv = _phc.c*nbins/width 
+    # nbins = R*width/_phc.c
     """
-    return round(R*hwidth*1e5/phc.c.cgs)
+    return round(R*hwidth*1e5/_phc.c.cgs)
 
-def lineProf(x, flx, lbc, flxerr=np.empty(0), hwidth=1000., ssize=0.05):
+def lineProf(x, flx, lbc, flxerr=_np.empty(0), hwidth=1000., ssize=0.05):
     '''
     lineProf() - retorna um array (flx) normalizado e um array x em VELOCIDADES.
     `lbc` deve fornecido em mesma unidade de x para conversão lambda -> vel.
@@ -431,12 +447,12 @@ def lineProf(x, flx, lbc, flxerr=np.empty(0), hwidth=1000., ssize=0.05):
     ssize = % do tamanho de y; numero de pontos usados nas extremidades
     para a media do contínuo. 'ssize' de .5 à 0 (exclusive).
     '''    
-    x = (x-lbc)/lbc*phc.c.cgs*1e-5 #km/s
-    idx = np.where(np.abs(x) <= hwidth)
+    x = (x-lbc)/lbc*_phc.c.cgs*1e-5 #km/s
+    idx = _np.where(_np.abs(x) <= hwidth)
     flux = linfit(x[idx], flx[idx], yerr=flxerr, ssize=ssize)
     return x[idx], flux
 
-def linfit(x, y, ssize=0.05, yerr=np.empty(0)):
+def linfit(x, y, ssize=0.05, yerr=_np.empty(0)):
     '''
     linfit() - retorna um array (y) normalizado, em posicoes de x
 
@@ -452,32 +468,32 @@ def linfit(x, y, ssize=0.05, yerr=np.empty(0)):
     ssize = int(ssize*len(y))
     if ssize == 0:
         ssize = 1
-    medx0, medx1 = np.average(x[:ssize]),np.average(x[-ssize:])
+    medx0, medx1 = _np.average(x[:ssize]),_np.average(x[-ssize:])
     if ssize > 20:
-        medy0, medy1 = np.median(y[:ssize]),np.median(y[-ssize:])
+        medy0, medy1 = _np.median(y[:ssize]),_np.median(y[-ssize:])
     else:
-        medy0, medy1 = np.average(y[:ssize]),np.average(y[-ssize:])
+        medy0, medy1 = _np.average(y[:ssize]),_np.average(y[-ssize:])
     new_y = medy0 + (medy1 - medy0) * (x - medx0) / (medx1 - medx0)
-    idx = np.where(new_y != 0)
+    idx = _np.where(new_y != 0)
     y[idx] = y[idx]/new_y[idx]
     if len(yerr) == 0.:
         return y
     else:
-        yerr = yerr/np.average(new_y)
+        yerr = yerr/_np.average(new_y)
         return y, yerr
 
 def EWcalc(vels, flux, vw=1000):
     """
-    Supoe que o fluxo jah estah normalizado, e vetores ordenados.
+    Supoe que o fluxo jah estah normalizado, e vetores ordenad_os.
 
     Devolve o valor EW, alem dos vetores cortados em vw.
     """
-    idx = np.where(np.abs(vels) <= vw)
+    idx = _np.where(_np.abs(vels) <= vw)
     outvels = vels[idx]
     normflux = flux[idx]
     ew = 0.
     if len(outvels) < 3:
-        #normflux = np.ones(len(outvels))
+        #normflux = _np.ones(len(outvels))
         return ew
     for i in range(len(outvels)-2):
         dl = outvels[i+1]-outvels[i]
@@ -486,17 +502,17 @@ def EWcalc(vels, flux, vw=1000):
 
 def ECcalc(vels, flux):
     """
-    Supoe que o fluxo jah estah normalizado, e vetores ordenados.
+    Supoe que o fluxo jah estah normalizado, e vetores ordenad_os.
 
     Calcula o topo da emissao da linha, e retorna em que velocidade ela
     ocorre.
     """
-    idx = np.where(np.max(flux) == flux)
+    idx = _np.where(_np.max(flux) == flux)
     return flux[idx], vels[idx]
 
 def VRcalc(vels, flux, vw=1000):
     """
-    Supoe que o fluxo jah estah normalizado, e vetores ordenados.
+    Supoe que o fluxo jah estah normalizado, e vetores ordenad_os.
 
     Calcula o ew para os dois lados (azul/vermelho) da linha, ajustando
     a velocidade de repouso. 
@@ -506,14 +522,14 @@ def VRcalc(vels, flux, vw=1000):
     vels += vc
     #corta em vw, e faz o teste de tamanho
     if vw > 0:
-        idx = np.where(np.abs(vels) <= vw)
+        idx = _np.where(_np.abs(vels) <= vw)
         outvels = vels[idx]
         normflux = flux[idx]
     if len(vels) < 3:
         ew0, ew1 = 0.
         return ew0, ew1, vc
     #
-    ivc = np.abs(outvels-0).argmin()
+    ivc = _np.abs(outvels-0).argmin()
     ew0 = 0.
     for i in range(0,ivc+1-2):
         dl = outvels[i+1]-outvels[i]
@@ -532,14 +548,14 @@ def PScalc(vels, flux, vc=0., ssize=.05):
     ssize = int(ssize*len(vels))
     if ssize == 0:
         ssize = 1
-    contmax = np.max(np.append(flux[:ssize],flux[-ssize:]))
-    fluxmax = np.max(flux)
+    contmax = _np.max(_np.append(flux[:ssize],flux[-ssize:]))
+    fluxmax = _np.max(flux)
     if fluxmax < 1.01*contmax:
         return 0, 0
     vels += vc
-    ivc = np.abs(vels-0).argmin()
-    i0 = np.abs(flux[:ivc]-np.max(flux[:ivc])).argmin()
-    i1 = np.abs(flux[ivc+1:]-np.max(flux[ivc+1:])).argmin()+ivc+1
+    ivc = _np.abs(vels-0).argmin()
+    i0 = _np.abs(flux[:ivc]-_np.max(flux[:ivc])).argmin()
+    i1 = _np.abs(flux[ivc+1:]-_np.max(flux[ivc+1:])).argmin()+ivc+1
     return vels[i0], vels[i1]
 
 def DCcalc(vels, flux, vmax=None, vc=0., ssize=0.05):
@@ -548,20 +564,20 @@ def DCcalc(vels, flux, vmax=None, vc=0., ssize=0.05):
     
     """
     vels += vc
-    ivc = np.abs(vels-0).argmin()
+    ivc = _np.abs(vels-0).argmin()
     #check if there is a peak
     ssize = int(ssize*len(vels))
     if ssize == 0:
         ssize = 1
-    contmax = np.max(np.append(flux[:ssize],flux[-ssize:]))
-    fluxmax = np.max(flux)
+    contmax = _np.max(_np.append(flux[:ssize],flux[-ssize:]))
+    fluxmax = _np.max(flux)
     if fluxmax < 1.01*contmax:
         return flux[ivc], flux[ivc]
     #if a vmax is not given...
     if isinstance(vmax, (int, long, float)) == False:
-        vmax = np.abs(flux-np.max(flux)).argmin()
+        vmax = _np.abs(flux-_np.max(flux)).argmin()
         vmax = vels[vmax]
-    ivmax = np.abs(vels-vmax).argmin()
+    ivmax = _np.abs(vels-vmax).argmin()
     return flux[ivmax], flux[ivc]
 
 def analline(lbd, flux, lbdc, hwidth=1000, verb=True):
@@ -580,16 +596,16 @@ def analline(lbd, flux, lbdc, hwidth=1000, verb=True):
         analline(lbd=sed2data[obs,:,2], flux=sed2data[obs,:,3], lbc=lbc)
     """
     if lbdc > 0:
-        vels = (lbd-lbdc)/lbdc*phc.c.cgs*1e-5
+        vels = (lbd-lbdc)/lbdc*_phc.c.cgs*1e-5
     else:
         vels = lbd
     #check if the file have the desired info.
     if vels[0] > -hwidth or vels[-1] < hwidth:
         if verb:
             print('# ERROR: spec out of range (wavelength)!')
-        return np.NaN, np.NaN, np.NaN, np.NaN, np.NaN, np.NaN
+        return _np.NaN, _np.NaN, _np.NaN, _np.NaN, _np.NaN, _np.NaN
 
-    idx = np.where(np.abs(vels) <= hwidth)
+    idx = _np.where(_np.abs(vels) <= hwidth)
     vels = vels[idx]
     flux = flux[idx]
     #Normalization:
@@ -625,45 +641,45 @@ def overplotsubdirs(path, star, limits=(6540,6600), showleg=True):
 
     Gera os arquivos `path/star/star.log` e `path/star/star_specs.png`.
     """
-    #path = os.getcwd()
+    #path = _os.getcwd()
     #star = raw_input('Type the star name: ')
     #ref0 = 6540
     #ref1 = 6600
 
     ref0,ref1 = limits
     
-    if os.path.exists('{}/{}'.format(path,star)) == False:
-        os.system('mkdir {}/{}'.format(path,star))
+    if _os.path.exists('{}/{}'.format(path,star)) == False:
+        _os.system('mkdir {}/{}'.format(path,star))
     f0 = open('{0}/{1}/{1}.log'.format(path,star), 'w')
     
-    nights = [o for o in os.listdir(path) if os.path.isdir('{}/{}'.format(path,\
+    nights = [o for o in _os.listdir(path) if _os.path.isdir('{}/{}'.format(path,\
         o))]
     
     legendl = ()
     i = 0
     for night in nights:
-        targets = [o for o in os.listdir('%s/%s' % (path,night)) if
-            os.path.isdir('%s/%s/%s' % (path,night,o))]
+        targets = [o for o in _os.listdir('%s/%s' % (path,night)) if
+            _os.path.isdir('%s/%s/%s' % (path,night,o))]
         for target in targets:
             if target.find(star)>-1:
-                scal = glob.glob('%s/%s/%s/*.cal.fits' % (path,night,target))
+                scal = _glob('%s/%s/%s/*.cal.fits' % (path,night,target))
                 if len(scal) > 0:            
-                    srv  = glob.glob('%s/%s/%s/*.rv.fits'  % (path,night,target))
+                    srv  = _glob('%s/%s/%s/*.rv.fits'  % (path,night,target))
                     if len(srv) != len(scal):
                         print('# Specs without dopcor at %s!' % night)
                         srv = scal
                     #legendl += (night,)
                     for cal in scal:              
-                        imfits = pyfits.open(cal)
+                        imfits = _pyfits.open(cal)
                         spec = imfits[0].data
-                        lbda = np.arange(len(spec))*imfits[0].header['CDELT1']+\
+                        lbda = _np.arange(len(spec))*imfits[0].header['CDELT1']+\
                             imfits[0].header['CRVAL1']
                         #a = raw_input('type to continue: ')
                         if lbda[-1] > 6560: #and flag == '1':
                             min_dif = min(abs(lbda-ref0))
-                            a0 = np.where(abs(lbda-ref0) == min_dif)[0][0]
+                            a0 = _np.where(abs(lbda-ref0) == min_dif)[0][0]
                             min_dif = min(abs(lbda-ref1))
-                            a1 = np.where(abs(lbda-ref1) == min_dif)[0][0]
+                            a1 = _np.where(abs(lbda-ref1) == min_dif)[0][0]
                             spec = normalize_range(lbda,spec,a0,a1)
                             msg = '{}, {}, {}'.format((0.1*i), night, cal)
                             print(msg)
@@ -672,8 +688,8 @@ def overplotsubdirs(path, star, limits=(6540,6600), showleg=True):
                                 leg = imfits[0].header['DATE-OBS']
                             except:
                                 leg = imfits[0].header['FRAME']
-                            plt.plot(lbda, spec, label=leg, alpha=0.7,
-                                color=phc.colors[np.mod(i, len(phc.colors))])
+                            _plt.plot(lbda, spec, label=leg, alpha=0.7,
+                                color=_phc.colors[_np.mod(i, len(_phc.colors))])
                             i+=1
                 else:
                     print('# Data not reduced for %s at %s!' % (star,night))
@@ -681,22 +697,22 @@ def overplotsubdirs(path, star, limits=(6540,6600), showleg=True):
                     f0.writelines(msg+'\n')
 
     if showleg:
-        legend = plt.legend(loc=(0.75, .05), labelspacing=0.1)
-        plt.setp(legend.get_texts(),  fontsize='small')
-    plt.xlim([ref0,ref1])
-    plt.ylim([-1, 5])
-    #plt.xlabel('vel. (km/s)')
-    plt.savefig('{0}/{1}/{1}_specs.png'.format(path,star))
-    plt.close()
+        legend = _plt.legend(loc=(0.75, .05), labelspacing=0.1)
+        _plt.setp(legend.get_texts(),  fontsize='small')
+    _plt.xlim([ref0,ref1])
+    _plt.ylim([-1, 5])
+    #_plt.xlabel('vel. (km/s)')
+    _plt.savefig('{0}/{1}/{1}_specs.png'.format(path,star))
+    _plt.close()
     f0.close()
     # 
     # Ha = False # False do HeI 6678
     # 
     # for i in range(len(ifits)):
-    #     imfits = pyfits.open(ifits[i])
+    #     imfits = _pyfits.open(ifits[i])
     #     print imfits[0].header[3]
     #     specs[i][:len(imfits[0].data)] = imfits[0].data
-    #     lbds[i] = np.arange(len(specs[i]))*imfits[0].header['CDELT1']+imfits[0].header['CRVAL1']
+    #     lbds[i] = _np.arange(len(specs[i]))*imfits[0].header['CDELT1']+imfits[0].header['CRVAL1']
     #     if Ha:
     #         if i == 0:
     #             lbds[i] = (lbds[i]-6561.5)/6561.5*3e5
@@ -708,8 +724,8 @@ def overplotsubdirs(path, star, limits=(6540,6600), showleg=True):
     #         else:        
     #             lbds[i] = (lbds[i]-6678.)/6678.*3e5
     #     
-    #     a = np.where( abs(lbds[i]+1000) ==  min(abs(lbds[i]+1000)) )
-    #     b = np.where( abs(lbds[i]-1000) ==  min(abs(lbds[i]-1000)) )
+    #     a = _np.where( abs(lbds[i]+1000) ==  min(abs(lbds[i]+1000)) )
+    #     b = _np.where( abs(lbds[i]-1000) ==  min(abs(lbds[i]-1000)) )
     #     
     #     specs[i] = normalize_range(lbds[i],specs[i],a,b)
     #     
@@ -729,8 +745,8 @@ def overplotsubdirs(path, star, limits=(6540,6600), showleg=True):
     #     title('HeI 6678 profile from LNA-Janot for Achernar')
     #     ylim([.9,1.05])
     # 
-    # legend = plt.legend(legendl, loc=(0.75, .05), labelspacing=0.1)
-    # plt.setp(legend.get_texts(),  fontsize='small')
+    # legend = _plt.legend(legendl, loc=(0.75, .05), labelspacing=0.1)
+    # _plt.setp(legend.get_texts(),  fontsize='small')
     # 
     # xlabel('vel. (km/s)')
 
@@ -746,62 +762,62 @@ def diffplotsubdirs(path, star, limits=(6540,6600)):
     """
     ref0,ref1 = limits
     
-    if os.path.exists('{}/{}'.format(path,star)) == False:
-        os.system('mkdir {}/{}'.format(path,star))
+    if _os.path.exists('{}/{}'.format(path,star)) == False:
+        _os.system('mkdir {}/{}'.format(path,star))
     f0 = open('{0}/{1}/{1}.log'.format(path,star), 'w')
     
-    nights = [o for o in os.listdir(path) if os.path.isdir('{}/{}'.format(path,\
+    nights = [o for o in _os.listdir(path) if _os.path.isdir('{}/{}'.format(path,\
         o))]    
 
     legendl = ()
     i = 0
     for night in nights:
-        targets = [o for o in os.listdir('%s/%s' % (path,night)) if os.path.isdir('%s/%s/%s' % (path,night,o))]
+        targets = [o for o in _os.listdir('%s/%s' % (path,night)) if _os.path.isdir('%s/%s/%s' % (path,night,o))]
         for target in targets:
             if target.find(star)>-1:
-                scal = glob.glob('%s/%s/%s/*.cal.fits' % (path,night,target))
+                scal = _glob('%s/%s/%s/*.cal.fits' % (path,night,target))
                 if len(scal) > 0:            
-                    srv  = glob.glob('%s/%s/%s/*.rv.fits'  % (path,night,target))
+                    srv  = _glob('%s/%s/%s/*.rv.fits'  % (path,night,target))
                     if len(srv) != len(scal):
                         print('# Specs with dopcor at %s!' % night)
                         srv = scal
                     #legendl += (night,)
                     for cal in scal:              
-                        imfits = pyfits.open(cal)
+                        imfits = _pyfits.open(cal)
                         spec = imfits[0].data
-                        lbda = np.arange(len(spec))*imfits[0].header['CDELT1']+imfits[0].header['CRVAL1']
+                        lbda = _np.arange(len(spec))*imfits[0].header['CDELT1']+imfits[0].header['CRVAL1']
                         #a = raw_input('type to continue: ')
                         if lbda[0] > 5500: #and flag == '1':
                             min_dif = min(abs(lbda-ref0))
-                            a0 = np.where(abs(lbda-ref0) == min_dif)[0][0]
+                            a0 = _np.where(abs(lbda-ref0) == min_dif)[0][0]
                             min_dif = min(abs(lbda-ref1))
-                            a1 = np.where(abs(lbda-ref1) == min_dif)[0][0]
+                            a1 = _np.where(abs(lbda-ref1) == min_dif)[0][0]
                             spec = normalize_range(lbda,spec,a0,a1)+(0.1*i)
                             print (0.1*i)
                             try:
                                 leg = imfits[0].header['DATE-OBS']
                             except:
                                 leg = imfits[0].header['FRAME']
-                            plt.plot([ref0,ref1], [1+0.1*i,1+0.1*i], 'k--', alpha=0.5)
-                            plt.plot(lbda, spec, label=leg, color=phc.colors[i])
+                            _plt.plot([ref0,ref1], [1+0.1*i,1+0.1*i], 'k--', alpha=0.5)
+                            _plt.plot(lbda, spec, label=leg, color=_phc.colors[i])
                             i+=1
                 else:
                     print('# Data not reduced for %s at %s!' % (star,night))
     
-    legend = plt.legend(loc=(0.75, .05), labelspacing=0.1)
-    plt.setp(legend.get_texts(),  fontsize='small')
-    plt.xlim([ref0,ref1])
-    #plt.xlabel('vel. (km/s)')
-    plt.savefig('{0}/{1}/{1}_specs_dif.png'.format(path,star))
+    legend = _plt.legend(loc=(0.75, .05), labelspacing=0.1)
+    _plt.setp(legend.get_texts(),  fontsize='small')
+    _plt.xlim([ref0,ref1])
+    #_plt.xlabel('vel. (km/s)')
+    _plt.savefig('{0}/{1}/{1}_specs_dif.png'.format(path,star))
     
     # 
     # Ha = False # False do HeI 6678
     # 
     # for i in range(len(ifits)):
-    #     imfits = pyfits.open(ifits[i])
+    #     imfits = _pyfits.open(ifits[i])
     #     print imfits[0].header[3]
     #     specs[i][:len(imfits[0].data)] = imfits[0].data
-    #     lbds[i] = np.arange(len(specs[i]))*imfits[0].header['CDELT1']+imfits[0].header['CRVAL1']
+    #     lbds[i] = _np.arange(len(specs[i]))*imfits[0].header['CDELT1']+imfits[0].header['CRVAL1']
     #     if Ha:
     #         if i == 0:
     #             lbds[i] = (lbds[i]-6561.5)/6561.5*3e5
@@ -813,8 +829,8 @@ def diffplotsubdirs(path, star, limits=(6540,6600)):
     #         else:        
     #             lbds[i] = (lbds[i]-6678.)/6678.*3e5
     #     
-    #     a = np.where( abs(lbds[i]+1000) ==  min(abs(lbds[i]+1000)) )
-    #     b = np.where( abs(lbds[i]-1000) ==  min(abs(lbds[i]-1000)) )
+    #     a = _np.where( abs(lbds[i]+1000) ==  min(abs(lbds[i]+1000)) )
+    #     b = _np.where( abs(lbds[i]-1000) ==  min(abs(lbds[i]-1000)) )
     #     
     #     specs[i] = normalize_range(lbds[i],specs[i],a,b)
     #     
@@ -834,8 +850,8 @@ def diffplotsubdirs(path, star, limits=(6540,6600)):
     #     title('HeI 6678 profile from LNA-Janot for Achernar')
     #     ylim([.9,1.05])
     # 
-    # legend = plt.legend(legendl, loc=(0.75, .05), labelspacing=0.1)
-    # plt.setp(legend.get_texts(),  fontsize='small')
+    # legend = _plt.legend(legendl, loc=(0.75, .05), labelspacing=0.1)
+    # _plt.setp(legend.get_texts(),  fontsize='small')
     # 
     # xlabel('vel. (km/s)')
     print('# Plot done!')
@@ -850,35 +866,35 @@ def refplotsubdirs(path, star, limits=(6540,6600)):
     """
     ref0,ref1 = limits
     
-    if os.path.exists('{}/{}'.format(path,star)) == False:
-        os.system('mkdir {}/{}'.format(path,star))
+    if _os.path.exists('{}/{}'.format(path,star)) == False:
+        _os.system('mkdir {}/{}'.format(path,star))
     f0 = open('{0}/{1}/{1}.log'.format(path,star), 'w')
     
-    nights = [o for o in os.listdir(path) if os.path.isdir('{}/{}'.format(path,\
+    nights = [o for o in _os.listdir(path) if _os.path.isdir('{}/{}'.format(path,\
         o))]
 
     legendl = ()
     i = 0
     
     for night in nights:
-        targets = [o for o in os.listdir('%s/%s' % (path,night)) if os.path.isdir('%s/%s/%s' % (path,night,o))]
+        targets = [o for o in _os.listdir('%s/%s' % (path,night)) if _os.path.isdir('%s/%s/%s' % (path,night,o))]
         for target in targets:
             if target.find(star)>-1:
-                scal = glob.glob('%s/%s/%s/*.cal.fits' % (path,night,target))
+                scal = _glob('%s/%s/%s/*.cal.fits' % (path,night,target))
                 if len(scal) > 0:            
-                    srv  = glob.glob('%s/%s/%s/*.rv.fits'  % (path,night,target))
+                    srv  = _glob('%s/%s/%s/*.rv.fits'  % (path,night,target))
                     if len(srv) != len(scal):
                         srv = scal
                     for cal in scal:              
-                        imfits = pyfits.open(cal)
+                        imfits = _pyfits.open(cal)
                         spec = imfits[0].data
-                        lbda = np.arange(len(spec))*imfits[0].header['CDELT1']+imfits[0].header['CRVAL1']
+                        lbda = _np.arange(len(spec))*imfits[0].header['CDELT1']+imfits[0].header['CRVAL1']
                         #a = raw_input('type to continue: ')
                         if lbda[0] > 5500: #and flag == '1':
                             min_dif = min(abs(lbda-ref0))
-                            a0 = np.where(abs(lbda-ref0) == min_dif)[0][0]
+                            a0 = _np.where(abs(lbda-ref0) == min_dif)[0][0]
                             min_dif = min(abs(lbda-ref1))
-                            a1 = np.where(abs(lbda-ref1) == min_dif)[0][0]
+                            a1 = _np.where(abs(lbda-ref1) == min_dif)[0][0]
                             spec = normalize_range(lbda,spec,a0,a1)
                             print (0.1*i)
                             leg = imfits[0].header['DATE-OBS']
@@ -899,34 +915,34 @@ def refplotsubdirs(path, star, limits=(6540,6600)):
     f0=open('{0}/{1}/ref.txt'.format(path,star))
     lines = f0.readlines()
     f0.close()
-    specref = np.array(lines[1].split(), dtype=float)
-    lbdaref = np.array(lines[0].split(), dtype=float)
+    specref = _np.array(lines[1].split(), dtype=float)
+    lbdaref = _np.array(lines[0].split(), dtype=float)
     func = interp1d(lbdaref, specref)#, kind='cubic')
-    lbdaref = np.linspace(ref0,ref1,5000)
+    lbdaref = _np.linspace(ref0,ref1,5000)
     specref = func(lbdaref)
     
     i = 0
     for night in nights:
-        targets = [o for o in os.listdir('%s/%s' % (path,night)) if os.path.isdir('%s/%s/%s' % (path,night,o))]
+        targets = [o for o in _os.listdir('%s/%s' % (path,night)) if _os.path.isdir('%s/%s/%s' % (path,night,o))]
         for target in targets:
             if target.find(star)>-1:
-                scal = glob.glob('%s/%s/%s/*.cal.fits' % (path,night,target))
+                scal = _glob('%s/%s/%s/*.cal.fits' % (path,night,target))
                 if len(scal) > 0:            
-                    srv  = glob.glob('%s/%s/%s/*.rv.fits'  % (path,night,target))
+                    srv  = _glob('%s/%s/%s/*.rv.fits'  % (path,night,target))
                     if len(srv) != len(scal):
                         print('# Specs without dopcor at %s!' % night)
                         srv = scal
                     #legendl += (night,)
                     for cal in scal:              
-                        imfits = pyfits.open(cal)
+                        imfits = _pyfits.open(cal)
                         spec = imfits[0].data
-                        lbda = np.arange(len(spec))*imfits[0].header['CDELT1']+imfits[0].header['CRVAL1']
+                        lbda = _np.arange(len(spec))*imfits[0].header['CDELT1']+imfits[0].header['CRVAL1']
                         #a = raw_input('type to continue: ')
                         if lbda[0] > 5500: #and flag == '1':
                             min_dif = min(abs(lbda-ref0))
-                            a0 = np.where(abs(lbda-ref0) == min_dif)[0][0]
+                            a0 = _np.where(abs(lbda-ref0) == min_dif)[0][0]
                             min_dif = min(abs(lbda-ref1))
-                            a1 = np.where(abs(lbda-ref1) == min_dif)[0][0]
+                            a1 = _np.where(abs(lbda-ref1) == min_dif)[0][0]
                             spec = normalize_range(lbda,spec,a0,a1)
                             func = interp1d(lbda, spec)#, kind='cubic')
                             #Tive problemas de 'out-of-bounds'... um espectro estava desordenado:
@@ -938,26 +954,26 @@ def refplotsubdirs(path, star, limits=(6540,6600)):
                             except:
                                 leg = imfits[0].header['FRAME']
                             if i <130:
-                                plt.plot(lbdaref, spec-specref, label=leg, alpha=0.8, color=phc.colors[i])
+                                _plt.plot(lbdaref, spec-specref, label=leg, alpha=0.8, color=_phc.colors[i])
                             i+=1
                 else:
                     print('# Data not reduced for %s at %s!' % (star,night))
     
-    legend = plt.legend(loc=(0.75, .05), labelspacing=0.1)
-    plt.setp(legend.get_texts(),  fontsize='small')
-    plt.xlim([ref0,ref1])
-    plt.title('Ref.= %s' % refleg)
-    #plt.xlabel('vel. (km/s)')
-    plt.savefig('{0}/{1}/{1}_specs_{2}.png'.format(path,star,refleg[:10]))
+    legend = _plt.legend(loc=(0.75, .05), labelspacing=0.1)
+    _plt.setp(legend.get_texts(),  fontsize='small')
+    _plt.xlim([ref0,ref1])
+    _plt.title('Ref.= %s' % refleg)
+    #_plt.xlabel('vel. (km/s)')
+    _plt.savefig('{0}/{1}/{1}_specs_{2}.png'.format(path,star,refleg[:10]))
     
     # 
     # Ha = False # False do HeI 6678
     # 
     # for i in range(len(ifits)):
-    #     imfits = pyfits.open(ifits[i])
+    #     imfits = _pyfits.open(ifits[i])
     #     print imfits[0].header[3]
     #     specs[i][:len(imfits[0].data)] = imfits[0].data
-    #     lbds[i] = np.arange(len(specs[i]))*imfits[0].header['CDELT1']+imfits[0].header['CRVAL1']
+    #     lbds[i] = _np.arange(len(specs[i]))*imfits[0].header['CDELT1']+imfits[0].header['CRVAL1']
     #     if Ha:
     #         if i == 0:
     #             lbds[i] = (lbds[i]-6561.5)/6561.5*3e5
@@ -969,8 +985,8 @@ def refplotsubdirs(path, star, limits=(6540,6600)):
     #         else:        
     #             lbds[i] = (lbds[i]-6678.)/6678.*3e5
     #     
-    #     a = np.where( abs(lbds[i]+1000) ==  min(abs(lbds[i]+1000)) )
-    #     b = np.where( abs(lbds[i]-1000) ==  min(abs(lbds[i]-1000)) )
+    #     a = _np.where( abs(lbds[i]+1000) ==  min(abs(lbds[i]+1000)) )
+    #     b = _np.where( abs(lbds[i]-1000) ==  min(abs(lbds[i]-1000)) )
     #     
     #     specs[i] = normalize_range(lbds[i],specs[i],a,b)
     #     
@@ -990,8 +1006,8 @@ def refplotsubdirs(path, star, limits=(6540,6600)):
     #     title('HeI 6678 profile from LNA-Janot for Achernar')
     #     ylim([.9,1.05])
     # 
-    # legend = plt.legend(legendl, loc=(0.75, .05), labelspacing=0.1)
-    # plt.setp(legend.get_texts(),  fontsize='small')
+    # legend = _plt.legend(legendl, loc=(0.75, .05), labelspacing=0.1)
+    # _plt.setp(legend.get_texts(),  fontsize='small')
     # 
     # xlabel('vel. (km/s)')
     print('# Plot done!')
@@ -1010,40 +1026,40 @@ def overplotsubdirs2(path, star, limits=(6540,6600)):
     """
     ref0,ref1 = limits
     
-    if os.path.exists('{}/{}'.format(path,star)) == False:
-        os.system('mkdir {}/{}'.format(path,star))
+    if _os.path.exists('{}/{}'.format(path,star)) == False:
+        _os.system('mkdir {}/{}'.format(path,star))
     f0 = open('{0}/{1}/{1}.log'.format(path,star), 'w')
     
-    nights = [o for o in os.listdir(path) if os.path.isdir('{}/{}'.format(path,\
+    nights = [o for o in _os.listdir(path) if _os.path.isdir('{}/{}'.format(path,\
         o))]
 
     legendl = ()
-    ax = plt.figure()
+    ax = _plt.figure()
     i = 0
     for night in nights:
-        targets = [o for o in os.listdir('%s/%s' % (path,night)) if os.path.isdir('%s/%s/%s' % (path,night,o))]
+        targets = [o for o in _os.listdir('%s/%s' % (path,night)) if _os.path.isdir('%s/%s/%s' % (path,night,o))]
         for target in targets:
             if target.find(star)>-1:
-                scal = glob.glob('%s/%s/%s/*.cal.fits' % (path,night,target))
+                scal = _glob('%s/%s/%s/*.cal.fits' % (path,night,target))
                 if len(scal) > 0:            
-                    srv  = glob.glob('%s/%s/%s/*.rv.fits'  % (path,night,target))
+                    srv  = _glob('%s/%s/%s/*.rv.fits'  % (path,night,target))
                     if len(srv) != len(scal):
                         print('# Specs without dopcor at %s!' % night)
                         srv = scal
                     #legendl += (night,)
                     for cal in scal:              
-                        imfits = pyfits.open(cal)
+                        imfits = _pyfits.open(cal)
                         spec = imfits[0].data
-                        lbda = np.arange(len(spec))*imfits[0].header['CDELT1']+imfits[0].header['CRVAL1']
+                        lbda = _np.arange(len(spec))*imfits[0].header['CDELT1']+imfits[0].header['CRVAL1']
                         #a = raw_input('type to continue: ')
                         if lbda[0] > 5500: #and flag == '1':
                             min_dif = min(abs(lbda-ref0))
-                            a0 = np.where(abs(lbda-ref0) == min_dif)[0][0]
+                            a0 = _np.where(abs(lbda-ref0) == min_dif)[0][0]
                             min_dif = min(abs(lbda-ref1))
-                            a1 = np.where(abs(lbda-ref1) == min_dif)[0][0]
+                            a1 = _np.where(abs(lbda-ref1) == min_dif)[0][0]
                             spec = normalize_range(lbda,spec,a0,a1)
                             print (0.1*i), night
-                            prtcolor = phc.colors[i]
+                            prtcolor = _phc.colors[i]
                             try:
                                 leg = imfits[0].header['DATE-OBS']
                             except:
@@ -1051,7 +1067,7 @@ def overplotsubdirs2(path, star, limits=(6540,6600)):
                             check = False
                             if leg.find('2012-11-20T23:51:37.392') != -1:
                                 leg = '2012-11-20'
-                                prtcolor = phc.colors[0]
+                                prtcolor = _phc.colors[0]
                                 check = True
                             elif leg.find('22/01/2013') != -1:
                                 leg = '2013-01-22'
@@ -1069,7 +1085,7 @@ def overplotsubdirs2(path, star, limits=(6540,6600)):
                                 print leg       
                             if check:
                                 print cal
-                                plt.plot(lbda, spec, label=leg, alpha=0.7, color=prtcolor)
+                                _plt.plot(lbda, spec, label=leg, alpha=0.7, color=prtcolor)
                             i+=1
                 else:
                     msg = '# Data not reduced for %s at %s!' % (star,night)
@@ -1079,24 +1095,24 @@ def overplotsubdirs2(path, star, limits=(6540,6600)):
     
     font = { 'size' : 16, }
     
-    legend = plt.legend(loc=(0.75, .05), labelspacing=0.1)
-    #plt.setp(legend.get_texts(),  fontsize='small')
-    plt.xlim([ref0,ref1])
-    plt.ylim([.58,1.2])
-    plt.xlabel(r'wavelength ($\AA$)', fontdict=font)
-    plt.ylabel('Normalized flux', fontdict=font)
-    #plt.xlabel('vel. (km/s)')
-    plt.savefig('{0}/{1}/{1}_specs2.png'.format(path,star))
-    plt.close()
+    legend = _plt.legend(loc=(0.75, .05), labelspacing=0.1)
+    #_plt.setp(legend.get_texts(),  fontsize='small')
+    _plt.xlim([ref0,ref1])
+    _plt.ylim([.58,1.2])
+    _plt.xlabel(r'wavelength ($\AA$)', fontdict=font)
+    _plt.ylabel('Normalized flux', fontdict=font)
+    #_plt.xlabel('vel. (km/s)')
+    _plt.savefig('{0}/{1}/{1}_specs2.png'.format(path,star))
+    _plt.close()
     f0.close()
     # 
     # Ha = False # False do HeI 6678
     # 
     # for i in range(len(ifits)):
-    #     imfits = pyfits.open(ifits[i])
+    #     imfits = _pyfits.open(ifits[i])
     #     print imfits[0].header[3]
     #     specs[i][:len(imfits[0].data)] = imfits[0].data
-    #     lbds[i] = np.arange(len(specs[i]))*imfits[0].header['CDELT1']+imfits[0].header['CRVAL1']
+    #     lbds[i] = _np.arange(len(specs[i]))*imfits[0].header['CDELT1']+imfits[0].header['CRVAL1']
     #     if Ha:
     #         if i == 0:
     #             lbds[i] = (lbds[i]-6561.5)/6561.5*3e5
@@ -1108,8 +1124,8 @@ def overplotsubdirs2(path, star, limits=(6540,6600)):
     #         else:        
     #             lbds[i] = (lbds[i]-6678.)/6678.*3e5
     #     
-    #     a = np.where( abs(lbds[i]+1000) ==  min(abs(lbds[i]+1000)) )
-    #     b = np.where( abs(lbds[i]-1000) ==  min(abs(lbds[i]-1000)) )
+    #     a = _np.where( abs(lbds[i]+1000) ==  min(abs(lbds[i]+1000)) )
+    #     b = _np.where( abs(lbds[i]-1000) ==  min(abs(lbds[i]-1000)) )
     #     
     #     specs[i] = normalize_range(lbds[i],specs[i],a,b)
     #     
@@ -1129,8 +1145,8 @@ def overplotsubdirs2(path, star, limits=(6540,6600)):
     #     title('HeI 6678 profile from LNA-Janot for Achernar')
     #     ylim([.9,1.05])
     # 
-    # legend = plt.legend(legendl, loc=(0.75, .05), labelspacing=0.1)
-    # plt.setp(legend.get_texts(),  fontsize='small')
+    # legend = _plt.legend(legendl, loc=(0.75, .05), labelspacing=0.1)
+    # _plt.setp(legend.get_texts(),  fontsize='small')
     # 
     # xlabel('vel. (km/s)')
     print('# Plot done!')
@@ -1143,35 +1159,35 @@ def overPlotLineSeries(fullseds, obsers=[0], lbc=.6564606, formats=['png']):
     Observers config. must be the same between models in `fullseds` list.
     """
     for obs in obsers:
-        fig, ax = plt.subplots()
+        fig, ax = _plt.subplots()
         k = obsers.index(obs)
         for file in fullseds:
             i = fullseds.index(file)
             sed2data = hdt.readfullsed2(file)
-            obsdegs = (np.arccos(sed2data[:,0,0])*180/np.pi)[obsers]
+            obsdegs = (_np.arccos(sed2data[:,0,0])*180/_np.pi)[obsers]
             obsdegs = list(obsdegs)
             (x,y) = lineProf(sed2data[obs,:,2], sed2data[obs,:,3], lbc=lbc)
             if file == fullseds[0]:
                 ax.plot(x, y, label='{0:02.1f} deg.'.format(obsdegs[k]), \
-                color=phc.colors[np.mod(i, len(phc.colors))])
+                color=_phc.colors[_np.mod(i, len(_phc.colors))])
             else:
-                ax.plot(x, y, color=phc.colors[np.mod(i, len(phc.colors))])
+                ax.plot(x, y, color=_phc.colors[_np.mod(i, len(_phc.colors))])
         ax.set_title(u'lbc = {0:.5f} $\mu$m'.format(lbc))
         ax.legend()
         for fmt in formats:
             fig.savefig('modsover_lbc{2:.4f}_obs{0:02.1f}.{1}'.format(obsdegs[k], fmt,\
             lbc), transparent=True)
-        plt.close()
+        _plt.close()
     return
 
 def overPlotLineFits(specs, lbc=.6564606, formats=['png'], hwidth=1500., \
     ylim=None, yzero=False, addsuf=''):
     """Generate overplot spec. line from a FITS file list.
     """
-    fig, ax = plt.subplots()
+    fig, ax = _plt.subplots()
     for spec in specs:
         i = specs.index(spec)
-        print("# Reading {0}...".format(phc.trimpathname(spec)[1]))
+        print("# Reading {0}...".format(_phc.trimpathname(spec)[1]))
         wl, flux, MJD, dateobs, datereduc, fitsfile = loadfits(spec)
         (x,y) = lineProf(wl, flux, lbc=lbc, hwidth=hwidth)
         if dateobs.find('-') > 0:
@@ -1180,7 +1196,7 @@ def overPlotLineFits(specs, lbc=.6564606, formats=['png'], hwidth=1500., \
             dtobs = dateobs.split('/')[::-1]
             dateobs = "-".join(dtobs)
         ax.plot(x, y, label='{0}'.format(dateobs), \
-        color=phc.colors[np.mod(i, len(phc.colors))])
+        color=_phc.colors[_np.mod(i, len(_phc.colors))])
     if ylim != None:
         ax.set_ylim(ylim)
     if yzero:
@@ -1189,12 +1205,12 @@ def overPlotLineFits(specs, lbc=.6564606, formats=['png'], hwidth=1500., \
     ax.set_title(u'lbc = {0:.5f} $\mu$m'.format(lbc))
     ax.set_ylabel('Spec - Ref.')
     legend = ax.legend(loc=(1.05, .01), labelspacing=0.1)
-    plt.setp(legend.get_texts(),  fontsize='small')
-    plt.subplots_adjust(left=0.1, right=0.78, top=0.9, bottom=0.1)#, hspace=0.3, wspace=.3)   
+    _plt.setp(legend.get_texts(),  fontsize='small')
+    _plt.subplots_adjust(left=0.1, right=0.78, top=0.9, bottom=0.1)#, hspace=0.3, wspace=.3)   
     for fmt in formats:
         fig.savefig('fitsover_lbc{1:.4f}{2}.{0}'.format(\
         fmt, lbc, addsuf), transparent=True)
-    plt.close()
+    _plt.close()
     return
 
 def incrPlotLineSeries(fullseds, obsers=[0], lbc=.6564606, formats=['png']):
@@ -1204,25 +1220,25 @@ def incrPlotLineSeries(fullseds, obsers=[0], lbc=.6564606, formats=['png']):
     Observers config. must be the same between models in `fullseds` list.
     """
     for obs in obsers:
-        fig, ax = plt.subplots()
+        fig, ax = _plt.subplots()
         k = obsers.index(obs)
         for file in fullseds:
             i = fullseds.index(file)
             sed2data = hdt.readfullsed2(file)
-            obsdegs = (np.arccos(sed2data[:,0,0])*180/np.pi)[obsers]
+            obsdegs = (_np.arccos(sed2data[:,0,0])*180/_np.pi)[obsers]
             obsdegs = list(obsdegs)
             (x,y) = lineProf(sed2data[obs,:,2], sed2data[obs,:,3], lbc=lbc)
             if file == fullseds[0]:
                 ax.plot(x, y+0.1*i, label='{0:02.1f} deg.'.format(obsdegs[k]), \
-                color=phc.colors[np.mod(i, len(phc.colors))])
+                color=_phc.colors[_np.mod(i, len(_phc.colors))])
             else:
-                ax.plot(x, y+0.1*i, color=phc.colors[np.mod(i, len(phc.colors))])
+                ax.plot(x, y+0.1*i, color=_phc.colors[_np.mod(i, len(_phc.colors))])
         ax.set_title(u'lbc = {0:.5f} $\mu$m'.format(lbc))
         ax.legend()
         for fmt in formats:
             fig.savefig('modsincr_lbc{2:.4f}_obs{0:02.1f}.{1}'.format(obsdegs[k], fmt,\
             lbc), transparent=True)
-        plt.close()
+        _plt.close()
     return
 
 def incrPlotLineFits(specs, lbc=.6564606, formats=['png'], hwidth=1500., \
@@ -1230,10 +1246,10 @@ def incrPlotLineFits(specs, lbc=.6564606, formats=['png'], hwidth=1500., \
     """Generate incremented spec. line from FITS files list.
     The increment is 0.1 for each file in sequence.
     """
-    fig, ax = plt.subplots()
+    fig, ax = _plt.subplots()
     for spec in specs:
         i = specs.index(spec)
-        print("# Reading {0}...".format(phc.trimpathname(spec)[1]))
+        print("# Reading {0}...".format(_phc.trimpathname(spec)[1]))
         wl, flux, MJD, dateobs, datereduc, fitsfile = loadfits(spec)
         (x,y) = lineProf(wl, flux, lbc=lbc, hwidth=hwidth)
         if dateobs.find('-') > 0:
@@ -1242,19 +1258,19 @@ def incrPlotLineFits(specs, lbc=.6564606, formats=['png'], hwidth=1500., \
             dtobs = dateobs.split('/')[::-1]
             dateobs = "-".join(dtobs)
         ax.plot(x, y+0.1*i, label='{0}'.format(dateobs), \
-        color=phc.colors[np.mod(i, len(phc.colors))])
+        color=_phc.colors[_np.mod(i, len(_phc.colors))])
     if yzero:
         ylim = ax.get_ylim()
         ax.plot([0,0], ylim, ls='-', color='Gray')
     ax.set_title(u'lbc = {0:.5f} $\mu$m'.format(lbc))
     ax.set_ylabel('Spec - Ref.')
     legend = ax.legend(loc=(1.05, .01), labelspacing=0.1)
-    plt.setp(legend.get_texts(),  fontsize='small')
-    plt.subplots_adjust(left=0.1, right=0.78, top=0.9, bottom=0.1)#, hspace=0.3, wspace=.3)   
+    _plt.setp(legend.get_texts(),  fontsize='small')
+    _plt.subplots_adjust(left=0.1, right=0.78, top=0.9, bottom=0.1)#, hspace=0.3, wspace=.3)   
     for fmt in formats:
         fig.savefig('fitsincr_lbc{1:.4f}{2}.{0}'.format(\
         fmt, lbc, addsuf), transparent=True)
-    plt.close()
+    _plt.close()
     return
 
 def diffPlotLineSeries(fullseds, obsers=[0], lbc=.6564606, formats=['png'], \
@@ -1271,12 +1287,12 @@ def diffPlotLineSeries(fullseds, obsers=[0], lbc=.6564606, formats=['png'], \
     `fullseds` list.
     """
     for obs in obsers:
-        fig, ax = plt.subplots()
+        fig, ax = _plt.subplots()
         k = obsers.index(obs)
         for file in fullseds:
             i = fullseds.index(file)
             sed2data = hdt.readfullsed2(file)
-            obsdegs = (np.arccos(sed2data[:,0,0])*180/np.pi)[obsers]
+            obsdegs = (_np.arccos(sed2data[:,0,0])*180/_np.pi)[obsers]
             obsdegs = list(obsdegs)
             (x,y) = lineProf(sed2data[obs,:,2], sed2data[obs,:,3], lbc=lbc, \
             hwidth=hwidth)
@@ -1285,19 +1301,19 @@ def diffPlotLineSeries(fullseds, obsers=[0], lbc=.6564606, formats=['png'], \
                 (vel,flx) = lineProf(refspec[obs,:,2], refspec[obs,:,3], lbc=lbc, \
                 hwidth=hwidth)
             else:
-                flx = np.interp(x, rvel, rflx)
+                flx = _np.interp(x, rvel, rflx)
             if file == fullseds[0]:
                 ax.plot(x, y-flx, label='{0:02.1f} deg.'.format(obsdegs[k]), \
-                color=phc.colors[np.mod(i, len(phc.colors))])
+                color=_phc.colors[_np.mod(i, len(_phc.colors))])
             else:
-                ax.plot(x, y-flx, color=phc.colors[np.mod(i, len(phc.colors))])
+                ax.plot(x, y-flx, color=_phc.colors[_np.mod(i, len(_phc.colors))])
         ax.set_title(u'lbc = {0:.5f} $\mu$m'.format(lbc))
         ax.set_ylabel('Spec - Ref.')
         ax.legend()
         for fmt in formats:
             fig.savefig('modsdiff_lbc{2:.4f}_obs{0:02.1f}.{1}'.format(obsdegs[k], fmt,\
             lbc), transparent=True)
-        plt.close()
+        _plt.close()
     return
 
 def diffPlotLineFits(specs, lbc=.6564606, formats=['png'], \
@@ -1310,39 +1326,39 @@ def diffPlotLineFits(specs, lbc=.6564606, formats=['png'], \
     It is recommend to run first (rvel, rflx) =  spt.lineProf(rvel, rflx,
     lbc=lbc, hwidth=hwidth).
     """
-    fig, ax = plt.subplots()
+    fig, ax = _plt.subplots()
     for spec in specs:
         i = specs.index(spec)
-        print("# Reading {0}...".format(phc.trimpathname(spec)[1]))
+        print("# Reading {0}...".format(_phc.trimpathname(spec)[1]))
         wl, flux, MJD, dateobs, datereduc, fitsfile = loadfits(spec)
         (x,y) = lineProf(wl, flux, lbc=lbc, hwidth=hwidth)
         if rvel == None or rflx == None:
             wl0, flux0, MJD, dateobs0, datereduc, fitsfile = loadfits(specs[0])
             (rvel,flx) = lineProf(wl0, flux0, lbc=lbc, hwidth=hwidth)
-            flx = np.interp(x, rvel, rflx)
+            flx = _np.interp(x, rvel, rflx)
         else:
-            flx = np.interp(x, rvel, rflx)
+            flx = _np.interp(x, rvel, rflx)
         #~ if spec == specs[0]:
             #~ ax.plot(x, y-flx, label='{0}'.format(dateobs), \
-            #~ color=phc.colors[np.mod(i, len(phc.colors))])
+            #~ color=_phc.colors[_np.mod(i, len(_phc.colors))])
         #~ else:
-            #~ ax.plot(x, y-flx, color=phc.colors[np.mod(i, len(phc.colors))])
+            #~ ax.plot(x, y-flx, color=_phc.colors[_np.mod(i, len(_phc.colors))])
         if dateobs.find('-') > 0:
             dateobs = dateobs[:10]
         elif dateobs.find('/') > 0:
             dtobs = dateobs.split('/')[::-1]
             dateobs = "-".join(dtobs)
         ax.plot(x, y-flx, label='{0}'.format(dateobs), \
-        color=phc.colors[np.mod(i, len(phc.colors))])
+        color=_phc.colors[_np.mod(i, len(_phc.colors))])
     ax.set_title(u'lbc = {0:.5f} $\mu$m'.format(lbc))
     ax.set_ylabel('Spec - Ref.')
     legend = ax.legend(loc=(1.05, .01), labelspacing=0.1)
-    plt.setp(legend.get_texts(),  fontsize='small')
-    plt.subplots_adjust(left=0.1, right=0.78, top=0.9, bottom=0.1)#, hspace=0.3, wspace=.3)   
+    _plt.setp(legend.get_texts(),  fontsize='small')
+    _plt.subplots_adjust(left=0.1, right=0.78, top=0.9, bottom=0.1)#, hspace=0.3, wspace=.3)   
     for fmt in formats:
         fig.savefig('fitsdiff_lbc{1:.4f}{2}.{0}'.format(\
         fmt, lbc, addsuf), transparent=True)
-    plt.close()
+    _plt.close()
     return
 
 
@@ -1360,9 +1376,9 @@ def diffPlotLineObs(fullseds, obsers=[0], lbc=.6564606, formats=['png'], \
     `fullseds` list.
     """
     for file in fullseds:
-        fig, ax = plt.subplots()
+        fig, ax = _plt.subplots()
         sed2data = hdt.readfullsed2(file)
-        obsdegs = (np.arccos(sed2data[:,0,0])*180/np.pi)[obsers]
+        obsdegs = (_np.arccos(sed2data[:,0,0])*180/_np.pi)[obsers]
         obsdegs = list(obsdegs)
         for obs in obsers:
             i = obsers.index(obs)
@@ -1372,17 +1388,17 @@ def diffPlotLineObs(fullseds, obsers=[0], lbc=.6564606, formats=['png'], \
                 (vel,flx) = lineProf(sed2data[obsers[0],:,2], \
                 sed2data[obsers[0],:,3], lbc=lbc, hwidth=hwidth)
             else:
-                flx = np.interp(x, rvel, rflx)
+                flx = _np.interp(x, rvel, rflx)
             ax.plot(x, y-flx, label='{0:02.1f} deg.'.format(obsdegs[i]), \
-            color=phc.colors[np.mod(i, len(phc.colors))])
+            color=_phc.colors[_np.mod(i, len(_phc.colors))])
         ax.set_title(u'lbc={0:.5f}$\mu$m, {1}'.format(lbc, \
-        phc.trimpathname(file)[1]))
+        _phc.trimpathname(file)[1]))
         ax.set_ylabel('Spec - Ref.')
         ax.legend()
         for fmt in formats:
-            fig.savefig('modsdiff_lbc{2:.4f}_{0}.{1}'.format(phc.trimpathname(file)[1], \
+            fig.savefig('modsdiff_lbc{2:.4f}_{0}.{1}'.format(_phc.trimpathname(file)[1], \
             fmt, lbc), transparent=True)
-        plt.close()
+        _plt.close()
     return
 
 
@@ -1391,7 +1407,7 @@ def kurlog(file=None, output=None):
 
     If output is not specified, it is saved as `file`+.log """
     if file == None:
-        file = '{0}/refs/fp00k0.pck'.format(hdtpath())
+        file = '{0}/refs/fp00k0.pck'.format(_hdt.hdtpath())
     teffs = []
     loggs = []
     fp = open(file)
@@ -1408,126 +1424,138 @@ def kuruczflux(teff, logg, range=None):
 
     Fluxes are in ergs/cm**2/s/hz/ster and wavelength in nm (range must be in
     nm)."""
-    kurfile = '{0}/refs/fp00k0.pck'.format(hdtpath())
+    kurfile = '{0}/refs/fp00k0.pck'.format(_hdt.hdtpath())
     kurwvlines = (174-22)
     kurflxcol = 10
     #wave
-    read = phc.readrange(kurfile, 22, 22+kurwvlines)
-    wave = np.array([val for line in read for val in line.split()], dtype=float)
+    read = _phc.readrange(kurfile, 22, 22+kurwvlines)
+    wave = _np.array([val for line in read for val in line.split()], dtype=float)
     #choose best
-    bestT = np.inf
-    bestg = np.inf
+    bestT = _np.inf
+    bestg = _np.inf
     fp = open(kurfile)
     for i, line in enumerate(fp):
         if line.find('TEFF') > -1:
             readT = float(line.split()[1])
-            if np.abs(readT-teff) <= np.abs(bestT-teff):
+            if _np.abs(readT-teff) <= _np.abs(bestT-teff):
                 bestT = readT
                 readg = float(line.split()[3])
-                if np.abs(readg-logg) <= np.abs(bestg-logg):
+                if _np.abs(readg-logg) <= _np.abs(bestg-logg):
                     bestg = readg
                     i0 = i+1
     fp.close()
     best = [bestT, bestg]
     #read best flux
-    read = phc.readrange(kurfile, i0, i0+kurwvlines)
-    flux = np.array([val for line in read for val in \
+    read = _phc.readrange(kurfile, i0, i0+kurwvlines)
+    flux = _np.array([val for line in read for val in \
     (line[i:i+kurflxcol] for i in xrange(0, len(line)-1, kurflxcol))], \
     dtype=float)
     #cut range
     if range == None:
         return wave, flux, best
     else:
-        idx = np.where((wave > range[0]) & (wave < range[1]))
+        idx = _np.where((wave > range[0]) & (wave < range[1]))
         return wave[idx], flux[idx], best    
 
 
-def plotSed2(files, obslist, tags=None, fmt='png', obsls=False, xlog=False,\
-    ylog=False, xlim=None, ylim=None, norm=False, pol=False):
-    """ Plot flux from Hdust models.
+def plotAll(files, obs=None, boxes=['s'], range=[[0,-1]], ncol=None, fmt=['png'],
+    out=None):
+    """ PlotAll routine for fullsed files.
 
-    `files` works as following: it must be (outs,,) matrix, where `n`
-    controls the linestyle type  (i.e., how many files on the graph) and `m`
-    the models which will make use of it.
+    | `files` and `obs` are lists that define files and observers. 
+    |
+    | The number of boxes is defined by the `boxes` list.
+    | Valid boxes are: 's' for SED, 'p' for polarimetry, 'l' for line.
+    | 
+    | `Range` is a list of lists and defines the interval for 's' and 'p'
+    | (in microns). For automatic selection, leave [0,-1] for the respective box.
+    | 'l' option must be [hwidht, lbd0] (mandatory).
+    |
+    | `ncol` fix the number of columns of the output file.
 
-    `obsls` [==True] sets observers as colors. Set it to False to observers as
-    linestyles.
+    The standard output name will be `date_time.png`, but it can be change
+    with the variables `out` and `fmt`.
 
-    `tags` is the output name for each list entry in `files`.
+    TDB: normalize line, yrange and (x,y) log_scale !
     """
+    for interv in range:
+        if len(interv) != 2:
+            print('# ERROR! Check range variable configuration!!!')
+            return
+    if len(files) != len(boxes) or len(files) != len(range):
+        print('# ERROR! Check input configuration!!!')
+        return
     #
-    if isinstance(files[0], list) == False:
-        files = [files]
-    if isinstance(fmt, list) == False:
-        fmt = [fmt]
-    if isinstance(obslist, list) == False:
-        obslist = [obslist]
-    obslist = list(obslist)
-    counter = 0
-    lflc = 0
-    #~ color=phc.colors[np.mod(spdtb.count, len(phc.colors))
-    for lfiles in files:
-        flc = 0
-        if tags is not None:
-            outname = tags[lflc]
-            lflc+= 1
+    nbox = len(files)
+    if ncol == None:
+        nlin = int(round(_np.sqrt(nbox)))
+        if nlin**2 <= nbox:
+            ncol = nlin
         else:
-            outname = phc.trimpathname(lfiles[0])[1].replace('.sed2','')
-        if pol:
-            outname='pol_'+outname
-        fig, ax = plt.subplots()
-        ax.set_title(outname)
-        for file in lfiles:
-            obsc = 0
-            flc+= 1
-            sed2data = readfullsed2(file)
-            legname = phc.trimpathname(file)[1].replace('.sed2','')
-            obsdeg = list(np.arccos(sed2data[:,0,0][obslist])*180/np.pi)
-            for obs in obslist:
-                obsc+= 1
-                if obsls:
-                    i = phc.colors[np.mod(flc-1,  len(phc.colors))]
-                    j = phc.ls[np.mod(obsc-1, len(phc.ls))]
-                else:
-                    i = phc.colors[np.mod(obsc-1, len(phc.colors))]
-                    j = phc.ls[np.mod(flc-1,  len(phc.ls))]
-                #
-                if pol:
-                    k = 7
-                    yk = 100.
-                    ax.set_ylabel(r'$Q$(%)')
-                else:
-                    k = 3
-                    yk = 1.
-                    ax.set_ylabel(r'Flux')
-                if norm and (xlim is not None):
-                    idx = np.where( (sed2data[obs,:,2] >= xlim[0]) & \
-                    (sed2data[obs,:,2] <= xlim[1]) )
-                    x = sed2data[obs,:,2][idx]
-                    y = linfit(x, sed2data[obs,:,k][idx]*yk)
-                else:
-                    x = sed2data[obs,:,2]
-                    y = sed2data[obs,:,k]*yk
-                ax.plot( x, y, \
-                label='{0:.1f}o. {1}'.format(obsdeg[obslist.index(obs)],legname), \
-                color=i, ls=j )
-            #ax.set_title(file)
-        ax.legend(prop={'size':6}, bbox_to_anchor=(1.7, 1.1))
-        ax.set_xlabel(r'wavelength ($\mu$m)')
-        if xlog:
-            ax.set_xscale('log')
-        if ylog:
-            ax.set_yscale('log')
-        if xlim is not None:
-            ax.set_xlim(xlim)
-        if ylim is not None:
-            ax.set_ylim(ylim)
-        plt.subplots_adjust(left=0.05, right=0.6, top=0.9, bottom=0.1)#, hspace=0.3, wspace=.3)
-        for ifmt in fmt:
-            fig.savefig('{0}.{1}'.format(outname,ifmt), transparent=True)
-        plt.close()
-        counter += 1
-    print('# {0} file generated!'.format(outname))
+            ncol = nlin+1
+    else:
+        nlin = nbox/ncol
+        if nlin*ncol < nbox:
+            ncol += 1
+    #
+    boxn = {'s':3, 'p':7, 'l':3}
+    if obs == None:
+        obs = [0]
+    fig, axs = _plt.subplots(nlin, ncol)#, sharex=True, sharey=True)
+    for file in files:
+        sed2data = hdt.readfullsed2(file)
+        for ob in obs:
+            for I in _product(nlin, ncol):
+                i,j = I
+                type = boxn[boxes[i+j]]
+                y = hdt.sed2data[ob,:,type]
+                if boxes[i+j] == 'l':
+                    print('linha')
+                axs[i,j].plot(sed2data[ob,:,2], y)
+    for I in _product(nlin, ncol):
+        i,j = I
+        if boxes[i+j] == 'l':
+            axs[i,j].set_ylabel('Norm. flux')
+        if boxes[i+j] == 'p':
+            axs[i,j].set_ylabel('Q (%)')
+        if boxes[i+j] == 's':
+            axs[i,j].set_ylabel('Flux (arb. unit)')
+        axs[i,j].set_xlabel(r'$\lambda$ ($\mu$m)')
+        if list(range(i+j)) != [0,-1] and boxes[i+j] != 'l':
+            axs[i,j].set_xlim(range(i+j))
+    #
+    if out == None:
+        out = 'plotall_{0}{1}{2}_{3}{4}'.format(*time.localtime[:5])
+    for format in fmt:
+        _plt.savefig('{0}.{1}'.format(out, format))
+        print('# File {0}.{1} saved!'.format(out, format))
+    _plt.close()
+    return
+
+
+def splitKurucz(file, path=None):
+    """
+    Split atmospheric Kurucz file (e.g., 'ap00k0.dat') into individual models.
+
+    INPUT: file, path (strings)
+
+    OUTPUT: *files written
+    """
+    if path == None:
+        path = _os.getcwd()
+    allk = _np.loadtxt(file, dtype=str, delimiter='\n')
+    
+    for i in range(0,len(allk)-1):
+        if 'EFF' in allk[i]:
+            iref = i
+            teff = int(allk[i].split()[1][:-1])
+            logg = float(allk[i].split()[3][:-3])
+        elif 'DECK6 72' in allk[i]:
+            allk[i] = allk[i].replace('DECK6 72','DECK6 71')
+        elif 'EFF' in allk[i+1]:
+            _np.savetxt('ap00k0tef%05dg%.1f.dat' % (teff,logg), allk[iref:i+1], fmt='%s')
+    
+    _np.savetxt('ap00k0tef%05dg%.1f.dat' % (teff,logg), allk[iref:], fmt='%s')
     return
 
 

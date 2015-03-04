@@ -1,5 +1,9 @@
 # -*- coding:utf-8 -*-
-"""Functions for converting between Julian dates and calendar dates.
+
+"""
+PyHdust *oifits* module: third-part functions for converting between Julian
+dates and calendar dates. I did not mak any modification. The original README
+is below.
 
 A function for converting Gregorian calendar dates to Julian dates, and
 another function for converting Julian calendar dates to Julian dates
@@ -34,14 +38,14 @@ This module is based on the TPM C library, by Jeffery W. Percival. The
 idea for splitting Julian date into two floating point numbers was
 inspired by the IAU SOFA C library.
 
-:author: Prasanth Nair
-:contact: prasanthhn@gmail.com
 :license: BSD (http://www.opensource.org/licenses/bsd-license.php)
 """
-from __future__ import division
-from __future__ import print_function
-import math
+from __future__ import division as _division
+from __future__ import print_function as _print_function
+import math as _math
 
+__author__ = "Prasanth Nair"
+__email__ = "prasanthhn@gmail.com"
 __version__ = "1.0"
 
 MJD_0 = 2400000.5
@@ -50,19 +54,19 @@ MJD_JD2000 = 51544.5
 
 def fpart(x):
     """Return fractional part of given number."""
-    return math.modf(x)[0]
+    return _math.modf(x)[0]
 
 
 def ipart(x):
     """Return integer part of given number."""
-    return math.modf(x)[1]
+    return _math.modf(x)[1]
 
 
 def is_leap(year):
     """Leap year or not in the Gregorian calendar."""
-    x = math.fmod(year, 4)
-    y = math.fmod(year, 100)
-    z = math.fmod(year, 400)
+    x = _math.fmod(year, 4)
+    y = _math.fmod(year, 100)
+    z = _math.fmod(year, 400)
 
     # Divisible by 4 and,
     # either not divisible by 100 or divisible by 400.
@@ -523,3 +527,7 @@ def _test_jd2jcal():
         assert x[i][1] == month[i]
         assert x[i][2] == day[i]
         assert x[i][3] <= 1e-15
+
+### MAIN ###
+if __name__ == "__main__":
+    pass

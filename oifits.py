@@ -1,8 +1,8 @@
-#Based on http://www.mpia-hd.mpg.de/homes/boley/oifits/ in 2012.
-#Modified by D. Moser in 2014-10-06
+#-*- coding:utf-8 -*-
 
 """
-A module for reading/writing OIFITS files
+PyHdust *oifits* module: third-part module for reading/writing OIFITS files.
+I made some modifications, but I keep the original README below.
 
 This module is NOT related to the OIFITS Python module provided at
 http://www.mrao.cam.ac.uk/research/OAS/oi_data/oifits.html
@@ -63,33 +63,21 @@ triple products, etc.  See the notes on the individual classes for a
 list of all the "hidden" attributes.
 
 For further information, contact Paul Boley (boley@mpia-hd.mpg.de).
-
-Example:
-
->>> importmatplotlib.pylab as plt
->>> import oifits
->>> from oitools import *
->>> oidata = oifits.open('VLTI-array.fits')
->>> plot_array(oidata.array['VLTI'])
->>> plt.show()
-
 """
+import pyfits as _pyfits
+import datetime as _datetime
+import copy as _copy
+import numpy as _np
 
-import numpy as np
-from numpy import double, bool, ma
-import pyfits
-import datetime
-import copy
-
-__author__ = "Paul Boley"
-__email__ = "boley@mpia-hd.mpg.de"
-__date__ ='1 October 2012'
-__version__ = '0.3.1'
-_mjdzero = datetime.datetime(1858, 11, 17)
+__author__ = "Daniel Moser"
+__email__ = "dmfaes@gmail.com"
+__date__ ='1 March 2015'
+__version__ = '0.9'
+_mjdzero = _datetime.datetime(1858, 11, 17)
 
 matchtargetbyname = False
 matchstationbyname = False
-refdate = datetime.datetime(2000, 1, 1)
+refdate = _datetime.datetime(2000, 1, 1)
 
 def _plurals(count):
     if count != 1: return 's'
@@ -130,8 +118,8 @@ class _angpoint(float):
             angle *= -1.0
         else:
             negative = False
-        degrees = np.floor(angle)
-        minutes = np.floor((angle - degrees)*60.0)
+        degrees = _np.floor(angle)
+        minutes = _np.floor((angle - degrees)*60.0)
         seconds = (angle - degrees - minutes/60.0)*3600.0
         try:
             if negative:
@@ -146,8 +134,8 @@ class _angpoint(float):
         e.g. 5:12:17.21.  Useful for right ascension."""
         angle = self.angle*24.0/360.0
 
-        hours = np.floor(angle)
-        minutes = np.floor((angle - hours)*60.0)
+        hours = _np.floor(angle)
+        minutes = _np.floor((angle - hours)*60.0)
         seconds = (angle - hours - minutes/60.0)*3600.0
         try:
             return "%02d:%02d:%05.2f"%(hours,minutes,seconds)
@@ -242,10 +230,10 @@ class OI_TARGET:
 class OI_WAVELENGTH:
 
     def __init__(self, eff_wave, eff_band=None):
-        self.eff_wave = np.array(eff_wave, dtype=double).reshape(-1)
+        self.eff_wave = _np.array(eff_wave, dtype=_np.double).reshape(-1)
         if eff_band == None:
-            eff_band = np.zeros_like(eff_wave)
-        self.eff_band = np.array(eff_band, dtype=double).reshape(-1)
+            eff_band = _np.zeros_like(eff_wave)
+        self.eff_band = _np.array(eff_band, dtype=_np.double).reshape(-1)
 
     def __eq__(self, other):
 
@@ -259,7 +247,7 @@ class OI_WAVELENGTH:
         return not self.__eq__(other)
 
     def __repr__(self):
-        return "%d wavelength%s (%.3g-%.3g um)"%(len(self.eff_wave), _plurals(len(self.eff_wave)), 1e6*np.min(self.eff_wave),1e6*np.max(self.eff_wave))
+        return "%d wavelength%s (%.3g-%.3g um)"%(len(self.eff_wave), _plurals(len(self.eff_wave)), 1e6*_np.min(self.eff_wave),1e6*_np.max(self.eff_wave))
 
     def info(self):
         print str(self)
@@ -272,14 +260,14 @@ class AMBER_SPECTRUM:
     def __init__(self, wavelength, interfspec, interfspecerr,\
         spectrum, spectrumerr, eff_wave, eff_band=None):
         self.wavelength = wavelength
-        self.eff_wave = np.array(eff_wave, dtype=double).reshape(-1)
+        self.eff_wave = _np.array(eff_wave, dtype=_np.double).reshape(-1)
         if eff_band == None:
-            eff_band = np.zeros_like(eff_wave)
-        self.eff_band = np.array(eff_band, dtype=double).reshape(-1)
-        self.interfspec = np.array(interfspec, dtype=double).reshape(-1)
-        self.interfspecerr = np.array(interfspecerr, dtype=double).reshape(-1)
-        self._spectrum = np.array(spectrum, dtype=double).reshape(-1)
-        self._spectrumerr = np.array(spectrumerr, dtype=double).reshape(-1)       
+            eff_band = _np.zeros_like(eff_wave)
+        self.eff_band = _np.array(eff_band, dtype=_np.double).reshape(-1)
+        self.interfspec = _np.array(interfspec, dtype=_np.double).reshape(-1)
+        self.interfspecerr = _np.array(interfspecerr, dtype=_np.double).reshape(-1)
+        self._spectrum = _np.array(spectrum, dtype=_np.double).reshape(-1)
+        self._spectrumerr = _np.array(spectrumerr, dtype=_np.double).reshape(-1)       
 
     def __eq__(self, other):
 
@@ -310,7 +298,7 @@ class AMBER_SPECTRUM:
         return not self.__eq__(other)
 
     def __repr__(self):
-        return "%d wavelength%s (%.3g-%.3g um)"%(len(self.eff_wave), _plurals(len(self.eff_wave)), 1e6*np.min(self.eff_wave),1e6*np.max(self.eff_wave))
+        return "%d wavelength%s (%.3g-%.3g um)"%(len(self.eff_wave), _plurals(len(self.eff_wave)), 1e6*_np.min(self.eff_wave),1e6*_np.max(self.eff_wave))
 
     def info(self):
         print str(self)
@@ -332,15 +320,15 @@ class OI_VIS:
         self.wavelength = wavelength
         self.target = target
         self.int_time = int_time
-        self._visamp = np.array(visamp, dtype=double).reshape(-1)
-        self._visamperr = np.array(visamperr, dtype=double).reshape(-1)
-        self._visphi = np.array(visphi, dtype=double).reshape(-1)
-        self._visphierr = np.array(visphierr, dtype=double).reshape(-1)
-        if cflux != None: self._cflux = np.array(cflux, dtype=double).reshape(-1)
+        self._visamp = _np.array(visamp, dtype=_np.double).reshape(-1)
+        self._visamperr = _np.array(visamperr, dtype=_np.double).reshape(-1)
+        self._visphi = _np.array(visphi, dtype=_np.double).reshape(-1)
+        self._visphierr = _np.array(visphierr, dtype=_np.double).reshape(-1)
+        if cflux != None: self._cflux = _np.array(cflux, dtype=_np.double).reshape(-1)
         else: self._cflux = None
-        if cfluxerr != None: self._cfluxerr = np.array(cfluxerr, dtype=double).reshape(-1)
+        if cfluxerr != None: self._cfluxerr = _np.array(cfluxerr, dtype=_np.double).reshape(-1)
         else: self._cfluxerr = None
-        self.flag = np.array(flag, dtype=bool).reshape(-1)
+        self.flag = _np.array(flag, dtype=bool).reshape(-1)
         self.ucoord = ucoord
         self.vcoord = vcoord
         self.station = station
@@ -370,10 +358,10 @@ class OI_VIS:
 
     def __getattr__(self, attrname):
         if attrname in ('visamp', 'visamperr', 'visphi', 'visphierr'):
-            return ma.masked_array(self.__dict__['_' + attrname], mask=self.flag)
+            return _np.ma.masked_array(self.__dict__['_' + attrname], mask=self.flag)
         elif attrname in ('cflux', 'cfluxerr'):
             if self.__dict__['_' + attrname] != None:
-                return ma.masked_array(self.__dict__['_' + attrname], mask=self.flag)
+                return _np.ma.masked_array(self.__dict__['_' + attrname], mask=self.flag)
             else:
                 return None
         else:
@@ -386,12 +374,12 @@ class OI_VIS:
             self.__dict__[attrname] = value
 
     def __repr__(self):
-        meanvis = ma.mean(self.visamp)
+        meanvis = _np.ma.mean(self.visamp)
         if self.station[0] and self.station[1]:
             baselinename = ' (' + self.station[0].sta_name + self.station[1].sta_name + ')'
         else:
             baselinename = ''
-        return '%s %s%s: %d point%s (%d masked), B = %5.1f m, PA = %5.1f deg, <V> = %4.2g'%(self.target.target, self.timeobs.strftime('%F %T'), baselinename, len(self.visamp), _plurals(len(self.visamp)), np.sum(self.flag), np.sqrt(self.ucoord**2 + self.vcoord**2), np.arctan(self.ucoord / self.vcoord) * 180.0 / np.pi % 180.0, meanvis)
+        return '%s %s%s: %d point%s (%d masked), B = %5.1f m, PA = %5.1f deg, <V> = %4.2g'%(self.target.target, self.timeobs.strftime('%F %T'), baselinename, len(self.visamp), _plurals(len(self.visamp)), _np.sum(self.flag), _np.sqrt(self.ucoord**2 + self.vcoord**2), _np.arctan(self.ucoord / self.vcoord) * 180.0 / _np.pi % 180.0, meanvis)
 
     def info(self):
         print str(self)
@@ -411,9 +399,9 @@ class OI_VIS2:
         self.wavelength = wavelength
         self.target = target
         self.int_time = int_time
-        self._vis2data = np.array(vis2data, dtype=double).reshape(-1)
-        self._vis2err = np.array(vis2err, dtype=double).reshape(-1)
-        self.flag = np.array(flag, dtype=bool).reshape(-1)
+        self._vis2data = _np.array(vis2data, dtype=_np.double).reshape(-1)
+        self._vis2err = _np.array(vis2err, dtype=_np.double).reshape(-1)
+        self.flag = _np.array(flag, dtype=bool).reshape(-1)
         self.ucoord = ucoord
         self.vcoord = vcoord
         self.station = station
@@ -441,7 +429,7 @@ class OI_VIS2:
 
     def __getattr__(self, attrname):
         if attrname in ('vis2data', 'vis2err'):
-            return ma.masked_array(self.__dict__['_' + attrname], mask=self.flag)
+            return _np.ma.masked_array(self.__dict__['_' + attrname], mask=self.flag)
         else:
             raise AttributeError, attrname
 
@@ -452,12 +440,12 @@ class OI_VIS2:
             self.__dict__[attrname] = value
 
     def __repr__(self):
-        meanvis = ma.mean(self.vis2data)
+        meanvis = _np.ma.mean(self.vis2data)
         if self.station[0] and self.station[1]:
             baselinename = ' (' + self.station[0].sta_name + self.station[1].sta_name + ')'
         else:
             baselinename = ''
-        return "%s %s%s: %d point%s (%d masked), B = %5.1f m, PA = %5.1f deg, <V^2> = %4.2g"%(self.target.target, self.timeobs.strftime('%F %T'), baselinename, len(self.vis2data), _plurals(len(self.vis2data)), np.sum(self.flag), np.sqrt(self.ucoord**2 + self.vcoord**2), np.arctan(self.ucoord / self.vcoord) * 180.0 / np.pi % 180.0, meanvis)
+        return "%s %s%s: %d point%s (%d masked), B = %5.1f m, PA = %5.1f deg, <V^2> = %4.2g"%(self.target.target, self.timeobs.strftime('%F %T'), baselinename, len(self.vis2data), _plurals(len(self.vis2data)), _np.sum(self.flag), _np.sqrt(self.ucoord**2 + self.vcoord**2), _np.arctan(self.ucoord / self.vcoord) * 180.0 / _np.pi % 180.0, meanvis)
 
     def info(self):
         print str(self)
@@ -479,11 +467,11 @@ class OI_T3:
         self.wavelength = wavelength
         self.target = target
         self.int_time = int_time
-        self._t3amp = np.array(t3amp, dtype=double).reshape(-1)
-        self._t3amperr = np.array(t3amperr, dtype=double).reshape(-1)
-        self._t3phi = np.array(t3phi, dtype=double).reshape(-1)
-        self._t3phierr = np.array(t3phierr, dtype=double).reshape(-1)
-        self.flag = np.array(flag, dtype=bool).reshape(-1)
+        self._t3amp = _np.array(t3amp, dtype=_np.double).reshape(-1)
+        self._t3amperr = _np.array(t3amperr, dtype=_np.double).reshape(-1)
+        self._t3phi = _np.array(t3phi, dtype=_np.double).reshape(-1)
+        self._t3phierr = _np.array(t3phierr, dtype=_np.double).reshape(-1)
+        self.flag = _np.array(flag, dtype=bool).reshape(-1)
         self.u1coord = u1coord
         self.v1coord = v1coord
         self.u2coord = u2coord
@@ -517,7 +505,7 @@ class OI_T3:
 
     def __getattr__(self, attrname):
         if attrname in ('t3amp', 't3amperr', 't3phi', 't3phierr'):
-            return ma.masked_array(self.__dict__['_' + attrname], mask=self.flag)
+            return _np.ma.masked_array(self.__dict__['_' + attrname], mask=self.flag)
         else:
             raise AttributeError, attrname
 
@@ -528,12 +516,12 @@ class OI_T3:
             self.__dict__[attrname] = value
 
     def __repr__(self):
-        meant3 = np.mean(self.t3amp[np.where(self.flag == False)])
+        meant3 = _np.mean(self.t3amp[_np.where(self.flag == False)])
         if self.station[0] and self.station[1] and self.station[2]:
             baselinename = ' (' + self.station[0].sta_name + self.station[1].sta_name + self.station[2].sta_name + ')'
         else:
             baselinename = ''
-        return "%s %s%s: %d point%s (%d masked), B = %5.1fm, %5.1fm, <T3> = %4.2g"%(self.target.target, self.timeobs.strftime('%F %T'), baselinename, len(self.t3amp), _plurals(len(self.t3amp)), np.sum(self.flag), np.sqrt(self.u1coord**2 + self.v1coord**2), np.sqrt(self.u2coord**2 + self.v2coord**2), meant3)
+        return "%s %s%s: %d point%s (%d masked), B = %5.1fm, %5.1fm, <T3> = %4.2g"%(self.target.target, self.timeobs.strftime('%F %T'), baselinename, len(self.t3amp), _plurals(len(self.t3amp)), _np.sum(self.flag), _np.sqrt(self.u1coord**2 + self.v1coord**2), _np.sqrt(self.u2coord**2 + self.v2coord**2), meant3)
 
     def info(self):
         print str(self)
@@ -571,10 +559,10 @@ class OI_ARRAY:
     def __init__(self, frame, arrxyz, stations=()):
         self.frame = frame
         self.arrxyz = arrxyz
-        self.station = np.empty(0)
+        self.station = _np.empty(0)
         for station in stations:
             tel_name, sta_name, sta_index, diameter, staxyz = station
-            self.station = np.append(self.station, OI_STATION(tel_name=tel_name, sta_name=sta_name, diameter=diameter, staxyz=staxyz))
+            self.station = _np.append(self.station, OI_STATION(tel_name=tel_name, sta_name=sta_name, diameter=diameter, staxyz=staxyz))
 
     def __eq__(self, other):
 
@@ -598,14 +586,14 @@ class OI_ARRAY:
 
     def __getattr__(self, attrname):
         if attrname == 'latitude':
-            radius = np.sqrt((self.arrxyz**2).sum())
-            return _angpoint(np.arcsin(self.arrxyz[2]/radius)*180.0/np.pi)
+            radius = _np.sqrt((self.arrxyz**2).sum())
+            return _angpoint(_np.arcsin(self.arrxyz[2]/radius)*180.0/_np.pi)
         elif attrname == 'longitude':
-            radius = np.sqrt((self.arrxyz**2).sum())
-            xylen = np.sqrt(self.arrxyz[0]**2+self.arrxyz[1]**2)
-            return _angpoint(np.arcsin(self.arrxyz[1]/xylen)*180.0/np.pi)
+            radius = _np.sqrt((self.arrxyz**2).sum())
+            xylen = _np.sqrt(self.arrxyz[0]**2+self.arrxyz[1]**2)
+            return _angpoint(_np.arcsin(self.arrxyz[1]/xylen)*180.0/_np.pi)
         elif attrname == 'altitude':
-            radius = np.sqrt((self.arrxyz**2).sum())
+            radius = _np.sqrt((self.arrxyz**2).sum())
             return radius - 6378100.0  
         else:
             raise AttributeError, attrname
@@ -634,12 +622,12 @@ class oifits:
     def __init__(self):
 
         self.wavelength = {}
-        self.amberspec = np.empty(0)
-        self.target = np.empty(0)
+        self.amberspec = _np.empty(0)
+        self.target = _np.empty(0)
         self.array = {}
-        self.vis = np.empty(0)
-        self.vis2 = np.empty(0)
-        self.t3 = np.empty(0)
+        self.vis = _np.empty(0)
+        self.vis2 = _np.empty(0)
+        self.t3 = _np.empty(0)
         self.hdrinfo = {}
 
     def __add__(self, other):
@@ -653,12 +641,12 @@ class oifits:
             print 'oifits objects are not consistent, bailing.'
             return
         
-        new = copy.deepcopy(self)
+        new = _copy.deepcopy(self)
         if len(other.wavelength):
             wavelengthmap = {}
             for key in other.wavelength.keys():
                 if key not in new.wavelength.keys():
-                    new.wavelength[key] = copy.deepcopy(other.wavelength[key])
+                    new.wavelength[key] = _copy.deepcopy(other.wavelength[key])
                 elif new.wavelength[key] != other.wavelength[key]:
                     raise ValueError('Wavelength tables have the same key but differing contents.')
                 wavelengthmap[id(other.wavelength[key])] = new.wavelength[key]
@@ -682,8 +670,8 @@ class oifits:
                         newkey = new.target.keys()[-1]+1
                     except:
                         newkey = 1
-                    target = copy.deepcopy(otarget)
-                    new.target = np.append(new.target, target)
+                    target = _copy.deepcopy(otarget)
+                    new.target = _np.append(new.target, target)
                     targetmap[id(otarget)] = target
 
         if len(other.array):
@@ -692,7 +680,7 @@ class oifits:
             for key, otharray in other.array.iteritems():
                 arraymap[id(otharray)] = key
                 if key not in new.array.keys():
-                    new.array[key] = copy.deepcopy(other.array[key])
+                    new.array[key] = _copy.deepcopy(other.array[key])
                 # If arrays have the same name but seem to differ, try
                 # to combine the two (by including the union of both
                 # sets of stations)
@@ -710,15 +698,15 @@ class oifits:
                     # dictionary, then this is a new station and
                     # should be added to the current array
                     if id(othsta) not in stationmap.keys():
-                        newsta = copy.deepcopy(othsta)
-                        new.array[key].station = np.append(new.array[key].station, newsta)
+                        newsta = _copy.deepcopy(othsta)
+                        new.array[key].station = _np.append(new.array[key].station, newsta)
                         stationmap[id(othsta)] = newsta
                         # Make sure that staxyz of the new station is relative to the new array center
                         newsta.staxyz = othsta.staxyz - other.array[key].arrxyz + new.array[key].arrxyz
 
         for vis in other.vis:
             if vis not in new.vis:
-                newvis = copy.copy(vis)
+                newvis = _copy.copy(vis)
                 # The wavelength, target, array and station objects
                 # should point to the appropriate objects inside the
                 # 'new' structure
@@ -729,11 +717,11 @@ class oifits:
                     newvis.station = [None, None]
                     newvis.station[0] = stationmap[id(vis.station[0])]
                     newvis.station[1] = stationmap[id(vis.station[1])]
-                new.vis = np.append(new.vis, newvis)
+                new.vis = _np.append(new.vis, newvis)
 
         for vis2 in other.vis2:
             if vis2 not in new.vis2:
-                newvis2 = copy.copy(vis2)
+                newvis2 = _copy.copy(vis2)
                 # The wavelength, target, array and station objects
                 # should point to the appropriate objects inside the
                 # 'new' structure
@@ -744,11 +732,11 @@ class oifits:
                     newvis2.station = [None, None]
                     newvis2.station[0] = stationmap[id(vis2.station[0])]
                     newvis2.station[1] = stationmap[id(vis2.station[1])]
-                new.vis2 = np.append(new.vis2, newvis2)
+                new.vis2 = _np.append(new.vis2, newvis2)
 
         for t3 in other.t3:
             if t3 not in new.t3:
-                newt3 = copy.copy(t3)
+                newt3 = _copy.copy(t3)
                 # The wavelength, target, array and station objects
                 # should point to the appropriate objects inside the
                 # 'new' structure
@@ -760,7 +748,7 @@ class oifits:
                     newt3.station[0] = stationmap[id(t3.station[0])]
                     newt3.station[1] = stationmap[id(t3.station[1])]
                     newt3.station[2] = stationmap[id(t3.station[2])]
-                new.t3 = np.append(new.t3, newt3)
+                new.t3 = _np.append(new.t3, newt3)
         
         return(new)
         
@@ -951,9 +939,9 @@ class oifits:
             print 'oifits object is not consistent, refusing to go further'
             return
 
-        hdulist = pyfits.HDUList()
-        hdu = pyfits.PrimaryHDU()
-        hdu.header.update('DATE', datetime.datetime.now().strftime(format='%F'), comment='Creation date')
+        hdulist = _pyfits.HDUList()
+        hdu = _pyfits.PrimaryHDU()
+        hdu.header.update('DATE', _datetime._datetime.now().strftime(format='%F'), comment='Creation date')
         hdu.header.add_comment('Written by OIFITS Python module version %s'%__version__)
         hdu.header.add_comment('http://www.mpia-hd.mpg.de/homes/boley/oifits/')
 
@@ -961,9 +949,9 @@ class oifits:
         hdulist.append(hdu)
         for insname, wavelength in self.wavelength.iteritems():
             wavelengthmap[id(wavelength)] = insname
-            hdu = pyfits.new_table(pyfits.ColDefs((
-                pyfits.Column(name='EFF_WAVE', format='1E', unit='METERS', array=wavelength.eff_wave),
-                pyfits.Column(name='EFF_BAND', format='1E', unit='METERS', array=wavelength.eff_band)
+            hdu = _pyfits.new_table(_pyfits.ColDefs((
+                _pyfits.Column(name='EFF_WAVE', format='1E', unit='METERS', array=wavelength.eff_wave),
+                _pyfits.Column(name='EFF_BAND', format='1E', unit='METERS', array=wavelength.eff_band)
                 )))
             hdu.header.update('EXTNAME', 'OI_WAVELENGTH')
             hdu.header.update('OI_REVN', 1, 'Revision number of the table definition')
@@ -1010,24 +998,24 @@ class oifits:
                 para_err.append(targ.para_err)
                 spectyp.append(targ.spectyp)
 
-            hdu = pyfits.new_table(pyfits.ColDefs((
-                pyfits.Column(name='TARGET_ID', format='1I', array=target_id),
-                pyfits.Column(name='TARGET', format='16A', array=target),
-                pyfits.Column(name='RAEP0', format='D1', unit='DEGREES', array=raep0),
-                pyfits.Column(name='DECEP0', format='D1', unit='DEGREES', array=decep0),
-                pyfits.Column(name='EQUINOX', format='E1', unit='YEARS', array=equinox),
-                pyfits.Column(name='RA_ERR', format='D1', unit='DEGREES', array=ra_err),
-                pyfits.Column(name='DEC_ERR', format='D1', unit='DEGREES', array=dec_err),
-                pyfits.Column(name='SYSVEL', format='D1', unit='M/S', array=sysvel),
-                pyfits.Column(name='VELTYP', format='A8', array=veltyp),
-                pyfits.Column(name='VELDEF', format='A8', array=veldef),
-                pyfits.Column(name='PMRA', format='D1', unit='DEG/YR', array=pmra),
-                pyfits.Column(name='PMDEC', format='D1', unit='DEG/YR', array=pmdec),
-                pyfits.Column(name='PMRA_ERR', format='D1', unit='DEG/YR', array=pmra_err),
-                pyfits.Column(name='PMDEC_ERR', format='D1', unit='DEG/YR', array=pmdec_err),
-                pyfits.Column(name='PARALLAX', format='E1', unit='DEGREES', array=parallax),
-                pyfits.Column(name='PARA_ERR', format='E1', unit='DEGREES', array=para_err),
-                pyfits.Column(name='SPECTYP', format='A16', array=spectyp)
+            hdu = _pyfits.new_table(_pyfits.ColDefs((
+                _pyfits.Column(name='TARGET_ID', format='1I', array=target_id),
+                _pyfits.Column(name='TARGET', format='16A', array=target),
+                _pyfits.Column(name='RAEP0', format='D1', unit='DEGREES', array=raep0),
+                _pyfits.Column(name='DECEP0', format='D1', unit='DEGREES', array=decep0),
+                _pyfits.Column(name='EQUINOX', format='E1', unit='YEARS', array=equinox),
+                _pyfits.Column(name='RA_ERR', format='D1', unit='DEGREES', array=ra_err),
+                _pyfits.Column(name='DEC_ERR', format='D1', unit='DEGREES', array=dec_err),
+                _pyfits.Column(name='SYSVEL', format='D1', unit='M/S', array=sysvel),
+                _pyfits.Column(name='VELTYP', format='A8', array=veltyp),
+                _pyfits.Column(name='VELDEF', format='A8', array=veldef),
+                _pyfits.Column(name='PMRA', format='D1', unit='DEG/YR', array=pmra),
+                _pyfits.Column(name='PMDEC', format='D1', unit='DEG/YR', array=pmdec),
+                _pyfits.Column(name='PMRA_ERR', format='D1', unit='DEG/YR', array=pmra_err),
+                _pyfits.Column(name='PMDEC_ERR', format='D1', unit='DEG/YR', array=pmdec_err),
+                _pyfits.Column(name='PARALLAX', format='E1', unit='DEGREES', array=parallax),
+                _pyfits.Column(name='PARA_ERR', format='E1', unit='DEGREES', array=para_err),
+                _pyfits.Column(name='SPECTYP', format='A16', array=spectyp)
                 )))
             hdu.header.update('EXTNAME', 'OI_TARGET')
             hdu.header.update('OI_REVN', 1, 'Revision number of the table definition')
@@ -1050,12 +1038,12 @@ class oifits:
                     sta_index.append(i)
                     diameter.append(station.diameter)
                     staxyz.append(station.staxyz)
-                hdu = pyfits.new_table(pyfits.ColDefs((
-                    pyfits.Column(name='TEL_NAME', format='16A', array=tel_name),
-                    pyfits.Column(name='STA_NAME', format='16A', array=sta_name),
-                    pyfits.Column(name='STA_INDEX', format='1I', array=sta_index),
-                    pyfits.Column(name='DIAMETER', unit='METERS', format='1E', array=diameter),
-                    pyfits.Column(name='STAXYZ', unit='METERS', format='3D', array=staxyz)
+                hdu = _pyfits.new_table(_pyfits.ColDefs((
+                    _pyfits.Column(name='TEL_NAME', format='16A', array=tel_name),
+                    _pyfits.Column(name='STA_NAME', format='16A', array=sta_name),
+                    _pyfits.Column(name='STA_INDEX', format='1I', array=sta_index),
+                    _pyfits.Column(name='DIAMETER', unit='METERS', format='1E', array=diameter),
+                    _pyfits.Column(name='STAXYZ', unit='METERS', format='3D', array=staxyz)
                     )))
             hdu.header.update('EXTNAME', 'OI_ARRAY')
             hdu.header.update('OI_REVN', 1, 'Revision number of the table definition')
@@ -1117,13 +1105,13 @@ class oifits:
                     if vis.cflux != None:
                         data['cflux'].append(vis.cflux)
                     else:
-                        cflux=np.empty(nwave)
+                        cflux=_np.empty(nwave)
                         cflux[:]=None
                         data['cflux'].append(cflux)
                     if vis.cfluxerr != None:
                         data['cfluxerr'].append(vis.cfluxerr)
                     else:
-                        cfluxerr=np.empty(nwave)
+                        cfluxerr=_np.empty(nwave)
                         cfluxerr[:]=None
                         data['cfluxerr'].append(cfluxerr)
                 data['ucoord'].append(vis.ucoord)
@@ -1136,25 +1124,25 @@ class oifits:
                 data = tables[key]
                 nwave = self.wavelength[key[1]].eff_wave.size
 
-                hdu = pyfits.new_table(pyfits.ColDefs([
-                    pyfits.Column(name='TARGET_ID', format='1I', array=data['target_id']),
-                    pyfits.Column(name='TIME', format='1D', unit='SECONDS', array=data['time']),
-                    pyfits.Column(name='MJD', unit='DAY', format='1D', array=data['mjd']),
-                    pyfits.Column(name='INT_TIME', format='1D', unit='SECONDS', array=data['int_time']),
-                    pyfits.Column(name='VISAMP', format='%dD'%nwave, array=data['visamp']),
-                    pyfits.Column(name='VISAMPERR', format='%dD'%nwave, array=data['visamperr']),
-                    pyfits.Column(name='VISPHI', unit='DEGREES', format='%dD'%nwave, array=data['visphi']),
-                    pyfits.Column(name='VISPHIERR', unit='DEGREES', format='%dD'%nwave, array=data['visphierr']),
-                    pyfits.Column(name='CFLUX', format='%dD'%nwave, array=data['cflux']),
-                    pyfits.Column(name='CFLUXERR', format='%dD'%nwave, array=data['cfluxerr']),
-                    pyfits.Column(name='UCOORD', format='1D', unit='METERS', array=data['ucoord']),
-                    pyfits.Column(name='VCOORD', format='1D', unit='METERS', array=data['vcoord']),
-                    pyfits.Column(name='STA_INDEX', format='2I', array=data['sta_index'], null=-1),
-                    pyfits.Column(name='FLAG', format='%dL'%nwave)
+                hdu = _pyfits.new_table(_pyfits.ColDefs([
+                    _pyfits.Column(name='TARGET_ID', format='1I', array=data['target_id']),
+                    _pyfits.Column(name='TIME', format='1D', unit='SECONDS', array=data['time']),
+                    _pyfits.Column(name='MJD', unit='DAY', format='1D', array=data['mjd']),
+                    _pyfits.Column(name='INT_TIME', format='1D', unit='SECONDS', array=data['int_time']),
+                    _pyfits.Column(name='VISAMP', format='%dD'%nwave, array=data['visamp']),
+                    _pyfits.Column(name='VISAMPERR', format='%dD'%nwave, array=data['visamperr']),
+                    _pyfits.Column(name='VISPHI', unit='DEGREES', format='%dD'%nwave, array=data['visphi']),
+                    _pyfits.Column(name='VISPHIERR', unit='DEGREES', format='%dD'%nwave, array=data['visphierr']),
+                    _pyfits.Column(name='CFLUX', format='%dD'%nwave, array=data['cflux']),
+                    _pyfits.Column(name='CFLUXERR', format='%dD'%nwave, array=data['cfluxerr']),
+                    _pyfits.Column(name='UCOORD', format='1D', unit='METERS', array=data['ucoord']),
+                    _pyfits.Column(name='VCOORD', format='1D', unit='METERS', array=data['vcoord']),
+                    _pyfits.Column(name='STA_INDEX', format='2I', array=data['sta_index'], null=-1),
+                    _pyfits.Column(name='FLAG', format='%dL'%nwave)
                     ]))
 
                 # Setting the data of logical field via the
-                # pyfits.Column call above with length > 1 (eg
+                # _pyfits.Column call above with length > 1 (eg
                 # format='171L' above) seems to be broken, atleast as
                 # of PyFITS 2.2.2
                 hdu.data.field('FLAG').setfield(data['flag'], bool)
@@ -1207,20 +1195,20 @@ class oifits:
                 data = tables[key]
                 nwave = self.wavelength[key[1]].eff_wave.size
 
-                hdu = pyfits.new_table(pyfits.ColDefs([
-                    pyfits.Column(name='TARGET_ID', format='1I', array=data['target_id']),
-                    pyfits.Column(name='TIME', format='1D', unit='SECONDS', array=data['time']),
-                    pyfits.Column(name='MJD', format='1D', unit='DAY', array=data['mjd']),
-                    pyfits.Column(name='INT_TIME', format='1D', unit='SECONDS', array=data['int_time']),
-                    pyfits.Column(name='VIS2DATA', format='%dD'%nwave, array=data['vis2data']),
-                    pyfits.Column(name='VIS2ERR', format='%dD'%nwave, array=data['vis2err']),
-                    pyfits.Column(name='UCOORD', format='1D', unit='METERS', array=data['ucoord']),
-                    pyfits.Column(name='VCOORD', format='1D', unit='METERS', array=data['vcoord']),
-                    pyfits.Column(name='STA_INDEX', format='2I', array=data['sta_index'], null=-1),
-                    pyfits.Column(name='FLAG', format='%dL'%nwave, array=data['flag'])
+                hdu = _pyfits.new_table(_pyfits.ColDefs([
+                    _pyfits.Column(name='TARGET_ID', format='1I', array=data['target_id']),
+                    _pyfits.Column(name='TIME', format='1D', unit='SECONDS', array=data['time']),
+                    _pyfits.Column(name='MJD', format='1D', unit='DAY', array=data['mjd']),
+                    _pyfits.Column(name='INT_TIME', format='1D', unit='SECONDS', array=data['int_time']),
+                    _pyfits.Column(name='VIS2DATA', format='%dD'%nwave, array=data['vis2data']),
+                    _pyfits.Column(name='VIS2ERR', format='%dD'%nwave, array=data['vis2err']),
+                    _pyfits.Column(name='UCOORD', format='1D', unit='METERS', array=data['ucoord']),
+                    _pyfits.Column(name='VCOORD', format='1D', unit='METERS', array=data['vcoord']),
+                    _pyfits.Column(name='STA_INDEX', format='2I', array=data['sta_index'], null=-1),
+                    _pyfits.Column(name='FLAG', format='%dL'%nwave, array=data['flag'])
                     ]))
                 # Setting the data of logical field via the
-                # pyfits.Column call above with length > 1 (eg
+                # _pyfits.Column call above with length > 1 (eg
                 # format='171L' above) seems to be broken, atleast as
                 # of PyFITS 2.2.2
                 hdu.data.field('FLAG').setfield(data['flag'], bool)
@@ -1280,24 +1268,24 @@ class oifits:
                 data = tables[key]
                 nwave = self.wavelength[key[1]].eff_wave.size
 
-                hdu = pyfits.new_table(pyfits.ColDefs((
-                    pyfits.Column(name='TARGET_ID', format='1I', array=data['target_id']),
-                    pyfits.Column(name='TIME', format='1D', unit='SECONDS', array=data['time']),
-                    pyfits.Column(name='MJD', format='1D', unit='DAY', array=data['mjd']),
-                    pyfits.Column(name='INT_TIME', format='1D', unit='SECONDS', array=data['int_time']),
-                    pyfits.Column(name='T3AMP', format='%dD'%nwave, array=data['t3amp']),
-                    pyfits.Column(name='T3AMPERR', format='%dD'%nwave, array=data['t3amperr']),
-                    pyfits.Column(name='T3PHI', format='%dD'%nwave, unit='DEGREES', array=data['t3phi']),
-                    pyfits.Column(name='T3PHIERR', format='%dD'%nwave, unit='DEGREES', array=data['t3phierr']),
-                    pyfits.Column(name='U1COORD', format='1D', unit='METERS', array=data['u1coord']),
-                    pyfits.Column(name='V1COORD', format='1D', unit='METERS', array=data['v1coord']),
-                    pyfits.Column(name='U2COORD', format='1D', unit='METERS', array=data['u2coord']),
-                    pyfits.Column(name='V2COORD', format='1D', unit='METERS', array=data['v2coord']),
-                    pyfits.Column(name='STA_INDEX', format='3I', array=data['sta_index'], null=-1),
-                    pyfits.Column(name='FLAG', format='%dL'%nwave, array=data['flag'])
+                hdu = _pyfits.new_table(_pyfits.ColDefs((
+                    _pyfits.Column(name='TARGET_ID', format='1I', array=data['target_id']),
+                    _pyfits.Column(name='TIME', format='1D', unit='SECONDS', array=data['time']),
+                    _pyfits.Column(name='MJD', format='1D', unit='DAY', array=data['mjd']),
+                    _pyfits.Column(name='INT_TIME', format='1D', unit='SECONDS', array=data['int_time']),
+                    _pyfits.Column(name='T3AMP', format='%dD'%nwave, array=data['t3amp']),
+                    _pyfits.Column(name='T3AMPERR', format='%dD'%nwave, array=data['t3amperr']),
+                    _pyfits.Column(name='T3PHI', format='%dD'%nwave, unit='DEGREES', array=data['t3phi']),
+                    _pyfits.Column(name='T3PHIERR', format='%dD'%nwave, unit='DEGREES', array=data['t3phierr']),
+                    _pyfits.Column(name='U1COORD', format='1D', unit='METERS', array=data['u1coord']),
+                    _pyfits.Column(name='V1COORD', format='1D', unit='METERS', array=data['v1coord']),
+                    _pyfits.Column(name='U2COORD', format='1D', unit='METERS', array=data['u2coord']),
+                    _pyfits.Column(name='V2COORD', format='1D', unit='METERS', array=data['v2coord']),
+                    _pyfits.Column(name='STA_INDEX', format='3I', array=data['sta_index'], null=-1),
+                    _pyfits.Column(name='FLAG', format='%dL'%nwave, array=data['flag'])
                     )))
                 # Setting the data of logical field via the
-                # pyfits.Column call above with length > 1 (eg
+                # _pyfits.Column call above with length > 1 (eg
                 # format='171L' above) seems to be broken, atleast as
                 # of PyFITS 2.2.2
                 hdu.data.field('FLAG').setfield(data['flag'], bool)
@@ -1321,7 +1309,7 @@ def open(filename, quiet=False):
     
     if not quiet:
         print "Opening %s"%filename
-    hdulist = pyfits.open(filename)
+    hdulist = _pyfits.open(filename)
     # First get all the OI_TARGET, OI_WAVELENGTH and OI_ARRAY tables
     for hdu in hdulist:
         header = hdu.header
@@ -1350,13 +1338,13 @@ def open(filename, quiet=False):
                                    pmra=row['PMRA'], pmdec=row['PMDEC'], pmra_err=row['PMRA_ERR'],
                                    pmdec_err=row['PMDEC_ERR'], parallax=row['PARALLAX'],
                                    para_err=row['PARA_ERR'], spectyp=row['SPECTYP'])
-                newobj.target = np.append(newobj.target, target)
+                newobj.target = _np.append(newobj.target, target)
                 targetmap[target_id] = target
         elif hdu.name == 'OI_ARRAY':
             if newobj.array == None: newobj.array = {}
             arrname = header['ARRNAME']
             frame = header['FRAME']
-            arrxyz = np.array([header['ARRAYX'], header['ARRAYY'], header['ARRAYZ']])
+            arrxyz = _np.array([header['ARRAYX'], header['ARRAYY'], header['ARRAYZ']])
             newobj.array[arrname] = OI_ARRAY(frame, arrxyz, stations=data)
             # Save the sta_index for each array, as we will need it
             # later to match measurements to stations
@@ -1379,17 +1367,17 @@ def open(filename, quiet=False):
         if hdu.name == 'OI_VIS':
             for row in data:
                 date = getDate(hdu, hdulist)
-                timeobs = datetime.datetime(int(date[0]), int(date[1]), int(date[2])) + datetime.timedelta(seconds=np.around(row.field('TIME'), 2))
+                timeobs = _datetime.datetime(int(date[0]), int(date[1]), int(date[2])) + _datetime.timedelta(seconds=_np.around(row.field('TIME'), 2))
                 int_time = row.field('INT_TIME')
-                visamp = np.reshape(row.field('VISAMP'), -1)
-                visamperr = np.reshape(row.field('VISAMPERR'), -1)
-                visphi = np.reshape(row.field('VISPHI'), -1)
-                visphierr = np.reshape(row.field('VISPHIERR'), -1)
-                if 'CFLUX' in row.array.names: cflux = np.reshape(row.field('CFLUX'), -1)
+                visamp = _np.reshape(row.field('VISAMP'), -1)
+                visamperr = _np.reshape(row.field('VISAMPERR'), -1)
+                visphi = _np.reshape(row.field('VISPHI'), -1)
+                visphierr = _np.reshape(row.field('VISPHIERR'), -1)
+                if 'CFLUX' in row.array.names: cflux = _np.reshape(row.field('CFLUX'), -1)
                 else: cflux = None
-                if 'CFLUXERR' in row.array.names: cfluxerr = np.reshape(row.field('CFLUXERR'), -1)
+                if 'CFLUXERR' in row.array.names: cfluxerr = _np.reshape(row.field('CFLUXERR'), -1)
                 else: cfluxerr = None
-                flag = np.reshape(row.field('FLAG'), -1)
+                flag = _np.reshape(row.field('FLAG'), -1)
                 ucoord = row.field('UCOORD')
                 vcoord = row.field('VCOORD')
                 target = targetmap[row.field('TARGET_ID')]
@@ -1400,7 +1388,7 @@ def open(filename, quiet=False):
                     station = [s1, s2]
                 else:
                     station = [None, None]
-                newobj.vis = np.append(newobj.vis, OI_VIS(timeobs=timeobs, int_time=int_time, visamp=visamp,
+                newobj.vis = _np.append(newobj.vis, OI_VIS(timeobs=timeobs, int_time=int_time, visamp=visamp,
                                                           visamperr=visamperr, visphi=visphi, visphierr=visphierr,
                                                           flag=flag, ucoord=ucoord, vcoord=vcoord, wavelength=wavelength,
                                                           target=target, array=array, station=station, cflux=cflux,
@@ -1408,11 +1396,11 @@ def open(filename, quiet=False):
         elif hdu.name == 'OI_VIS2':
             for row in data:
                 date = getDate(hdu, hdulist)
-                timeobs = datetime.datetime(int(date[0]), int(date[1]), int(date[2])) + datetime.timedelta(seconds=np.around(row.field('TIME'), 2))
+                timeobs = _datetime.datetime(int(date[0]), int(date[1]), int(date[2])) + _datetime.timedelta(seconds=_np.around(row.field('TIME'), 2))
                 int_time = row.field('INT_TIME')
-                vis2data = np.reshape(row.field('VIS2DATA'), -1)
-                vis2err = np.reshape(row.field('VIS2ERR'), -1)
-                flag = np.reshape(row.field('FLAG'), -1)
+                vis2data = _np.reshape(row.field('VIS2DATA'), -1)
+                vis2err = _np.reshape(row.field('VIS2ERR'), -1)
+                flag = _np.reshape(row.field('FLAG'), -1)
                 ucoord = row.field('UCOORD')
                 vcoord = row.field('VCOORD')
                 target = targetmap[row.field('TARGET_ID')]
@@ -1423,20 +1411,20 @@ def open(filename, quiet=False):
                     station = [s1, s2]
                 else:
                     station = [None, None]
-                newobj.vis2 = np.append(newobj.vis2, OI_VIS2(timeobs=timeobs, int_time=int_time, vis2data=vis2data,
+                newobj.vis2 = _np.append(newobj.vis2, OI_VIS2(timeobs=timeobs, int_time=int_time, vis2data=vis2data,
                                                              vis2err=vis2err, flag=flag, ucoord=ucoord, vcoord=vcoord,
                                                              wavelength=wavelength, target=target, array=array,
                                                              station=station))
         elif hdu.name == 'OI_T3':
             for row in data:
                 date = getDate(hdu, hdulist)
-                timeobs = datetime.datetime(int(date[0]), int(date[1]), int(date[2])) + datetime.timedelta(seconds=np.around(row.field('TIME'), 2))
+                timeobs = _datetime.datetime(int(date[0]), int(date[1]), int(date[2])) + _datetime.timedelta(seconds=_np.around(row.field('TIME'), 2))
                 int_time = row.field('INT_TIME')
-                t3amp = np.reshape(row.field('T3AMP'), -1)
-                t3amperr = np.reshape(row.field('T3AMPERR'), -1)
-                t3phi = np.reshape(row.field('T3PHI'), -1)
-                t3phierr = np.reshape(row.field('T3PHIERR'), -1)
-                flag = np.reshape(row.field('FLAG'), -1)
+                t3amp = _np.reshape(row.field('T3AMP'), -1)
+                t3amperr = _np.reshape(row.field('T3AMPERR'), -1)
+                t3phi = _np.reshape(row.field('T3PHI'), -1)
+                t3phierr = _np.reshape(row.field('T3PHIERR'), -1)
+                flag = _np.reshape(row.field('FLAG'), -1)
                 u1coord = row.field('U1COORD')
                 v1coord = row.field('V1COORD')
                 u2coord = row.field('U2COORD')
@@ -1450,7 +1438,7 @@ def open(filename, quiet=False):
                     station = [s1, s2, s3]
                 else:
                     station = [None, None, None]
-                newobj.t3 = np.append(newobj.t3, OI_T3(timeobs=timeobs, int_time=int_time, t3amp=t3amp,
+                newobj.t3 = _np.append(newobj.t3, OI_T3(timeobs=timeobs, int_time=int_time, t3amp=t3amp,
                                                        t3amperr=t3amperr, t3phi=t3phi, t3phierr=t3phierr,
                                                        flag=flag, u1coord=u1coord, v1coord=v1coord, u2coord=u2coord,
                                                        v2coord=v2coord, wavelength=wavelength, target=target,
@@ -1463,19 +1451,19 @@ def open(filename, quiet=False):
             dataAS0err = []
             dataASferr = []
             for row in data:
-                dataAS0 = np.append(dataAS0, row['SPECTRUM'])
-                dataAS0err = np.append(dataAS0err, row['SPECTRUM'])
+                dataAS0 = _np.append(dataAS0, row['SPECTRUM'])
+                dataAS0err = _np.append(dataAS0err, row['SPECTRUM'])
             dataAS0 = dataAS0.reshape(-1)
             dataAS0err = dataAS0err.reshape(-1)
             for i in range(3):
-                dataASf = np.append(dataASf, dataAS0[i::3])
-                dataASferr = np.append(dataASferr, dataAS0err[i::3])
+                dataASf = _np.append(dataASf, dataAS0[i::3])
+                dataASferr = _np.append(dataASferr, dataAS0err[i::3])
             dataASf = dataASf.reshape(3,-1)
             dataASferr = dataASferr.reshape(3,-1)
             #datanames = data.names
             for i in range(3):
                 #if 'EFF_BAND' in datanames:
-                newobj.amberspec = np.append(newobj.amberspec, AMBER_SPECTRUM(eff_wave=data.field('EFF_WAVE'), eff_band=data.field('EFF_BAND'),
+                newobj.amberspec = _np.append(newobj.amberspec, AMBER_SPECTRUM(eff_wave=data.field('EFF_WAVE'), eff_band=data.field('EFF_BAND'),
                                                   wavelength=wavelength, interfspec=data.field('INTERF_SPECTRUM'),
                                                   interfspecerr=data.field('INTERF_SPECTRUM_ERROR'),
                                                   spectrum=dataASf[i], spectrumerr=dataASferr[i]))
@@ -1486,3 +1474,7 @@ def open(filename, quiet=False):
         newobj.info(recursive=False)
 
     return newobj
+
+### MAIN ###
+if __name__ == "__main__":
+    pass
