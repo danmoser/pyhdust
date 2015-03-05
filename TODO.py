@@ -22,6 +22,10 @@
 
 | MAIN
 |   -update obs_calcs (spherical triangles)
+|   -rotstars: add option for ellipsoidal star
+|   -genlog: add check for *.sigma files
+|   -merge: be ``smart'' and be independent of filters definitions (e.g., \
+|continuum or line based on the number of points). 
 
 | PHC
 |   -update phc.rot_stars (Beta(W))
