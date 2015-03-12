@@ -1559,6 +1559,52 @@ def splitKurucz(file, path=None):
     return
 
 
+def din_spec(refspec, metadata, lbc=6562.86, hwidth=1500., res=50, interv=None,
+    fmt=['png'], outname='din_spec', pxsize=8):
+    """ Plot dynamical specs. from metadata table of the Spec class.
+
+    `interv` controls the interval between specs.
+
+    `res` is the resolution in km/s.
+
+    TBD: average, binned specs.
+    """
+    #Define MJD and bins
+    dates = _np.array(metadata[:,0], dtype=float)
+    t0 = _np.min(dates)
+    tf = _np.max(dates)
+    if interv == None:
+        interv = _np.linspace(t0,tf,21)
+    else:
+        interv = _np.arange(t0,tf+interv,interv)
+    dt = interv[1]-interv[0]
+    #Select specs 
+    interv_names = _np.zeros(len(interv), dtype="|S512")
+    wl0 = _np.arange(-hwidth,hwidth+res,res)
+    fluxes = _np.ones(( len(wl0),len(interv) ))
+    for i in range(len(interv)):
+        date = _phc.find_nearest(dates,interv[i])
+        #check if it is inside bin
+        if date > interv[i]-dt/2 and date < interv[i]+dt/2:
+            j = list(dates).index(date)
+            interv_names = metadata[j,3]
+            wl, flux, tmp, tmp, tmp, tmp = loadfits(refspec)
+            wl, flux = lineProf(wl, flux, lbc=lbc, hwidth=hwidth)
+            fluxes[:,i] = _np.interp(wl0, wl, flux)
+    #Create image
+    img = _np.empty((pxsize*len(interv),len(wl0)))
+    for i in range(len(interv)):
+        img[i*pxsize:(i+1)*pxsize] = _np.tile(fluxes[:,i],pxsize).reshape(pxsize,len(wl0))
+    #Save image
+    _plt.imshow(img)
+    for ext in fmt:
+        print(_os.getcwd(), 'hdt/{}.{}'.format(outname, ext))
+        _plt.savefig('hdt/{}.{}'.format(outname, ext))
+    _plt.close()
+    return
+
+
+
 ### MAIN ###
 if __name__ == "__main__":
     pass

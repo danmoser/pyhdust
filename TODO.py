@@ -7,8 +7,9 @@
 | GENERAL
 |   -pip install for pyhdust
 |   -Transparent legend-box on the graphs
+|   -Discover bug Ha hdt.mergesed2() with bestar2.02 
 |   -Change scipy interpolate with numpy.interp (hdt.doFilterConv, others...)
-|   *Define unique 'Planejamento_LNA' reference (targets [coordinates], P and Ph0
+|   -Define unique 'Planejamento_LNA' as MySQL (targets [coordinates], P and Ph0
 |   [mags.], nights observed vs. bad weather, etc.)
 |   *Define flux units at SED2 file read
 |   -Standardization at CGS/SI units

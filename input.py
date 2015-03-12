@@ -1,4 +1,4 @@
-#-*- coding:utf-8 -*-
+# -*- coding:utf-8 -*-
 
 """
 PyHdust *input* module: Hdust input tools.
@@ -19,7 +19,7 @@ __version__ = '0.9'
 
     
 def makeDiskGrid(modn, mvals, mhvals, hvals, rdvals, sig0vals, doFVDD, \
-    selsources, alpha=.5,mu=.5, R0r=300, Mdot11=False):
+    selsources, alpha=.5,mu=.5, R0r=300, Mdot11=False, path=None):
     """
     | ###CONFIG. OPTIONS
     | #MODEL NUMBER
@@ -83,10 +83,10 @@ def makeDiskGrid(modn, mvals, mhvals, hvals, rdvals, sig0vals, doFVDD, \
         Req *= Rsun
 
         Th = h*Tp/100.
-		#a0 = (kB*h/100.*Tp/mu/mH)**.5
+        #a0 = (kB*h/100.*Tp/mu/mH)**.5
         a = (kB*Th/mu/mH)**.5
         n0 = (G*M/2./_np.pi)**.5*sig0/mu/mH/a/Req**1.5
-		#Th = a**2*mu*mH/kB
+        #Th = a**2*mu*mH/kB
 
         srcname = src.replace('source/','').replace('.txt','')
         suffix = '_PLn{0:.1f}_sig{1:.2f}_h{2:03.0f}_Rd{3:05.1f}_{4}'.format(\
@@ -117,8 +117,8 @@ def makeDiskGrid(modn, mvals, mhvals, hvals, rdvals, sig0vals, doFVDD, \
 
         Th = h*Tp/100.
         a = (kB*Th/mu/mH)**.5
-		#a0 = (kB*h/100*Tp/mu/mH)**.5
-		#a = a0*Req0*Req**.25/Req/Req**.25
+        #a0 = (kB*h/100*Tp/mu/mH)**.5
+        #a = a0*Req0*Req**.25/Req/Req**.25
         
         R0 = R0r*Req
         Mdot = sig0*Req**2*3*_np.pi*alpha*a**2/(G*M*R0)**.5   #SI units
@@ -148,13 +148,20 @@ def makeDiskGrid(modn, mvals, mhvals, hvals, rdvals, sig0vals, doFVDD, \
         return
         
     
-    ###SETUP Tpole = REF of a (scale height)    
+    ###TODO Setup Tpole = REF of a (scale height)    
     #Tps = dict(zip(Ms, Tp11))
     
     ###PROGRAM BEGINS
+    path0 = _os.getcwd()
+    if path != None:
+        _os.chdir(path)
+        if path[-1] != '/':
+            path += '/'
+    else:
+        path = ''
     #Check modN folder
-    if _os.path.exists('mod{0}'.format(modn)) == False:
-        _os.system('mkdir mod{0}'.format(modn))
+    if _os.path.exists('mod{}'.format(modn)) == False:
+        _os.system('mkdir mod{}'.format(modn))
     
     #Select sources
     sources = _glob('source/'+selsources)
@@ -169,14 +176,17 @@ def makeDiskGrid(modn, mvals, mhvals, hvals, rdvals, sig0vals, doFVDD, \
         if doFVDD:
             doMdot(prodI)
     print('# {0:.0f} arquivos foram gerados !!'.format(len(sources)*\
-    len(sig0vals)*len(rdvals)*len(hvals)*(len(mvals)+1)*len(mhvals)))    
+    len(sig0vals)*len(rdvals)*len(hvals)*(len(mvals)+1)*len(mhvals)))
+
+    if path is not '':
+        _os.chdir(path0)
     ###END PROGRAM    
     return
 
 
 def makeInpJob(modn, clusters, nodes, walltime, wcheck, email, chkout, st1max,\
 st1refmax, docases, sim1, sim2, simulations, images, composition,\
-controls, gridcells, observers, ctrM=False, touch=False, srcNf=False):
+controls, gridcells, observers, ctrM=False, touch=False, srcNf=None, path=None):
     """
     | ### Start edit here ###
     | modn = '02'
@@ -284,11 +294,11 @@ controls, gridcells, observers, ctrM=False, touch=False, srcNf=False):
             case1[5] = case1[5].replace('source',src)
             if simulations[i] == 'SED':
                 sig = suf[suf.find('_sig')+4:suf.find('_sig')+8]
-                if isFloat(sig) and srcNf:
+                if isFloat(sig) and srcNf[i]:
                     case1[4] = case1[4].replace('step1','SED_sig{0}'.format(sig))
                 else:
                     case1[4] = case1[4].replace('step1',simulations[i])
-            elif simulations[i] in ['Brg','Ha'] and srcNf:
+            elif srcNf[i]:
                 case1[4] = case1[4].replace('step1','{0}_{1}'.format(\
                 simulations[i],src))
             else:
@@ -311,7 +321,6 @@ controls, gridcells, observers, ctrM=False, touch=False, srcNf=False):
         
         outname = mod[mod.find('/')+1:].replace('txt',sel)
             
-
         f0 = open('{0}s/{0}s_{1}_mod{2}.sh'.format(sel,proj,modn),'a')
         if sel == 'job':
             wout[4]  = wout[4].replace('128','{0}'.format(nodes))
@@ -350,6 +359,15 @@ controls, gridcells, observers, ctrM=False, touch=False, srcNf=False):
     
     
     #PROGRAM START
+    if srcNf == None:
+        srcNf = len(simulations)*[False]
+    path0 = _os.getcwd()
+    if path != None:
+        _os.chdir(path)
+        if path[-1] != '/':
+            path += '/'
+    else:
+        path = ''
     #obtain the actual directory
     proj = _os.getcwd() 
     proj = proj[proj.rfind('/')+1:]
@@ -414,9 +432,9 @@ controls, gridcells, observers, ctrM=False, touch=False, srcNf=False):
         
         if chkout and 3 in cases:
             for i in range(len(simulations)):
-                sed2chk = _glob('mod{0}/{1}*{2}*.sed2'.format(modn,\
-                simulations[i],suf))
-                if len(sed2chk)>0:
+                outs2a = 'mod{0}/{1}_mod{0}{2}.sed2'.format(modn,simulations[i],suf)
+                outs2b = 'mod{0}/{1}_mod{0}{2}_SEI.sed2'.format(modn,simulations[i],suf)
+                if _os.path.exists(outs2a) or _os.path.exists(outs2b):
                     simchk[i] = False
             if True not in simchk:
                 cases.remove(3)
@@ -447,10 +465,13 @@ controls, gridcells, observers, ctrM=False, touch=False, srcNf=False):
         if len(cases)>0:
             for sel in clusters:
                 doJobs(mod,sel,addtouch)
+
+    if path is not '':
+        _os.chdir(path0)
     #PROGRAM END
     return
 
-def makeNoDiskGrid(modn, selsources):
+def makeNoDiskGrid(modn, selsources, path=None):
     """
     #Create a model list with random disk parameters ("noCS" in filename)
     
@@ -476,9 +497,15 @@ def makeNoDiskGrid(modn, selsources):
         f0.writelines(wmod)
         f0.close()
         return
-    
-    
+        
     ###PROGRAM BEGINS
+    path0 = _os.getcwd()
+    if path != None:
+        _os.chdir(path)
+        if path[-1] != '/':
+            path += '/'
+    else:
+        path = ''
     #Check modN folder
     if _os.path.exists('mod{}'.format(modn)) == False:
         _os.system('mkdir mod{}'.format(modn))
@@ -494,7 +521,9 @@ def makeNoDiskGrid(modn, selsources):
     for prodI in _product(sources):
         prodI = prodI[0]
         doNoCS(prodI)
-    print('# {:.0f} arquivos foram gerados !!'.format(len(sources)))    
+    print('# {:.0f} arquivos foram gerados !!'.format(len(sources)))
+    if path is not "":
+        _os.chdir(path0)
     ###END PROGRAM
     return
 
@@ -545,13 +574,13 @@ def makeSimulLine(vrots, basesims, Rs, hwidth, Ms, Obs, suffix):
         k = basesims.index(basesim)
         R = Rs[k]
         nmod = mod[:]
-        vel = '{:.1f}'.format(hwidth+vrots[i][j])
+        vel = '{0:.1f}'.format(hwidth+vrots[i][j])
         nmod[103] = nmod[103].replace('1020.',vel)
         n = str(int(round(2*(hwidth+vrots[i][j])*R/c*1e5)))
         print(srcid, n)
         nmod[100] = nmod[100].replace('100',n)
     
-        f0 = open(basesim.replace('.txt','_{}_{}.txt'.format(srcid, suffix)),'w')
+        f0 = open(basesim.replace('.txt','_{0}_{1}.txt'.format(srcid, suffix)),'w')
         f0.writelines(nmod)
         f0.close()
     return
@@ -573,8 +602,8 @@ def makeStarGrid(oblats, Hfs, path=None):
             path += '/'
     else:
         path = ''
-    if _os.path.exists('{0}stmodels'.format(path)) == False:
-        _os.system('mkdir {0}stmodels'.format(path))
+    if not _os.path.exists('stmodels'):
+        _os.system('mkdir stmodels')
     try:
         runIDL = True 
         import pidly
@@ -596,21 +625,21 @@ def makeStarGrid(oblats, Hfs, path=None):
         for ob in oblats:
             for H in Hfs:
                 idl('geneve_par, {}, {}, /oblat,/makeeps'.format(ob,H))
-                _os.system('mv {}/geneve_lum.eps {}stmodels/geneve_lum_{:.2f}_{:.2f}.eps'.format(propath,path,ob,H))
-                _os.system('mv {}/geneve_rp.eps {}stmodels/geneve_rp_{:.2f}_{:.2f}.eps'.format(propath,path,ob,H))
-                _os.system('mv {}/geneve_par.txt {}stmodels/oblat{}_h{}.txt'.format(propath,path,ob,H))
+                _os.system('mv {}/geneve_lum.eps stmodels/geneve_lum_{:.2f}_{:.2f}.eps'.format(propath,ob,H))
+                _os.system('mv {}/geneve_rp.eps stmodels/geneve_rp_{:.2f}_{:.2f}.eps'.format(propath,ob,H))
+                _os.system('mv {}/geneve_par.txt stmodels/oblat{}_h{}.txt'.format(propath,ob,H))
         idl.close()
     
     f0 = open('{0}/refs/REF_estrela.txt'.format(_hdt.hdtpath()))
     mod = f0.readlines()
     f0.close()
 
-    if _os.path.exists('{0}source'.format(path)) == False:
-        _os.system('mkdir {0}source'.format(path))
+    if _os.path.exists('source') == False:
+        _os.system('mkdir source')
     
     for ob in oblats:                        
         for H in Hfs:  
-            f0 = open('{}stmodels/oblat{}_h{}.txt'.format(path,ob,H))                     
+            f0 = open('stmodels/oblat{}_h{}.txt'.format(ob,H))                     
             matriz = f0.readlines() 
             f0.close()
             Omega,W,Beta = map(float, matriz[1].split())
@@ -656,11 +685,11 @@ def makeStarGrid(oblats, Hfs, path=None):
                             wmod[6]=wmod[6].replace('7500.',('%.2f' % Lum))
                             wmod[7]=wmod[7].replace('0.25',('%.5f' % Beta))
     
-                            f0=open('{0}source'.format(path)+'/Be'+suffix+'.txt', 'w')
+                            f0=open('source/Be'+suffix+'.txt', 'w')
                             f0.writelines(wmod)
                             f0.close()
     #
-    if path == "":
+    if path is not "":
         _os.chdir(path0)
     return
 

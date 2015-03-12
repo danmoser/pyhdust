@@ -34,7 +34,7 @@ filters = ['u','b','v','r','i']
 def stdchk(stdname):
     """ Check it the standard star name contains an known name, and return
     its position in `padroes.txt` """
-    lstds = list(_np.loadtxt('{0}/pol/padroes.txt'.format(hdtpath()), dtype=str,\
+    lstds = list(_np.loadtxt('{0}/refs/pol_padroes.txt'.format(hdtpath()), dtype=str,\
     usecols=[0]))
     chk = False
     i = -1
@@ -529,8 +529,8 @@ def genStdLog(path=None):
             else:
                print('Value not valid. Please, type \'y\' ou \'n\':')
 
-    ltgts = _np.loadtxt('{0}/pol/alv_os.txt'.format(hdtpath()), dtype=str)
-    lstds = _np.loadtxt('{0}/pol/padroes.txt'.format(hdtpath()), dtype=str,\
+    ltgts = _np.loadtxt('{0}/refs/pol_alvos.txt'.format(hdtpath()), dtype=str)
+    lstds = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(hdtpath()), dtype=str,\
     usecols=[0])
     tgts = [fld for fld in _os.listdir('{0}'.format(path)) if \
     _os.path.isdir(_os.path.join('{0}'.format(path), fld))]
@@ -663,10 +663,10 @@ def genObjLog(path=None, delta=2.5):
             else:
                print('Value not valid. Please, type \'y\' ou \'n\':')
 
-    ltgts = _np.loadtxt('{0}/pol/alv_os.txt'.format(hdtpath()), dtype=str)
+    ltgts = _np.loadtxt('{0}/refs/pol_alvos.txt'.format(hdtpath()), dtype=str)
     tgts = [fld for fld in _os.listdir('{0}'.format(path)) if \
     _os.path.isdir(_os.path.join('{0}'.format(path), fld))]
-    lstds = _np.loadtxt('{0}/pol/padroes.txt'.format(hdtpath()), dtype=str,\
+    lstds = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(hdtpath()), dtype=str,\
     usecols=[0])
     lines = ''
     rtgts=[]
@@ -750,7 +750,7 @@ def corObjStd(target, night, f, calc, path=None, delta=2.5):
     """
     if path == None:
         path = _os.getcwd()
-    std = _np.loadtxt('{0}/pol/padroes.txt'.format(hdtpath()), dtype=str)
+    std = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(hdtpath()), dtype=str)
     calc = float(calc)
     angref = 0.
     thstd = 0.
@@ -803,7 +803,7 @@ def corObjStd(target, night, f, calc, path=None, delta=2.5):
 def genTarget(target, path=None, PAref=None, skipdth=False, delta=2.5, epssig=2.0):
     """ Gen. target
 
-    PAref deve ser do formato `pyhdust/pol/padroes.txt`.
+    PAref deve ser do formato `pyhdust/refs/pol_padroes.txt`.
 
     Calculos/definicoes:
 
@@ -826,10 +826,10 @@ def genTarget(target, path=None, PAref=None, skipdth=False, delta=2.5, epssig=2.
                 print('# ERROR! Wrong PAref matrix format')
                 raise SystemExit(1)
     else:
-        PAref = _np.loadtxt('{0}/pol/padroes.txt'.format(hdtpath()), dtype=str)
+        PAref = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(hdtpath()), dtype=str)
     #le listas de padroes e alvos
-    std = _np.loadtxt('{0}/pol/padroes.txt'.format(hdtpath()), dtype=str)
-    obj = _np.loadtxt('{0}/pol/alv_os.txt'.format(hdtpath()), dtype=str)
+    std = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(hdtpath()), dtype=str)
+    obj = _np.loadtxt('{0}/refs/pol_alvos.txt'.format(hdtpath()), dtype=str)
     #verifica se teu objeto eh um objeto valido
     if target not in _np.hstack((std[:,0],obj)):
         print('# Warning! Target {0} is not a default target or standard!!'.\
@@ -977,8 +977,8 @@ def listNights(path, tgt):
     """
     List Nights
     """
-    ltgts = _np.loadtxt('{0}/pol/alv_os.txt'.format(hdtpath()), dtype=str)
-    lstds = _np.loadtxt('{0}/pol/padroes.txt'.format(hdtpath()), dtype=str,\
+    ltgts = _np.loadtxt('{0}/refs/pol_alvos.txt'.format(hdtpath()), dtype=str)
+    lstds = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(hdtpath()), dtype=str,\
     usecols=[0])
     if tgt not in _np.hstack((ltgts,lstds)):
         print('# Warning! Target {0} is not a default target or standard!!'.\
@@ -1009,7 +1009,7 @@ def plotMagStar(tgt, path=None):
     """
     if path == None:
         path = _os.getcwd()
-    lmags = _np.loadtxt('{0}/pol/mags.txt'.format(hdtpath()), dtype=str)
+    lmags = _np.loadtxt('{0}/refs/pol_mags.txt'.format(hdtpath()), dtype=str)
 
     if tgt not in lmags[:,0]:
         print('# ERROR! {0} is not a valid mag. star!'.format(tgt))

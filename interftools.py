@@ -24,6 +24,7 @@ Todas as leituras binarias baseiam-se no struct.
 import os as _os
 import struct as _struct
 import numpy as _np
+import pyfits as _pyfits
 from glob import glob as _glob
 import pyhdust.phc as _phc
 import pyhdust.oifits as _oifits
@@ -178,6 +179,54 @@ def readmap(file, quiet=False):
 
     return data, obslist, lbdc, Ra, xmax
 
+def img2fits(img, lbd, Ra, xmax, dist, outname='model'):
+    """ Export an image (e.g., data[0,0,0,:,:]) to the fits format.
+
+    `lbd` is the wavelength of the image and must be in meters. """
+    hdu = pyfits.PrimaryHDU(img)
+    hdulist = pyfits.HDUList([hdu])
+    pixsize = 2*xmax[0]/len(img)
+    rad_per_pixel = _np.double(pixsize*_phc.Rsun.cgs/(dist*_phc.pc.cgs))#*60.*60.*1000.*180./_np.pi)
+    hdulist[0].header['CDELT1'] = rad_per_pixel
+    hdulist[0].header['CDELT2'] = rad_per_pixel
+    hdulist[0].header['CDELT3'] = lbdc
+    hdulist[0].header['CRVAL1'] = 0.
+    hdulist[0].header['CRVAL2'] = 0.
+    hdulist[0].header['CRVAL3'] = lbdc
+    hdulist[0].header['NAXIS'] = 2
+    hdulist[0].header['NAXIS1'] = len(img)
+    hdulist[0].header['NAXIS2'] = len(img[0])
+    hdulist[0].header['CPPIX1'] = len(img)/2
+    hdulist[0].header['CPPIX2'] = len(img[0])/2
+    outname = '{0}.fits'.format(outname.replace(".fits",""))
+    hdu.writeto(outname)
+    print('# Saved {0} !'.format(outname))
+    return
+
+def data2fitscube(data, obs, lbdc, Ra, xmax, dist, zoom=0, outname='model'):
+    """ Export a set of images (e.g., data[zoom,obs,:,:,:]) to the fits cube
+    format.
+
+    `lbdc` is the wavelength array and must be in meters. """
+    hdu = pyfits.PrimaryHDU(data[zoom,obs,:,:,:])
+    hdulist = pyfits.HDUList([hdu])
+    pixsize = 2*xmax[0]/len(img)
+    rad_per_pixel = _np.double(pixsize*_phc.Rsun.cgs/(dist*_phc.pc.cgs))#*60.*60.*1000.*180./_np.pi)
+    hdulist[0].header['CDELT1'] = rad_per_pixel
+    hdulist[0].header['CDELT2'] = rad_per_pixel
+    hdulist[0].header['CDELT3'] = (lbdc[-1]-lbdc[0])/len(lbdc)
+    hdulist[0].header['CRVAL1'] = 0.
+    hdulist[0].header['CRVAL2'] = 0.
+    hdulist[0].header['CRVAL3'] = lbdc
+    hdulist[0].header['NAXIS'] = 2
+    hdulist[0].header['NAXIS1'] = len(img)
+    hdulist[0].header['NAXIS2'] = len(img[0])
+    hdulist[0].header['CPPIX1'] = len(img)/2
+    hdulist[0].header['CPPIX2'] = len(img[0])/2
+    outname = '{0}.fits'.format(outname.replace(".fits",""))
+    hdu.writeto(outname)
+    print('# Saved {0} !'.format(outname))
+    return
 
 def genSquare(size=64, halfside=16, center=(0,0)):
     """
@@ -540,13 +589,15 @@ def plot_pionier(oidata, ffile='last_run', fmt=['png'], legend=True, model=None,
     #_plt.savefig('hdt/{}_{}.png'.format(hdrinfo[0], hdrinfo[2]), transparent=True)
     #_plt.locator_params(axis = 'x', nbins = 7)
     _plt.subplots_adjust(left=0.12, right=0.95, top=0.96, bottom=0.09, hspace=.009, wspace=.32)
+    if not _os.path.exists('hdt'):
+        os.system('mkdir hdt')
     for suf in fmt:
-        _plt.savefig('{0}.{1}'.format(name,suf), transparent=True)
+        _plt.savefig('hdt/{0}.{1}'.format(name,suf), transparent=True)
     _plt.close()
     return
 
 def plot_pionier_res(oidata, model, ffile='last_run', fmt=['png'], legend=True, 
-    obs=None, dist=None):
+    obs=None, dist=42.75, quiet=True):
     """  Obs-Model comparison for PIONIER
 
     model, obs are lists
@@ -643,7 +694,7 @@ def plot_pionier_res(oidata, model, ffile='last_run', fmt=['png'], legend=True,
         if obs == None:
             obs = [0]
         for mod in model:
-            data, obslist, lbdc, Ra, xmax = readmap(mod)
+            data, obslist, lbdc, Ra, xmax = readmap(mod, quiet=quiet)
             pixsize = 2*xmax[0]/len(data[0,0,0,:,:])
             rad_per_pixel = _np.double(pixsize*_phc.Rsun.cgs/(dist*_phc.pc.cgs))#*60.*60.*1000.*180./_np.pi)
             V2 = []
@@ -658,6 +709,7 @@ def plot_pionier_res(oidata, model, ffile='last_run', fmt=['png'], legend=True,
                     V2 += [V**2]
                     lbds += [lbcalc]
             lbds = _np.array(lbds)
+            #~ V2 = _np.array(V2)+(.0875e-8*B/lbds-.026)
             V2 = _np.array(V2)+(.0875e-8*B/lbds-.026)
             ax3.plot(B/lbds, V2, color='purple', alpha=.3)
             ax4.plot(B/lbds, (vis2.vis2data-V2)/vis2.vis2err, color='black', markersize=ms, marker='o', ls='')#marker='s',
@@ -740,7 +792,7 @@ def plot_pionier_res(oidata, model, ffile='last_run', fmt=['png'], legend=True,
                     else:
                         PAmax += [PA[1]]
                     lbds += [lcalc]
-            Bmax = _np.array(Bmax); lbds = _np.array(lbds); t3m = _np.array(t3m)+.3; PAmax = _np.array(PAmax)
+            Bmax = _np.array(Bmax); lbds = _np.array(lbds); t3m = _np.array(t3m); PAmax = _np.array(PAmax)
             ax5.plot(Bmax/lbds, t3m, color='purple', alpha=.9)
             ax6.plot(Bmax/lbds, (y-t3m)/yerr, color='black', markersize=ms, marker='o', ls='')#alpha=.6, 
     #~ ax5.get_xaxis().set_ticklabels([])
@@ -1045,6 +1097,7 @@ def printinfo(file):
         info2+= ['{0:.1f}'.format(_np.sqrt(vis.ucoord**2 + vis.vcoord**2))]
         info2+= ['{0:.1f}'.format(_np.arctan(vis.ucoord / vis.vcoord) * 180.0 / _np.pi % 180.0)]
     return [info[2][:10], '{0:.7f}'.format(info[1])] + info2 
+
 
 ### MAIN ###
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-#-*- coding:utf-8 -*-
+# -*- coding:utf-8 -*-
 
 """
 PyHdust *beatlas* module: BeAtlas specific variables and functions.
@@ -39,10 +39,13 @@ dtype=str)
 Tp11 = _np.array([28905.8,26945.8,25085.2,23629.3,22296.1,20919.7,\
 18739.3,17063.8,15587.7,14300.3,13329.9,12307.1])
 
+sig0 = _np.logspace(_np.log10(0.02),_np.log10(4.0),7)
 
-def rmMods(modn, Ms):
+Sig0 = ['{0:.2f}'.format(x) for x in sig0]
+
+def rmMods(modn, Ms, clusters=['job']):
     """
-    Remove the *.txt models of models `modn` according to the list structure
+    Remove the *.inp models of models `modn` according to the list structure
     below.
 
     | Masses list ans sig0 POSITION do be excluded
@@ -65,22 +68,27 @@ def rmMods(modn, Ms):
     OUTPUT: *files removed
     """
     #Create sig0 list
-    mods = _glob('mod{}/*NI*.txt'.format(modn))
-    n0file = _np.genfromtxt(mods, delimiter = (22,4), usecols=(1), dtype=None)
-    sig0s = []
-    for item in n0file:
-        if item not in sig0s:
-            sig0s += [item]
-    sig0s.sort()
-    
-    for item in Ms:
-        M = item[0]
-        exsig = item[1]
-        for rm in exsig:
-            _os.system('rm mod{0}/mod{0}*_sig{1}*_M{2}*.txt'.format(modn,sig0s[rm],\
-            M))
-            print('# Deleted mod{0}/mod{0}*_sig{1}*_M{2}*.txt'.format(modn,\
-            sig0s[rm],M))
+    sig0s = Sig0
+    project = _phc.trimpathname(_os.getcwd())[1]
+    for cl in clusters:
+        file = open('{0}s/{0}s_{1}_mod{2}.sh'.format(cl, project, modn))
+        lines = file.readlines()
+        file.close()
+        for item in Ms:
+            M = item[0]
+            exsig = item[1]
+            for rm in exsig:
+                _os.system('rm mod{0}/mod{0}*_sig{1}*_M{2}*.inp'.format(modn,
+                sig0s[rm], M))
+                print('# Deleted mod{0}/mod{0}*_sig{1}*_M{2}*.inp'.format(modn,
+                sig0s[rm],M))
+                _os.system('rm {3}s/mod{0}*_sig{1}*_M{2}*.{3}'.format(modn,
+                sig0s[rm], M, cl))
+                lines = [line for line in lines if (line.find('_sig{0}'.format(
+                sig0s[rm]))==-1 or line.find('_M{0}'.format(M))==-1)]
+		file = open('{0}s/{0}s_{1}_mod{2}.sh'.format(cl, project, modn), 'w')
+		file.writelines(lines)
+		file.close()
     #End prog
     return 
 
@@ -98,6 +106,22 @@ def interpolBA(params, modelos):
     """ Interpola os `modelos` para os parametros `params` """
     return 1
 
+def breakJob(n, file):
+	""" Break the jobs/jobs_Project_modn.sh into n files 
+	../jobs_Project_modn_##.txt to be used with `dispara` """
+	f0 = open(file)
+	lines = f0.readlines()
+	f0.close()
+	lines.sort()
+	lines = [line.replace('qsub ','') for line in lines]
+	outname = _phc.trimpathname(file)[1].replace('.sh','')
+	N = len(lines)
+	for i in range(n):
+		f0 = open('{0}_{1:02d}.txt'.format(outname, i), 'w')
+		f0.writelines(lines[i*N/n:(i+1)*N/n])
+		f0.close()
+	print('# {0} files created!'.format(n))
+	return
 
 def correltable(pos):
     """ Create the correlation table of Domiciano de Souza+ 2014. """

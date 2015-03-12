@@ -55,6 +55,19 @@ def fltTxtOccur(s, lines, n=1):
         out = _re.findall(fltregex, occur)[0]
     return float(out)
 
+def sortfile(file, quiet=False):
+    """ Sort the file. """
+    f0 = open(file, 'r')
+    lines = f0.readlines()
+    f0.close()
+    lines.sort()
+    f0 = open(file, 'w')
+    f0.writelines(lines)
+    f0.close()
+    if not quiet:
+        print('# File {0} sorted!'.format(file))
+    return
+    
 
 def outfld(fold='hdt'):
     """

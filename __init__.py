@@ -128,7 +128,6 @@ def plotMJDdates(spec=None, pol=None, interf=None, limits=None):
     ax.set_xlabel('MJD')
     return
     
-
 def hdtpath():
     """
     Return the path os the module.
@@ -303,6 +302,7 @@ def mergesed2(models, Vrots, path=None):
     'Brg':2.166}
     
     for model in models:
+        model = model.replace('.inp','.txt')
         modfld, modelname = _phc.trimpathname(model)
         path = _phc.trimpathname(modfld[:-1])[0]
         if _os.path.exists('{0}fullsed'.format(path)) == False:
@@ -313,7 +313,7 @@ def mergesed2(models, Vrots, path=None):
         sfound = []
         #Process broad-bands
         for suf in sufbands:
-            file = modfld+'{}_{}.sed2'.format(suf,modelname.replace(".txt",""))
+            file = modfld+'{0}_{1}.sed2'.format(suf,modelname.replace(".txt",""))
             if _os.path.exists(file):
                 sfound += [suf]
                 newdata = readsed2(file)
@@ -325,7 +325,7 @@ def mergesed2(models, Vrots, path=None):
                     if _np.product( (nobs, Rstar, Rwind) == sed2info(file)[1:] )==0:
                         key = ''
                         while key.upper() != Y:
-                            print('# WARNING: {} has different HDUST output!!!'.\
+                            print('# WARNING: {0} has different HDUST output!!!'.\
                             format(modelname))
                             key = raw_input('Do you want do proceed? (y/other): ')
                     nlbd += sed2info(file)[0]
@@ -333,7 +333,7 @@ def mergesed2(models, Vrots, path=None):
         #Process lines
         Vrot = Vrots[models.index(model)]
         for suf in suflines:
-            file = modfld+'{}_{}_SEI.sed2'.format(suf,modelname.replace(".inp",""))
+            file = modfld+'{0}_{1}_SEI.sed2'.format(suf,modelname.replace(".txt",""))
             if _os.path.exists(file):
                 sfound += [suf]
                 newdata = readsed2(file)
@@ -355,7 +355,7 @@ def mergesed2(models, Vrots, path=None):
                     if _np.product((nobs, Rstar, Rwind) == sed2info(file)[1:]) == 0:
                         key = ''
                         while key.upper() != Y:
-                            print('# WARNING: {} has different HDUST input!!!'.\
+                            print('# WARNING: {0} has different HDUST input!!!'.\
                             format(modelname))
                             key = raw_input('Do you want do proceed? (y/other): ')
                     idx = _np.where((sed2data[:,2] < mini) | (sed2data[:,2] > maxi))
@@ -365,7 +365,7 @@ def mergesed2(models, Vrots, path=None):
                     sed2data = _np.vstack((sed2data,newdata))
 
         if len(sfound) > 0:
-            print('# PROCESSED: {} with {}'.format(model, sfound))
+            print('# PROCESSED: {0} with {1}'.format(model, sfound))
             fullsed2 = _np.zeros((len(sed2data),16))
             fullsed2[:,0:3+1] = sed2data[:,0:3+1]
             fullsed2[:,4] = sed2data[:,11]
@@ -384,18 +384,18 @@ def mergesed2(models, Vrots, path=None):
             idx = _np.argsort(fullsed2, order=('MU','LAMBDA'))
             fullsed2 = fullsed2[idx]
         
-            hd = '%CONTAINS: {}\n'.format(' + '.join(sfound))
-            hd+= '%CREATED: {}\n'.format(_time.asctime( _time.localtime(_time.time()) ))
-            hd+= '%{:>7s}{:>8s}{:>13s}{:>13s}'.format('nlbd','nobs','Rstar','Rwind')+'\n'
-            hd+= '{:8d}{:8d}{:13.4f}{:13.2f}\n'.format(int(nlbd),int(nobs),Rstar,Rwind)
-            hd+= '%{:>12s}'.format('MU')+(15*'{:>13s}').format('PHI','LAMBDA','FLUX',\
+            hd = '%CONTAINS: {0}\n'.format(' + '.join(sfound))
+            hd+= '%CREATED: {0}\n'.format(_time.asctime( _time.localtime(_time.time()) ))
+            hd+= '%{0:>7s}{1:>8s}{2:>13s}{3:>13s}'.format('nlbd','nobs','Rstar','Rwind')+'\n'
+            hd+= '{0:8d}{1:8d}{2:13.4f}{3:13.2f}\n'.format(int(nlbd),int(nobs),Rstar,Rwind)
+            hd+= '%{0:>12s}'.format('MU')+(15*'{0:>13s}').format('PHI','LAMBDA','FLUX',\
             'SCT FLUX','EMIT FLUX','TRANS FLUX','Q','U','Sig FLUX','Sig FLUX',\
             'Sig SCT FLUX','Sig EMIT FLUX','Sig TRANS FLUX','Sig Q','Sig U')
         
             _np.savetxt(path+'fullsed/fullsed_'+modelname.replace('.inp','.sed2'),\
             fullsed2, header=hd, comments="", fmt='%13.6f', delimiter='')
         else:
-            print('# WARNING: No SED2 found for {}'.format(model))
+            print('# WARNING: No SED2 found for {0}'.format(model))
     return
 
 
