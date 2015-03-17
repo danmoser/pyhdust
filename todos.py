@@ -1,13 +1,12 @@
 #!/usr/bin/env python
-#-*- coding:utf-8 -*-
-#Modified by D. Moser in 2015-03-02
+# -*- coding:utf-8 -*-
+# Modified by D. Moser in 2015-03-17
 
 """ TODOs
 
 | GENERAL
 |   -pip install for pyhdust
 |   -Transparent legend-box on the graphs
-|   -Discover bug Ha hdt.mergesed2() with bestar2.02 
 |   -Change scipy interpolate with numpy.interp (hdt.doFilterConv, others...)
 |   -Define unique 'Planejamento_LNA' as MySQL (targets [coordinates], P and Ph0
 |   [mags.], nights observed vs. bad weather, etc.)
@@ -38,8 +37,7 @@
 |   -Implement Mdot11 option in makeDiskGrid
 
 | BEATLAS
-|   -Create XDR BeAtlas, rotine correlations emcee (+maps)
-|   -Update beatlas.py stellar parameters
+|   -Create XDR BeAtlas, rotine correlations emcee (+maps), triangle.py
 
 """
 

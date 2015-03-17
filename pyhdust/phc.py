@@ -14,6 +14,7 @@ import re as _re
 import numpy as _np
 import datetime as _dt
 from glob import glob as _glob
+from itertools import product as _product
 import pyhdust.jdcal as _jdcal
 
 try:
@@ -23,8 +24,6 @@ except:
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
-__date__ ='1 March 2015'
-__version__ = '0.9'
 
 
 class Constant(object):
@@ -111,16 +110,24 @@ def wg_avg_and_std(values, sigma):
     avg = _np.average(values, weights=1/sigma)
     return (avg, _np.sqrt(_np.sum(sigma**2))/len(values) )
 
-def find_nearest(array,value):
+def find_nearest(array,value, bigger=None):
     """ Find nearest VALUE in the array and return it.
 
     INPUT: array, value
 
     OUTPUT: closest value (array dtype)
     """
-    array = _np.array(array)
-    idx = (_np.abs(array-value)).argmin()
-    return array[idx]
+    if bigger == None:
+        array = _np.array(array)
+        idx = (_np.abs(array-value)).argmin()
+        found = array[idx]
+    elif bigger == True:
+        found = min(x for x in array if x > value)        
+    elif bigger == False:
+        found = max(x for x in array if x < value)
+    else:
+        print('# ERROR at bigger!!')
+    return found
 
 def bindata(x, y, yerr, nbins, xrange=None):
     """
@@ -397,6 +404,59 @@ def readrange(file, i0, ie):
             break
     fp.close()
     return lines
+
+def interLinND(X, X0, X1, Fx):
+    """
+    | N-dimensional linear interpolation in LOG space!!
+    | Pay attention: Fx must always be > 0.
+
+    | INPUT:
+    | X = position in with the interpolation is desired;
+    | X0 = minimal values of the interval;
+    | X1 = maximum values of the inveral
+    | Fx = function values along the interval, ORDERED BY DIMENSTION.
+    | Example: Fx = [F00, F01, F10, F11]
+
+    OUTPUT: interpolated value (float)"""
+    X = _np.array(X)
+    X0 = _np.array(X0)
+    X1 = _np.array(X1)
+    Xd = (X-X0)/(X1-X0)
+    DX = _np.array([ [(1-x),x] for x in Xd ])
+    #
+    i = 0
+    F = 0
+    for prod in _product(*DX):
+        F+= _np.log(Fx[i])*_np.product(prod)
+        i+= 1
+    #
+    return _np.exp(F)
+
+def interLinNDnonlog(X, X0, X1, Fx):
+    """
+    N-dimensional linear interpolation.
+
+    | INPUT:
+    | X = position in with the interpolation is desired;
+    | X0 = minimal values of the interval;
+    | X1 = maximum values of the inveral
+    | Fx = function values along the interval, ORDERED BY DIMENSTION.
+    | Example: Fx = [F00, F01, F10, F11]
+
+    OUTPUT: interpolated value (float)"""
+    X = _np.array(X)
+    X0 = _np.array(X0)
+    X1 = _np.array(X1)
+    Xd = (X-X0)/(X1-X0)
+    DX = _np.array([ [(1-x),x] for x in Xd ])
+    #
+    i = 0
+    F = 0
+    for prod in _product(*DX):
+        F+= Fx[i]*_np.product(prod)
+        i+= 1
+    #
+    return F
 
 ra2deg = _np.double(180./_np.pi)
 

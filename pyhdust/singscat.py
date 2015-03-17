@@ -39,7 +39,6 @@ import time as _time
 import pyhdust.jdcal as _jdcal
 import pyhdust.poltools as _polt
 import pyhdust.phc as _phc
-from pyhdust import hdtpath as _hdtpath
 
 try:
     import matplotlib.pyplot as _plt
@@ -49,9 +48,6 @@ except:
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
-__date__ ='1 March 2015'
-__version__ = '0.9'
-
 
 ### PHYSICAL CONSTANTS VARS ###
 _sigT = _phc.sigT.cgs #cm^2 = Thomson cross section

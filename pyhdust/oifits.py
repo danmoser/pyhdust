@@ -69,10 +69,9 @@ import datetime as _datetime
 import copy as _copy
 import numpy as _np
 
-__author__ = "Daniel Moser"
-__email__ = "dmfaes@gmail.com"
-__date__ ='1 March 2015'
-__version__ = '0.9'
+__author__ = "Daniel Moser; Paul Boley"
+__email__ = "dmfaes@gmail.com; boley@mpia-hd.mpg.de"
+
 _mjdzero = _datetime.datetime(1858, 11, 17)
 
 matchtargetbyname = False

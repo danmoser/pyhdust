@@ -31,9 +31,6 @@ except:
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
-__date__ ='1 March 2015'
-__version__ = '0.9'
-
 
 _outfold = ''
 

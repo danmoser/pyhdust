@@ -22,8 +22,7 @@ except:
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
-__date__ ='1 March 2015'
-__version__ = '0.9'
+__version__ = 0.91
 
 
 bestars = [
@@ -135,7 +134,8 @@ def hdtpath():
     >>> hdt.hdtpath()
     /home/user/Scripts/pyhdust/
     """
-    return __file__[:__file__.rfind('/')+1]
+    fulldir = __file__[:__file__.rfind('/')+1]
+    return fulldir[:fulldir[:-1].rfind('/')+1]
 
 def doFilterConv(x0, y0, filter):
     """

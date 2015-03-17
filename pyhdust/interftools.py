@@ -24,7 +24,6 @@ Todas as leituras binarias baseiam-se no struct.
 import os as _os
 import struct as _struct
 import numpy as _np
-import pyfits as _pyfits
 from glob import glob as _glob
 import pyhdust.phc as _phc
 import pyhdust.oifits as _oifits
@@ -33,13 +32,12 @@ from pyhdust.spectools import linfit as _linfit
 try:
     import matplotlib.pyplot as _plt
     import matplotlib.ticker as _mtick
+    import pyfits as _pyfits
 except:
-    print('# Warning! matplotlib module not installed!!!')
+    print('# Warning! matplotlib and/or pyfits module not installed!!!')
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
-__date__ ='1 March 2015'
-__version__ = '0.9'
 
 
 colors = ["red","green","blue","black"]
@@ -183,23 +181,23 @@ def img2fits(img, lbd, Ra, xmax, dist, outname='model'):
     """ Export an image (e.g., data[0,0,0,:,:]) to the fits format.
 
     `lbd` is the wavelength of the image and must be in meters. """
-    hdu = pyfits.PrimaryHDU(img)
-    hdulist = pyfits.HDUList([hdu])
+    hdu = _pyfits.PrimaryHDU(img[::-1,:])
+    hdulist = _pyfits.HDUList([hdu])
     pixsize = 2*xmax[0]/len(img)
     rad_per_pixel = _np.double(pixsize*_phc.Rsun.cgs/(dist*_phc.pc.cgs))#*60.*60.*1000.*180./_np.pi)
     hdulist[0].header['CDELT1'] = rad_per_pixel
     hdulist[0].header['CDELT2'] = rad_per_pixel
-    hdulist[0].header['CDELT3'] = lbdc
+    hdulist[0].header['CDELT3'] = 1.
     hdulist[0].header['CRVAL1'] = 0.
     hdulist[0].header['CRVAL2'] = 0.
-    hdulist[0].header['CRVAL3'] = lbdc
+    hdulist[0].header['CRVAL3'] = lbd
     hdulist[0].header['NAXIS'] = 2
     hdulist[0].header['NAXIS1'] = len(img)
     hdulist[0].header['NAXIS2'] = len(img[0])
     hdulist[0].header['CPPIX1'] = len(img)/2
     hdulist[0].header['CPPIX2'] = len(img[0])/2
     outname = '{0}.fits'.format(outname.replace(".fits",""))
-    hdu.writeto(outname)
+    hdu.writeto(outname, clobber=True)
     print('# Saved {0} !'.format(outname))
     return
 
@@ -208,23 +206,23 @@ def data2fitscube(data, obs, lbdc, Ra, xmax, dist, zoom=0, outname='model'):
     format.
 
     `lbdc` is the wavelength array and must be in meters. """
-    hdu = pyfits.PrimaryHDU(data[zoom,obs,:,:,:])
-    hdulist = pyfits.HDUList([hdu])
-    pixsize = 2*xmax[0]/len(img)
+    hdu = _pyfits.PrimaryHDU(data[zoom,obs,:,:,:])
+    hdulist = _pyfits.HDUList([hdu])
+    pixsize = 2*xmax[0]/len(data[zoom,obs,0,:,:])
     rad_per_pixel = _np.double(pixsize*_phc.Rsun.cgs/(dist*_phc.pc.cgs))#*60.*60.*1000.*180./_np.pi)
     hdulist[0].header['CDELT1'] = rad_per_pixel
     hdulist[0].header['CDELT2'] = rad_per_pixel
     hdulist[0].header['CDELT3'] = (lbdc[-1]-lbdc[0])/len(lbdc)
     hdulist[0].header['CRVAL1'] = 0.
     hdulist[0].header['CRVAL2'] = 0.
-    hdulist[0].header['CRVAL3'] = lbdc
+    hdulist[0].header['CRVAL3'] = lbdc[0]
     hdulist[0].header['NAXIS'] = 2
-    hdulist[0].header['NAXIS1'] = len(img)
-    hdulist[0].header['NAXIS2'] = len(img[0])
-    hdulist[0].header['CPPIX1'] = len(img)/2
-    hdulist[0].header['CPPIX2'] = len(img[0])/2
+    hdulist[0].header['NAXIS1'] = len(data[zoom,obs,0,:,:])
+    hdulist[0].header['NAXIS2'] = len(data[zoom,obs,0,:,:][0])
+    hdulist[0].header['CPPIX1'] = len(data[zoom,obs,0,:,:])/2
+    hdulist[0].header['CPPIX2'] = len(data[zoom,obs,0,:,:][0])/2
     outname = '{0}.fits'.format(outname.replace(".fits",""))
-    hdu.writeto(outname)
+    hdu.writeto(outname, clobber=True)
     print('# Saved {0} !'.format(outname))
     return
 
