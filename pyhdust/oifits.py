@@ -1317,6 +1317,9 @@ def open(filename, quiet=False):
             hdrobj, hdrmjd, hdrobs, hdrdat = ('', '', '', '')
             if 'OBJECT' in header:
                 hdrobj = header['OBJECT']
+                if hdrobj.upper() == 'OBJECT':
+                    if 'HIERARCH ESO OBS TARG NAME' in header:
+                        hdrobj = header['HIERARCH ESO OBS TARG NAME']
             if 'MJD-OBS' in header:
                 hdrmjd = header['MJD-OBS']
             if 'DATE-OBS' in header:

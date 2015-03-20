@@ -392,7 +392,7 @@ def mergesed2(models, Vrots, path=None):
             'SCT FLUX','EMIT FLUX','TRANS FLUX','Q','U','Sig FLUX','Sig FLUX',\
             'Sig SCT FLUX','Sig EMIT FLUX','Sig TRANS FLUX','Sig Q','Sig U')
         
-            _np.savetxt(path+'fullsed/fullsed_'+modelname.replace('.inp','.sed2'),\
+            _np.savetxt(path+'fullsed/fullsed_'+modelname.replace('.txt','.sed2'),\
             fullsed2, header=hd, comments="", fmt='%13.6f', delimiter='')
         else:
             print('# WARNING: No SED2 found for {0}'.format(model))
@@ -1044,6 +1044,19 @@ def obsCalc():
       f0.close()
     return
     
+def readSingleBe(file):
+    """ Read the SingleBe file.
+
+    OUTPUT: radius(len(grid)), sigr(len(time), len(grid)), time [sec.]
+    """
+    f0 = open(file)
+    lines = f0.readlines()
+    f0.close()
+    time = _np.array(lines[16::9]).astype(float)
+    sigr = _np.array(_np.genfromtxt(lines[20::9])).astype(float)
+    radius = _np.array(lines[4].split()).astype(float)
+    return radius, sigr, time
+
 
 ### MAIN ###
 if __name__ == "__main__":

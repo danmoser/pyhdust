@@ -16,6 +16,11 @@ from itertools import product as _product
 import pyhdust.phc as _phc
 import pyhdust as _hdt
 
+try:
+    import matplotlib.pyplot as _plt
+except:
+    print('# Warning! matplotlib module not installed!!!')
+
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
 
@@ -171,9 +176,9 @@ def rmMods(modn, Ms, clusters=['job']):
                 sig0s[rm], M, cl))
                 lines = [line for line in lines if (line.find('_sig{0}'.format(
                 sig0s[rm]))==-1 or line.find('_M{0}'.format(M))==-1)]
-		file = open('{0}s/{0}s_{1}_mod{2}.sh'.format(cl, project, modn), 'w')
-		file.writelines(lines)
-		file.close()
+        file = open('{0}s/{0}s_{1}_mod{2}.sh'.format(cl, project, modn), 'w')
+        file.writelines(lines)
+        file.close()
     #End prog
     return
 
@@ -372,6 +377,7 @@ def interpolBA(params, ctrlarr, lparams, minfo, models, param=True):
     if len(ctrlarr) != nq:
         print('# ERROR in ctrlarr!!')
         return
+    params = params[:_np.sum(_np.isnan(ctrlarr))]
     nlb = len(models[0])
     outmodels = _np.empty((2**len(params),nlb))
     mod = BAmod('')

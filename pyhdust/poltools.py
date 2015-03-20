@@ -1,9 +1,9 @@
 #-*- coding:utf-8 -*-
-#Modified by D. Bednarski in 2015 March
 
 """
 PyHdust *poltools* module: polarimetry tools
 
+:co-author: Daniel Bednarski
 :license: GNU GPL v3.0 (https://github.com/danmoser/pyhdust/blob/master/LICENSE)
 """
 import os as _os
@@ -32,7 +32,7 @@ filters = ['u','b','v','r','i']
 def stdchk(stdname):
     """ Check it the standard star name contains an known name, and return
     its position in `padroes.txt` """
-    lstds = list(_np.loadtxt('{0}/refs/pol_padroes.txt'.format(hdtpath()), dtype=str,\
+    lstds = list(_np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str,\
     usecols=[0]))
     chk = False
     i = -1
@@ -362,8 +362,6 @@ def plotfrompollog(path, star, filters=None, colors=None):
 def grafpol(argv):
     """
     Program to plot the best adjust and its residuals of IRAF reduction
-    
-    :co-author: Daniel Bednarski
     """    
     tela = False
     todos = False
@@ -506,8 +504,6 @@ def grafpol(argv):
 def genStdLog(path=None):
     """
     Generate Standards Log
-
-    :co-author: Daniel Bednarski
     """
     if path == None:
         path = _os.getcwd()
@@ -527,8 +523,8 @@ def genStdLog(path=None):
             else:
                print('Value not valid. Please, type \'y\' ou \'n\':')
 
-    ltgts = _np.loadtxt('{0}/refs/pol_alvos.txt'.format(hdtpath()), dtype=str)
-    lstds = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(hdtpath()), dtype=str,\
+    ltgts = _np.loadtxt('{0}/refs/pol_alvos.txt'.format(_hdtpath()), dtype=str)
+    lstds = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str,\
     usecols=[0])
     tgts = [fld for fld in _os.listdir('{0}'.format(path)) if \
     _os.path.isdir(_os.path.join('{0}'.format(path), fld))]
@@ -595,8 +591,6 @@ def chkStdLog(path=None, delta=2.5):
 
     delta is the allowed variation for the angles between the two
     beams for one same calcite.
-
-    :co-author: Daniel Bednarski
     """
     allinfo = True
     if path == None:
@@ -640,8 +634,6 @@ def genObjLog(path=None, delta=2.5):
 
     delta is the allowed variation for the angles between the two
     beams for one same calcite.
-
-    :co-author: Daniel Bednarski
     """
     if path == None:
         path = _os.getcwd()
@@ -661,10 +653,10 @@ def genObjLog(path=None, delta=2.5):
             else:
                print('Value not valid. Please, type \'y\' ou \'n\':')
 
-    ltgts = _np.loadtxt('{0}/refs/pol_alvos.txt'.format(hdtpath()), dtype=str)
+    ltgts = _np.loadtxt('{0}/refs/pol_alvos.txt'.format(_hdtpath()), dtype=str)
     tgts = [fld for fld in _os.listdir('{0}'.format(path)) if \
     _os.path.isdir(_os.path.join('{0}'.format(path), fld))]
-    lstds = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(hdtpath()), dtype=str,\
+    lstds = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str,\
     usecols=[0])
     lines = ''
     rtgts=[]
@@ -744,11 +736,10 @@ def corObjStd(target, night, f, calc, path=None, delta=2.5):
 
     Input: target, f, calc, stds
     Output: angref, thstd
-    :co-author: Daniel Bednarski
     """
     if path == None:
         path = _os.getcwd()
-    std = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(hdtpath()), dtype=str)
+    std = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str)
     calc = float(calc)
     angref = 0.
     thstd = 0.
@@ -766,8 +757,8 @@ def corObjStd(target, night, f, calc, path=None, delta=2.5):
             if stdchk(stdinf[1])[0] and stdinf[2] == f and \
             abs(float(stdinf[3])-calc) <= delta:
                 # Bednarski: I changed below to work correctly
-                Q, U, sig, P, th, sigT, tmp, tmp2 = readout('{0}/{1}'.\
-                format(path+'/'+night,stdinf[4]))
+                Q, U, sig, P, th, sigT, tmp, tmp2 = readout('{0}/{1}/{2}'.\
+                    format(path+night,stdinf[1],stdinf[4]))
                 stdname += [ stdinf[1] ]
                 thstd += [ float(th) ]
                 if thstd == 0.:
@@ -811,11 +802,11 @@ def genTarget(target, path=None, PAref=None, skipdth=False, delta=2.5, epssig=2.
         * Q = P*cos(2*th_eq*pi/180)
         * U = P*sin(2*th_eq*pi/180)
         * sigth = 28.6*sig
-
-    :co-author: Daniel Bednarski
     """
     if path == None:
         path = _os.getcwd()
+    if path[-1] != '/':
+        path += '/'
     #Carregar angulos de referencia para todos os filtros de um conjunto de
     # padroes
     if PAref is not None:
@@ -824,10 +815,10 @@ def genTarget(target, path=None, PAref=None, skipdth=False, delta=2.5, epssig=2.
                 print('# ERROR! Wrong PAref matrix format')
                 raise SystemExit(1)
     else:
-        PAref = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(hdtpath()), dtype=str)
+        PAref = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str)
     #le listas de padroes e alvos
-    std = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(hdtpath()), dtype=str)
-    obj = _np.loadtxt('{0}/refs/pol_alvos.txt'.format(hdtpath()), dtype=str)
+    std = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str)
+    obj = _np.loadtxt('{0}/refs/pol_alvos.txt'.format(_hdtpath()), dtype=str)
     #verifica se teu objeto eh um objeto valido
     if target not in _np.hstack((std[:,0],obj)):
         print('# Warning! Target {0} is not a default target or standard!!'.\
@@ -848,17 +839,17 @@ def genTarget(target, path=None, PAref=None, skipdth=False, delta=2.5, epssig=2.
                 print('# ERROR! Check {0}/{1}/obj.log'.format(path,night))
                 raise SystemExit(1)
             for objinf in objs:
-#                thstd = 0.
+                #~ thstd = 0.
                 dth = []
                 stdnames = ''
-                # Existe algum motivo abaixo para encontrar se objinf[1] CONTEM target e nao
-                # se eh de fato IGUAL a target? Comentei e mudei.
-#                if objinf[1].find(target) > -1:
+                #~ Existe algum motivo abaixo para encontrar se objinf[1] CONTEM target e nao
+                #~ se eh de fato IGUAL a target? Comentei e mudei.
+                #~ if objinf[1].find(target) > -1:
                 if objinf[1] == target:
                     MJD, tmp, f, calc, out = objinf
                     # Bednarski: I changed below to work correctly
-                    Q, U, sig, P, th, sigT, tmp, tmp2 = readout('{0}/{1}'.\
-                    format(path+'/'+night,out))
+                    Q, U, sig, P, th, sigT, tmp, tmp2 = readout('{0}/{1}/{2}'.\
+                    format(path+night,objinf[1],out))
                     P = float(P)*100
                     th = float(th)
                     sig = float(sig)*100
@@ -886,7 +877,7 @@ def genTarget(target, path=None, PAref=None, skipdth=False, delta=2.5, epssig=2.
                                 stdnames += ','
                             stdnames += stdname[i]
                         mdth=sum(dth)/len(dth)  # evalute the mean dth
-                        devth=np.std(dth)
+                        devth=_np.std(dth)
                     th = -th-mdth
                     # Bednarski: I changed 'if' for 'while' because it can be necessary more than once
                     while th >= 180:
@@ -975,8 +966,8 @@ def listNights(path, tgt):
     """
     List Nights
     """
-    ltgts = _np.loadtxt('{0}/refs/pol_alvos.txt'.format(hdtpath()), dtype=str)
-    lstds = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(hdtpath()), dtype=str,\
+    ltgts = _np.loadtxt('{0}/refs/pol_alvos.txt'.format(_hdtpath()), dtype=str)
+    lstds = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str,\
     usecols=[0])
     if tgt not in _np.hstack((ltgts,lstds)):
         print('# Warning! Target {0} is not a default target or standard!!'.\
@@ -1007,7 +998,7 @@ def plotMagStar(tgt, path=None):
     """
     if path == None:
         path = _os.getcwd()
-    lmags = _np.loadtxt('{0}/refs/pol_mags.txt'.format(hdtpath()), dtype=str)
+    lmags = _np.loadtxt('{0}/refs/pol_mags.txt'.format(_hdtpath()), dtype=str)
 
     if tgt not in lmags[:,0]:
         print('# ERROR! {0} is not a valid mag. star!'.format(tgt))

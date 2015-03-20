@@ -3,6 +3,7 @@
 """
 PyHdust *input* module: Hdust input tools.
 
+:co-author: Rodrigo Vieira
 :license: GNU GPL v3.0 (https://github.com/danmoser/pyhdust/blob/master/LICENSE)
 """
 import os as _os
@@ -590,8 +591,6 @@ def makeStarGrid(oblats, Hfs, path=None):
     | Hfs = [0.3] (example)
 
     Masses list a Z value are inside `geneve_par.pro` file.
-
-    :co-author: Rodrigo Vieira
     """
     path0 = _os.getcwd()
     if path != None:
@@ -699,8 +698,6 @@ def makeSimulDens(dbase, basesim):
 
     |dbase = _np.logspace(_np.log10(0.02),_np.log10(4.0),7)
     |basesim = 'simulation/sed.txt'
-
-    :co-author: Rodrigo Vieira
     """
     f0 = open(basesim)
     mod = f0.readlines()

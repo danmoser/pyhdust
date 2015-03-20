@@ -44,7 +44,7 @@ colors = ["red","green","blue","black"]
 
 ### READ MAP ###
 def log_transform(im):
-    '''returns log(image) scaled to the interval [0,1]'''
+    '''Returns log(image) scaled to the interval [0,1]'''
     try:
         (min, max) = (_np.min(im[_np.where(im > 0)]), _np.max(im))
         if (max > min) and (max > 0):
@@ -54,6 +54,7 @@ def log_transform(im):
             im[idx] = _np.NaN
             return im
     except:
+        print('#Warning! The image could not be normalized !!!')
         pass
     return im
 
@@ -85,6 +86,7 @@ def dat2png(file):
 
 def imshowl(img):
     """
+    Plot the normalized image in log-scale.
     """
     _plt.clf()
     _plt.imshow(log_transform(img), cmap=_plt.get_cmap('gist_heat'))
@@ -92,15 +94,13 @@ def imshowl(img):
 
 def readmap(file, quiet=False):
     """
-    Read MAP or MAPS files.
+    Read *Hdust* MAP or MAPS files.
 
-    output = data, obslist, lbdc, Ra, xmax
+    OUTPUT = data, obslist, lbdc, Ra, xmax
 
-    data(nimgs,nobs,nlbd,ny,nx,dfact)
-
-    .map, dfact = 6
-
-    .maps, dfact = 1
+    | data(nimgs,nobs,nlbd,ny,nx,dfact)
+    | .map, dfact = 6
+    | .maps, dfact = 1
     """
     if file[-4:] == '.map':
         dfact = 6
@@ -1026,7 +1026,8 @@ def plot_oifits(oidata, ffile='last_run', fmt=['png'], xrange=None, legend=True)
 def genfinaloifits(oidata, ffile, xrange=None, legend=True):
     """ Standard observational log
     WITH the CORRECTED SPECTRUM
-    """    
+    """
+    #~ TODO
     print('# WAIT... Work in progress')
     return
 
@@ -1084,8 +1085,8 @@ def checkESOdownload(path=None):
     print(path,len(lines),count)
     return
 
-def printinfo(file):
-    """ Print OIFITS observational log, as appendix of Faes, D. M. (2015)
+def printinfo(file, extract=False):
+    """ Print AMBER OIFITS observational log, as appendix of Faes, D. M. (2015)
 
     DATE-OBS    MJD PA  B   PA  B   PA  B"""
     oidata = _oifits.open(file, quiet='True')
@@ -1094,7 +1095,18 @@ def printinfo(file):
     for vis in oidata.vis:
         info2+= ['{0:.1f}'.format(_np.sqrt(vis.ucoord**2 + vis.vcoord**2))]
         info2+= ['{0:.1f}'.format(_np.arctan(vis.ucoord / vis.vcoord) * 180.0 / _np.pi % 180.0)]
-    return [info[2][:10], '{0:.7f}'.format(info[1])] + info2 
+    if extract:
+        wav = []
+        info3 = []
+        info4 = []
+        for vis in oidata.vis:
+            wav += [1e6*vis.wavelength.eff_wave]
+            info3 += [vis.visphi, vis.visphierr]
+        for vis2 in oidata.vis2:
+            info4 += [vis2.vis2data, vis2.vis2err]
+        return [info[2][:10], '{0:.7f}'.format(info[1]), info[0]] + info2, wav, info3, info4
+    else:
+        return [info[2][:10], '{0:.7f}'.format(info[1]), info[0]] + info2
 
 
 ### MAIN ###

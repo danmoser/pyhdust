@@ -26,6 +26,14 @@ __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
 
 
+def dtflag():
+    """ Return a "datetime" flag, i.e., a string the the current date and time
+    formated as yyyy-mm-dd_hh-MM."""
+    now = _dt.datetime.now()
+    return '{0}-{1:02d}-{2:02d}_{3:02d}-{4:02d}'.format(now.year, now.month,
+    now.day, now.hour, now.minute)
+    
+
 class Constant(object):
     """ Class for a physical/astronomical constant
     """

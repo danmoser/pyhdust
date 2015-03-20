@@ -177,7 +177,7 @@ class Spec(object):
 
         Currently, only compatible for standard fits.
         """
-        if file[-4:] != 'fits':
+        if file.find('.fit') ==-1:
             print("# ERROR! `loadspec` unrecognized format!")
             return
         (self.wl, self.flux, self.MJD, self.dateobs, self.datereduc, self.file)\
@@ -321,9 +321,10 @@ def loadfits(fitsfile):
         dtobs,tobs = check_dtobs(dtobs)
         MJD = _jdcal.gcal2jd(*dtobs)[1]+tobs
     else:
-        MJD = 0.
-        print('# ERROR! No DATE-OBS information is available! {}'.\
+        MJD = _jdcal.MJD_JD2000
+        print('# Warning! No DATE-OBS information is available! {}'.\
         format(fitsfile))
+        print('# Assuming MJD_JD2000')
     if 'DATE-OBS' in imfits[0].header:
         dateobs = imfits[0].header['DATE-OBS']
     if 'IRAF-TLM' in imfits[0].header:
@@ -443,6 +444,8 @@ def lineProf(x, flx, lbc, flxerr=_np.empty(0), hwidth=1000., ssize=0.05):
 
     ssize = % do tamanho de y; numero de pontos usados nas extremidades
     para a media do contínuo. 'ssize' de .5 à 0 (exclusive).
+
+    OUTPUT: vel (array), flx (array)
     '''    
     x = (x-lbc)/lbc*_phc.c.cgs*1e-5 #km/s
     idx = _np.where(_np.abs(x) <= hwidth)
@@ -587,10 +590,10 @@ def analline(lbd, flux, lbdc, hwidth=1000, verb=True):
 
     if lbdc <= 0, lbd array is assumed to be a velocity array (in km/s)!
 
+    | EXAMPLE: Using sed2data. lbc = 0.6565 (halpha), obs = 1 (width==1000)
+    |     analline(lbd=sed2data[obs,:,2], flux=sed2data[obs,:,3], lbc=lbc)
 
-    EXAMPLE: Using sed2data. lbc = 0.6565 (halpha), obs = 1 (width==1000)
-
-        analline(lbd=sed2data[obs,:,2], flux=sed2data[obs,:,3], lbc=lbc)
+    OUTPUT: EW, EC, VR, peaksep, depthcent, F0 
     """
     if lbdc > 0:
         vels = (lbd-lbdc)/lbdc*_phc.c.cgs*1e-5
@@ -599,7 +602,7 @@ def analline(lbd, flux, lbdc, hwidth=1000, verb=True):
     #check if the file have the desired info.
     if vels[0] > -hwidth or vels[-1] < hwidth:
         if verb:
-            print('# ERROR: spec out of range (wavelength)!')
+            print('# ERROR: spec out of range (wavelength)! Check hwidth!')
         return _np.NaN, _np.NaN, _np.NaN, _np.NaN, _np.NaN, _np.NaN
 
     idx = _np.where(_np.abs(vels) <= hwidth)
@@ -1600,6 +1603,41 @@ def din_spec(refspec, metadata, lbc=6562.86, hwidth=1500., res=50, interv=None,
     _plt.close()
     return
 
+def writeFits(flx, lbd, extrahead=None, savename=None, quiet=False, path=None,
+    lbdc=None):
+    """ Write a 1D spectra FITS.
+
+    | INPUT: flux array, lbd array, extrahead flag+info, save name.
+    | - lbd array: if len(lbd)==2: lbd = [CRVAL1, CDELT1]
+    |              else: CDELT1 = (lbd[-1]-lbd[0])/(len(lbd)-1)
+    |                    CRVAL1 = lbd[0]
+    |   WARNING: lbd must be in ANGSTROMS (FITS default). It can also be 
+    |   velocities. In this case, it must be in km/s and lbdc is given in ANGSTROM.
+    | - extrahead: matrix (n,2). Example: [['OBJECT','Achernar'], ['COMMENT','value']]
+
+    OUTPUT: write FITS file.
+    """
+    if path is None:
+        path = _os.getcwd()
+    if path[-1] != ['/']:
+        path+= '/'
+    if lbdc is not None:
+        lbd = (lbd/_phc.c.cgs*1e5+1)*lbdc
+    hdu = _pyfits.PrimaryHDU(flx)
+    hdulist = _pyfits.HDUList([hdu])
+    hdulist[0].header['CRVAL1'] = lbd[0]
+    if len(lbd) == 2:
+        hdulist[0].header['CDELT1'] = lbd[1]
+    else:
+        hdulist[0].header['CDELT1'] = (lbd[-1]-lbd[0])/(len(lbd)-1)
+    if savename is None:
+        savename = 'spec_{0}'.format(_phc.dtflag())
+    if savename.find('.fit') == -1:
+        savename+= '.fits'
+    hdu.writeto(path+savename, clobber=True)
+    if not quiet:
+        print('# FITS file {0}{1} saved!'.format(path,savename))
+    return
 
 
 ### MAIN ###
