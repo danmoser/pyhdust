@@ -227,7 +227,9 @@ def convnorm(x, arr, pattern):
     return _np.convolve(pattern, arr)[cut:-cut]*dx
 
 def BBlbd(T,lbd=None):
-    """ Black body radiation as function of lambda. CGS units (erg sr−1 cm−3). """
+    """ Black body radiation as function of lambda. CGS units (erg s-1 sr−1 cm−3).
+
+    INPUT: lambda vector in cm. If None, lbd = 1000-10000 Angs."""
     if lbd==None:
         lbd = _np.arange(1000, 10000, 100)*1e-8 #Angs -> cm
     ft = h.cgs*c.cgs/(lbd*kB.cgs*T)
@@ -413,10 +415,10 @@ def readrange(file, i0, ie):
     fp.close()
     return lines
 
-def interLinND(X, X0, X1, Fx):
+def interLinND(X, X0, X1, Fx, disablelog=False):
     """
     | N-dimensional linear interpolation in LOG space!!
-    | Pay attention: Fx must always be > 0.
+    | Pay attention: Fx must always be > 0. If not, put disablelog=True.
 
     | INPUT:
     | X = position in with the interpolation is desired;
@@ -435,36 +437,13 @@ def interLinND(X, X0, X1, Fx):
     i = 0
     F = 0
     for prod in _product(*DX):
-        F+= _np.log(Fx[i])*_np.product(prod)
+        if disablelog:
+            F+= Fx[i]*_np.product(prod)
+        else:
+            F+= _np.log(Fx[i])*_np.product(prod)
         i+= 1
     #
     return _np.exp(F)
-
-def interLinNDnonlog(X, X0, X1, Fx):
-    """
-    N-dimensional linear interpolation.
-
-    | INPUT:
-    | X = position in with the interpolation is desired;
-    | X0 = minimal values of the interval;
-    | X1 = maximum values of the inveral
-    | Fx = function values along the interval, ORDERED BY DIMENSTION.
-    | Example: Fx = [F00, F01, F10, F11]
-
-    OUTPUT: interpolated value (float)"""
-    X = _np.array(X)
-    X0 = _np.array(X0)
-    X1 = _np.array(X1)
-    Xd = (X-X0)/(X1-X0)
-    DX = _np.array([ [(1-x),x] for x in Xd ])
-    #
-    i = 0
-    F = 0
-    for prod in _product(*DX):
-        F+= Fx[i]*_np.product(prod)
-        i+= 1
-    #
-    return F
 
 ra2deg = _np.double(180./_np.pi)
 

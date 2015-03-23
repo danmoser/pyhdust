@@ -1423,7 +1423,9 @@ def kuruczflux(teff, logg, range=None):
     """ Return fluxes from a Kurucz model.
 
     Fluxes are in ergs/cm**2/s/hz/ster and wavelength in nm (range must be in
-    nm)."""
+    nm).
+
+    OUTPUT: wv, flux, info"""
     kurfile = '{0}/refs/fp00k0.pck'.format(_hdt.hdtpath())
     kurwvlines = (174-22)
     kurflxcol = 10

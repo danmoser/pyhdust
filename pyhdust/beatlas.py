@@ -226,7 +226,8 @@ def fsedList(fsedlist, param=True):
     return nm*len(listpar[-1]), listpar
     
 
-def createBAsed(fsedlist, xdrpath, lbdarr, param=True, savetxt=False):
+def createBAsed(fsedlist, xdrpath, lbdarr, param=True, savetxt=False,
+    ignorelum=False):
     """ Create the BeAtlas SED XDR release.
 
     | The file structure:
@@ -242,6 +243,8 @@ def createBAsed(fsedlist, xdrpath, lbdarr, param=True, savetxt=False):
     | -photospheric models: sig0 = 0.00
     | -Parametric disk model default (`param` == True)
     | -VDD-ST models: n excluded (alpha and R0 fixed. Confirm?)
+    | -The flux will be given in ergs/s/cm2/nm. If ignorelum==True, the usual
+    |   F_lbda/F_bol unit will be given.
 
     Since the grid is not symmetric, there is no index to jump directly to the
     desired model. So the suggestion is to use the index matrix, or read the
@@ -262,8 +265,21 @@ def createBAsed(fsedlist, xdrpath, lbdarr, param=True, savetxt=False):
     k = 0
     for i in range(len(fsedlist)):
         mod = BAmod(fsedlist[i])
+        #~ Select only `param` matching cases:
         if mod.param == param:
             sed2data = _hdt.readfullsed2(fsedlist[i])
+            if not ignorelum:
+                j =  fsedlist[i].find('fullsed_mod')
+                modn = fsedlist[i][j+11:j+13]
+                log = fsedlist[i].replace('fullsed_mod','../mod{0}/mod'.format(modn)).\
+                replace('.sed2','.log')
+                f0 = open(log)
+                lines = f0.readlines()
+                f0.close()
+                iL = _phc.fltTxtOccur('L =', lines)*_phc.Lsun.cgs
+            else:
+                iL = 1.
+            dist = 10.*_phc.pc.cgs
             for j in range(header2[-1]):
                 #~  M, ob(W), Z, H, sig, Rd, h, *n*, cos(i).
                 if param:
@@ -276,7 +292,7 @@ def createBAsed(fsedlist, xdrpath, lbdarr, param=True, savetxt=False):
                     models[k*header2[-1]+j] = _np.interp(lbdarr, sed2data[j,:,2],
                 sed2data[j,:,3])
                 else:
-                    models[k*header2[-1]+j] = sed2data[j,:,3]
+                    models[k*header2[-1]+j] = sed2data[j,:,3]*iL/4/_np.pi/dist**2
             k += 1
     #
     f0 = open(xdrpath, 'w')
@@ -315,9 +331,16 @@ def createBAsed(fsedlist, xdrpath, lbdarr, param=True, savetxt=False):
 def readBAsed(xdrpath, quiet=False):
     """ Read the BeAtlas SED release.
 
+    | Definitions:
+    | -photospheric models: sig0 = 0.00
+    | -Parametric disk model default (`param` == True)
+    | -VDD-ST models: n excluded (alpha and R0 fixed. Confirm?)
+    | -The models flux are given in ergs/s/cm2/nm. If ignorelum==True in the
+    |   XDR creating, F_lbda/F_bol unit will be given.
+
     INPUT: xdrpath
 
-    OUTPUT: list of mod params, lbd arr, models idx, models flx
+    OUTPUT: list of mods parameters, lambda array (nm), mods index, mods flux
     """
     f = open(xdrpath).read()
     ixdr=0

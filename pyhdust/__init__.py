@@ -298,7 +298,9 @@ def mergesed2(models, Vrots, path=None):
     sufbands = ['SED', 'UV', 'IR', 'NIR', 'BALMER', 'PASCHEN', 'CM', 'MM', #0-7
     'J', 'H', 'K', 'L', 'M', 'N', 'Q1', 'Q2'] #8-14
     #wavelength in microns
-    suflines = {'Hb':.486268, 'Ha':.656461, 'Br13':1.61137, 'Br12':1.6416,
+    suflines = {'H12':.372300, 'H11':.373543, 'H10':.375122, 'H9':.377170,
+    'H8':.379899, 'H7':.383649, 'H6':.389017, 'H5':.397120, 'Hd':.410289,
+    'Hg':.4341.69, 'Hb':.486271, 'Ha':.656461, 'Br13':1.61137, 'Br12':1.6416,
     'Brg':2.166}
     
     for model in models:
