@@ -461,6 +461,8 @@ def linfit(x, y, ssize=0.05, yerr=_np.empty(0)):
 
     ssize = % do tamanho de y; numero de pontos usados nas extremidades
     para a media do contínuo. 'ssize' de .5 à 0 (exclusive).
+
+    OUTPUT: y, yerr (if given)
     '''
     if ssize < 0 or ssize > .5:
         print('# Invalid ssize value...')
@@ -1639,6 +1641,61 @@ def writeFits(flx, lbd, extrahead=None, savename=None, quiet=False, path=None,
     hdu.writeto(path+savename, clobber=True)
     if not quiet:
         print('# FITS file {0}{1} saved!'.format(path,savename))
+    return
+
+def plotSpecQuantities():
+    """ Plot spec class database `vs` MJD e civil date
+
+    Plot originally done to London, Canada, 2014. """
+
+    limits = (56100.,56750.)
+    limits = (56470.,56720.)
+    dtb = 'hdt/data_aeri.txt'
+
+    #def plotspecdtb(dtb='hdt/datafile.txt', limits=None, fact=1, step='y'):
+    """
+    """
+    ylabels = ['EW', 'E/C', 'V/R', 'Pk. sep. (km/s)', 'E-F0', 'F0']
+    lims = [[-2,4+2,2],[1.,1.4+.1,0.1],[.6,1.4+.2,.2],[0,400+100,100],\
+    [.30,.45+.05,.05],[0.6,1.20+.2,.2]]
+    fig, ax = plt.subplots(6,1, sharex=True, figsize=(5.6,8))
+    dtb = np.loadtxt(dtb)
+    #dtb2 = np.loadtxt(dtb2)
+
+    #dtb2[:,1] /= 50 #from km/s to Angs
+    #dtb2[:,4] /= .8 #from km/s to Angs
+    for i in range(1,6+1):
+        ax[i-1].plot(dtb[:,0], dtb[:,i], 'o')
+        #ax[i-1].plot(dtb2[:,0], dtb2[:,i], color='red')
+        ax[i-1].set_ylabel(ylabels[i-1])
+        ax[i-1].set_yticks(np.arange(*lims[i-1]))
+
+    if limits is None:
+        limits = ax[0].get_xlim()
+    else:
+        ax[0].set_xlim(limits)
+    mjd0, mjd1 = limits
+    ax[5].set_xlabel('MJD')
+    ticks = phc.gentkdates(mjd0, mjd1, 1, 'm', dtstart=dt.datetime(2013,7,1).\
+    date())
+    mjdticks = [jdcal.gcal2jd(date.year,date.month,date.day)[1] for date in \
+    ticks]
+    #ticks = [dt.datetime(*jdcal.jd2gcal(jdcal.MJD_0, date)[:3]).date() for \
+    #date in ax[0].get_xticks()]
+    #mjdticks = ax[0].get_xticks()
+    for i in range(1,6+1):
+        ax2 = ax[i-1].twiny()
+        ax2.set_xlim(limits)
+        ax2.set_xticks(mjdticks)
+        ax2.set_xticklabels(['' for date in ticks])
+        if i == 1:
+            ax2.set_xlabel('Civil date')
+            ax2.set_xticklabels([date.strftime("%d %b %y") for date in ticks])
+            plt.setp( ax2.xaxis.get_majorticklabels(), rotation=45 )
+    plt.subplots_adjust(left=0.13, right=0.95, top=0.88, bottom=0.06, hspace=.15)
+    plt.savefig('hdt/cad.png')
+    plt.savefig('hdt/cad.eps')
+    plt.close()
     return
 
 

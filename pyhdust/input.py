@@ -187,6 +187,12 @@ def makeInpJob(modn, clusters, nodes, walltime, wcheck, email, chkout, st1max,\
 st1refmax, docases, sim1, sim2, simulations, images, composition,\
 controls, gridcells, observers, ctrM=False, touch=False, srcNf=None, path=None):
     """
+    Create INP+JOB files to run Hdust.
+
+    All SOURCE files must initiate by "Be_". Otherwise, the `makeInpJob` will
+    not work. This is to satisfies the criteria of a specific disk model for
+    each source star.
+    
     | ### Start edit here ###
     | modn = '02'
     | 
