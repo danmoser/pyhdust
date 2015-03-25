@@ -669,6 +669,7 @@ def plot_pionier_res(oidata, model, ffile='last_run', fmt=['png'], legend=True,
     #ax4 = VIS2 vs. PA
     #~ names = []
     colorid = 0
+    mcolors = ['black', 'red', 'green', 'blue']
     plotid = 323
     ax3 = fig.add_subplot(plotid)
     plotid = 324
@@ -692,6 +693,7 @@ def plot_pionier_res(oidata, model, ffile='last_run', fmt=['png'], legend=True,
         if obs == None:
             obs = [0]
         for mod in model:
+            k = model.index(mod)
             data, obslist, lbdc, Ra, xmax = readmap(mod, quiet=quiet)
             pixsize = 2*xmax[0]/len(data[0,0,0,:,:])
             rad_per_pixel = _np.double(pixsize*_phc.Rsun.cgs/(dist*_phc.pc.cgs))#*60.*60.*1000.*180./_np.pi)
@@ -709,8 +711,8 @@ def plot_pionier_res(oidata, model, ffile='last_run', fmt=['png'], legend=True,
             lbds = _np.array(lbds)
             #~ V2 = _np.array(V2)+(.0875e-8*B/lbds-.026)
             V2 = _np.array(V2)+(.0875e-8*B/lbds-.026)
-            ax3.plot(B/lbds, V2, color='purple', alpha=.3)
-            ax4.plot(B/lbds, (vis2.vis2data-V2)/vis2.vis2err, color='black', markersize=ms, marker='o', ls='')#marker='s',
+            ax3.plot(B/lbds, V2, color=mcolors[k], alpha=.3)
+            ax4.plot(B/lbds, (vis2.vis2data-V2)/vis2.vis2err, color=mcolors[k], markersize=ms, marker='o', ls='')#marker='s',
     Blim = ax3.get_xlim()
     ax4.set_xlim(Blim)
     #~ ax1.xaxis.get_major_formatter().set_useOffset(False)
@@ -767,6 +769,7 @@ def plot_pionier_res(oidata, model, ffile='last_run', fmt=['png'], legend=True,
         if obs == None:
             obs = [0]
         for mod in model:
+            k = model.index(mod)
             data, obslist, lbdc, Ra, xmax = readmap(mod, quiet=True)
             pixsize = 2*xmax[0]/len(data[0,0,0,:,:])
             rad_per_pixel = _np.double(pixsize*_phc.Rsun.cgs/(dist*_phc.pc.cgs))#*60.*60.*1000.*180./_np.pi)
@@ -791,8 +794,8 @@ def plot_pionier_res(oidata, model, ffile='last_run', fmt=['png'], legend=True,
                         PAmax += [PA[1]]
                     lbds += [lcalc]
             Bmax = _np.array(Bmax); lbds = _np.array(lbds); t3m = _np.array(t3m); PAmax = _np.array(PAmax)
-            ax5.plot(Bmax/lbds, t3m, color='purple', alpha=.9)
-            ax6.plot(Bmax/lbds, (y-t3m)/yerr, color='black', markersize=ms, marker='o', ls='')#alpha=.6, 
+            ax5.plot(Bmax/lbds, t3m, color=mcolors[k], alpha=.9)
+            ax6.plot(Bmax/lbds, (y-t3m)/yerr, color=mcolors[k], markersize=ms, marker='o', ls='')#alpha=.6, 
     #~ ax5.get_xaxis().set_ticklabels([])
     #~ labels = ax5.get_yticks().tolist()
     #~ labels[-1] = ''

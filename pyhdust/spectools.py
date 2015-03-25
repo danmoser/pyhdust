@@ -17,6 +17,7 @@ sufixo `.cal`, algumas informacoes no header sao necessarias:
 """
 import os as _os
 import numpy as _np
+import datetime as _dt
 from glob import glob as _glob
 import pyhdust.phc as _phc
 import pyhdust.jdcal as _jdcal
@@ -25,6 +26,7 @@ import pyhdust as _hdt
 try:
     import pyfits as _pyfits
     import matplotlib.pyplot as _plt
+    import matplotlib.patches as _mp
     from scipy.interpolate import interp1d as _interp1d
 except:
     print('# Warning! matplotlib, scipy and/or pyfits module not installed!!!')
@@ -1643,32 +1645,43 @@ def writeFits(flx, lbd, extrahead=None, savename=None, quiet=False, path=None,
         print('# FITS file {0}{1} saved!'.format(path,savename))
     return
 
-def plotSpecQuantities():
+def plotSpecData(dtb, limits=[56470.,56720.], civcfg=[1,'m',2013,1,1], fmt=['png'],
+ident=None):
     """ Plot spec class database `vs` MJD e civil date
 
-    Plot originally done to London, Canada, 2014. """
+    Plot originally done to London, Canada, 2014.
 
-    limits = (56100.,56750.)
-    limits = (56470.,56720.)
-    dtb = 'hdt/data_aeri.txt'
+    INPUT: civcfg = [step, 'd'/'m'/'y', starting year, month, day]
 
-    #def plotspecdtb(dtb='hdt/datafile.txt', limits=None, fact=1, step='y'):
-    """
-    """
+    OUTPUT: Written image."""
+    if isinstance(dtb, basestring):
+        dtb = _np.loadtxt(dtb)
+    if ident is not None:
+        idref = _np.unique(ident)
+
     ylabels = ['EW', 'E/C', 'V/R', 'Pk. sep. (km/s)', 'E-F0', 'F0']
     lims = [[-2,4+2,2],[1.,1.4+.1,0.1],[.6,1.4+.2,.2],[0,400+100,100],\
     [.30,.45+.05,.05],[0.6,1.20+.2,.2]]
-    fig, ax = plt.subplots(6,1, sharex=True, figsize=(5.6,8))
-    dtb = np.loadtxt(dtb)
-    #dtb2 = np.loadtxt(dtb2)
+    fig, ax = _plt.subplots(6,1, sharex=True, figsize=(5.6,8))
 
-    #dtb2[:,1] /= 50 #from km/s to Angs
-    #dtb2[:,4] /= .8 #from km/s to Angs
-    for i in range(1,6+1):
-        ax[i-1].plot(dtb[:,0], dtb[:,i], 'o')
-        #ax[i-1].plot(dtb2[:,0], dtb2[:,i], color='red')
+    icolor = 'blue'
+    for i in range(1,len(ylabels)+1):
+        for j in range(len(dtb[:,0])):
+            if ident is not None:
+                idx = _np.where(ident[j] == idref)[0]
+                icolor = _phc.colors[idx]
+            ax[i-1].plot(dtb[j,0], dtb[j,i], 'o', color=icolor)
         ax[i-1].set_ylabel(ylabels[i-1])
-        ax[i-1].set_yticks(np.arange(*lims[i-1]))
+        ax[i-1].set_yticks(_np.arange(*lims[i-1]))
+
+    if ident is not None:
+        patch = []
+        for id in idref:
+            idx = _np.where(id == idref)[0]
+            icolor = _phc.colors[idx]
+            print icolor, id
+            ax[0].plot([], [], 'o', color=icolor, label=id)
+        ax[0].legend(bbox_to_anchor=(1.05,1), loc=2, borderaxespad=0., prop={'size':6})
 
     if limits is None:
         limits = ax[0].get_xlim()
@@ -1676,9 +1689,9 @@ def plotSpecQuantities():
         ax[0].set_xlim(limits)
     mjd0, mjd1 = limits
     ax[5].set_xlabel('MJD')
-    ticks = phc.gentkdates(mjd0, mjd1, 1, 'm', dtstart=dt.datetime(2013,7,1).\
-    date())
-    mjdticks = [jdcal.gcal2jd(date.year,date.month,date.day)[1] for date in \
+    ticks = _phc.gentkdates(mjd0, mjd1, civcfg[0], civcfg[1], dtstart=\
+    _dt.datetime(civcfg[2],civcfg[3],civcfg[4]).date())
+    mjdticks = [_jdcal.gcal2jd(date.year,date.month,date.day)[1] for date in \
     ticks]
     #ticks = [dt.datetime(*jdcal.jd2gcal(jdcal.MJD_0, date)[:3]).date() for \
     #date in ax[0].get_xticks()]
@@ -1691,11 +1704,11 @@ def plotSpecQuantities():
         if i == 1:
             ax2.set_xlabel('Civil date')
             ax2.set_xticklabels([date.strftime("%d %b %y") for date in ticks])
-            plt.setp( ax2.xaxis.get_majorticklabels(), rotation=45 )
-    plt.subplots_adjust(left=0.13, right=0.95, top=0.88, bottom=0.06, hspace=.15)
-    plt.savefig('hdt/cad.png')
-    plt.savefig('hdt/cad.eps')
-    plt.close()
+            _plt.setp( ax2.xaxis.get_majorticklabels(), rotation=45 )
+    _plt.subplots_adjust(left=0.13, right=0.8, top=0.88, bottom=0.06, hspace=.15)
+    for f in fmt:
+        _plt.savefig('SpecQ.{0}'.format(f))
+    _plt.close()
     return
 
 

@@ -243,7 +243,7 @@ def createBAsed(fsedlist, xdrpath, lbdarr, param=True, savetxt=False,
     | -photospheric models: sig0 = 0.00
     | -Parametric disk model default (`param` == True)
     | -VDD-ST models: n excluded (alpha and R0 fixed. Confirm?)
-    | -The flux will be given in ergs/s/cm2/nm. If ignorelum==True, the usual
+    | -The flux will be given in ergs/s/cm2/um. If ignorelum==True, the usual
     |   F_lbda/F_bol unit will be given.
 
     Since the grid is not symmetric, there is no index to jump directly to the
@@ -268,18 +268,21 @@ def createBAsed(fsedlist, xdrpath, lbdarr, param=True, savetxt=False,
         #~ Select only `param` matching cases:
         if mod.param == param:
             sed2data = _hdt.readfullsed2(fsedlist[i])
+            iL = 1.
+            dist = _np.sqrt(4*_np.pi)
             if not ignorelum:
                 j =  fsedlist[i].find('fullsed_mod')
                 modn = fsedlist[i][j+11:j+13]
                 log = fsedlist[i].replace('fullsed_mod','../mod{0}/mod'.format(modn)).\
                 replace('.sed2','.log')
-                f0 = open(log)
+                if not _os.path.exists(log):
+                    log = _glob(log.replace('../mod{0}/mod'.format(modn),
+                    '../mod{0}/*mod'.format(modn)))
+                f0 = open(log[0])
                 lines = f0.readlines()
                 f0.close()
-                iL = _phc.fltTxtOccur('L =', lines)*_phc.Lsun.cgs
-            else:
-                iL = 1.
-            dist = 10.*_phc.pc.cgs
+                iL = _phc.fltTxtOccur('L =', lines, seq=2)*_phc.Lsun.cgs
+                dist = 10.*_phc.pc.cgs
             for j in range(header2[-1]):
                 #~  M, ob(W), Z, H, sig, Rd, h, *n*, cos(i).
                 if param:

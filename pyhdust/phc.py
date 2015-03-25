@@ -47,11 +47,11 @@ class Constant(object):
         return str('{:.7e} in {} (cgs)'.format(self.cgs, self.unitscgs))
 
 
-def fltTxtOccur(s, lines, n=1):
-    """ Return the first float of the line after the n-th
-    occurrence of `s` in the array `lines`.
+def fltTxtOccur(s, lines, n=1, seq=1):
+    """ Return the seq-th float of the line after the n-th
+    occurrence of `s` in the array `lines`. 
 
-    INPUT: s=string, lines=array of strings, n=int
+    INPUT: s=string, lines=array of strings, n/seq=int (starting at 1)
 
     OUTPUT: float"""
     fltregex = r'[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?'
@@ -59,7 +59,7 @@ def fltTxtOccur(s, lines, n=1):
     out = _np.NaN
     if len(occur) >= n:
         occur = occur[n-1]
-        out = _re.findall(fltregex, occur)[0]
+        out = _re.findall(fltregex, occur)[seq-1]
     return float(out)
 
 def sortfile(file, quiet=False):
