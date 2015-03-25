@@ -26,7 +26,6 @@ import pyhdust as _hdt
 try:
     import pyfits as _pyfits
     import matplotlib.pyplot as _plt
-    import matplotlib.patches as _mp
     from scipy.interpolate import interp1d as _interp1d
 except:
     print('# Warning! matplotlib, scipy and/or pyfits module not installed!!!')
