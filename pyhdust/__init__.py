@@ -10,6 +10,7 @@ import time as _time
 import datetime as _datetime
 import math as _math
 import numpy as _np
+import re as _re
 from glob import glob as _glob
 import pyhdust.phc as _phc
 import pyhdust.jdcal as _jdcal
@@ -478,26 +479,32 @@ def genlog(path=None, extrainfo=None):
 
     for modn in modfld:
         modnn = _phc.trimpathname(modn)[1]
-        mods = _glob('{0}/{1}*.txt'.format(modn, modnn))
+        modglob = _glob('{0}/*'.format(modn))
+        mods = [x for x in modglob if (x.find('.txt') > -1 and x.find('{0}_'.\
+        format(modnn)) >-1 )]
         print('# Catalogue of {0}'.format(modn))
         for mod in mods:
-            #if mod.find('aeri') > 0:
             suf = mod[mod.rfind('/') + 1:-4]
 
-            step1 = _glob('{0}/{1}??.temp'.format(modn, suf))
+            #~ step1 = _glob('{0}/{1}??.temp'.format(modn, suf))
+            sufglob = [x for x in modglob if (x.find(suf) > -1)]
+            step1 = [x for x in sufglob if (x.find('.temp') > -1 and
+            x.find('/{0}_'.format(modnn)) >-1 and x.find('_avg') == -1)]
             if len(step1) == 0:
                 step1 = ['0']
             step1.sort()
 
-            sed2 = _glob('{0}/*{1}_*.sed2'.format(modn, suf))
-            sed2 += _glob('{0}/*{1}.sed2'.format(modn, suf))
+            #~ sed2 = _glob('{0}/*{1}_*.sed2'.format(modn, suf))
+            #~ sed2 += _glob('{0}/*{1}.sed2'.format(modn, suf))
+            sed2 = [x for x in sufglob if x.find('.sed2') > -1]
             sed2.sort()
             s2out = ''
             for sedi in sed2:
                 s2out += sedi[sedi.rfind('/') + 1:sedi.find('_')] + '+'
 
-            maps = _glob('{0}/*{1}_*.maps'.format(modn, suf))
-            maps += _glob('{0}/*{1}.maps'.format(modn, suf))
+            #~ maps = _glob('{0}/*{1}_*.maps'.format(modn, suf))
+            #~ maps += _glob('{0}/*{1}.maps'.format(modn, suf))
+            maps = [x for x in sufglob if x.find('.map') > -1]
             maps.sort()
             mout = ''
             for mapi in maps:

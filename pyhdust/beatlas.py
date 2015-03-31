@@ -278,7 +278,8 @@ def createBAsed(fsedlist, xdrpath, lbdarr, param=True, savetxt=False,
                 if not _os.path.exists(log):
                     log = _glob(log.replace('../mod{0}/mod'.format(modn),
                     '../mod{0}/*mod'.format(modn)))
-                f0 = open(log[0])
+                    log = log[0]
+                f0 = open(log)
                 lines = f0.readlines()
                 f0.close()
                 iL = _phc.fltTxtOccur('L =', lines, seq=2)*_phc.Lsun.cgs
@@ -338,12 +339,13 @@ def readBAsed(xdrpath, quiet=False):
     | -photospheric models: sig0 = 0.00
     | -Parametric disk model default (`param` == True)
     | -VDD-ST models: n excluded (alpha and R0 fixed. Confirm?)
-    | -The models flux are given in ergs/s/cm2/nm. If ignorelum==True in the
+    | -The models flux are given in ergs/s/cm2/um. If ignorelum==True in the
     |   XDR creating, F_lbda/F_bol unit will be given.
 
     INPUT: xdrpath
 
-    OUTPUT: list of mods parameters, lambda array (nm), mods index, mods flux
+    | OUTPUT: listpar, lbdarr, minfo, models 
+    | (list of mods parameters, lambda array (um), mods index, mods flux)
     """
     f = open(xdrpath).read()
     ixdr=0
@@ -396,6 +398,9 @@ def interpolBA(params, ctrlarr, lparams, minfo, models, param=True):
 
     This function always returns a valid result (i.e., extrapolations from the
     nearest values are always on).
+
+    If it is a 'Non-squared grid' (asymmetric), it will return a zero array if
+    a given model is not found.
     """
     nq = 9
     if not param:
@@ -421,6 +426,8 @@ def interpolBA(params, ctrlarr, lparams, minfo, models, param=True):
         allpars[idx] = prod
         mod.build(allpars, lparams)
         idx = mod.getidx(minfo)
+        if _np.sum(idx) == 0:
+            return _np.zeros(nlb)
         outmodels[j] = models[idx]
         j+= 1
     X0 = parlims[:,0]

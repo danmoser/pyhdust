@@ -445,7 +445,7 @@ def interLinND(X, X0, X1, Fx, disablelog=False):
     #
     if not disablelog:
         return _np.exp(F)
-    else
+    else:
         return F
 
 ra2deg = _np.double(180./_np.pi)
