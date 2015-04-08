@@ -321,6 +321,10 @@ def loadfits(fitsfile):
         dtobs = imfits[0].header['DATE-OBS']
         dtobs,tobs = check_dtobs(dtobs)
         MJD = _jdcal.gcal2jd(*dtobs)[1]+tobs
+    elif 'FRAME' in imfits[0].header:
+        dtobs = imfits[0].header['FRAME']
+        dtobs,tobs = check_dtobs(dtobs)
+        MJD = _jdcal.gcal2jd(*dtobs)[1]+tobs
     else:
         MJD = _jdcal.MJD_JD2000
         print('# Warning! No DATE-OBS information is available! {}'.\
@@ -328,6 +332,8 @@ def loadfits(fitsfile):
         print('# Assuming MJD_JD2000')
     if 'DATE-OBS' in imfits[0].header:
         dateobs = imfits[0].header['DATE-OBS']
+    elif 'FRAME' in imfits[0].header:
+        dateobs = imfits[0].header['FRAME']
     if 'IRAF-TLM' in imfits[0].header:
         datereduc = imfits[0].header['IRAF-TLM']
     elif 'DATE' in imfits[0].header:

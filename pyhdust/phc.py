@@ -47,7 +47,7 @@ class Constant(object):
         return str('{:.7e} in {} (cgs)'.format(self.cgs, self.unitscgs))
 
 
-def fltTxtOccur(s, lines, n=1, seq=1):
+def fltTxtOccur(s, lines, n=1, seq=1, after=False):
     """ Return the seq-th float of the line after the n-th
     occurrence of `s` in the array `lines`. 
 
@@ -55,7 +55,10 @@ def fltTxtOccur(s, lines, n=1, seq=1):
 
     OUTPUT: float"""
     fltregex = r'[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?'
-    occur = [x for x in lines if x.find(s) > -1]
+    if after:
+        occur = [x[x.find(s)+len(s):] for x in lines if x.find(s) > -1]
+    else:
+        occur = [x for x in lines if x.find(s) > -1]
     out = _np.NaN
     if len(occur) >= n:
         occur = occur[n-1]

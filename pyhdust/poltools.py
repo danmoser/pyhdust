@@ -3,6 +3,9 @@
 """
 PyHdust *poltools* module: polarimetry tools
 
+History:
+-Added options `force` and `chknames` to genStdLog and genObjLog
+
 :co-author: Daniel Bednarski
 :license: GNU GPL v3.0 (https://github.com/danmoser/pyhdust/blob/master/LICENSE)
 """
@@ -72,7 +75,7 @@ def readoutMJD(out):
     seq = int(out[i:i+2])
     npos = int(out[i+2:i+5])
     f = out[out.rfind('_')-1:out.rfind('_')]
-    path = phc.trimpathname(out)[0]
+    path = _phc.trimpathname(out)[0]
     JD = _glob('{0}/JD_*_{1}'.format(path,f))
     try:
         f0 = open(JD[0])
@@ -123,7 +126,7 @@ def minErrBlk16(night,f,i):
                 out[0] = outi
     else:
         print('# Warning! No 08pos *.out found at {0} for {1} band!'.format(\
-        phc.trimpathname(night)[1],f))
+        _phc.trimpathname(night)[1],f))
     ls = _glob('{0}/*_{1}_08{2:03d}*.out'.format(night,f,i+8))
     if len(ls) > 0:
         err[1] = float(readout(ls[0])[2])
@@ -144,7 +147,7 @@ def minErrBlk16(night,f,i):
     else:
         if len(_glob('{0}/*_{1}_*.fits'.format(night,f))) >= 16-1+i:
             print('# Warning! Some *_16*.out found at {0} for {1} band!'.format(\
-            phc.trimpathname(night)[1],f))
+            _phc.trimpathname(night)[1],f))
             #print i, ls, len(_glob('{0}/*_{1}_*.fits'.format(night,f)))
     j = _np.where(err == _np.min(err))[0]
     return err[j], out[j]
@@ -167,7 +170,7 @@ def chooseout(night,f):
         outs = []
         if npos != 0:
             print('# Reducao nao feita em {0} para filtro {1}!'.format(\
-            phc.trimpathname(night)[1],f))
+            _phc.trimpathname(night)[1],f))
     #Se ateh 16 npos, pega o de menor erro (16 nao incluso)
     elif npos < 16:
         err1 = 1.
@@ -204,7 +207,7 @@ def chooseout(night,f):
                     if len(ls) != 2:
                         print(('# Warning! Check the *.out 2 '+\
                         'versions for filter {0} of {1}').\
-                        format(f,phc.trimpathname(night)[1]))
+                        format(f,_phc.trimpathname(night)[1]))
                         if len(ls) == 1:
                             out = ls[0]
                         #else:
@@ -285,7 +288,7 @@ def plotfrompollog(path, star, filters=None, colors=None):
     sigth = tab[:,12].astype(float)
 
     if colors == None:
-        colors = phc.colors
+        colors = _phc.colors
     if filters == None:
         filters = ['b','v','r','i']
         colors = ['b','y','r','brown']
@@ -306,7 +309,7 @@ def plotfrompollog(path, star, filters=None, colors=None):
     ylim = ax.get_ylim()
     ax.set_xlabel('MJD')
     xlim = ax.get_xlim()
-    ticks = phc.gentkdates(xlim[0], xlim[1], 3, 'm',\
+    ticks = _phc.gentkdates(xlim[0], xlim[1], 3, 'm',\
     dtstart=dt.datetime(2012,7,1).date())
     mjdticks = [jdcal.gcal2jd(date.year,date.month,date.day)[1] for date in \
     ticks]
@@ -327,7 +330,7 @@ def plotfrompollog(path, star, filters=None, colors=None):
     fig, ax = _plt.subplots()
     for f in filters:
         ind = _np.where(filt == f)
-        x, y, yerr = phc.bindata(MJD[ind], P[ind], sigP[ind], bres)
+        x, y, yerr = _phc.bindata(MJD[ind], P[ind], sigP[ind], bres)
         leg += (f.upper()+' band',)
         ax.errorbar(x, y, yerr, marker='o', color=colors[filters.index(f)], fmt='-')
     ax.legend(leg,'upper left', fontsize='small')            
@@ -336,7 +339,7 @@ def plotfrompollog(path, star, filters=None, colors=None):
     ax.set_ylim(ylim)
     ax.set_xlabel('MJD')
     xlim = ax.get_xlim()
-    ticks = phc.gentkdates(xlim[0], xlim[1], 3, 'm',\
+    ticks = _phc.gentkdates(xlim[0], xlim[1], 3, 'm',\
     dtstart=dt.datetime(2012,7,1).date())
     mjdticks = [jdcal.gcal2jd(date.year,date.month,date.day)[1] for date in \
     ticks]
@@ -353,7 +356,7 @@ def plotfrompollog(path, star, filters=None, colors=None):
     
     for f in filters:
         ind = _np.where(filt == f)
-        avg,sigm = phc.wg_avg_and_std(P[ind], sigP[ind])
+        avg,sigm = _phc.wg_avg_and_std(P[ind], sigP[ind])
         print('# Averaged {} band is {:.3f} +/- {:.3f} %'.format(f.upper(),avg,\
         sigm))
     return
@@ -501,27 +504,22 @@ def grafpol(argv):
     return
 
    
-def genStdLog(path=None):
+def genStdLog(path=None, force=False, chknames=True):
     """
     Generate Standards Log
+
+    If `force`==True, it overrides security condition.
+
+    If `chknames`==True, unknown targets (i.e., folder name) will be manually
+    checked. 
     """
     if path == None:
         path = _os.getcwd()
 
     # bednarski: security condition
-    if _os.path.exists('{0}/std.log'.format(path)):
-        print('\nCAUTION: std.log file already exists for {0} night. '.\
-        format(path) + 'Are you sure to continue, overwriting all manual' + \
-        'changes on this file? (y/n):')
-        while True:
-            verif = raw_input('  ')
-            if verif in ['y', 'Y']:
-                break
-            elif verif in ['n', 'N']:
-                print('Aborted!')
-                return
-            else:
-               print('Value not valid. Please, type \'y\' ou \'n\':')
+    if not force:
+        if not securCondit('{0}/std.log'.format(path)):
+            return
 
     ltgts = _np.loadtxt('{0}/refs/pol_alvos.txt'.format(_hdtpath()), dtype=str)
     lstds = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str,\
@@ -534,7 +532,8 @@ def genStdLog(path=None):
     # Bednarski: I added below to verify and query correct standard names.
     # I changed to work on directories with suffix also (like 'eaql_a0').
     for tgt in tgts:
-        if tgt.split('_')[0] not in _np.hstack((ltgts,lstds,_np.array(['calib']))):
+        if tgt.split('_')[0] not in _np.hstack((ltgts,lstds,_np.array(['calib'])))\
+        and chknames:
             print('Target {0} is not a known standard or target!!\n'.\
             format(tgt.split('_')[0]) + '  If it\'s a standard, type the ' + \
             'common name. Otherwise, press -Enter- to skip:')
@@ -626,32 +625,49 @@ def chkStdLog(path=None, delta=2.5):
     return allinfo
 
 
+def securCondit(chkfile):
+    """ Ask the user if he wants to continue since the file already exists...
+
+    OUTPUT: False (do not) and True (continue)
+    """
+    flag = True
+    if _os.path.exists(chkfile):
+        print('\n# CAUTION: the file {0} already exists. '.format(chkfile) +
+        'Are you sure to continue, overwriting all manual ' + \
+        'changes on this file? (y/n):')
+        verif = ''
+        while verif not in ['y','n']:
+            verif = raw_input('  ')
+            verif = verif.lower()
+            if verif == 'n':
+                print('# Aborted!')
+                flag = False
+            elif verif not in ['y','n']:
+               print('Value not valid. Please, type \'y\' ou \'n\':')
+    return flag
+    
+
 # Bednarski: I added delta variable to (calc-calcst) tolerance
-def genObjLog(path=None, delta=2.5):
+def genObjLog(path=None, delta=2.5, force=False, chknames=True):
     """
     Generate Objects Log.
     Must be runned after genStdLog.
 
     delta is the allowed variation for the angles between the two
     beams for one same calcite.
+
+    If `force`==True, it overrides security condition.
+
+    If `chknames`==True, unknown targets (i.e., folder name) will be manually
+    checked. 
     """
     if path == None:
         path = _os.getcwd()
 
     # bednarski: security condition
-    if _os.path.exists('{0}/obj.log'.format(path)):
-        print('\nCAUTION: obj.log file already exists for {0} night. '.\
-        format(path) + 'Are you sure to continue, overwriting all manual' + \
-        'changes on this file? (y/n):')
-        while True:
-            verif = raw_input('  ')
-            if verif in ['y', 'Y']:
-                break
-            elif verif in ['n', 'N']:
-                print('Aborted!')
-                return
-            else:
-               print('Value not valid. Please, type \'y\' ou \'n\':')
+    if not force:
+        if not securCondit('{0}/obj.log'.format(path)):
+            return
 
     ltgts = _np.loadtxt('{0}/refs/pol_alvos.txt'.format(_hdtpath()), dtype=str)
     tgts = [fld for fld in _os.listdir('{0}'.format(path)) if \
@@ -664,7 +680,8 @@ def genObjLog(path=None, delta=2.5):
     # Bednarski: I added below to verify and query correct target names.
     # I changed to work on directories with suffix also (like 'dsco_a0').
     for tgt in tgts:
-        if tgt.split('_')[0] not in _np.hstack((ltgts,lstds,_np.array(['calib']))):
+        if tgt.split('_')[0] not in _np.hstack((ltgts,lstds,_np.array(['calib'])))\
+        and chknames:
             print('Target {0} is not a known target either standard!!\n'.\
             format(tgt.split('_')[0]) + '  Type the common name ' + \
             'case it be a target or press -Enter- to skip:')
@@ -757,8 +774,8 @@ def corObjStd(target, night, f, calc, path=None, delta=2.5):
             if stdchk(stdinf[1])[0] and stdinf[2] == f and \
             abs(float(stdinf[3])-calc) <= delta:
                 # Bednarski: I changed below to work correctly
-                Q, U, sig, P, th, sigT, tmp, tmp2 = readout('{0}/{1}/{2}'.\
-                    format(path+night,stdinf[1],stdinf[4]))
+                Q, U, sig, P, th, sigT, tmp, tmp2 = readout('{0}/{1}'.\
+                    format(path+night,stdinf[4]))
                 stdname += [ stdinf[1] ]
                 thstd += [ float(th) ]
                 if thstd == 0.:
@@ -802,6 +819,8 @@ def genTarget(target, path=None, PAref=None, skipdth=False, delta=2.5, epssig=2.
         * Q = P*cos(2*th_eq*pi/180)
         * U = P*sin(2*th_eq*pi/180)
         * sigth = 28.6*sig
+
+    `skipdth` ignores the delta-theta correction!
     """
     if path == None:
         path = _os.getcwd()
@@ -848,12 +867,14 @@ def genTarget(target, path=None, PAref=None, skipdth=False, delta=2.5, epssig=2.
                 if objinf[1] == target:
                     MJD, tmp, f, calc, out = objinf
                     # Bednarski: I changed below to work correctly
-                    Q, U, sig, P, th, sigT, tmp, tmp2 = readout('{0}/{1}/{2}'.\
-                    format(path+night,objinf[1],out))
+                    Q, U, sig, P, th, sigT, tmp, tmp2 = readout('{0}/{1}'.\
+                    format(path+night,out))
                     P = float(P)*100
                     th = float(th)
                     sig = float(sig)*100
-                    sigth = 28.65*sig/P  # Nao precisava dividir por P ainda?
+                    sigth = 0.
+                    if P > 0:
+                        sigth = 28.65*sig/P  # Nao precisava dividir por P ainda?
                     stdname, thstd, angref = corObjStd(target, night, f, calc, path=path, delta=delta)
                     #print f,  thstd, angref
                     # Bednarski: reorganizei esses ifs abaixo pra funcionar agora com
@@ -1041,10 +1062,10 @@ def plotMagStar(tgt, path=None):
     ax0.set_title('{0} ; P={1} days, ph0={2:.3f}'.format(tgt,P,ph0+jdcal.MJD_0))
     _plt.savefig('{0}/{1}.png'.format(path,tgt))
 
-    bphase, bP, bsigP = phc.bindata(phase, data['P'], data['sigP'], 30)
-    bphase, bQ, bsigP = phc.bindata(phase, data['Q'], data['sigP'], 30)
-    bphase, bU, bsigP = phc.bindata(phase, data['U'], data['sigP'], 30)
-    bphase, bth, bsigth = phc.bindata(phase, data['th'], data['sigth'], 30)
+    bphase, bP, bsigP = _phc.bindata(phase, data['P'], data['sigP'], 30)
+    bphase, bQ, bsigP = _phc.bindata(phase, data['Q'], data['sigP'], 30)
+    bphase, bU, bsigP = _phc.bindata(phase, data['U'], data['sigP'], 30)
+    bphase, bth, bsigth = _phc.bindata(phase, data['th'], data['sigth'], 30)
     fig3, (ax0, ax1, ax2, ax3) = _plt.subplots(4,1, sharex=True)
     ax0.errorbar(bphase, bP, yerr=bsigP, fmt='ok')
     ax1.errorbar(bphase, bQ, yerr=bsigP, fmt='or')
@@ -1068,7 +1089,9 @@ def sortLog(file):
     log = _np.loadtxt(file, dtype=str)
     log = log[log[:,0].argsort()]
     fmt = '%12s %7s %1s %5s %5s %6s %5s %6s %6s %6s %5s %5s'
-    _np.savetxt(file.replace('.log','.txt'), log, fmt=fmt, header=lines[0])
+    #~ Format error
+    #~ _np.savetxt(file.replace('.log','.txt'), log, fmt=fmt, header=lines[0])
+    _np.savetxt(file.replace('.log','.txt'), log, fmt='%s', header=lines[0])
     return
 
 def filtra_obs(n,obs):

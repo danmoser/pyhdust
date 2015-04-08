@@ -185,7 +185,8 @@ def makeDiskGrid(modn, mvals, mhvals, hvals, rdvals, sig0vals, doFVDD, \
 
 def makeInpJob(modn, clusters, nodes, walltime, wcheck, email, chkout, st1max,\
 st1refmax, docases, sim1, sim2, simulations, images, composition,\
-controls, gridcells, observers, ctrM=False, touch=False, srcNf=None, path=None):
+controls, gridcells, observers, ctrM=False, touch=False, srcNf=None, path=None,
+srcid=''):
     """
     Create INP+JOB files to run Hdust.
 
@@ -262,7 +263,7 @@ controls, gridcells, observers, ctrM=False, touch=False, srcNf=None, path=None):
         case1[5] = case1[5].replace('source',src)
         if 1 not in cases:
             for i in range(len(case1)):
-                case1[i] = '!'+case1[i]
+                case1[i] = '!~ '+case1[i]
         return case1
         
     def doCase2(inp,cases):
@@ -280,7 +281,7 @@ controls, gridcells, observers, ctrM=False, touch=False, srcNf=None, path=None):
         case1[5] = case1[5].replace('source',src)
         if 2 not in cases:
             for i in range(len(case1)):
-                case1[i] = '!'+case1[i]
+                case1[i] = '!~ '+case1[i]
         return case1
     
     def doCase3(inp,simchk):
@@ -314,7 +315,7 @@ controls, gridcells, observers, ctrM=False, touch=False, srcNf=None, path=None):
             case1.append('\n')
             if simchk[i] == False:
                 for i in range(len(case1)):
-                    case1[i] = '!'+case1[i]
+                    case1[i] = '!~ '+case1[i]
             case3 += case1
         return case3
         
@@ -399,6 +400,8 @@ controls, gridcells, observers, ctrM=False, touch=False, srcNf=None, path=None):
     
         suf = mod[mod.find('_'):-4]
         src = mod[mod.find('Be_'):-4]
+        if src.find(srcid) == -1:
+            continue
 
         cases = docases[:]
         #Do the touch thing
