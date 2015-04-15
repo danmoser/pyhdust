@@ -2,12 +2,10 @@
 # -*- coding:utf-8 -*-
 # Modified by D. Moser in 2015-03-17
 
-import pyhdust
-
 try:
-    from setuptools import setup
+    from setuptools import setup, find_packages
 except ImportError:
-    from distutils.core import setup
+    from distutils.core import setup, find_packages
 
 
 def rd(filename):
@@ -19,16 +17,21 @@ def rd(filename):
 
 if __name__ == "__main__":
     setup(name='pyhdust',
-    version=pyhdust.__version__,
+    version=0.94,
     description='BeACoN’s Python tools for Hdust',
-    url='http://astroweb.iag.usp.br/~moser/pyhdust/',
+    url='http://astroweb.iag.usp.br/~moser/doc/',
     author='Daniel M. Faes',
     author_email='dmfaes@gmail.com',
     license='GNU GPLv3.0',
-    packages=['pyhdust'],
+    #~ packages=['pyhdust'],
+    packages=find_packages(exclude=['build', 'docs', '*egg*', 'dist']),
+    package_data={'pyhdust': ['../LICENSE', '../README.md', '../todos.py',
+    '../filters/*', '../refs/*', '../stmodels/*']},
+    #~ include_package_data=True,
     zip_safe=False,
     install_requires=['numpy'],
-    # ~ package_dir = {'../'},
+    #~ data_files = [('refs/*', 'stmodels/*')],
+    #~ package_dir = {'../'},
     long_description=rd('README.md'),
     classifiers=[
         "Development Status :: 4 - Beta",

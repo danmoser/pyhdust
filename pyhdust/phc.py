@@ -287,6 +287,16 @@ def fracday2hms(frac):
     ss = int(round(ss*60))
     return hh,mm,ss
 
+def ra2degf(rastr):
+    """ RA to degrees (decimal). Input is string. """
+    vals = _np.array(rastr.split(':')).astype(float)
+    return (vals[0]+vals[1]/60.+vals[2]/3600.)*360./24
+
+def dec2degf(decstr):
+    """ Sexagesimal to decimal. Input is string. """
+    vals = _np.array(decstr.split(':')).astype(float)
+    return vals[0]+vals[1]/60.+vals[2]/3600.
+
 def gentkdates(mjd0, mjd1, fact, step, dtstart=None):
     """ Generates round dates between > mjd0 and < mjd1 in a given step.
     Valid steps are:
@@ -451,6 +461,60 @@ def interLinND(X, X0, X1, Fx, disablelog=False):
     else:
         return F
 
+def rotate_coords(x, y, theta, ox, oy):
+    """Rotate arrays of coordinates x and y by theta radians about the
+    point (ox, oy).
+
+    This routine was inspired on a http://codereview.stackexchange.com post.
+    """
+    s, c = _np.sin(theta), _np.cos(theta)
+    x, y = _np.asarray(x) - ox, _np.asarray(y) - oy
+    return x * c - y * s + ox, x * s + y * c + oy
+
+def rotate_image(src, theta, ox, oy, fill=255):
+    """Rotate the image src by theta radians about (ox, oy).
+    Pixels in the result that don't correspond to pixels in src are
+    replaced by the value fill.
+
+    This routine was inspired on a http://codereview.stackexchange.com post.
+    """
+    # Images have origin at the top left, so negate the angle.
+    theta = -theta
+
+    # Dimensions of source image. Note that scipy.misc.imread loads
+    # images in row-major order, so src.shape gives (height, width).
+    sh, sw = src.shape
+
+    # Rotated positions of the corners of the source image.
+    cx, cy = rotate_coords([0, sw, sw, 0], [0, 0, sh, sh], theta, ox, oy)
+
+    # Determine dimensions of destination image.
+    dw, dh = (int(_np.ceil(c.max() - c.min())) for c in (cx, cy))
+
+    # Coordinates of pixels in destination image.
+    dx, dy = _np.meshgrid(_np.arange(dw), _np.arange(dh))
+
+    # Corresponding coordinates in source image. Since we are
+    # transforming dest-to-src here, the rotation is negated.
+    sx, sy = rotate_coords(dx + cx.min(), dy + cy.min(), -theta, ox, oy)
+
+    # Select nearest neighbour.
+    sx, sy = sx.round().astype(int), sy.round().astype(int)
+
+    # Mask for valid coordinates.
+    mask = (0 <= sx) & (sx < sw) & (0 <= sy) & (sy < sh)
+
+    # Create destination image.
+    dest = _np.empty(shape=(dh, dw), dtype=src.dtype)
+
+    # Copy valid coordinates from source image.
+    dest[dy[mask], dx[mask]] = src[sy[mask], sx[mask]]
+
+    # Fill invalid coordinates.
+    dest[dy[~mask], dx[~mask]] = fill
+
+    return dest
+
 ra2deg = _np.double(180./_np.pi)
 
 ls = ['-','--',':','-.']
@@ -476,7 +540,7 @@ alpha = Constant(7.29735308e-3, 7.2973525698e-3, '', 'Fine structure constant')
 Rinf = Constant(109737.316, 10973731.6, 'cm', 'Rydberg constant') 	
 sigT = Constant(6.65245854533e-25, 6.65245854533e-29, 'cm2', 'Thomson cross section')
 
-au = Constant(1.49597870691e13, 149597871, 'cm', 'Astronomical unit')
+au = Constant(1.49597870691e13, 1.49597870691e11, 'cm', 'Astronomical unit')
 pc = Constant(3.08567758e18, 3.08567758e16, 'cm', 'Parsec')
 ly = Constant(9.4605284e17, 9.4605284e15, 'cm', 'Light year')		
 Msun = Constant(1.9891e33, 1.9891e30, 'g', 'Solar mass')	

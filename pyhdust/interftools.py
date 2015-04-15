@@ -177,50 +177,169 @@ def readmap(file, quiet=False):
 
     return data, obslist, lbdc, Ra, xmax
 
-def img2fits(img, lbd, Ra, xmax, dist, outname='model'):
+def img2fits(img, lbd, Ra, xmax, dist, outname='model', rot=0., lum=0.,
+    orient=0., coordsinf=None, deg=False, ulbd=''):
     """ Export an image (e.g., data[0,0,0,:,:]) to the fits format.
 
-    `lbd` is the wavelength of the image and must be in meters. """
+    `lbd` is the wavelength value and the dimension is kept as it is. It must
+    be in meters for JMMC softwares (ASPRO2/LITPRO).
+
+    `ulbd` units of the lbd.
+
+    `rot` = rotation angle to be applied to the images. 'x' and 'y' coordinate
+    axes should be orientated with equatorial north corresponding to 'up' (and
+    east == 'left'). Units in Degrees.
+
+    `orient` = orientation of the coordinate system. This is completely
+    independent of the `rot` variable.
+
+    `lum` = luminosity given in Solar units.
+    BUNIT sets the units of the image. Considering that HDUST images
+    give the pixels counts as :math:`F_\lambda/F`, the same correction as done
+    to BeAtlas is performed, and the final results are in 10^-17 erg/s/cm^2/Ang.
+    If `lum` = 0, no change is done.
+
+    `coordsinf` = [RA,DEC].
+    Example: ['21:51:12.055', '+28:51:38.72']
+
+    `deg` = angles in degrees (instead of radians).
+    """
+    if rot != 0.:
+        #~ print('# Total flux BEFORE rotation {0}'.format(_np.sum(img)))
+        img = _phc.rotate_image(img, rot*_np.pi/180, 0, 0, fill=0.)
+        #~ print('# Total flux AFTER rotation {0}\n'.format(_np.sum(img)))
+    if lum != 0:
+        img = img*(lum*_phc.Lsun.cgs)/4/_np.pi/(dist*_phc.pc.cgs)**2*1e-4*1e17
     hdu = _pyfits.PrimaryHDU(img[::-1,:])
     hdulist = _pyfits.HDUList([hdu])
     pixsize = 2*xmax[0]/len(img)
     rad_per_pixel = _np.double(pixsize*_phc.Rsun.cgs/(dist*_phc.pc.cgs))#*60.*60.*1000.*180./_np.pi)
-    hdulist[0].header['CDELT1'] = rad_per_pixel
-    hdulist[0].header['CDELT2'] = rad_per_pixel
-    hdulist[0].header['CDELT3'] = 1.
-    hdulist[0].header['CRVAL1'] = 0.
-    hdulist[0].header['CRVAL2'] = 0.
-    hdulist[0].header['CRVAL3'] = lbd
-    hdulist[0].header['NAXIS'] = 2
+    ucdelt = 'radians'
+    ushort = 'rad'
+    if deg:
+        rad_per_pixel*= 180./_np.pi
+        ucdelt = 'degrees'
+        ushort = 'deg'
+    hdulist[0].header['CDELT1'] = (-rad_per_pixel, ucdelt)
+    hdulist[0].header['CDELT2'] = (rad_per_pixel, ucdelt)
+    hdulist[0].header['CDELT3'] = (1., ulbd)
+    hdulist[0].header['CRVAL3'] = (lbd, ulbd)
     hdulist[0].header['NAXIS1'] = len(img)
     hdulist[0].header['NAXIS2'] = len(img[0])
+    hdulist[0].header['CRPIX1'] = len(img)/2.
+    hdulist[0].header['CRPIX2'] = len(img[0])/2.
     hdulist[0].header['CPPIX1'] = len(img)/2
     hdulist[0].header['CPPIX2'] = len(img[0])/2
+    hdulist[0].header['CROTA2'] = (float('{0:.3f}'.format(orient)), 'degrees')
+    if lum != 0:
+        hdulist[0].header['BUNIT'] = '10^-17 erg/s/cm^2/Ang'
+    if coordsinf is not None:
+        hdulist[0].header['CTYPE1'] = 'RA---TAN' #'GLON-CAR'
+        hdulist[0].header['CTYPE2'] = 'DEC--TAN' #'GLON-CAR'
+        hdulist[0].header['RA'] = coordsinf[0]
+        hdulist[0].header['DEC'] = coordsinf[1]
+        #~ hdulist[0].header['RADECSYS'] = 'FK5'
+        hdulist[0].header['EQUINOX'] = 2000.0
+        hdulist[0].header['CRVAL1'] = (_phc.ra2degf(coordsinf[0]), 'degrees')
+        hdulist[0].header['CRVAL2'] = (_phc.dec2degf(coordsinf[1]), 'degrees')
+    else:
+        hdulist[0].header['CRVAL1'] = 0.
+        hdulist[0].header['CRVAL2'] = 0.
+    hdulist[0].header['CROTA1'] = (0.000, 'degrees')
+    hdulist[0].header['CD1_1'] = (-rad_per_pixel, ucdelt)
+    hdulist[0].header['CD1_2'] = (0.000, ucdelt)
+    hdulist[0].header['CD2_1'] = (0.000, ucdelt)
+    hdulist[0].header['CD2_2'] = (rad_per_pixel, ucdelt)
+    hdulist[0].header['CUNIT1'] = ushort
+    hdulist[0].header['CUNIT2'] = ushort
+    hdulist[0].header['LONPOLE'] = 180.000
+    hdulist[0].header['LATPOLE'] = 0.000
     outname = '{0}.fits'.format(outname.replace(".fits",""))
     hdu.writeto(outname, clobber=True)
     print('# Saved {0} !'.format(outname))
     return
 
-def data2fitscube(data, obs, lbdc, Ra, xmax, dist, zoom=0, outname='model'):
+def data2fitscube(data, obs, lbdc, Ra, xmax, dist, zoom=0, outname='model',
+    orient=0., rot=0., lum=0., coordsinf=None, map=False, deg=False):
     """ Export a set of images (e.g., data[zoom,obs,:,:,:]) to the fits cube
     format.
 
-    `lbdc` is the wavelength array and must be in meters. """
-    hdu = _pyfits.PrimaryHDU(data[zoom,obs,:,:,:])
+    `map` = if `data` is a *.map file, set it to True. Leave false to *.maps.
+
+    `lbdc` is the wavelength array and the dimension is kept as it is. It must
+    be in meters for JMMC softwares (ASPRO2/LITPRO).
+
+    `rot` = rotation angle to be applied to the images. 'x' and 'y' coordinate
+    axes should be orientated with equatorial north corresponding to 'up' (and
+    east == 'left'). Units in Degrees.
+
+    `orient` = orientation of the coordinate system. This is completely
+    independent of the `rot` variable.
+
+    `lum` = luminosity given in Solar units.
+    BUNIT sets the units of the image. Considering that HDUST images
+    give the pixels counts as :math:`F_\lambda/F`, the same correction as done
+    to BeAtlas is performed, and the final results are in 10^-17 erg/s/cm^2/Ang.
+    If `lum` = 0, no change is done.
+
+    `coordsinf` = [RA,DEC].
+    Example: ['21:51:12.055', '+28:51:38.72']
+
+    `deg` = angles in degrees (instead of radians).
+    """
+    if not map: 
+        imgs = data[zoom,obs,:,::-1,:]
+    else:
+        imgs = data[zoom,obs,:,::-1,:,0]
+    if rot == 0.:
+        pass
+    else:
+        print('# ERROR! Rotation of CUBES not yet implemented!')
+        raise SystemExit(0)
+    if lum != 0:
+        #~ iL = _phc.fltTxtOccur('L =', lines, seq=2)*_phc.Lsun.cgs
+        imgs = imgs*(lum*_phc.Lsun.cgs)/4/_np.pi/(dist*_phc.pc.cgs)**2*1e-4*1e17
+    hdu = _pyfits.PrimaryHDU(imgs)
     hdulist = _pyfits.HDUList([hdu])
     pixsize = 2*xmax[0]/len(data[zoom,obs,0,:,:])
     rad_per_pixel = _np.double(pixsize*_phc.Rsun.cgs/(dist*_phc.pc.cgs))#*60.*60.*1000.*180./_np.pi)
-    hdulist[0].header['CDELT1'] = rad_per_pixel
-    hdulist[0].header['CDELT2'] = rad_per_pixel
-    hdulist[0].header['CDELT3'] = (lbdc[-1]-lbdc[0])/len(lbdc)
-    hdulist[0].header['CRVAL1'] = 0.
-    hdulist[0].header['CRVAL2'] = 0.
-    hdulist[0].header['CRVAL3'] = lbdc[0]
-    hdulist[0].header['NAXIS'] = 2
-    hdulist[0].header['NAXIS1'] = len(data[zoom,obs,0,:,:])
-    hdulist[0].header['NAXIS2'] = len(data[zoom,obs,0,:,:][0])
-    hdulist[0].header['CPPIX1'] = len(data[zoom,obs,0,:,:])/2
-    hdulist[0].header['CPPIX2'] = len(data[zoom,obs,0,:,:][0])/2
+    ucdelt = 'radians'
+    if deg:
+        rad_per_pixel*= 180./_np.pi
+        ucdelt = 'degrees'
+    hdulist[0].header['CDELT1'] = (-rad_per_pixel, ucdelt)
+    hdulist[0].header['CDELT2'] = (rad_per_pixel, ucdelt)
+    hdulist[0].header['CDELT3'] = (1., ulbd)
+    hdulist[0].header['CRVAL3'] = (lbd, ulbd)
+    hdulist[0].header['NAXIS1'] = len(img)
+    hdulist[0].header['NAXIS2'] = len(img[0])
+    hdulist[0].header['CPPIX1'] = len(img)/2
+    hdulist[0].header['CPPIX2'] = len(img[0])/2
+    hdulist[0].header['CROTA2'] = (float('{0:.3f}'.format(orient)), 'degrees')
+    if lum != 0:
+        hdulist[0].header['BUNIT'] = '10^-17 erg/s/cm^2/Ang'
+    #~ hdulist[0].header['CROTA1'] = float('{0:.3f}'.format(rot))
+    #~ if rot != 0:
+        #~ hdulist[0].header['CD1_1'] = rad_per_pixel*_np.cos(rot*_np.pi/180)
+        #~ hdulist[0].header['CD1_2'] = -rad_per_pixel*_np.sin(rot*_np.pi/180)
+        #~ hdulist[0].header['CD2_1'] = rad_per_pixel*_np.sin(rot*_np.pi/180)
+        #~ hdulist[0].header['CD2_2'] = rad_per_pixel*_np.cos(rot*_np.pi/180)
+        #~ CD1_1 = CDELT1 * cos (CROTA2)
+        #~ CD1_2 = -CDELT2 * sin (CROTA2)
+        #~ CD2_1 = CDELT1 * sin (CROTA2)
+        #~ CD2_2 = CDELT2 * cos (CROTA2)
+    if coordsinf is not None:
+        hdulist[0].header['CTYPE1'] = 'RA---TAN' #'GLON-CAR'
+        hdulist[0].header['CTYPE2'] = 'DEC---TAN' #'GLON-CAR'
+        hdulist[0].header['RA'] = coordsinf[0]
+        hdulist[0].header['DEC'] = coordsinf[1]
+        hdulist[0].header['RADECSYS'] = 'FK5'
+        hdulist[0].header['EQUINOX'] = 2000.0
+        hdulist[0].header['CRVAL1'] = (_phc.ra2degf(coordsinf[0]), 'degrees')
+        hdulist[0].header['CRVAL2'] = (_phc.dec2degf(coordsinf[1]), 'degrees')
+    else:
+        hdulist[0].header['CRVAL1'] = 0.
+        hdulist[0].header['CRVAL2'] = 0.
     outname = '{0}.fits'.format(outname.replace(".fits",""))
     hdu.writeto(outname, clobber=True)
     print('# Saved {0} !'.format(outname))

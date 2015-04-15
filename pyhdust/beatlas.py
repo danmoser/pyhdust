@@ -278,7 +278,11 @@ def createBAsed(fsedlist, xdrpath, lbdarr, param=True, savetxt=False,
                 if not _os.path.exists(log):
                     log = _glob(log.replace('../mod{0}/mod'.format(modn),
                     '../mod{0}/*mod'.format(modn)))
-                    log = log[0]
+                    if len(log) >= 1:
+                        log = log[0]
+                    else:
+                        print('# ERROR! No log file found for {0}'.format(fsedlist[i]))
+                        raise SystemExit(0)
                 f0 = open(log)
                 lines = f0.readlines()
                 f0.close()
@@ -287,14 +291,14 @@ def createBAsed(fsedlist, xdrpath, lbdarr, param=True, savetxt=False,
             for j in range(header2[-1]):
                 #~  M, ob(W), Z, H, sig, Rd, h, *n*, cos(i).
                 if param:
-                    minfo[k*header2[-1]+j] = _np.array([mod.M, mod.ob, mod.Z, mod.H,
-                mod.sig, mod.Rd, mod.h, mod.n, listpar[-1][j]]).astype(float)
+                    minfo[k*header2[-1]+j] = _np.array([ mod.M, mod.ob, mod.Z, mod.H,
+                mod.sig, mod.Rd, mod.h, mod.n, listpar[-1][j] ]).astype(float)
                 else:
-                    minfo[k*header2[-1]+j] = _np.array([mod.M, mod.ob, mod.Z, mod.H,
-                mod.sig, mod.Rd, mod.h, listpar[-1][j]]).astype(float)
+                    minfo[k*header2[-1]+j] = _np.array([ mod.M, mod.ob, mod.Z, mod.H,
+                mod.sig, mod.Rd, mod.h, listpar[-1][j] ]).astype(float)
                 if len(sed2data[j,:,2]) != nlb:
                     models[k*header2[-1]+j] = _np.interp(lbdarr, sed2data[j,:,2],
-                sed2data[j,:,3])
+                sed2data[j,:,3])*iL/4/_np.pi/dist**2
                 else:
                     models[k*header2[-1]+j] = sed2data[j,:,3]*iL/4/_np.pi/dist**2
             k += 1

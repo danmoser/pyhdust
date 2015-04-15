@@ -23,7 +23,6 @@ except:
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
-__version__ = 0.91
 
 bestars = [
     # The numbers below are based on Harmanec 1988
@@ -401,10 +400,10 @@ def mergesed2(models, Vrots, path=None):
             hd += '%CREATED: {0}\n'.format(_time.asctime(_time.localtime(_time.time())))
             hd += '%{0:>7s}{1:>8s}{2:>13s}{3:>13s}'.format('nlbd', 'nobs', 'Rstar', 'Rwind') + '\n'
             hd += '{0:8d}{1:8d}{2:13.4f}{3:13.2f}\n'.format(int(nlbd), int(nobs), Rstar, Rwind)
-            hd += '%{0:>12s}'.format('MU') + (15 * '{0:>13s}').format('PHI', 'LAMBDA', 'FLUX', \
+            hd += '%{0:>12s}'.format('MU') + (15 * '{:>13s}').format('PHI', 'LAMBDA', 'FLUX', \
                                                                       'SCT FLUX', 'EMIT FLUX', 'TRANS FLUX', 'Q', 'U',
                                                                       'Sig FLUX', 'Sig FLUX', \
-                                                                      'Sig SCT FLUX', 'Sig EMIT FLUX', 'Sig TRANS FLUX',
+                                                                      'SigSCTFLX', 'SigEMITFLX', 'SigTRANSFLX',
                                                                       'Sig Q', 'Sig U')
 
             _np.savetxt(path + 'fullsed/fullsed_' + modelname.replace('.txt', '.sed2'), \
