@@ -57,9 +57,8 @@ def readscr(file):
         ob = _phc.fltTxtOccur('R_eq/R_pole =',lines,n=1)
         Tp = _phc.fltTxtOccur('Teff_pole =',lines,n=1)
     else:
-        W = 0.775		
-		L = 7500. #Lsun
-		bet = 0.25
+        W = _phc.fltTxtOccur('W =',lines,n=1)
+		bet = _phc.fltTxtOccur('Beta_GD =',lines,n=1)
         wfrac = _np.sqrt(27./8*(1+0.5*W**2)**3*W**2)
         ob, Tp = rotStar(M=M, rp=Rp, beta=bet, wfrac=wfrac, quiet=True)
     return M,Rp*ob,Tp
