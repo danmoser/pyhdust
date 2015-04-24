@@ -40,6 +40,29 @@ bestars = [
     ['B9', 10351, 02.52, 02.25, 591, 2.39],
     ['B9.5', 9886, 02.38, 02.17, 46, 2.32]]
 
+def readscr(file):
+    '''
+    Read source generated with `ref_estrela.txt`.
+
+    OUTPUT: M, Req and TP (2*solar units and K).
+    '''
+    f0 = open(file)
+    lines = f0.readlines()
+    f0.close()
+
+    n = int(_phc.fltTxtOccur('STAR =',lines,n=1))
+    M = _phc.fltTxtOccur('M =',lines,n=n)
+    Rp = _phc.fltTxtOccur('R_pole =',lines,n=n)
+    if n == 2:
+        ob = _phc.fltTxtOccur('R_eq/R_pole =',lines,n=1)
+        Tp = _phc.fltTxtOccur('Teff_pole =',lines,n=1)
+    else:
+        W = 0.775		
+		L = 7500. #Lsun
+		bet = 0.25
+        wfrac = _np.sqrt(27./8*(1+0.5*W**2)**3*W**2)
+        ob, Tp = rotStar(M=M, rp=Rp, beta=bet, wfrac=wfrac, quiet=True)
+    return M,Rp*ob,Tp
 
 def n0toSigma0(n0, M, Req, f, Tp, mu):
     """ VDD Steady-State conversion between `n0` to `Sigma0`.
@@ -671,14 +694,14 @@ def diskcalcs(M, R, Tpole, T, alpha, R0, mu, rho0, Rd):
 
 
 def rotStar(Tp=20000., M=10.3065, rp=5.38462, star='B', beta=0.25, wfrac=0.8,
-            th_res=5001):
+            th_res=5001, quiet=False):
     """ Return the photospheric parameters of a rotating star.
 
     TBD: calculation of Von Zeipel's Beta parameter as function of W.
 
     INPUT: th_res (theta resolution, integer)...
 
-    OUTPUT: printed status
+    OUTPUT: printed status + (ob, Tp values)
     """
     Rsun = _phc.Rsun.cgs
     Msun = _phc.Msun.cgs
@@ -748,35 +771,38 @@ def rotStar(Tp=20000., M=10.3065, rp=5.38462, star='B', beta=0.25, wfrac=0.8,
     b = lumf(wfrac, Tp, rp, M, beta)
     c = lumf(0.0001, Tp, rp, M, beta)
     Cw = (c / b) ** (1. / (4. * beta)) * C
+    ob = rt(_np.pi / 2, wfrac)/(rp / Rsun)
 
     ### OUTPUT ###
-    print('# Parameters:')
-    print('wfrac     = %.4f' % (wfrac))
-    print('Star Mass = %.2f Msun' % (M / Msun))
-    print('Rpole     = %.2f Rsun' % (rp / Rsun))
-    print('Req       = %.2f Rpole' % (rt(_np.pi / 2, wfrac)))
-    print('Teff_pol  = %.1f' % (Tp))
-
-    print('Star Area = %.2f' % (area(wfrac)))
-    print('Star Lum. = %.1f' % (lum(wfrac, Tp, rp, C, M, beta) / Lsun))
-    print('Star Lum.*= %.1f' % (lum0))
-
-    print('vrot(km/s)= %.1f' % (vrot / 1e5))
-    print('vorb(km/s)= %.1f' % (_np.sqrt(G * M / rp / rt(_np.pi / 2, wfrac)) / 1e5) )
-    print('vcrt(km/s)= %.1f' % (wcrit * rp * rt(_np.pi / 2, 1.) / 1e5))
-
-    print('log(g)pole= %.2f' % (_np.log10(abs(g(wfrac, M, rp, 0.))) ))
-    print('log(g)eq  = %.2f' % (_np.log10(abs(g(wfrac, M, rp, _np.pi / 2))) ))
-    print('Teff_eq   = %.1f' % ( (C * abs(g(wfrac, M, rp, _np.pi / 2))) ** beta) )
-    print('Teff_eq*  = %.1f' % ( (Cw * abs(g(wfrac, M, rp, _np.pi / 2))) ** beta) )
-
-    print('Teff_pol* = %.2f' % ( (Cw * abs(g(wfrac, M, rp, 0.))) ** beta) )
-    print(
-        'T_pol/eq* = %.4f' % (
-        (Cw * abs(g(wfrac, M, rp, 0.))) ** beta / (Cw * abs(g(wfrac, M, rp, _np.pi / 2))) ** beta) )
-
-    print('# \"*\" == case where L is constant!')
-    return
+    if not quiet:
+        print('# Parameters:')
+        print('wfrac     = %.4f' % (wfrac))
+        print('W         = %.4f' % (_np.sqrt(2*(ob-1))))
+        print('Star Mass = %.2f Msun' % (M / Msun))
+        print('Rpole     = %.2f Rsun' % (rp / Rsun))
+        print('Req       = %.2f Rpole' % (rt(_np.pi / 2, wfrac)))
+        print('Teff_pol  = %.1f' % (Tp))
+    
+        print('Star Area = %.2f' % (area(wfrac)))
+        print('Star Lum. = %.1f' % (lum(wfrac, Tp, rp, C, M, beta) / Lsun))
+        print('Star Lum.*= %.1f' % (lum0))
+    
+        print('vrot(km/s)= %.1f' % (vrot / 1e5))
+        print('vorb(km/s)= %.1f' % (_np.sqrt(G * M / rp / rt(_np.pi / 2, wfrac)) / 1e5) )
+        print('vcrt(km/s)= %.1f' % (wcrit * rp * rt(_np.pi / 2, 1.) / 1e5))
+    
+        print('log(g)pole= %.2f' % (_np.log10(abs(g(wfrac, M, rp, 0.))) ))
+        print('log(g)eq  = %.2f' % (_np.log10(abs(g(wfrac, M, rp, _np.pi / 2))) ))
+        print('Teff_eq   = %.1f' % ( (C * abs(g(wfrac, M, rp, _np.pi / 2))) ** beta) )
+        print('Teff_eq*  = %.1f' % ( (Cw * abs(g(wfrac, M, rp, _np.pi / 2))) ** beta) )
+    
+        print('Teff_pol* = %.2f' % ( (Cw * abs(g(wfrac, M, rp, 0.))) ** beta) )
+        print(
+            'T_pol/eq* = %.4f' % (
+            (Cw * abs(g(wfrac, M, rp, 0.))) ** beta / (Cw * abs(g(wfrac, M, rp, _np.pi / 2))) ** beta) )
+    
+        print('# \"*\" == case where L is constant!')
+    return ob, (Cw * abs(g(wfrac, M, rp, 0.))) ** beta)
 
 
 def obsCalc():

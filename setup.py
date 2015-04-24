@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
-# Modified by D. Moser in 2015-03-17
+# Modified by D. Moser in 2015-04-15
 
 try:
     from setuptools import setup, find_packages
@@ -17,7 +17,7 @@ def rd(filename):
 
 if __name__ == "__main__":
     setup(name='pyhdust',
-    version=0.94,
+    version=0.95,
     description='BeACoN’s Python tools for Hdust',
     url='http://astroweb.iag.usp.br/~moser/doc/',
     author='Daniel M. Faes',
@@ -30,6 +30,7 @@ if __name__ == "__main__":
     #~ include_package_data=True,
     zip_safe=False,
     install_requires=['numpy'],
+    #install_requires=['numpy >= 1.6.0'],
     #~ data_files = [('refs/*', 'stmodels/*')],
     #~ package_dir = {'../'},
     long_description=rd('README.md'),
