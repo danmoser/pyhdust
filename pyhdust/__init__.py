@@ -11,6 +11,7 @@ import datetime as _datetime
 import math as _math
 import numpy as _np
 import re as _re
+import struct as _struct
 from glob import glob as _glob
 import pyhdust.phc as _phc
 import pyhdust.jdcal as _jdcal
@@ -58,9 +59,12 @@ def readscr(file):
         Tp = _phc.fltTxtOccur('Teff_pole =',lines,n=1)
     else:
         W = _phc.fltTxtOccur('W =',lines,n=1)
-		bet = _phc.fltTxtOccur('Beta_GD =',lines,n=1)
-        wfrac = _np.sqrt(27./8*(1+0.5*W**2)**3*W**2)
-        ob, Tp = rotStar(M=M, rp=Rp, beta=bet, wfrac=wfrac, quiet=True)
+        bet = _phc.fltTxtOccur('Beta_GD =',lines,n=1)
+        L = _phc.fltTxtOccur('L =',lines,n=n)
+        wfrac = _np.sqrt(27./8*(1+0.5*W**2)**-3*W**2)
+        ob, Tp = rotStar(Tp=L, M=M, rp=Rp, beta=bet, wfrac=wfrac, quiet=True,
+        LnotTp=True)
+    #print M,Rp*ob,Tp
     return M,Rp*ob,Tp
 
 def n0toSigma0(n0, M, Req, f, Tp, mu):
@@ -293,7 +297,7 @@ def chkObsLog(path=None, nights=None, badweath=None):
     for night in lnights:
         if night in lbadweath:
             pass
-        elif _os.path.exists(night) == False:
+        elif not _os.path.exists(night):
             print('# ERROR! {0} has no data and was not lost for bad weather!'. \
                   format(night))
     flds = [fld for fld in _os.listdir('{0}'.format(path)) if \
@@ -308,6 +312,154 @@ def chkObsLog(path=None, nights=None, badweath=None):
             print('# Warning! Bad weather {0} is not recorded as OPD night!'. \
                   format(night))
             print('# Probably it is a spec night.')
+    return
+
+def readtemp(tfile, quiet=False):
+    """ Read *.temp file
+
+    - ncr = número de células da simulação na coordenada radial
+    - ncmu = número de células da simulação na coordenada latitudinal
+    - ncphi = número de células da simulação na coordenada azimutal
+    - nLTE = number of atomic LTE levels
+    - nNLTE = number of atomic NLTE levels
+    - beta = flare disk parameter
+    - Rstar = raio da estrela
+    - Ra = raio máximo da simulação, onde acabam todas as poeiras
+    - pcrc = coordenadas das células em raio
+    - pcmuc = coordenadas das células em mu
+    - pcphic = coordenadas das células em phi
+    - pcr = distância entre as células em raio
+    - pcmu = distância entre as células em mu
+    - pcphi = distância entre as células em phi
+
+    OUTPUT = ncr,ncmu,ncphi,nLTE,nNLTE,Rstar,Ra,beta,data,pcr,pcmu,pcphi
+    """
+    f = open(tfile).read()
+    ixdr=0
+    ncr, ncmu, ncphi, nLTE, nNLTE = _struct.unpack('>5l', f[ixdr:ixdr+4*5])
+    ixdr+=4*5
+    Rstar, Ra, beta = _struct.unpack('>3f', f[ixdr:ixdr+4*3])
+    ixdr+=4*3
+    #~ 
+    rlen = (nLTE+6)*ncr*ncmu*ncphi
+    data = _struct.unpack('>{0}f'.format(rlen), f[ixdr:ixdr+4*rlen])
+    ixdr+=4*rlen
+    data = _np.reshape(data, (nLTE+6,ncr,ncmu,ncphi), order='F')
+    #~
+    #this will check if the XDR is finished.
+    if ixdr == len(f):
+        if not quiet:
+            print('# XDR {0} completely read!'.format(tfile))
+    else:
+        print('# Warning: XDR {0} not completely read!'.format(tfile))
+        print('# length difference is {0}'.format( (len(f)-ixdr)/4 ) )
+    #~
+    pcrc = data[0,:,0,0]
+    pcr = _np.zeros(ncr+1)
+    pcr[0] = Rstar
+    for icr in range(1,ncr+1):
+        pcr[icr] = pcr[icr-1] + 2*(pcrc[icr-1]-pcr[icr-1])
+    pcmu = _np.zeros((ncmu+1,ncr))
+    #~ 
+    for icr in range(0, ncr):
+        pcmuc = data[1,icr,:,0]
+        pcmu[0,icr] = -1.
+        for icmu in range(1,ncmu+1):
+            pcmu[icmu,icr] = pcmu[icmu-1,icr] + 2.*(pcmuc[icmu-1]-pcmu[icmu-1,icr])
+    #~
+    pcphic = data[2,0,0,:]
+    pcphi = _np.zeros(ncphi+1)
+    pcphi[0] = 0.
+    for icphi in range(1,ncphi+1):
+        pcphi[icphi] = pcphi[icphi-1] + 2*(pcphic[icphi-1]-pcphi[icphi-1])
+    #~ 
+    return ncr,ncmu,ncphi,nLTE,nNLTE,Rstar,Ra,beta,data,pcr,pcmu,pcphi
+
+
+def plottemp(tfile, tfrange=[], philist=[0], interpol=False, xax=0, fmts=['png'],
+    outpref=None, plotavg=True):
+    """
+    `tfile` = filename or file prefix to be plotted. If `tfrange` (e.g.,
+    tfrange=[20,24] is present, it you automatically plot the interval.
+
+    `xax` = 0: log10(r/R-1), 1: r/R; 2: 1-R/r
+
+    `outpref` = prefix of the output images
+
+    `fmts` = format os the output images.
+
+    `plotavg` = plot tfile_avg.temp file (if exists).
+
+    If interpol==True, what will be plotted is the population along rays of
+    a given latitude. The latitudes are defined in array muplot below.
+
+    If interpola==False, what will be plotted is the population for a given mu
+    index as a function of radius, starting with index ncmu/2(midplane) + plus
+
+    - ntip, = número de tipos de poeira determinados para a simulação (composição)
+    - na, = número do tipo da poeira (tamanhos)
+    - NdustShells, = número de camadas de poeiras da simulação
+    - Rdust, = raio onde está(ão) a(s) camada(s)
+    - Tdestruction, = temperatura na qual os grãos são evaporados
+    - Tdust, = temperatura da poeira numa da posição da grade da simulação (r,phi,mu)
+    - lacentro, = controla os tipos e tamanhos das poeiras
+
+    For more info, see `readtemp` help. 
+
+    OUTPUT = ...
+    """   
+    if interpol:
+        print('# Interpol option currently is not available.')
+        raise SystemExit(0)
+    if xax not in [0,1,2]:
+        print('# Invalid `xax` option. Try again.')
+        raise SystemExit(0)
+    #~
+    fig, axs = _plt.subplots(1, 1)#, figsize=(21./3,29.7/3), sharex=True)
+    lev = 0
+    np = 0
+    rplus = 0
+    if tfrange == []:
+        tfrange = [int(tfile[-7:-5])]
+    for tn in range(int(tfrange[0]), int(tfrange[-1])+1):
+        if tfile.find('.temp') > 0:
+            rtfile = tfile.replace(tfile[-7:-5], '{0:02d}'.format(tn))
+        else:
+            rtfile = tfile+'{0:02d}.temp'.format(tn)
+        ncr,ncmu,ncphi,nLTE,nNLTE,Rstar,Ra,beta,data,pcr,pcmu,pcphi = \
+        readtemp(rtfile, quiet=True)
+        for phiidx in range(0,len(philist)):
+            icphi = philist[phiidx]
+            x = data[0,:,0,icphi]
+            if (xax == 0): x = _np.log10(x/Rstar-1.); xtitle = r'$\log_{10}(r/R_*-1)$'
+            elif (xax == 1): x = x/Rstar; xtitle = r'$r/R_*$'
+            elif (xax == 2): x = 1.-Rstar/x; xtitle = r'$1-R_*/r$'
+            y = data[3+lev,:,ncmu/2+np+rplus,icphi]
+            y = y/1000.
+            axs.plot(x, y, 'o:', label=tn)
+    rtfile = rtfile.replace('.temp', '_avg.temp')
+    if _os.path.exists(rtfile):
+        ncr,ncmu,ncphi,nLTE,nNLTE,Rstar,Ra,beta,data,pcr,pcmu,pcphi = \
+        readtemp(rtfile, quiet=True)
+        for phiidx in range(0,len(philist)):
+            icphi = philist[phiidx]
+            x = data[0,:,0,icphi]
+            if (xax == 0): x = _np.log10(x/Rstar-1.); xtitle = r'$\log_{10}(r/R_*-1)$'
+            elif (xax == 1): x = x/Rstar; xtitle = r'$r/R_*$'
+            elif (xax == 2): x = 1.-Rstar/x; xtitle = r'$1-R_*/r$'
+            y = data[3+lev,:,ncmu/2+np+rplus,icphi]
+            y = y/1000.
+            axs.plot(x, y, 'o-', label='avg')    
+    #~
+    axs.legend()
+    axs.set_title(tfile)
+    axs.set_xlabel(xtitle)
+    axs.set_ylabel(r'Temperature (10$^3$ K)')
+    if outpref == None:
+        outpref = _phc.dtflag()
+    for fmt in fmts:
+        _plt.savefig('{0}.{1}'.format(outpref,fmt), transparent=True)
+    _plt.close()
     return
 
 
@@ -339,7 +491,7 @@ def mergesed2(models, Vrots, path=None):
         model = model.replace('.inp', '.txt')
         modfld, modelname = _phc.trimpathname(model)
         path = _phc.trimpathname(modfld[:-1])[0]
-        if _os.path.exists('{0}fullsed'.format(path)) == False:
+        if not _os.path.exists('{0}fullsed'.format(path)):
             _os.system('mkdir {0}fullsed'.format(path))
         #
         #~ modelname = modelname.replace('.txt','.inp')
@@ -693,10 +845,12 @@ def diskcalcs(M, R, Tpole, T, alpha, R0, mu, rho0, Rd):
 
 
 def rotStar(Tp=20000., M=10.3065, rp=5.38462, star='B', beta=0.25, wfrac=0.8,
-            th_res=5001, quiet=False):
+            th_res=5001, quiet=False, LnotTp=False):
     """ Return the photospheric parameters of a rotating star.
 
-    TBD: calculation of Von Zeipel's Beta parameter as function of W.
+    `LnotTp`: the value of "Tp" is the Luminosity (in solar units).
+
+    Calculation of Von Zeipel's Beta parameter as function of W: see math...
 
     INPUT: th_res (theta resolution, integer)...
 
@@ -713,6 +867,8 @@ def rotStar(Tp=20000., M=10.3065, rp=5.38462, star='B', beta=0.25, wfrac=0.8,
     rp = rp * Rsun
     if wfrac == 0.:
         wfrac = 1e-9
+    if LnotTp:
+        Tp = (Tp*Lsun/4./_np.pi/rp**2/sigma)**.25
 
     ### DEFS ###
     def rt(th, wfrac):
@@ -801,7 +957,7 @@ def rotStar(Tp=20000., M=10.3065, rp=5.38462, star='B', beta=0.25, wfrac=0.8,
             (Cw * abs(g(wfrac, M, rp, 0.))) ** beta / (Cw * abs(g(wfrac, M, rp, _np.pi / 2))) ** beta) )
     
         print('# \"*\" == case where L is constant!')
-    return ob, (Cw * abs(g(wfrac, M, rp, 0.))) ** beta)
+    return ob, (Cw * abs(g(wfrac, M, rp, 0.))) ** beta
 
 
 def obsCalc():
