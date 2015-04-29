@@ -414,8 +414,8 @@ def fastnumvis(img, lbd, Bproj, PA, rad_per_pixel, PAdisk=90.):
     PA = PA-PAdisk+90.
     idx = _np.where(img > 0)
     
-    u = Bproj*_np.double(_np.sin(PA/_phc.ra2deg)/lbd)
-    v = Bproj*_np.double(_np.cos(PA/_phc.ra2deg)/lbd)
+    u = Bproj*_np.double(_np.sin(PA/_np.double(180./_np.pi))/lbd)
+    v = Bproj*_np.double(_np.cos(PA/_np.double(180./_np.pi))/lbd)
     #print PA,phc.ra2deg,lbd,Bproj,v
 
     ny = len(img)
@@ -433,7 +433,7 @@ def fastnumvis(img, lbd, Bproj, PA, rad_per_pixel, PAdisk=90.):
     complexVis= TF_z/TF_z0
     
     VisAmp = _np.abs(complexVis)
-    VisPhase = _np.arctan2(complexVis.imag, complexVis.real)*_phc.ra2deg
+    VisPhase = _np.arctan2(complexVis.imag, complexVis.real)*_np.double(180./_np.pi)
     return complexVis, VisAmp, VisPhase
 
 def fastnumvis3(img, lbd, Bprojs, PAs, rad_per_pixel, PAdisk=90.):
@@ -454,7 +454,7 @@ def fastnumvis3(img, lbd, Bprojs, PAs, rad_per_pixel, PAdisk=90.):
     complexVis = cV1*cV2*cV3.conjugate()
 
     VisAmp = _np.abs(complexVis)
-    VisPhase = _np.arctan2(complexVis.imag, complexVis.real)*_phc.ra2deg
+    VisPhase = _np.arctan2(complexVis.imag, complexVis.real)*_np.double(180./_np.pi)
     return complexVis, VisAmp, VisPhase
 
 

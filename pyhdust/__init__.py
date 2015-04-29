@@ -22,24 +22,11 @@ try:
 except:
     print('# Warning! matplotlib and/or scipy module not installed!!!')
 
+__version__ = 0.952
+__release__ = "Beta"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
 
-bestars = [
-    # The numbers below are based on Harmanec 1988
-    #SpType     Tpole    Mass    Rp      Lum     Rp2
-    ['B0', 29854, 14.57, 05.80, 27290, 6.19],
-    ['B0.5', 28510, 13.19, 05.46, 19953, 5.80],
-    ['B1', 26182, 11.03, 04.91, 11588, 5.24],
-    ['B2', 23121, 08.62, 04.28, 5297, 4.55],
-    ['B3', 19055, 06.07, 03.56, 1690, 3.78],
-    ['B4', 17179, 05.12, 03.26, 946, 3.48],
-    ['B5', 15488, 04.36, 03.01, 530, 3.21],
-    ['B6', 14093, 03.80, 02.81, 316, 2.99],
-    ['B7', 12942, 03.38, 02.65, 200, 2.82],
-    ['B8', 11561, 02.91, 02.44, 109, 2.61],
-    ['B9', 10351, 02.52, 02.25, 591, 2.39],
-    ['B9.5', 9886, 02.38, 02.17, 46, 2.32]]
 
 def readscr(file):
     '''
@@ -375,10 +362,42 @@ def readtemp(tfile, quiet=False):
     #~ 
     return ncr,ncmu,ncphi,nLTE,nNLTE,Rstar,Ra,beta,data,pcr,pcmu,pcphi
 
+def readdust(tfile):
+    """ TBD!!
+
+    - ntip, = número de tipos de poeira determinados para a simulação (composição)
+    - na, = número do tipo da poeira (tamanhos)
+    - NdustShells, = número de camadas de poeiras da simulação
+    - Rdust, = raio onde está(ão) a(s) camada(s)
+    - Tdestruction, = temperatura na qual os grãos são evaporados
+    - Tdust, = temperatura da poeira numa da posição da grade da simulação (r,phi,mu)
+    - lacentro, = controla os tipos e tamanhos das poeiras
+
+    """
+    return
+
+def plotdust(tfile):
+    """ TBD!!
+
+    For more info, see `readdust` help. 
+    
+    """
+    return
+    
 
 def plottemp(tfile, tfrange=[], philist=[0], interpol=False, xax=0, fmts=['png'],
     outpref=None, plotavg=True):
     """
+    .. code::
+
+        >>> import pyhdust as hdt
+        >>> hdt.plottemp('bestar2.02/mod01/mod01b33.temp', tfrange=[30,33])
+
+    .. image:: _static/hdt_plottemp.png
+        :width: 512px
+        :align: center
+        :alt: hdt.plottemp example
+
     `tfile` = filename or file prefix to be plotted. If `tfrange` (e.g.,
     tfrange=[20,24] is present, it you automatically plot the interval.
 
@@ -395,16 +414,6 @@ def plottemp(tfile, tfrange=[], philist=[0], interpol=False, xax=0, fmts=['png']
 
     If interpola==False, what will be plotted is the population for a given mu
     index as a function of radius, starting with index ncmu/2(midplane) + plus
-
-    - ntip, = número de tipos de poeira determinados para a simulação (composição)
-    - na, = número do tipo da poeira (tamanhos)
-    - NdustShells, = número de camadas de poeiras da simulação
-    - Rdust, = raio onde está(ão) a(s) camada(s)
-    - Tdestruction, = temperatura na qual os grãos são evaporados
-    - Tdust, = temperatura da poeira numa da posição da grade da simulação (r,phi,mu)
-    - lacentro, = controla os tipos e tamanhos das poeiras
-
-    For more info, see `readtemp` help. 
 
     OUTPUT = ...
     """   
@@ -904,7 +913,7 @@ def rotStar(Tp=20000., M=10.3065, rp=5.38462, star='B', beta=0.25, wfrac=0.8,
             l = l + rt(ths[i], wfrac) ** 2 * _np.sin(ths[i]) * abs(g(wfrac, M, rp, ths[i])) ** (4 * beta)
         return l * ths[-2] * rp ** 2
 
-    Bstars = _np.array(bestars, dtype=str)
+    Bstars = _np.array(_phc.bestars, dtype=str)
     if star in Bstars:
         i = _np.where(Bstars[:, 0] == star)
         i = i[0][0]

@@ -47,7 +47,7 @@ class Constant(object):
         return str('{:.7e} in {} (cgs)'.format(self.cgs, self.unitscgs))
 
 
-def fltTxtOccur(s, lines, n=1, seq=1, after=False):
+def fltTxtOccur(s, lines, n=1, seq=1, after=False, asstr=False):
     """ Return the seq-th float of the line after the n-th
     occurrence of `s` in the array `lines`. 
 
@@ -63,7 +63,10 @@ def fltTxtOccur(s, lines, n=1, seq=1, after=False):
     if len(occur) >= n:
         occur = occur[n-1]
         out = _re.findall(fltregex, occur)[seq-1]
-    return float(out)
+    if not asstr:
+        out = float(out)
+    return out
+
 
 def sortfile(file, quiet=False):
     """ Sort the file. """
@@ -91,6 +94,7 @@ def outfld(fold='hdt'):
         _os.system('mkdir {}'.format(fold))
     return
 
+
 def strrep(seq, n, newseq):
     """ Insert `newseq` at position `n` of the string `seq`.
 
@@ -101,6 +105,7 @@ def strrep(seq, n, newseq):
     OUTPUT: string
     """
     return seq[:n]+newseq+seq[n+1:]
+
 
 def wg_avg_and_std(values, sigma):
     """
@@ -121,6 +126,7 @@ def wg_avg_and_std(values, sigma):
     avg = _np.average(values, weights=1/sigma)
     return (avg, _np.sqrt(_np.sum(sigma**2))/len(values) )
 
+
 def find_nearest(array,value, bigger=None):
     """ Find nearest VALUE in the array and return it.
 
@@ -139,6 +145,7 @@ def find_nearest(array,value, bigger=None):
     else:
         print('# ERROR at bigger!!')
     return found
+
 
 def bindata(x, y, yerr, nbins, xrange=None):
     """
@@ -169,6 +176,7 @@ def bindata(x, y, yerr, nbins, xrange=None):
             idx[i] = True
     return (tmpx[idx], tmpy[idx], tmpyerr[idx])
 
+
 def trimpathname(file):
     """Trim the full path string to return path and filename.
 
@@ -176,6 +184,7 @@ def trimpathname(file):
 
     OUTPUT: folder path, filename (strings)"""
     return [ file[:file.rfind('/')+1], file[file.rfind('/')+1:] ]
+
 
 def rmext(name):
     """Remove the extension of a filename.
@@ -189,6 +198,7 @@ def rmext(name):
         return name
     return name[:name.rfind('.')]
 
+
 def normgauss(sig, x=None, xc=0.):
     """Normalized Gaussian function.
 
@@ -199,6 +209,7 @@ def normgauss(sig, x=None, xc=0.):
     if x == None:
         x = _np.linspace(-5*sig,5*sig,101)
     return 1./(2*_np.pi)**.5/sig*_np.exp(-(x-xc)**2./(2*sig**2.))
+
 
 def normbox(hwidth, x=None, xc=0.):
     """Normalized Box function.
@@ -213,6 +224,7 @@ def normbox(hwidth, x=None, xc=0.):
     idx = _np.where(_np.abs(x-xc) <= hwidth)
     y[idx] = _np.zeros(len(y[idx]))+2./hwidth 
     return y
+
 
 def convnorm(x, arr, pattern):
     """Do the convolution of arr with pattern.
@@ -229,6 +241,7 @@ def convnorm(x, arr, pattern):
     cut = len(x)/2
     return _np.convolve(pattern, arr)[cut:-cut]*dx
 
+
 def BBlbd(T,lbd=None):
     """ Black body radiation as function of lambda. CGS units (erg s-1 sr−1 cm−3).
 
@@ -237,6 +250,7 @@ def BBlbd(T,lbd=None):
         lbd = _np.arange(1000, 10000, 100)*1e-8 #Angs -> cm
     ft = h.cgs*c.cgs/(lbd*kB.cgs*T)
     return 2*h.cgs*c.cgs**2/(lbd**5*(_np.exp(ft)-1))
+
 
 def recsearch(path, star, fstr):
     """
@@ -261,6 +275,7 @@ def recsearch(path, star, fstr):
                 for file in files:
                     outfilelist += [file]
     return outfilelist
+
 
 def fracday2hms(frac):
     """Enter fraction of a day (e.g., MJD) and return integers of hour, min,
@@ -287,15 +302,18 @@ def fracday2hms(frac):
     ss = int(round(ss*60))
     return hh,mm,ss
 
+
 def ra2degf(rastr):
     """ RA to degrees (decimal). Input is string. """
     vals = _np.array(rastr.split(':')).astype(float)
     return (vals[0]+vals[1]/60.+vals[2]/3600.)*360./24
 
+
 def dec2degf(decstr):
     """ Sexagesimal to decimal. Input is string. """
     vals = _np.array(decstr.split(':')).astype(float)
     return vals[0]+vals[1]/60.+vals[2]/3600.
+
 
 def gentkdates(mjd0, mjd1, fact, step, dtstart=None):
     """ Generates round dates between > mjd0 and < mjd1 in a given step.
@@ -370,6 +388,7 @@ def gentkdates(mjd0, mjd1, fact, step, dtstart=None):
         raise SystemExit(1)
     return dates
 
+
 def cart2sph(x,y,z):
     """ Cartesian to spherical coordinates.
 
@@ -384,7 +403,8 @@ def cart2sph(x,y,z):
     #ind = (y<0) & (x<0)
     #phi[ind] = phi+_np.pi
     return r,th,phi
-    
+
+
 def sph2cart(r,th,phi):
     """  Spherical to Cartesian coordinates.
 
@@ -395,6 +415,7 @@ def sph2cart(r,th,phi):
     y = r*_np.sin(th)*_np.sin(phi)
     z = r*_np.cos(th)
     return x,y,z
+
 
 def cart_rot(x,y,z,ang_xy,ang_yz,ang_zx):
     """ Apply rotation in Cartesian coordinates.
@@ -409,6 +430,7 @@ def cart_rot(x,y,z,ang_xy,ang_yz,ang_zx):
     ])
     vec = _np.array([x,y,z])
     return _np.dot(rotmtx,vec)
+
 
 def readrange(file, i0, ie):
     """ Read a specific range of lines of a file with minimal memory use.
@@ -427,6 +449,7 @@ def readrange(file, i0, ie):
             break
     fp.close()
     return lines
+
 
 def interLinND(X, X0, X1, Fx, disablelog=False):
     """
@@ -461,6 +484,7 @@ def interLinND(X, X0, X1, Fx, disablelog=False):
     else:
         return F
 
+
 def rotate_coords(x, y, theta, ox, oy):
     """Rotate arrays of coordinates x and y by theta radians about the
     point (ox, oy).
@@ -470,6 +494,7 @@ def rotate_coords(x, y, theta, ox, oy):
     s, c = _np.sin(theta), _np.cos(theta)
     x, y = _np.asarray(x) - ox, _np.asarray(y) - oy
     return x * c - y * s + ox, x * s + y * c + oy
+
 
 def rotate_image(src, theta, ox, oy, fill=255):
     """Rotate the image src by theta radians about (ox, oy).
@@ -515,9 +540,71 @@ def rotate_image(src, theta, ox, oy, fill=255):
 
     return dest
 
-ra2deg = _np.double(180./_np.pi)
 
-ls = ['-','--',':','-.']
+def normGScale(val, min=None, max=None, log=False):
+    """ Return the normalized value(s) between 0 and 255 (gray scale).
+
+    If `log` then the normalization is done in this scale.
+
+    If `min` and `max` are not set, it is assumed that val is a list.
+
+    .. code::
+
+        >>> phc.normGScale(np.linspace(0,10,10), 0, 10)
+        array([  0,  28,  57,  85, 113, 142, 170, 198, 227, 255])
+        >>> phc.normGScale(np.linspace(0,10,10))
+        array([  0,  28,  57,  85, 113, 142, 170, 198, 227, 255])
+        >>> phc.normGScale(np.linspace(0,10,10), 0, 10, log=True)
+        array([  0,   0,  80, 128, 161, 187, 208, 226, 241, 255])
+        >>> phc.normGScale(np.logspace(0,1,10), 0, 10, log=True)
+        array([  0,  28,  57,  85, 113, 142, 170, 198, 227, 255])
+        >>> phc.normGScale(np.logspace(0,1,10), 0, 10)
+        array([ 26,  33,  43,  55,  71,  92, 118, 153, 197, 255])
+        >>> phc.normGScale(np.logspace(0,1,10))
+        array([  0,   8,  19,  33,  51,  73, 103, 142, 191, 255])
+    """
+    if len(val) == 1 and (min is None or max is None):
+        print('# Warning! Wrong normGScale call!!')
+        return 127
+    #~
+    val = _np.array(val).astype(float)
+    if min is None:
+        min = _np.min(val)
+    if max is None:
+        max = _np.max(val)
+    #~ 
+    if not log:
+        val = (val-min)/(max-min)*255
+    else:
+        if min <= 0:
+            min = _np.min(val[_np.where(val > 0)])
+            val[_np.where(val <= 0)] = min
+        val = (_np.log(_np.array(val).astype(float))-_np.log(min))/(_np.log(max)-_np.log(min))*255
+    return _np.round(val).astype(int)
+    
+
+def gradColor(val, cmapn='jet', min=None, max=None, log=False):
+    """ Return the corresponding value(s) color of a given colormap.
+
+    Good options, specially for lines, are 'jet', 'gnuplot', 'brg', 
+    'cool' and 'gist_heat' (attention! Here max is white!). 
+
+    >>> for i in range(0,10):
+    >>>     cor = phc.gradColor(arange(10), cmapn='gist_heat')[i]
+    >>>     print cor
+    >>>     plt.plot(arange(5)+i, color=cor, label='GB='+('{:4.2f},'*3).format(*cor)[:-1])
+    >>>
+    >>> plt.legend(fontsize=8)
+
+    .. image:: _static/phc_gradColor.png
+        :width: 512px
+        :align: center
+        :alt: phc.gradColor example
+    """
+    val = normGScale(val, min=min, max=max, log=log)
+    cmap = _plt.get_cmap(cmapn)
+    return cmap(val)
+
 
 #Constants
 c = Constant(2.99792458e10, 299792458., 'cm s-1', 'speed of light in vacuum') #:
@@ -544,8 +631,8 @@ au = Constant(1.49597870691e13, 1.49597870691e11, 'cm', 'Astronomical unit')
 pc = Constant(3.08567758e18, 3.08567758e16, 'cm', 'Parsec')
 ly = Constant(9.4605284e17, 9.4605284e15, 'cm', 'Light year')		
 Msun = Constant(1.9891e33, 1.9891e30, 'g', 'Solar mass')	
-Rsun = Constant(6.961e10, 696100, 'cm', 'Solar radius')
-Lsun = Constant(3.846e33,	3.846e26, 'erg s-1', 'Solar luminosity')
+Rsun = Constant(6.961e10, 696100e3, 'cm', 'Solar radius')
+Lsun = Constant(3.846e33, 3.846e26, 'erg s-1', 'Solar luminosity')
 Tsun = Constant(5778., 5778., 'K', 'Solar Temperature')
 
 yr =  Constant(3.15569e7, 3.15569e7, 'sec', 'year')
@@ -553,6 +640,24 @@ yr =  Constant(3.15569e7, 3.15569e7, 'sec', 'year')
 colors = ['Black','Blue','Green','red','orange','brown','purple','gray',
     'dodgerblue','lightgreen','tomato','yellow','peru','MediumVioletRed',
     'LightSteelBlue','cyan','darkred','olive']
+
+ls = ['-','--',':','-.']
+
+bestars = [
+    # The numbers below are based on Harmanec 1988
+    #SpType     Tpole    Mass    Rp      Lum     Rp2
+    ['B0', 29854, 14.57, 05.80, 27290, 6.19],
+    ['B0.5', 28510, 13.19, 05.46, 19953, 5.80],
+    ['B1', 26182, 11.03, 04.91, 11588, 5.24],
+    ['B2', 23121, 08.62, 04.28, 5297, 4.55],
+    ['B3', 19055, 06.07, 03.56, 1690, 3.78],
+    ['B4', 17179, 05.12, 03.26, 946, 3.48],
+    ['B5', 15488, 04.36, 03.01, 530, 3.21],
+    ['B6', 14093, 03.80, 02.81, 316, 2.99],
+    ['B7', 12942, 03.38, 02.65, 200, 2.82],
+    ['B8', 11561, 02.91, 02.44, 109, 2.61],
+    ['B9', 10351, 02.52, 02.25, 591, 2.39],
+    ['B9.5', 9886, 02.38, 02.17, 46, 2.32]]
 
 ### MAIN ###
 if __name__ == "__main__":

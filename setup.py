@@ -17,7 +17,7 @@ def rd(filename):
 
 if __name__ == "__main__":
     setup(name='pyhdust',
-    version=0.95,
+    version=0.952,
     description='BeACoN’s Python tools for Hdust',
     url='http://astroweb.iag.usp.br/~moser/doc/',
     author='Daniel M. Faes',
@@ -25,8 +25,8 @@ if __name__ == "__main__":
     license='GNU GPLv3.0',
     #~ packages=['pyhdust'],
     packages=find_packages(exclude=['build', 'docs', '*egg*', 'dist']),
-    package_data={'pyhdust': ['../LICENSE', '../README.md', '../todos.py',
-    '../filters/*', '../refs/*', '../stmodels/*']},
+    package_data={'pyhdust': ['../LICENSE', '../README.md', '../filters/*',
+    '../refs/*', '../stmodels/*']},
     #~ include_package_data=True,
     zip_safe=False,
     install_requires=['numpy'],

@@ -52,4 +52,5 @@ coverage.xml
 docs
 
 # PyBuilder
+hdtbuilder.py
 target/
