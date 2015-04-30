@@ -147,7 +147,7 @@ def find_nearest(array,value, bigger=None):
     return found
 
 
-def bindata(x, y, yerr, nbins, xrange=None):
+def bindata(x, y, nbins, yerr=None, xrange=None):
     """
     Return the weighted binned data.
 
@@ -164,6 +164,8 @@ def bindata(x, y, yerr, nbins, xrange=None):
         min = _np.min(x)
     else:
         min,max = xrange
+    if yerr == None:
+        yerr = _np.ones(len(x))
     shift = (max-min) / (nbins-1)
     tmpx = _np.arange(nbins)*shift+min
     tmpy = _np.zeros(nbins)
@@ -174,7 +176,10 @@ def bindata(x, y, yerr, nbins, xrange=None):
         if len(selx[0]) >= 1:
             tmpy[i],tmpyerr[i] = wg_avg_and_std(y[selx], yerr[selx])
             idx[i] = True
-    return (tmpx[idx], tmpy[idx], tmpyerr[idx])
+    if _np.sum(yerr)/len(x) == 1:
+        return tmpx[idx], tmpy[idx]
+    else:
+        return tmpx[idx], tmpy[idx], tmpyerr[idx]
 
 
 def trimpathname(file):

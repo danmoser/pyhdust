@@ -15,6 +15,7 @@ sufixo `.cal`, algumas informacoes no header sao necessarias:
 
 :license: GNU GPL v3.0 (https://github.com/danmoser/pyhdust/blob/master/LICENSE)
 """
+
 import os as _os
 import numpy as _np
 import datetime as _dt
@@ -34,6 +35,7 @@ __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
 
 _outfold = ''
+
 
 class Spec(object):
     """Definicao de classe espectro para conter toda a informacao util
@@ -148,7 +150,9 @@ class Spec(object):
         metafile=_outfold+'/metafile.txt'):
         """Save current table
         """
-        _np.savetxt(datafile, self.data, fmt='%12.6f')
+        header = ['MJD', 'EW', 'EC', 'VR', 'peaksep', 'depthcent', 'F0']
+        _np.savetxt(datafile, self.data, fmt='%12.6f',
+        header=(len(header)*'{:>12s}').format(*header))
         _np.savetxt(metafile, self.metadata, fmt='%s', delimiter=',')
         return
 
@@ -161,7 +165,8 @@ class Spec(object):
         >>> spdtb.loaddata()
         """
         self.data = _np.loadtxt(datafile)
-        self.metadata = _np.loadtxt(metafile, fmt='%s', delimiter=',')
+        if _os.path.exists(metafile):
+            self.metadata = _np.loadtxt(metafile, dtype='str', delimiter=',')
         self.updatecount()
         return
 
@@ -222,7 +227,7 @@ class Spec(object):
         _plt.close()
         return
 
-###
+
 def extractfromsplot(file, splot):
     """Ce = center; Co = core
     #LcCe, LcCo, lcGW, lcEW, lvCe, lcCo, lvEW, lrCe, LrCo, lrEW
@@ -263,6 +268,7 @@ def extractfromsplot(file, splot):
                 pass
     return out
 
+
 def check_dtobs(dtobs):
     """ Check if the dtobs fits the float format. Required for MJD calc. """
     if 'T' in dtobs:
@@ -285,7 +291,8 @@ def check_dtobs(dtobs):
     dtobs = _np.array(dtobs, dtype='int32')
     return dtobs, tobs
 
-def shiftfits(fitsfile, newsh=''):
+
+def shiftfits(fitsfile, newsh=None):
     """ Update FITS spec header for a given shift value. """
     imfits = _pyfits.open(fitsfile, mode='update')
     if 'WLSHIFT' in imfits[0].header:
@@ -294,12 +301,13 @@ def shiftfits(fitsfile, newsh=''):
     else:
         print('# No WLSHIFT available for {0}'.format( \
         _phc.trimpathname(fitsfile)[1]))
-    if newsh == '':
+    if newsh is None:
         newsh = raw_input('Type the new shift: ')
     if newsh != '':
-        imfits[0].header['WLSHIFT'] = newsh
+        imfits[0].header['WLSHIFT'] = float(newsh)
         imfits.close()
     return
+
 
 def loadfits(fitsfile):
     """load FITS spec
@@ -343,6 +351,7 @@ def loadfits(fitsfile):
         wl += shift
     return wl, flux, MJD, dateobs, datereduc, fitsfile
 
+
 def vac2air(wl):
     """The IAU standard for conversion from air to vacuum wavelengths is given
     in Morton (1991, ApJS, 77, 119). For vacuum wavelengths (VAC) in Angstroms,
@@ -350,6 +359,7 @@ def vac2air(wl):
     AIR = VAC / (1.0 + 2.735182E-4 + 131.4182 / VAC^2 + 2.76249E8 / VAC^4 )
     """
     return wl / (1.0 + 2.735182E-4 + 131.4182 / wl**2 + 2.76249E8 / wl**4 )
+
 
 def air2vac(wl):
     """The IAU standard for conversion from air to vacuum wavelengths is given
@@ -362,6 +372,7 @@ def air2vac(wl):
     """
     return wl / (1.0 -2.73443407e-04 -1.31275255e+02 / wl**2\
     -2.75708212e+08 / wl**4)
+
 
 def checksubdirs(path, star, lbc, hwidth=1000, showleg=True, plots=False):
     """
@@ -411,12 +422,14 @@ def checksubdirs(path, star, lbc, hwidth=1000, showleg=True, plots=False):
     metafile='{}/meta_{}.txt'.format(_outfold,star))
     return
 
+
 def hydrogenlinewl(ni, nf):
     """Generate H line transitions wavelengths in meters for VACUUM
 
     Rydberg constant `R` was manually adjusted to fit Halpha and Hbeta lines.
     """
     return (10967850.*(1./nf**2-1./ni**2))**-1.
+
 
 def calcres_R(hwidth=1350, nbins=108):
     """
@@ -429,6 +442,7 @@ def calcres_R(hwidth=1350, nbins=108):
     """
     return round(_phc.c.cgs*nbins/hwidth/1e5)
 
+
 def calcres_nbins(R=12000, hwidth=1350):
     """
     (h)Width in km/s.
@@ -439,6 +453,7 @@ def calcres_nbins(R=12000, hwidth=1350):
     # nbins = R*width/_phc.c
     """
     return round(R*hwidth*1e5/_phc.c.cgs)
+
 
 def lineProf(x, flx, lbc, flxerr=_np.empty(0), hwidth=1000., ssize=0.05):
     '''
@@ -458,6 +473,7 @@ def lineProf(x, flx, lbc, flxerr=_np.empty(0), hwidth=1000., ssize=0.05):
     idx = _np.where(_np.abs(x) <= hwidth)
     flux = linfit(x[idx], flx[idx], yerr=flxerr, ssize=ssize)
     return x[idx], flux
+
 
 def linfit(x, y, ssize=0.05, yerr=_np.empty(0)):
     '''
@@ -491,6 +507,7 @@ def linfit(x, y, ssize=0.05, yerr=_np.empty(0)):
         yerr = yerr/_np.average(new_y)
         return y, yerr
 
+
 def EWcalc(vels, flux, vw=1000):
     """
     Supoe que o fluxo jah estah normalizado, e vetores ordenad_os.
@@ -509,6 +526,7 @@ def EWcalc(vels, flux, vw=1000):
         ew += (1.-(normflux[i+1]+normflux[i])/2.)*dl
     return ew
 
+
 def ECcalc(vels, flux):
     """
     Supoe que o fluxo jah estah normalizado, e vetores ordenad_os.
@@ -518,6 +536,7 @@ def ECcalc(vels, flux):
     """
     idx = _np.where(_np.max(flux) == flux)
     return flux[idx], vels[idx]
+
 
 def VRcalc(vels, flux, vw=1000):
     """
@@ -549,6 +568,7 @@ def VRcalc(vels, flux, vw=1000):
         ew1 += (1.-(normflux[i+1]+normflux[i])/2.)*dl
     return ew0, ew1, vc
 
+
 def PScalc(vels, flux, vc=0., ssize=.05):
     """
     Calcula peak_separation
@@ -566,6 +586,7 @@ def PScalc(vels, flux, vc=0., ssize=.05):
     i0 = _np.abs(flux[:ivc]-_np.max(flux[:ivc])).argmin()
     i1 = _np.abs(flux[ivc+1:]-_np.max(flux[ivc+1:])).argmin()+ivc+1
     return vels[i0], vels[i1]
+
 
 def DCcalc(vels, flux, vmax=None, vc=0., ssize=0.05):
     """
@@ -588,6 +609,7 @@ def DCcalc(vels, flux, vmax=None, vc=0., ssize=0.05):
         vmax = vels[vmax]
     ivmax = _np.abs(vels-vmax).argmin()
     return flux[ivmax], flux[ivc]
+
 
 def analline(lbd, flux, lbdc, hwidth=1000, verb=True):
     """
@@ -634,6 +656,7 @@ def analline(lbd, flux, lbdc, hwidth=1000, verb=True):
     
     return EW, EC, VR, peaksep, depthcent, F0
 
+
 def normalize_range(lb,spec,a,b):
     """This function is obsolete and must be removed.
 
@@ -642,6 +665,7 @@ def normalize_range(lb,spec,a,b):
     a2 = (spec[b]-spec[a])/(lb[b]-lb[a])
     a1 = spec[a]-a2*lb[a]
     return spec/(a1+a2*lb)
+
 
 def overplotsubdirs(path, star, limits=(6540,6600), showleg=True):
     """
@@ -762,6 +786,7 @@ def overplotsubdirs(path, star, limits=(6540,6600), showleg=True):
     print('# Plot done!')
     return
 
+
 def diffplotsubdirs(path, star, limits=(6540,6600)):
     """
     Realiza o plot de espectros da estrela `star` dentre do diretorio `path`.
@@ -865,6 +890,7 @@ def diffplotsubdirs(path, star, limits=(6540,6600)):
     # xlabel('vel. (km/s)')
     print('# Plot done!')
     return
+
 
 def refplotsubdirs(path, star, limits=(6540,6600)):
     """
@@ -1023,7 +1049,6 @@ def refplotsubdirs(path, star, limits=(6540,6600)):
     return
 
 
-
 def overplotsubdirs2(path, star, limits=(6540,6600)):
     """
     Realiza o plot de espectros da estrela `star` dentre do diretorio `path`.
@@ -1161,6 +1186,7 @@ def overplotsubdirs2(path, star, limits=(6540,6600)):
     print('# Plot done!')
     return
 
+
 def overPlotLineSeries(fullseds, obsers=[0], lbc=.6564606, formats=['png']):
     """Generate overplot spec. line from a HDUST mod list, separated by
     observers.
@@ -1222,6 +1248,7 @@ def overPlotLineFits(specs, lbc=.6564606, formats=['png'], hwidth=1500., \
     _plt.close()
     return
 
+
 def incrPlotLineSeries(fullseds, obsers=[0], lbc=.6564606, formats=['png']):
     """Generate incremented spec. line from a HDUST mod list, separated by
     observers. The increment is 0.1 for each file in fullseds sequence.
@@ -1249,6 +1276,7 @@ def incrPlotLineSeries(fullseds, obsers=[0], lbc=.6564606, formats=['png']):
             lbc), transparent=True)
         _plt.close()
     return
+
 
 def incrPlotLineFits(specs, lbc=.6564606, formats=['png'], hwidth=1500., \
     yzero=False, addsuf=''):
@@ -1281,6 +1309,7 @@ def incrPlotLineFits(specs, lbc=.6564606, formats=['png'], hwidth=1500., \
         fmt, lbc, addsuf), transparent=True)
     _plt.close()
     return
+
 
 def diffPlotLineSeries(fullseds, obsers=[0], lbc=.6564606, formats=['png'], \
     rvel=None, rflx=None, hwidth=1000.):
@@ -1325,8 +1354,9 @@ def diffPlotLineSeries(fullseds, obsers=[0], lbc=.6564606, formats=['png'], \
         _plt.close()
     return
 
+
 def diffPlotLineFits(specs, lbc=.6564606, formats=['png'], \
-    rvel=None, rflx=None, hwidth=1500., addsuf=''):
+    rvel=None, rflx=None, hwidth=1500., addsuf='', cmapn='jet'):
     """Generate overplot of DIFFERENCE spec. line from a FITS files list.
     The observations will be linearly interpolated
     with the reference spec. If none is given as reference, 
@@ -1334,6 +1364,8 @@ def diffPlotLineFits(specs, lbc=.6564606, formats=['png'], \
 
     It is recommend to run first (rvel, rflx) =  spt.lineProf(rvel, rflx,
     lbc=lbc, hwidth=hwidth).
+
+    If `cmap` is None or empty, the phc.colors vector is read.
     """
     fig, ax = _plt.subplots()
     for spec in specs:
@@ -1342,9 +1374,12 @@ def diffPlotLineFits(specs, lbc=.6564606, formats=['png'], \
         wl, flux, MJD, dateobs, datereduc, fitsfile = loadfits(spec)
         (x,y) = lineProf(wl, flux, lbc=lbc, hwidth=hwidth)
         if rvel == None or rflx == None:
-            wl0, flux0, MJD, dateobs0, datereduc, fitsfile = loadfits(specs[0])
-            (rvel,flx) = lineProf(wl0, flux0, lbc=lbc, hwidth=hwidth)
-            flx = _np.interp(x, rvel, rflx)
+            #~ wl0, flux0, MJD, dateobs0, datereduc, fitsfile = loadfits(specs[0])
+            #~ (rvel,flx) = lineProf(wl0, flux0, lbc=lbc, hwidth=hwidth)
+            #~ flx = _np.interp(x, rvel, rflx)
+            rvel = x
+            rflx = y
+            flx = y[:]
         else:
             flx = _np.interp(x, rvel, rflx)
         #~ if spec == specs[0]:
@@ -1357,8 +1392,11 @@ def diffPlotLineFits(specs, lbc=.6564606, formats=['png'], \
         elif dateobs.find('/') > 0:
             dtobs = dateobs.split('/')[::-1]
             dateobs = "-".join(dtobs)
-        ax.plot(x, y-flx, label='{0}'.format(dateobs), \
-        color=_phc.colors[_np.mod(i, len(_phc.colors))])
+        if cmapn == '' or cmapn == None:
+            color=_phc.colors[_np.mod(i, len(_phc.colors))]
+        else:
+            color=_phc.gradColor(range(len(specs)), cmapn='jet')[i]
+        ax.plot(x, y-flx, label='{0}'.format(dateobs), color=color)
     ax.set_title(u'lbc = {0:.5f} $\mu$m'.format(lbc))
     ax.set_ylabel('Spec - Ref.')
     legend = ax.legend(loc=(1.05, .01), labelspacing=0.1)
@@ -1614,6 +1652,7 @@ def din_spec(refspec, metadata, lbc=6562.86, hwidth=1500., res=50, interv=None,
     _plt.close()
     return
 
+
 def writeFits(flx, lbd, extrahead=None, savename=None, quiet=False, path=None,
     lbdc=None):
     """ Write a 1D spectra FITS.
@@ -1650,13 +1689,21 @@ def writeFits(flx, lbd, extrahead=None, savename=None, quiet=False, path=None,
         print('# FITS file {0}{1} saved!'.format(path,savename))
     return
 
-def plotSpecData(dtb, limits=[56470.,56720.], civcfg=[1,'m',2013,1,1], fmt=['png'],
-ident=None):
+
+def plotSpecData(dtb, limits=[56470.,56720.], civcfg=[1,'m',2013,1,1],
+    fmt=['png'], ident=None, lims=None, setylim=False, addsuf=''):
     """ Plot spec class database `vs` MJD e civil date
 
     Plot originally done to London, Canada, 2014.
 
     INPUT: civcfg = [step, 'd'/'m'/'y', starting year, month, day]
+
+    `lims` sequence: 'EW', 'E/C', 'V/R', 'Pk. sep. (km/s)', 'E-F0', 'F0'
+
+    `lims` = [[-2,4+2,2],[1.,1.4+.1,0.1],[.6,1.4+.2,.2],[0,400+100,100],
+    [.30,.45+.05,.05],[0.6,1.20+.2,.2]]
+
+    If `lims` is defined, `setylim` can be set to True.
 
     OUTPUT: Written image."""
     if isinstance(dtb, basestring):
@@ -1665,19 +1712,22 @@ ident=None):
         idref = _np.unique(ident)
 
     ylabels = ['EW', 'E/C', 'V/R', 'Pk. sep. (km/s)', 'E-F0', 'F0']
-    lims = [[-2,4+2,2],[1.,1.4+.1,0.1],[.6,1.4+.2,.2],[0,400+100,100],\
-    [.30,.45+.05,.05],[0.6,1.20+.2,.2]]
-    fig, ax = _plt.subplots(6,1, sharex=True, figsize=(5.6,8))
+    fig, ax = _plt.subplots(6,1, sharex=True, figsize=(9.6,8))
 
     icolor = 'blue'
     for i in range(1,len(ylabels)+1):
+        ax[i-1].plot(*_phc.bindata(dtb[:,0], dtb[:,i], 20))
         for j in range(len(dtb[:,0])):
             if ident is not None:
                 idx = _np.where(ident[j] == idref)[0]
                 icolor = _phc.colors[idx]
             ax[i-1].plot(dtb[j,0], dtb[j,i], 'o', color=icolor)
         ax[i-1].set_ylabel(ylabels[i-1])
-        ax[i-1].set_yticks(_np.arange(*lims[i-1]))
+        if lims is not None:
+            if lims[i-1][-1] != 0:
+                ax[i-1].set_yticks(_np.arange(*lims[i-1]))
+            if setylim:
+                ax[i-1].set_ylim([ lims[i-1][0],lims[i-1][1] ])
 
     if ident is not None:
         patch = []
@@ -1712,9 +1762,55 @@ ident=None):
             _plt.setp( ax2.xaxis.get_majorticklabels(), rotation=45 )
     _plt.subplots_adjust(left=0.13, right=0.8, top=0.88, bottom=0.06, hspace=.15)
     for f in fmt:
-        _plt.savefig('SpecQ.{0}'.format(f))
+        _plt.savefig('SpecQ{1}.{0}'.format(f, addsuf), transparent=True)
     _plt.close()
     return
+
+
+def cardelli(lbd, flux, ebv=0., Rv=3.1):
+    """
+    Milky Way Extinction law from Cardelli et al. 1989
+
+    `lbd` must be in microns.
+
+    OUTPUT: Corrected flux.
+    """
+    x=1./_np.array(lbd) #CCM x is 1/microns
+    a, b=_np.ndarray(x.shape,x.dtype),_np.ndarray(x.shape,x.dtype)
+
+    if any((x<0.3)|(10<x)):
+        raise ValueError('Some wavelengths outside CCM 89 extinction curve range')
+
+    irs = (0.3 <= x) & (x <= 1.1)
+    opts = (1.1 <= x) & (x <= 3.3)
+    nuv1s = (3.3 <= x) & (x <= 5.9)
+    nuv2s = (5.9 <= x) & (x <= 8)
+    fuvs = (8 <= x) & (x <= 10)
+
+    #CCM Infrared
+    a[irs]=.574*x[irs]**1.61
+    b[irs]=-0.527*x[irs]**1.61
+
+    #CCM NIR/optical
+    a[opts]=_np.polyval((.32999,-.7753,.01979,.72085,-.02427,-.50447,.17699,1),x[opts]-1.82)
+    b[opts]=_np.polyval((-2.09002,5.3026,-.62251,-5.38434,1.07233,2.28305,1.41338,0),x[opts]-1.82)
+
+    #CCM NUV
+    a[nuv1s]=1.752-.316*x[nuv1s]-0.104/((x[nuv1s]-4.67)**2+.341)
+    b[nuv1s]=-3.09+1.825*x[nuv1s]+1.206/((x[nuv1s]-4.62)**2+.263)
+
+    y=x[nuv2s]-5.9
+    Fa=-.04473*y**2-.009779*y**3
+    Fb=-.2130*y**2-.1207*y**3
+    a[nuv2s]=1.752-.316*x[nuv2s]-0.104/((x[nuv2s]-4.67)**2+.341)+Fa
+    b[nuv2s]=-3.09+1.825*x[nuv2s]+1.206/((x[nuv2s]-4.62)**2+.263)+Fb
+
+    #CCM FUV
+    a[fuvs]=_np.polyval((-.070,.137,-.628,-1.073),x[fuvs]-8)
+    b[fuvs]=_np.polyval((.374,-.42,4.257,13.67),x[fuvs]-8)
+
+    AlbAv = a+b/Rv
+    return flux*10**(-AlbAv*Rv*ebv/2.5)
 
 
 ### MAIN ###

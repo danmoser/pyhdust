@@ -1,8 +1,23 @@
-#!/usr/bin/env python
 # -*- coding:utf-8 -*-
 
-""" History
+"""
+PyHdust auxiliary module: PyHdust releases control.
+
+History
 ============
+..
+    v0.954 @ 2015-0
+    ----------------------
+
+v0.953 @ 2015-05-
+----------------------
+- phc.bindata, now yerr is an optional array
+- spt,dtb improvements save/load Class
+- spt.shiftfits improved
+- spt.plotSpecData improved
+- spt.cardelli included
+
+
 v0.952b @ 2015-04-28
 ---------------------
 - Create of releases.py
@@ -51,11 +66,12 @@ phc
 spec
 -----------
 
-
+:license: GNU GPL v3.0 (https://github.com/danmoser/pyhdust/blob/master/LICENSE)
 """
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
+
 
 def listFunctions():
     """ List all *PyHdust* functions. """ 
@@ -92,6 +108,7 @@ def listFunctions():
     print("\n".join([x for x in dir(spt) if x[0] != "_"]))
 
     return
+
 
 def setRelease():
     """ Read the version values from __init__.py and write it to the setup.py
@@ -131,6 +148,7 @@ def setRelease():
     os.system('midori _build/html/index.html &')
     #~ os.system('disown')
     return
+
 
 ### MAIN ###
 if __name__ == "__main__":
