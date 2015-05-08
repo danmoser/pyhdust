@@ -22,7 +22,7 @@ try:
 except:
     print('# Warning! matplotlib and/or scipy module not installed!!!')
 
-__version__ = 0.953
+__version__ = 0.954
 __release__ = "Beta"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -53,6 +53,7 @@ def readscr(file):
         LnotTp=True)
     #print M,Rp*ob,Tp
     return M,Rp*ob,Tp
+
 
 def n0toSigma0(n0, M, Req, f, Tp, mu):
     """ VDD Steady-State conversion between `n0` to `Sigma0`.
@@ -301,6 +302,7 @@ def chkObsLog(path=None, nights=None, badweath=None):
             print('# Probably it is a spec night.')
     return
 
+
 def readtemp(tfile, quiet=False):
     """ Read *.temp file
 
@@ -362,6 +364,7 @@ def readtemp(tfile, quiet=False):
     #~ 
     return ncr,ncmu,ncphi,nLTE,nNLTE,Rstar,Ra,beta,data,pcr,pcmu,pcphi
 
+
 def readdust(tfile):
     """ TBD!!
 
@@ -376,6 +379,7 @@ def readdust(tfile):
     """
     return
 
+
 def plotdust(tfile):
     """ TBD!!
 
@@ -383,31 +387,55 @@ def plotdust(tfile):
     
     """
     return
-    
 
-def plottemp(tfile, tfrange=[], philist=[0], interpol=False, xax=0, fmts=['png'],
-    outpref=None, plotavg=True):
+
+def gentemplist(tfile, tfrange=None, avg=True):
+    """
+    `tfile` = file name or file prefix to be plotted. If `tfrange` (e.g.,
+    tfrange=[20,24] is present, it you automatically plot the interval.
+
+    `avg` = include tfile_avg.temp file (if exists).
+
+    OUTPUT = file list, label list
+    """
+    if tfrange is None:
+        tfrange = [int(tfile.replace('.temp','')[-2:])]
+    ltfile = []
+    ltlabel = []
+    for tn in range(int(tfrange[0]), int(tfrange[-1])+1):
+        if tfile.find('.temp') > 0:
+            ltfile+= [tfile.replace(tfile[-7:-5], '{0:02d}'.format(tn))]
+        else:
+            ltfile+= [tfile+'{0:02d}.temp'.format(tn)]
+        ltlabel += [str(tn)]
+    tfile = ltfile[-1].replace('.temp', '_avg.temp')
+    if _os.path.exists(tfile) and avg:
+        ltfile+= [tfile]
+        ltlabel += ['Avg.']
+    return ltfile, ltlabel
+
+
+def plottemp(tfiles, philist=[0], interpol=False, xax=0, fmts=['png'],
+    outpref=None, tlabels=None, title=None):
     """
     .. code::
 
         >>> import pyhdust as hdt
-        >>> hdt.plottemp('bestar2.02/mod01/mod01b33.temp', tfrange=[30,33])
+        >>> tfiles, tlabels = hdt.gentemplist('bestar2.02/mod01/mod01b33.temp', tfrange=[30,33])
+        >>> hdt.plottemp(tfiles, tlabels=tlabels)
 
     .. image:: _static/hdt_plottemp.png
         :width: 512px
         :align: center
         :alt: hdt.plottemp example
 
-    `tfile` = filename or file prefix to be plotted. If `tfrange` (e.g.,
-    tfrange=[20,24] is present, it you automatically plot the interval.
+    `tfile` = filenames list.
 
     `xax` = 0: log10(r/R-1), 1: r/R; 2: 1-R/r
 
     `outpref` = prefix of the output images
 
     `fmts` = format os the output images.
-
-    `plotavg` = plot tfile_avg.temp file (if exists).
 
     If interpol==True, what will be plotted is the population along rays of
     a given latitude. The latitudes are defined in array muplot below.
@@ -416,7 +444,11 @@ def plottemp(tfile, tfrange=[], philist=[0], interpol=False, xax=0, fmts=['png']
     index as a function of radius, starting with index ncmu/2(midplane) + plus
 
     OUTPUT = ...
-    """   
+    """
+    if isinstance(tfiles, basestring):
+        tfiles = [tfiles]
+    if title is None:
+        title = tfiles[-1]
     if interpol:
         print('# Interpol option currently is not available.')
         raise SystemExit(0)
@@ -428,13 +460,8 @@ def plottemp(tfile, tfrange=[], philist=[0], interpol=False, xax=0, fmts=['png']
     lev = 0
     np = 0
     rplus = 0
-    if tfrange == []:
-        tfrange = [int(tfile[-7:-5])]
-    for tn in range(int(tfrange[0]), int(tfrange[-1])+1):
-        if tfile.find('.temp') > 0:
-            rtfile = tfile.replace(tfile[-7:-5], '{0:02d}'.format(tn))
-        else:
-            rtfile = tfile+'{0:02d}.temp'.format(tn)
+    for i in range(len(tfiles)):
+        rtfile = tfiles[i]
         ncr,ncmu,ncphi,nLTE,nNLTE,Rstar,Ra,beta,data,pcr,pcmu,pcphi = \
         readtemp(rtfile, quiet=True)
         for phiidx in range(0,len(philist)):
@@ -445,23 +472,16 @@ def plottemp(tfile, tfrange=[], philist=[0], interpol=False, xax=0, fmts=['png']
             elif (xax == 2): x = 1.-Rstar/x; xtitle = r'$1-R_*/r$'
             y = data[3+lev,:,ncmu/2+np+rplus,icphi]
             y = y/1000.
-            axs.plot(x, y, 'o:', label=tn)
-    rtfile = rtfile.replace('.temp', '_avg.temp')
-    if _os.path.exists(rtfile):
-        ncr,ncmu,ncphi,nLTE,nNLTE,Rstar,Ra,beta,data,pcr,pcmu,pcphi = \
-        readtemp(rtfile, quiet=True)
-        for phiidx in range(0,len(philist)):
-            icphi = philist[phiidx]
-            x = data[0,:,0,icphi]
-            if (xax == 0): x = _np.log10(x/Rstar-1.); xtitle = r'$\log_{10}(r/R_*-1)$'
-            elif (xax == 1): x = x/Rstar; xtitle = r'$r/R_*$'
-            elif (xax == 2): x = 1.-Rstar/x; xtitle = r'$1-R_*/r$'
-            y = data[3+lev,:,ncmu/2+np+rplus,icphi]
-            y = y/1000.
-            axs.plot(x, y, 'o-', label='avg')    
+            fmt = 'o:'
+            if rtfile.find('avg') > 0:
+                fmt = 'o-'
+            if tlabels is not None:
+                axs.plot(x, y, fmt, label=tlabels[i])
+            else:
+                axs.plot(x, y, fmt)
     #~
     axs.legend()
-    axs.set_title(tfile)
+    axs.set_title(title)
     axs.set_xlabel(xtitle)
     axs.set_ylabel(r'Temperature (10$^3$ K)')
     if outpref == None:

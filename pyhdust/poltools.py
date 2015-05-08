@@ -497,7 +497,7 @@ def grafpol(argv):
             str_ptsf=str_pts
             filenamef=filename
     
-    if todos == False:
+    if not todos:
         plotlog(Qf,Uf,sigmaf,P_ptsf,th_ptsf,str_ptsf,filenamef)
     
     print('\n# Fim da rotina de plot! Ver arquivo '+filenamef.replace('.log','.png'))
@@ -617,7 +617,7 @@ def chkStdLog(path=None, delta=2.5):
             calcst = float(stdi[3])
             if f == fst and abs(calc-calcst) < delta:
                 foundstd = True
-        if foundstd == False:
+        if not foundstd:
             #implementar ajuste de filtro e apontamento para outro std.log
             print(('# ERROR! Standard star info not found for filt. {0} and '+\
             'calc. {1} in {2}!').format(f, calc, path))
@@ -729,7 +729,7 @@ def genObjLog(path=None, delta=2.5, force=False, chknames=True):
     f0 = open('{0}/obj.log'.format(path), 'w')
     f0.writelines(lines)
     f0.close()
-    if chkStdLog(path=path, delta=delta) == False:
+    if not chkStdLog(path=path, delta=delta):
         print('# ERROR! Missing information in the `std.log` file!!')
 
     # Bednarski: changed here  tgt  ->  tgt.split('_')[0]

@@ -384,7 +384,7 @@ def readBAsed(xdrpath, quiet=False):
     models = models.reshape((nm,-1))
     #this will check if the XDR is finished.
     if ixdr == len(f):
-        if quiet == False:
+        if not quiet:
             print('# XDR {} completely read!'.format(xdrpath))
     else:
         print('# Warning: XDR {} not completely read!'.format(xdrpath))

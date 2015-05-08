@@ -84,17 +84,29 @@ def dat2png(file):
     #
     return
 
-def imshowl(img):
+
+def imshowl(img, cmap='gist_heat'):
     """
     Plot the normalized image in log-scale.
     """
     _plt.clf()
-    _plt.imshow(log_transform(img), cmap=_plt.get_cmap('gist_heat'))
+    _plt.imshow(log_transform(img), cmap=_plt.get_cmap(cmap))
     return
 
-def readmap(file, quiet=False):
+
+def readmap(file, quiet=False, mapimg=0):
     """
     Read *Hdust* MAP or MAPS files.
+
+    `mapimg`: extract this component from the *.map* file.
+
+        - 0 = total flux
+        - 1 = transmitted flux
+        - 2 = scattered flux
+        - 3 = emitted flux
+        - 4 = pol. *Q* flux
+        - 5 = pol. *U* flux
+        - 6 = pol. *V* flux
 
     OUTPUT = data, obslist, lbdc, Ra, xmax
 
@@ -163,7 +175,7 @@ def readmap(file, quiet=False):
 
     #this will check if the XDR is finished.
     if ixdr == len(f):
-        if quiet == False:
+        if not quiet:
             print('# XDR {} completely read!'.format(file))
     else:
         print('# Warning: XDR {} not completely read!'.format(file))
@@ -176,6 +188,7 @@ def readmap(file, quiet=False):
         lbdc[i] = (lbdarr[i]+lbdarr[i+1])/2.
 
     return data, obslist, lbdc, Ra, xmax
+
 
 def img2fits(img, lbd, Ra, xmax, dist, outname='model', rot=0., lum=0.,
     orient=0., coordsinf=None, deg=False, ulbd=''):
@@ -258,6 +271,7 @@ def img2fits(img, lbd, Ra, xmax, dist, outname='model', rot=0., lum=0.,
     hdu.writeto(outname, clobber=True)
     print('# Saved {0} !'.format(outname))
     return
+
 
 def data2fitscube(data, obs, lbdc, Ra, xmax, dist, zoom=0, outname='model',
     orient=0., rot=0., lum=0., coordsinf=None, map=False, deg=False):
@@ -345,6 +359,7 @@ def data2fitscube(data, obs, lbdc, Ra, xmax, dist, zoom=0, outname='model',
     print('# Saved {0} !'.format(outname))
     return
 
+
 def genSquare(size=64, halfside=16, center=(0,0)):
     """
     Generate a square inside a squa_re.
@@ -390,6 +405,7 @@ def genGaussian(size=64, sig=64/8, center=(0,0)):
     #
     return _np.exp(-0.5 * ((x-x0)**2 + (y-y0)**2) / sig**2)
 
+
 def setspacecoords(nx, ny, rad_per_pixel, xc=0., yc=0.):
     """
     return xx and yy, 2D physical coordinates in ANGULAR dimensions
@@ -403,6 +419,7 @@ def setspacecoords(nx, ny, rad_per_pixel, xc=0., yc=0.):
     y = _np.arange(0.,ny)-(ny-1)/2.+yc
     yy = _np.repeat(y, nx).reshape(-1, nx)*rad_per_pixel
     return  xx, yy
+
 
 def fastnumvis(img, lbd, Bproj, PA, rad_per_pixel, PAdisk=90.):
     """
@@ -435,6 +452,7 @@ def fastnumvis(img, lbd, Bproj, PA, rad_per_pixel, PAdisk=90.):
     VisAmp = _np.abs(complexVis)
     VisPhase = _np.arctan2(complexVis.imag, complexVis.real)*_np.double(180./_np.pi)
     return complexVis, VisAmp, VisPhase
+
 
 def fastnumvis3(img, lbd, Bprojs, PAs, rad_per_pixel, PAdisk=90.):
     """

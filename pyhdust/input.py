@@ -143,7 +143,7 @@ def makeDiskGrid(modn, mvals, mhvals, hvals, rdvals, sig0vals, doFVDD, \
     else:
         path = ''
     #Check modN folder
-    if _os.path.exists('mod{}'.format(modn)) == False:
+    if not _os.path.exists('mod{}'.format(modn)):
         _os.system('mkdir mod{}'.format(modn))
     
     #Select sources
@@ -297,7 +297,7 @@ srcid=''):
             if images[i] != '':
                 case1.append("IMAGES      = '{0}'\n".format(images[i]))
             case1.append('\n')
-            if simchk[i] == False:
+            if not simchk[i]:
                 for i in range(len(case1)):
                     case1[i] = '!~ '+case1[i]
             case3 += case1
@@ -364,7 +364,7 @@ srcid=''):
     
     #Folder's checks
     for sel in clusters:
-        if _os.path.exists('{0}s'.format(sel)) == False:
+        if not _os.path.exists('{0}s'.format(sel)):
             _os.system('mkdir {0}s'.format(sel))
         elif _os.path.exists('{0}s/{0}s_{1}_mod{2}.sh'.format(sel,proj,modn)):
             _os.system('rm {0}s/{0}s_{1}_mod{2}.sh'.format(sel,proj,modn))
@@ -506,7 +506,7 @@ def makeNoDiskGrid(modn, selsources, path=None):
     else:
         path = ''
     #Check modN folder
-    if _os.path.exists('mod{}'.format(modn)) == False:
+    if not _os.path.exists('mod{}'.format(modn)):
         _os.system('mkdir mod{}'.format(modn))
     
     #Select sources
@@ -631,7 +631,7 @@ def makeStarGrid(oblats, Hfs, path=None):
     mod = f0.readlines()
     f0.close()
 
-    if _os.path.exists('source') == False:
+    if not _os.path.exists('source'):
         _os.system('mkdir source')
     
     for ob in oblats:                        

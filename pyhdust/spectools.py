@@ -378,7 +378,7 @@ def checksubdirs(path, star, lbc, hwidth=1000, showleg=True, plots=False):
     """
     Faz o que tem que fazer.
     """
-    if _os.path.exists('{}/{}'.format(path,star)) == False:
+    if not _os.path.exists('{}/{}'.format(path,star)):
         _os.system('mkdir {}/{}'.format(path,star))
 
     nights = [o for o in _os.listdir(path) if _os.path.isdir('{}/{}'.format(path,\
@@ -399,7 +399,7 @@ def checksubdirs(path, star, lbc, hwidth=1000, showleg=True, plots=False):
                     for cal in scal:
                         spdtb.loadspec(cal)
                         spdtb.addspec()
-                        if _np.isnan(spdtb.EW) == False:
+                        if not _np.isnan(spdtb.EW):
                             if plots:
                                 spdtb.plotspec()
                             vels = (spdtb.wl-lbc)/lbc*_phc.c.cgs*1e-5
@@ -604,7 +604,7 @@ def DCcalc(vels, flux, vmax=None, vc=0., ssize=0.05):
     if fluxmax < 1.01*contmax:
         return flux[ivc], flux[ivc]
     #if a vmax is not given...
-    if isinstance(vmax, (int, long, float)) == False:
+    if not isinstance(vmax, (int, long, float)):
         vmax = _np.abs(flux-_np.max(flux)).argmin()
         vmax = vels[vmax]
     ivmax = _np.abs(vels-vmax).argmin()
@@ -681,7 +681,7 @@ def overplotsubdirs(path, star, limits=(6540,6600), showleg=True):
 
     ref0,ref1 = limits
     
-    if _os.path.exists('{}/{}'.format(path,star)) == False:
+    if not _os.path.exists('{}/{}'.format(path,star)):
         _os.system('mkdir {}/{}'.format(path,star))
     f0 = open('{0}/{1}/{1}.log'.format(path,star), 'w')
     
@@ -796,7 +796,7 @@ def diffplotsubdirs(path, star, limits=(6540,6600)):
     """
     ref0,ref1 = limits
     
-    if _os.path.exists('{}/{}'.format(path,star)) == False:
+    if not _os.path.exists('{}/{}'.format(path,star)):
         _os.system('mkdir {}/{}'.format(path,star))
     f0 = open('{0}/{1}/{1}.log'.format(path,star), 'w')
     
@@ -901,7 +901,7 @@ def refplotsubdirs(path, star, limits=(6540,6600)):
     """
     ref0,ref1 = limits
     
-    if _os.path.exists('{}/{}'.format(path,star)) == False:
+    if not _os.path.exists('{}/{}'.format(path,star)):
         _os.system('mkdir {}/{}'.format(path,star))
     f0 = open('{0}/{1}/{1}.log'.format(path,star), 'w')
     
@@ -1060,7 +1060,7 @@ def overplotsubdirs2(path, star, limits=(6540,6600)):
     """
     ref0,ref1 = limits
     
-    if _os.path.exists('{}/{}'.format(path,star)) == False:
+    if not _os.path.exists('{}/{}'.format(path,star)):
         _os.system('mkdir {}/{}'.format(path,star))
     f0 = open('{0}/{1}/{1}.log'.format(path,star), 'w')
     
@@ -1238,7 +1238,7 @@ def overPlotLineFits(specs, lbc=.6564606, formats=['png'], hwidth=1500., \
         ylim = ax.get_ylim()
         ax.plot([0,0], ylim, ls='-', color='Gray')
     ax.set_title(u'lbc = {0:.5f} $\mu$m'.format(lbc))
-    ax.set_ylabel('Spec - Ref.')
+    ax.set_ylabel('Overplotted spectra')
     legend = ax.legend(loc=(1.05, .01), labelspacing=0.1)
     _plt.setp(legend.get_texts(),  fontsize='small')
     _plt.subplots_adjust(left=0.1, right=0.78, top=0.9, bottom=0.1)#, hspace=0.3, wspace=.3)   
@@ -1300,7 +1300,7 @@ def incrPlotLineFits(specs, lbc=.6564606, formats=['png'], hwidth=1500., \
         ylim = ax.get_ylim()
         ax.plot([0,0], ylim, ls='-', color='Gray')
     ax.set_title(u'lbc = {0:.5f} $\mu$m'.format(lbc))
-    ax.set_ylabel('Spec - Ref.')
+    ax.set_ylabel('Spaced spectra')
     legend = ax.legend(loc=(1.05, .01), labelspacing=0.1)
     _plt.setp(legend.get_texts(),  fontsize='small')
     _plt.subplots_adjust(left=0.1, right=0.78, top=0.9, bottom=0.1)#, hspace=0.3, wspace=.3)   
@@ -1346,7 +1346,7 @@ def diffPlotLineSeries(fullseds, obsers=[0], lbc=.6564606, formats=['png'], \
             else:
                 ax.plot(x, y-flx, color=_phc.colors[_np.mod(i, len(_phc.colors))])
         ax.set_title(u'lbc = {0:.5f} $\mu$m'.format(lbc))
-        ax.set_ylabel('Spec - Ref.')
+        ax.set_ylabel('Difference spectra (spec - ref.)')
         ax.legend()
         for fmt in formats:
             fig.savefig('modsdiff_lbc{2:.4f}_obs{0:02.1f}.{1}'.format(obsdegs[k], fmt,\
@@ -1398,7 +1398,7 @@ def diffPlotLineFits(specs, lbc=.6564606, formats=['png'], \
             color=_phc.gradColor(range(len(specs)), cmapn='jet')[i]
         ax.plot(x, y-flx, label='{0}'.format(dateobs), color=color)
     ax.set_title(u'lbc = {0:.5f} $\mu$m'.format(lbc))
-    ax.set_ylabel('Spec - Ref.')
+    ax.set_ylabel('Difference spectra (spec - ref.)')
     legend = ax.legend(loc=(1.05, .01), labelspacing=0.1)
     _plt.setp(legend.get_texts(),  fontsize='small')
     _plt.subplots_adjust(left=0.1, right=0.78, top=0.9, bottom=0.1)#, hspace=0.3, wspace=.3)   
@@ -1440,7 +1440,7 @@ def diffPlotLineObs(fullseds, obsers=[0], lbc=.6564606, formats=['png'], \
             color=_phc.colors[_np.mod(i, len(_phc.colors))])
         ax.set_title(u'lbc={0:.5f}$\mu$m, {1}'.format(lbc, \
         _phc.trimpathname(file)[1]))
-        ax.set_ylabel('Spec - Ref.')
+        ax.set_ylabel('Difference spectra (spec - ref.)')
         ax.legend()
         for fmt in formats:
             fig.savefig('modsdiff_lbc{2:.4f}_{0}.{1}'.format(_phc.trimpathname(file)[1], \
@@ -1503,7 +1503,7 @@ def kuruczflux(teff, logg, range=None):
     if range == None:
         return wave, flux, best
     else:
-        idx = _np.where((wave > range[0]) & (wave < range[1]))
+        idx = _np.where((wave > range[0]) & (wave < range[-1]))
         return wave[idx], flux[idx], best    
 
 

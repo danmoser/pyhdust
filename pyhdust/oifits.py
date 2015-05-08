@@ -636,7 +636,7 @@ class oifits:
         goes for stations of the array (controlled by
         oifits.matchstationbyname)"""
         # Don't do anything if the two oifits objects are not CONSISTENT!
-        if self.isconsistent() == False or other.isconsistent() == False:
+        if not self.isconsistent() or not other.isconsistent():
             print 'oifits objects are not consistent, bailing.'
             return
         
@@ -691,7 +691,7 @@ class oifits:
                         elif matchstationbyname and newsta.sta_name == othsta.sta_name:
                             stationmap[id(othsta)] = newsta
                             break
-                        elif newsta.sta_name == othsta.sta_name and matchstationbyname == False:
+                        elif newsta.sta_name == othsta.sta_name and not matchstationbyname:
                             raise ValueError('Stations have matching names but conflicting data.')
                     # If 'id(othsta)' is not in the stationmap
                     # dictionary, then this is a new station and
@@ -1446,7 +1446,7 @@ def open(filename, quiet=False):
                                                        v2coord=v2coord, wavelength=wavelength, target=target,
                                                        array=array, station=station))
         elif hdu.name == 'AMBER_SPECTRUM':
-            if quiet == False:
+            if not quiet:
                 print('AMBER SPEC INFO read')
             dataAS0 = []
             dataASf = []

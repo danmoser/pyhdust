@@ -6,10 +6,19 @@ PyHdust auxiliary module: PyHdust releases control.
 History
 ============
 ..
-    v0.954 @ 2015-0
+    v0.955 @ 2015-0
     ----------------------
 
-v0.953 @ 2015-05-
+v0.954 @ 2015-0
+----------------------
+- releases.py do automatically the docs' rsync
+- hdt.plottemp improved
+- General: "== False" replaced by "not"
+- spt.*Plot* corrections
+- spt.kuruczflux correction
+- 
+
+v0.953 @ 2015-05-01
 ----------------------
 - phc.bindata, now yerr is an optional array
 - spt,dtb improvements save/load Class
@@ -49,7 +58,7 @@ __init__
 -----------
 - update obs_calcs (spherical triangles)
 - rotstars: add option for ellipsoidal star
-- genlog: add check for *.sigma files
+- genlog: add check for \*.sigma files
 - merge: be ``smart'' and be independent of filters definitions (e.g., continuum or line based on the number of points). 
 
 beatlas
@@ -144,8 +153,9 @@ def setRelease():
     print('# docs/index.rst file updated!')
     os.chdir('{0}/docs'.format(hdtpath()))
     os.system('make html')
+    os.system('rsync -rP _build/html/ astroweb:/www/moser/www/doc')
     print('# From version {0} to {1}'.format(oldver, __version__))
-    os.system('midori _build/html/index.html &')
+    os.system('midori http://astroweb.iag.usp.br/~moser/doc &')
     #~ os.system('disown')
     return
 

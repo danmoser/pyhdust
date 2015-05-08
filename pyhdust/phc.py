@@ -90,7 +90,7 @@ def outfld(fold='hdt'):
 
     OUTPUT: *system [folder creation]
     """
-    if _os.path.exists(fold) == False:
+    if not _os.path.exists(fold):
         _os.system('mkdir {}'.format(fold))
     return
 
@@ -138,9 +138,9 @@ def find_nearest(array,value, bigger=None):
         array = _np.array(array)
         idx = (_np.abs(array-value)).argmin()
         found = array[idx]
-    elif bigger == True:
+    elif bigger:
         found = min(x for x in array if x > value)        
-    elif bigger == False:
+    elif not bigger:
         found = max(x for x in array if x < value)
     else:
         print('# ERROR at bigger!!')
@@ -314,9 +314,9 @@ def ra2degf(rastr):
     return (vals[0]+vals[1]/60.+vals[2]/3600.)*360./24
 
 
-def dec2degf(decstr):
+def dec2degf(decstr, delimiter=":"):
     """ Sexagesimal to decimal. Input is string. """
-    vals = _np.array(decstr.split(':')).astype(float)
+    vals = _np.array(decstr.split(delimiter)).astype(float)
     return vals[0]+vals[1]/60.+vals[2]/3600.
 
 
@@ -612,9 +612,9 @@ def gradColor(val, cmapn='jet', min=None, max=None, log=False):
 
 
 #Constants
-c = Constant(2.99792458e10, 299792458., 'cm s-1', 'speed of light in vacuum') #:
-h = Constant(6.6260755e-27, 6.62606957e-34, 'erg s-1', 'Planck constant') #:
-hbar = Constant(1.05457266e-27, 1.05457172534e-34, 'erg s', 'Planck constant/(2*pi)') #:
+c = Constant(2.99792458e10, 299792458., 'cm s-1', 'speed of light in vacuum')
+h = Constant(6.6260755e-27, 6.62606957e-34, 'erg s-1', 'Planck constant')
+hbar = Constant(1.05457266e-27, 1.05457172534e-34, 'erg s', 'Planck constant/(2*pi)')
 G = Constant(6.674253e-8, 6.674253e-11, 'cm3 g-1 s-2', 'Gravitational constant') 
 e = Constant(4.8032068e-10, 1.60217657e-19,	'esu', 'Elementary charge')
 ep0 = Constant(1., 8.8542e-12, '', 'Permittivity of Free Space')
