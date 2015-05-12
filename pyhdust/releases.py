@@ -6,17 +6,22 @@ PyHdust auxiliary module: PyHdust releases control.
 History
 ============
 ..
-    v0.955 @ 2015-0
+    v0.956 @ 2015-0
     ----------------------
 
-v0.954 @ 2015-0
+v0.955 @ 2015-05-12
+----------------------
+- spt.fitzpatrick included
+- intt.img2fits and intt.data2fitscube rotation correction
+- Documentation of poltools.py (Portuguese)
+
+v0.954 @ 2015-05-08
 ----------------------
 - releases.py do automatically the docs' rsync
 - hdt.plottemp improved
 - General: "== False" replaced by "not"
 - spt.*Plot* corrections
 - spt.kuruczflux correction
-- 
 
 v0.953 @ 2015-05-01
 ----------------------
@@ -25,7 +30,6 @@ v0.953 @ 2015-05-01
 - spt.shiftfits improved
 - spt.plotSpecData improved
 - spt.cardelli included
-
 
 v0.952b @ 2015-04-28
 ---------------------
@@ -36,6 +40,11 @@ v0.952b @ 2015-04-28
 - Removed *ra2deg* variable
 - Updated phc.rot_stars (Beta(W))
 - Created XDR BeAtlas
+
+Previously
+------------
+- Added options `force` and `chknames` to genStdLog and genObjLog
+
 
 To Be Done
 ============

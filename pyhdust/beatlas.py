@@ -243,7 +243,7 @@ def createBAsed(fsedlist, xdrpath, lbdarr, param=True, savetxt=False,
     | -photospheric models: sig0 = 0.00
     | -Parametric disk model default (`param` == True)
     | -VDD-ST models: n excluded (alpha and R0 fixed. Confirm?)
-    | -The flux will be given in ergs/s/cm2/um. If ignorelum==True, the usual
+    | -The flux will be given in ergs/s/um2/um. If ignorelum==True, the usual
     |   F_lbda/F_bol unit will be given.
 
     Since the grid is not symmetric, there is no index to jump directly to the
@@ -340,11 +340,11 @@ def readBAsed(xdrpath, quiet=False):
     """ Read the BeAtlas SED release.
 
     | Definitions:
-    | -photospheric models: sig0 = 0.00
+    | -photospheric models: sig0 (and other quantities) == 0.00
     | -Parametric disk model default (`param` == True)
     | -VDD-ST models: n excluded (alpha and R0 fixed. Confirm?)
     | -The models flux are given in ergs/s/cm2/um. If ignorelum==True in the
-    |   XDR creating, F_lbda/F_bol unit will be given.
+    |   XDR creation, F_lbda/F_bol unit will be given.
 
     INPUT: xdrpath
 
@@ -392,6 +392,7 @@ def readBAsed(xdrpath, quiet=False):
     #~ 
     return listpar, lbdarr, models[:,0:nq], models[:,nq:]
 
+
 def interpolBA(params, ctrlarr, lparams, minfo, models, param=True):
     """ Interpola os `modelos` para os parametros `params` 
 
@@ -438,6 +439,7 @@ def interpolBA(params, ctrlarr, lparams, minfo, models, param=True):
     X1 = parlims[:,1]
     return _phc.interLinND(params, X0, X1, outmodels)
 
+
 def breakJob(n, file):
 	""" Break the jobs/jobs_Project_modn.sh into n files 
 	../jobs_Project_modn_##.txt to be used with `dispara` """
@@ -455,6 +457,7 @@ def breakJob(n, file):
 	print('# {0} files created!'.format(n))
 	return
 
+
 def correltable(pos):
     """ Create the correlation table of Domiciano de Souza+ 2014. """
     nwalkers = len(pos)
@@ -470,6 +473,7 @@ def correltable(pos):
     _plt.close()
     print('# Figure "correl.png" saved!')
     return
+
 
 ### MAIN ###
 if __name__ == "__main__":

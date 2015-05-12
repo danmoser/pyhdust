@@ -3,8 +3,59 @@
 """
 PyHdust *poltools* module: polarimetry tools
 
-History:
--Added options `force` and `chknames` to genStdLog and genObjLog
+Em reuniões em nov/2014 com Moser, Bednarski e Alex, ficou decidido:
+
+- Cada estrela (alvo ou padrão) terá um PREFIXO único de observação. Essa lista é gerada da seguinte forma: copia-se a coluna no arquivo *planejamento_LNA.xls* num arquivo de texto, que será lido pelas rotinas (arquivo *pyhdust/pol/alvos.txt*). Destaca-se que a identificação do alvo é feita desta forma, não importando o prefixo dos arquivos *fits*.
+
+- A estrutura de diretórios "local" é *noite/prefixoalvo_n*. Assim, todo sub-diretório da noite é considerado um alvo, exceto *calib*. Caso uma estrela tenha sido observada em mais de uma sequencia, adicionar *_n*, onde pode ser um número (e.g., 2) ou um descritivo (e.g., *a2*). Tudo o que está em subdiretórios dos alvos é ignorado.
+
+- A estrutura de diretórios será *dadospuros/noite/alvo* e *reduzidos/noite/alvo*. O script *pur2red* limpa o resultado da redução dos dados puros. O script *red2pur* copia os resultados da redução em reduzidos para a pasta dos dados puros.
+
+-  O critério para a escolha do(s) arquivos *out(s)* será o de minimizar os erros em blocos de 16 ou 8+8 posições, mantendo o máximo de pontos independentes possível. Os detalhes estarão no manual das rotinas.
+
+-  As rotinas python propostas são as seguintes: (i) *genStdLog*, (ii) *genObjLog*, (iii) *genStdDat*, (iv) *genTarget*, (v) *pur2red*, (vi) *red2pur* e (vii) *listNights*. Consultar o manual das rotinas para a lista completa e detalhes.
+
+-  É possivel demonstrar que :math:`P=\sqrt{Q^2+P^2}` e :math:`\sigma_P=\sigma_{Q,U}`.
+
+Passos da redução: 
+
+-  Obtem-se a lista de noites do objeto (ou via página Beacon, ou via rotina *listNights* caso tenha acesso a pasta *puros*).
+
+-  Gera-se os arquivos de calibração-padrão (rotina *iraf* *calib*).
+
+-  Reduz-se as padrões da noite no *iraf*. Roda-se  *genStdLog*. A rotina imprime alertas de dados de padrões não reduzidos. Colunas da saída de *genStdLog*:
+
+MJD|target|filt|calc|out|flags| (um *out* por filtro/padrão). 
+
+-  Reduz-se os alvos da noite (*iraf*). Roda-se *genObjLog* e imprime alertas de dados não reduzidos/estrelas fora da nomenclatura. Colunas da saída de *genObjLog*: MJD|target|filt|calc|out\_n|flags| (pode haver mais de um *out* por filtro/alvo; registro em nova linha).
+
+-  Roda-se *genStdDat*. A rotina faz: (i) olha na saída de *genObjLog* os filtros/calcitas dos alvos utilizados, (ii) e espera encontrar as padrões correspondentes; (iii) caso não encontre uma padrão, faz interpolação (de filtros). Se faltou para toda a calcita, pede para o usuário fazer a referência a saída de outro *genStdLog*.
+
+-  Reduz-se todas as noites (de interesse). Roda-se *genTarget* para um, múltiplos ou todos os alvos. Procura noite à noite o alvo na saída de *genObjLog*, calibrado com *genStdDat* da noite correspondente (detalhe: nesta configuração, os arquivos *outs* serão lindos neste momento. Ou seja, o usuário depois dos passos 1, 2 e 3, ainda precisa ter acesso a estes arquivos). Neste momento, o usuário confirma qual ângulo de referência da padrão será utilizado (padrão é o "publicado"). Caso exista mais de uma padrão para o filtro/calcita, faz uma média do :math:`\Delta\theta`. Colunas da saída de *genTarget* (saída individual para cada estrela):
+
+MJD|noite|filt|calc|ang.ref|del.th|P|Q|U|th|sigP|sigth|flags|.
+
+Outras definições sugeridas:
+
+-  No caso de um alvo observado com duas calcitas (como padrões), não colocar no mesmo diretório. Isso complica muito o desflexibiliza muito as rotinas que gerenciam os artivos *\*.out*. A regra é criar uma nova pasta com o sufixo "_a2" contendo os arquivos fits. A raiz destes arquivos é arbitrária.
+
+-  Além disso, outra situação é necessária para se abrir outra pasta: ao se iniciar uma nova sequência temporal.
+
+-  Nomenclatura de observação *target_a0_g1_f.fits* onde *a0* e *g1* são argumentos opcionais (calcita e ganho/config\*.\* do CCD) e *f* é o filtro. Na ausência destes parâmetros, assume-se valor padrão (ou lê-se no *header* dos fits).
+
+-  Os avisos em tela *Warning* avisa o usuário que uma informação foi registrada, mas ela não é a otimizada. Por exemplo, na ausência de uma das versões de redução (.1 ou .2) ou do agrupamento de posições da lâmina (08 ou 16).
+
+-  Os avisos em tela *Error* avisa o usuário que uma informação foi perdida. Dependendo o erro, o script será interrompido (não gerando nenhum output parcial).
+
+Definições das flags.
+
+- [0] As flags são cumulativas. Se estiver 0, significa que tudo ocorreu bem (nenhuma decisão ou aproximação no processo de redução foi feita). Se ocorreram, terá uma ou mais das flags abaixo.
+
+- [pA] Estrela sem padrão para calibração de *dth* (output é salvo mesmo assim).
+
+- [pB] A correção *dth* foi feita usando uma estrela de outra noite.
+
+- [pC] A correção *dth* foi feita usando duas ou mais estrelas.
 
 :co-author: Daniel Bednarski
 :license: GNU GPL v3.0 (https://github.com/danmoser/pyhdust/blob/master/LICENSE)
