@@ -2,8 +2,8 @@
 #OAR -n hdust_dmf
 #OAR -l core=12,walltime=24:0:0
 #OAR -p gpu='NO'
-#OAR -O log/out.%jobid%
-#OAR -E log/err.%jobid%
+#OAR -O out.%jobid%
+#OAR -E err.%jobid%
 
 source /softs/env_default.sh
 mpiexec.hydra  -machinefile $OAR_FILE_NODES \

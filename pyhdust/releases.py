@@ -14,6 +14,10 @@ v0.955 @ 2015-05-12
 - spt.fitzpatrick included
 - intt.img2fits and intt.data2fitscube rotation correction
 - Documentation of poltools.py (Portuguese)
+- hdt.readSingleBe improved
+- inp.makeDiskGrid with SingleBe option
+- intt.img2fits debugged
+- inp.makeInpJob BlueGene support added
 
 v0.954 @ 2015-05-08
 ----------------------

@@ -355,40 +355,40 @@ def readBAsed(xdrpath, quiet=False):
     ixdr=0
     #~ 
     npxs = 3
-    upck = '>{}l'.format(npxs)
+    upck = '>{0}l'.format(npxs)
     header = _np.array(_struct.unpack(upck, f[ixdr:ixdr+npxs*4]) )
     ixdr+=npxs*4
     nq, nlb, nm = header
     #~ 
     npxs = nq
-    upck = '>{}l'.format(npxs)
+    upck = '>{0}l'.format(npxs)
     header = _np.array(_struct.unpack(upck, f[ixdr:ixdr+npxs*4]) )
     ixdr+=npxs*4
     #~ 
     listpar = [[] for i in range(nq)]
     for i in range(nq):
         npxs = header[i]
-        upck = '>{}f'.format(npxs)
+        upck = '>{0}f'.format(npxs)
         listpar[i] = _np.array(_struct.unpack(upck, f[ixdr:ixdr+npxs*4]) )
         ixdr+=npxs*4
     #~ 
     npxs = nlb
-    upck = '>{}f'.format(npxs)
+    upck = '>{0}f'.format(npxs)
     lbdarr = _np.array(_struct.unpack(upck, f[ixdr:ixdr+npxs*4]) )
     ixdr+=npxs*4
     #~ 
     npxs = nm*(nq+nlb)
-    upck = '>{}f'.format(npxs)
+    upck = '>{0}f'.format(npxs)
     models = _np.array(_struct.unpack(upck, f[ixdr:ixdr+npxs*4]) )
     ixdr+=npxs*4
     models = models.reshape((nm,-1))
     #this will check if the XDR is finished.
     if ixdr == len(f):
         if not quiet:
-            print('# XDR {} completely read!'.format(xdrpath))
+            print('# XDR {0} completely read!'.format(xdrpath))
     else:
-        print('# Warning: XDR {} not completely read!'.format(xdrpath))
-        print('# length difference is {}'.format( (len(f)-ixdr)/4 ) )
+        print('# Warning: XDR {0} not completely read!'.format(xdrpath))
+        print('# length difference is {0}'.format( (len(f)-ixdr)/4 ) )
     #~ 
     return listpar, lbdarr, models[:,0:nq], models[:,nq:]
 

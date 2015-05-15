@@ -207,10 +207,10 @@ def img2fits(img, lbd, xmax, dist, outname='model', rot=0., lum=0.,
 
     `rot` = rotation angle to be applied to the images. 'x' and 'y' coordinate
     axes should be orientated with equatorial north corresponding to 'up' (and
-    east == 'left'). Units in Degrees.
+    east == 'left'). Units according to `deg` bool.
 
     `orient` = orientation of the coordinate system. This is completely
-    independent of the `rot` variable.
+    independent of the `rot` variable. Units according to `deg` bool.
 
     `lum` = luminosity given in Solar units.
     BUNIT sets the units of the image. Considering that HDUST images
@@ -231,8 +231,8 @@ def img2fits(img, lbd, xmax, dist, outname='model', rot=0., lum=0.,
     else:
         ucdelt = 'radians'
         ushort = 'rad'
-        orientr = orient
-        orient = orientr*180/_np.pi
+        orientr= orient
+        orient = orient*180/_np.pi
     #~ 
     if rot != 0.:
         #~ print('# Total flux BEFORE rotation {0}'.format(_np.sum(img)))

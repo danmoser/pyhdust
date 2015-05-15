@@ -17,8 +17,9 @@ __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
 
     
-def makeDiskGrid(modn, mvals, mhvals, hvals, rdvals, sig0vals, doFVDD, \
-    selsources, alpha=.5, mu=.5, R0r=300, Mdot11=False, path=None):
+def makeDiskGrid(modn='01', mhvals=[1.5], hvals=[.6], rdvals=[18.6], mvals=None,
+    sig0vals=None, doFVDD=False, sBdays=None, sBfiles=None, selsources='*',
+    alpha=.5, mu=.5, R0r=300, Mdot11=False, path=None):
     """
     | ###CONFIG. OPTIONS
     | #MODEL NUMBER
@@ -129,7 +130,48 @@ def makeDiskGrid(modn, mvals, mhvals, hvals, rdvals, sig0vals, doFVDD, \
         f0.writelines(wmod)
         f0.close()
         return
+
+    def doSB(prodI, hseq=False):
+        '''
+        Given a prodI (i.e., sources,rdvals,hvals,mhvals,sBdays,sBfiles),
+        generates the Single Be based model input
+        '''
+    
+        src,rd,h,mh,day,sfile = prodI
+        M,Req,Tp = _hdt.readscr(src)
+        Mstr = str(M)
+        M *= Msun
+        Req *= Rsun
+
+        Th = h*Tp/100.
+        #a0 = (kB*h/100.*Tp/mu/mH)**.5
+        a = (kB*Th/mu/mH)**.5
+        #~ n0 = (G*M/2./_np.pi)**.5*sig0/mu/mH/a/Req**1.5
+        #Th = a**2*mu*mH/kB
+
+        srcname = src.replace('source/','').replace('.txt','')
         
+        wmod = mod[:]
+        wmod[13]=wmod[13].replace('18.6',('%.2f' % rd))
+        wmod[18]=wmod[18].replace('= 1','= 4')
+        wmod[28]=wmod[28].replace('deltasco/Atsuo/1D/data/dSco_a035_01',(sfile))
+        wmod[29]=wmod[29].replace('2.3',('%.2f' % (day/365.25)))
+        if not hseq:
+            wmod[33]=wmod[33].replace('1.5',('%.2f' % mh))
+            suffix = '_SB{0}_{1:.1f}d_h{2:03.0f}_Rd{3:05.1f}_{4}'.format(\
+            _phc.trimpathname(sfile)[1],day,h,rd,srcname)
+        else:
+            wmod[31]=wmod[31].replace('= 0','= 1')
+            wmod[36]=wmod[36].replace('1.5',('%.2f' % mh))
+            suffix = '_SB{0}_{1:.1f}d_hseq_Rd{2:05.1f}_{3}'.format(\
+            _phc.trimpathname(sfile)[1],day,rd,srcname)
+
+        wmod[40]=wmod[40].replace('18000.',('%.1f' % Th))      
+              
+        f0=open('mod'+modn+'/mod'+modn+suffix+'.txt', 'w')
+        f0.writelines(wmod)
+        f0.close()
+        return
     
     ###TODO Setup Tpole = REF of a (scale height)    
     #Tps = dict(zip(Ms, Tp11))
@@ -153,13 +195,25 @@ def makeDiskGrid(modn, mvals, mhvals, hvals, rdvals, sig0vals, doFVDD, \
     f0 = open('{0}/refs/REF_disco.txt'.format(_hdt.hdtpath()))
     mod = f0.readlines()
     f0.close()
-    
-    for prodI in _product(sources,sig0vals,rdvals,hvals,mvals,mhvals):
-        doPL(prodI)
-        if doFVDD:
-            doMdot(prodI)
-    print('# {0:.0f} arquivos foram gerados !!'.format(len(sources)*\
-    len(sig0vals)*len(rdvals)*len(hvals)*(len(mvals)+1)*len(mhvals)))
+
+    if sBdays is None or sBfiles is None:
+        for prodI in _product(sources,sig0vals,rdvals,hvals,mvals,mhvals):
+            doPL(prodI)
+            i = 0
+            if doFVDD:
+                i = 1
+                doMdot(prodI)
+        print('# {0:.0f} arquivos foram gerados !!'.format(len(sources)*\
+        len(sig0vals)*len(rdvals)*len(hvals)*(len(mvals)+i)*len(mhvals)))
+    else:
+        for prodI in _product(sources,rdvals,hvals,mhvals,sBdays,sBfiles):
+            doSB(prodI)
+            i = 0
+            if doFVDD:
+                i = 1
+                doSB(prodI, hseq=True)
+        print('# {0:.0f} arquivos foram gerados !!'.format(len(sources)*\
+        len(rdvals)*len(hvals)*len(sBdays)*(len(mhvals)+i)*len(sBfiles)))
 
     if path is not '':
         _os.chdir(path0)
@@ -167,10 +221,12 @@ def makeDiskGrid(modn, mvals, mhvals, hvals, rdvals, sig0vals, doFVDD, \
     return
 
 
-def makeInpJob(modn, clusters, nodes, walltime, wcheck, email, chkout, st1max,\
-st1refmax, docases, sim1, sim2, simulations, images, composition,\
-controls, gridcells, observers, ctrM=False, touch=False, srcNf=None, path=None,
-srcid=''):
+def makeInpJob(modn='01', nodes=512, simulations=['SED'],
+    docases=[1,3], sim1=['step1'], sim2=['step1_ref'], composition=['pureH'],
+    controls=['controls'], gridcells=['grid'], observers=['observers'],
+    images=[''], clusters=['job'], srcid='',
+    walltime='24:00:00', wcheck=False, email='$USER@localhost', chkout=False,
+    st1max=20, st1refmax=24, ctrM=False, touch=False, srcNf=None, path=None):
     """
     Create INP+JOB files to run Hdust.
 
@@ -183,7 +239,7 @@ srcid=''):
     | 
     | #clusters config
     | # job = AlphaCrucis; oar = MesoCentre Licallo; ge = MesoCentre FRIPP
-    | clusters = ['job','oar','ge']
+    | clusters = ['job','oar','ge','bgp']
     | clusters = ['oar']
     | nodes    = 48
     | #if wcheck == True, walltime will be AUTOMATICALLY estimated
@@ -223,7 +279,6 @@ srcid=''):
     | touch       = True
     | ###stop edition here
     """
-    
     def isFloat(x):
         try:
             a = float(x)
@@ -303,7 +358,7 @@ srcid=''):
             case3 += case1
         return case3
         
-    def doJobs(mod, sel, addtouch='\n'):
+    def doJobs(mod, sel, nodes, addtouch='\n'):
         #load Ref
         f0 = open('{0}/refs/REF.{1}'.format(_hdt.hdtpath(),sel))
         wout = f0.readlines()
@@ -339,6 +394,19 @@ srcid=''):
             wout[11] = wout[11].replace('hdust_bestar2.02.inp','{0}/{1}'.\
             format(proj,mod.replace('.txt','.inp')))
             f0.writelines('qsub -P hdust {0}/{1}s/{2}\n'.format(proj,sel,outname))
+        elif sel == 'bgp':
+            wout[14] = wout[14].replace('512','{0}'.format(nodes))
+            nodes = int(nodes)
+            if nodes%512 != 0:
+                nrsv = (nodes//512+1)*128
+            else:
+                nrsv = (nodes//512)*128
+            wout[10] = wout[10].replace('128','{0}'.format(nrsv))
+            wout[4] = wout[4].replace('24:00:00','{0}'.format(walltime))
+            wout[14] = wout[14].replace('hdust_bestar2.02.inp','{0}/{1}'.\
+            format(proj,mod.replace('.txt','.inp')))
+            f0.writelines('chmod +x {0}/{1}s/{2}\n'.format(proj,sel,outname))
+            f0.writelines('llsubmit ./{0}/{1}s/{2}\n'.format(proj,sel,outname))
         f0.close()
         
         f0 = open('{0}s/{1}'.format(sel,outname),'w')
@@ -346,7 +414,6 @@ srcid=''):
         print('# Saved: {0}s/{1}'.format(sel,outname))
         f0.close()
         return
-    
     
     #PROGRAM START
     if srcNf == None:
@@ -463,7 +530,7 @@ srcid=''):
         #Write jobs (if necessary)
         if len(cases)>0:
             for sel in clusters:
-                doJobs(mod,sel,addtouch)
+                doJobs(mod,sel,nodes,addtouch)
 
     if path is not '':
         _os.chdir(path0)

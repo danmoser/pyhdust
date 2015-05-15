@@ -49,7 +49,7 @@ def readscr(file):
         bet = _phc.fltTxtOccur('Beta_GD =',lines,n=1)
         L = _phc.fltTxtOccur('L =',lines,n=n)
         wfrac = _np.sqrt(27./8*(1+0.5*W**2)**-3*W**2)
-        ob, Tp = rotStar(Tp=L, M=M, rp=Rp, beta=bet, wfrac=wfrac, quiet=True,
+        ob, Tp, A = rotStar(Tp=L, M=M, rp=Rp, beta=bet, wfrac=wfrac, quiet=True,
         LnotTp=True)
     #print M,Rp*ob,Tp
     return M,Rp*ob,Tp
@@ -883,7 +883,7 @@ def rotStar(Tp=20000., M=10.3065, rp=5.38462, star='B', beta=0.25, wfrac=0.8,
 
     INPUT: th_res (theta resolution, integer)...
 
-    OUTPUT: printed status + (ob, Tp values)
+    OUTPUT: printed status + (ob, Tp values, Area[cm2])
     """
     Rsun = _phc.Rsun.cgs
     Msun = _phc.Msun.cgs
@@ -955,7 +955,7 @@ def rotStar(Tp=20000., M=10.3065, rp=5.38462, star='B', beta=0.25, wfrac=0.8,
     b = lumf(wfrac, Tp, rp, M, beta)
     c = lumf(0.0001, Tp, rp, M, beta)
     Cw = (c / b) ** (1. / (4. * beta)) * C
-    ob = rt(_np.pi / 2, wfrac)/(rp / Rsun)
+    ob = rt(_np.pi / 2, wfrac)#/(rp / Rsun)
 
     ### OUTPUT ###
     if not quiet:
@@ -986,7 +986,7 @@ def rotStar(Tp=20000., M=10.3065, rp=5.38462, star='B', beta=0.25, wfrac=0.8,
             (Cw * abs(g(wfrac, M, rp, 0.))) ** beta / (Cw * abs(g(wfrac, M, rp, _np.pi / 2))) ** beta) )
     
         print('# \"*\" == case where L is constant!')
-    return ob, (Cw * abs(g(wfrac, M, rp, 0.))) ** beta
+    return ob, (Cw * abs(g(wfrac, M, rp, 0.))) ** beta, area(wfrac)*(rp**2)
 
 
 def obsCalc():
@@ -1291,18 +1291,72 @@ def obsCalc():
     return
 
 
-def readSingleBe(file):
-    """ Read the SingleBe file.
+def readSingleBe(sBfile):
+    """ Read the singleBe output
 
-    OUTPUT: radius(len(grid)), sigr(len(time), len(grid)), time [sec.]
+    OUTPUT = rgrid, lsig_r, nsnaps, simdays, alpha
     """
-    f0 = open(file)
-    lines = f0.readlines()
-    f0.close()
-    time = _np.array(lines[16::9]).astype(float)
-    sigr = _np.array(_np.genfromtxt(lines[20::9])).astype(float)
-    radius = _np.array(lines[4].split()).astype(float)
-    return radius, sigr, time
+
+    def readSBeBlock(lines):
+        """ """
+        tau = _np.array(lines[0]).astype(float)              # tauintval in rad
+        tausec = _np.array(lines[1]).astype(float)           # tausec in rad
+        sinject = _np.array(lines[2]).astype(float)          # `sinject` ?
+        alpha_r =  _np.array(lines[3].split()).astype(float) # alpha(r)
+        s1_r =  _np.array(lines[4].split()).astype(float)    # s1(r) = sig/sig0 ?
+        sig_r =  _np.array(lines[5].split()).astype(float)   # sigma(r)
+        maxr =  _np.array(lines[6]).astype(float)            # maxr = maximmum
+                                                            #non-zero cell
+        vr_cs  =  _np.array(lines[7].split()).astype(float)  # vel_rad/cs ?
+        decrr =  _np.array(lines[8].split()).astype(float)   # Decretion rate
+                                                            #(units?)
+        return
+
+    hs = 15                     # header size
+    f0 = open(sBfile).read().split('\n')
+    f0 = f0[:-1]
+    nsnaps = (len(f0)-hs+1)/9   # number of snapshots
+    line0 = f0[0].split()
+    
+    alpha=float(line0[0])       # constant alpha parameter
+    teff=float(line0[1])        # stellar effective temperature in K
+    tdisk=float(line0[3])       # disk temperature in K
+    cs=float(line0[4])          # "sound speed" in cm/s
+    mstar=float(line0[5])       # mass of the star, in solar masses
+    req=float(line0[6])         # equatorial radius, in solar units
+    omega0=float(line0[8])      # disk angular velocity at equator in rad/s?
+    rho0=float(line0[13])       # g cm-3
+    sigma0=float(line0[14])     # g cm-2
+    rin=float(line0[15])        # internal radius of the disk (in req?)
+    rout=float(line0[16])       # external radius of the disk (in req?)
+    rinject=float(line0[17])    # radius of injection in the disk (in req?)
+    n=int(line0[18])            # number of radial cells
+    kinject=int(line0[19])      # cell of mass injection
+    dt=float(line0[24])         # ?
+    tauintval=float(line0[26])  # time steps (in rad)
+    
+    #BLOCKS
+    ltau = _np.array(f0[hs+0::9]).astype(float)     # tauintval in rad
+    ltausec = _np.array(f0[hs+1::9]).astype(float)  # tausec in seconds
+    lsinject = _np.array(f0[hs+2::9]).astype(float) # `sinject` ?
+    # alpha(r)
+    lalpha_r =  _np.array([l.split() for l in f0[hs+3::9]]).astype(float) 
+    # s1(r) = sig/sig0 ?
+    ls1_r =  _np.array([l.split() for l in f0[hs+4::9]]).astype(float)
+    # sigma(r)
+    lsig_r =  _np.array([l.split() for l in f0[hs+5::9]]).astype(float)
+    # maxr = maximmum non-zero cell
+    lmaxr =  _np.array(f0[hs+6::9]).astype(float)            
+    # vel_rad/cs ?  ##VARIABLE SIZE = not read
+    #~ lvr_cs  =  _np.array([l.split() for l in f0[hs+7::9]]).astype(float)  
+    # Decretion rate (units?)  ##VARIABLE SIZE = not read
+    #~ ldecrr =  _np.array([l.split() for l in f0[hs+8::9]]).astype(float)   
+    
+    tauintvaldays = tauintval/omega0/24/3600       # time steps in days
+    rgrid = _np.array(f0[4].split()).astype(float)  # radial grid values
+    simdays = ltausec[-1]/24/3600                  # simulation total time in days
+    
+    return rgrid, lsig_r, nsnaps, simdays, alpha
 
 
 ### MAIN ###
