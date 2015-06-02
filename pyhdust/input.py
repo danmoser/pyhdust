@@ -17,7 +17,7 @@ __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
 
     
-def makeDiskGrid(modn='01', mhvals=[1.5], hvals=[.6], rdvals=[18.6], mvals=None,
+def makeDiskGrid(modn='01', mhvals=[1.5], hvals=[60.], rdvals=[18.6], mvals=None,
     sig0vals=None, doFVDD=False, sBdays=None, sBfiles=None, selsources='*',
     alpha=.5, mu=.5, R0r=300, Mdot11=False, path=None):
     """
@@ -222,8 +222,8 @@ def makeDiskGrid(modn='01', mhvals=[1.5], hvals=[.6], rdvals=[18.6], mvals=None,
 
 
 def makeInpJob(modn='01', nodes=512, simulations=['SED'],
-    docases=[1,3], sim1=['step1'], sim2=['step1_ref'], composition=['pureH'],
-    controls=['controls'], gridcells=['grid'], observers=['observers'],
+    docases=[1,3], sim1='step1', sim2='step1_ref', composition='pureH',
+    controls='controls', gridcells='grid', observers='observers',
     images=[''], clusters=['job'], srcid='',
     walltime='24:00:00', wcheck=False, email='$USER@localhost', chkout=False,
     st1max=20, st1refmax=24, ctrM=False, touch=False, srcNf=None, path=None):
@@ -402,7 +402,7 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'],
             else:
                 nrsv = (nodes//512)*128
             wout[10] = wout[10].replace('128','{0}'.format(nrsv))
-            wout[4] = wout[4].replace('24:00:00','{0}'.format(walltime))
+            wout[5] = wout[5].replace('24:00:00','{0}'.format(walltime))
             wout[14] = wout[14].replace('hdust_bestar2.02.inp','{0}/{1}'.\
             format(proj,mod.replace('.txt','.inp')))
             f0.writelines('chmod +x {0}/{1}s/{2}\n'.format(proj,sel,outname))
@@ -517,7 +517,7 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'],
                 h+=1
             idx = _np.where(simchk==True)
             if len(idx[0])>0:
-                extra = 4+len(idx[0])
+                extra = 0+6*len(idx[0])
                 h = h+extra*48/nodes
             walltime = '{0}:0:0'.format(h)
         

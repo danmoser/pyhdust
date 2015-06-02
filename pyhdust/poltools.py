@@ -1158,6 +1158,15 @@ def filtraobs(data, r=20):
     idx = data['P']/data['sigP'] > r
     return data[idx]
 
+def loadpol(txt):
+    """ Load polarization txt file. """
+    dtb = _np.loadtxt(txt, dtype=str)
+    dtb = _np.core.records.fromarrays(dtb.transpose(), names='MJD,night,filt,\
+    calc,stdstars,dth,devdth,P,Q,U,th,sigP,sigth', formats='f8,{0},{0},f8,{0},\
+    f8,f8,f8,f8,f8,f8,f8,f8'.format(dtb.dtype))
+    return dtb
+    
+
 ### MAIN ###
 if __name__ == "__main__":
     pass

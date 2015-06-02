@@ -594,12 +594,15 @@ def gradColor(val, cmapn='jet', min=None, max=None, log=False):
     Good options, specially for lines, are 'jet', 'gnuplot', 'brg', 
     'cool' and 'gist_heat' (attention! Here max is white!). 
 
-    >>> for i in range(0,10):
-    >>>     cor = phc.gradColor(arange(10), cmapn='gist_heat')[i]
-    >>>     print cor
-    >>>     plt.plot(arange(5)+i, color=cor, label='GB='+('{:4.2f},'*3).format(*cor)[:-1])
-    >>>
-    >>> plt.legend(fontsize=8)
+    .. code-block:: python
+
+        cor = phc.gradColor(arange(10), cmapn='gist_heat')
+        for i in range(0,10):
+            cor = phc.gradColor(arange(10), cmapn='gist_heat')[i]
+            print cor
+            plt.plot(arange(5)+i, color=cor, label='GB='+('{:4.2f},'*3).format(*cor)[:-1])
+        
+        plt.legend(fontsize=8)
 
     .. image:: _static/phc_gradColor.png
         :width: 512px

@@ -29,6 +29,7 @@ try:
     import matplotlib.pyplot as _plt
     import scipy.interpolate as _interpolate
     from scipy.interpolate import interp1d as _interp1d
+    from scipy.optimize import curve_fit
 except:
     print('# Warning! matplotlib, scipy and/or pyfits module not installed!!!')
 
@@ -80,10 +81,9 @@ class Spec(object):
 
     >>> spdtb.loaddata()
     """
-    def __init__(self, wl=None, flux=None, lbc=None, hwidth=None, EW=_np.NaN,
-        EC=_np.NaN, VR=_np.NaN,
-        peaksep=_np.NaN, depthcent=_np.NaN, F0=_np.NaN, dateobs='', MJD=0.,
-        datereduc='', file=''):
+    def __init__(self, wl=None, flux=None, lbc=None, hwidth=1000., EW=_np.NaN,
+        EC=_np.NaN, VR=_np.NaN, peaksep=_np.NaN, depthcent=_np.NaN, F0=_np.NaN,
+        dateobs='', MJD=0., datereduc='', file=''):
         self.wl = wl
         self.flux = flux
         self.lbc = lbc
@@ -178,7 +178,7 @@ class Spec(object):
             self.count = len(self.data)
         return
 
-    def loadspec(self, file):
+    def loadspec(self, file, gaussfit=False):
         """Load a fits file (parameters `wl`, `flux`, `MJD`, `dateobs`,
         `datareduc` and `file`).
 
@@ -190,7 +190,8 @@ class Spec(object):
         (self.wl, self.flux, self.MJD, self.dateobs, self.datereduc, self.file)\
         = loadfits(file)
         (self.EW, self.EC, self.VR, self.peaksep, self.depthcent, self.F0) = \
-        analline(self.wl, self.flux, self.lbc, verb=False)
+        analline(self.wl, self.flux, self.lbc, hwidth=self.hwidth, verb=False,\
+        gaussfit=gaussfit)
         return
 
     def plotspec(self, outname=''):
@@ -472,8 +473,13 @@ def lineProf(x, flx, lbc, flxerr=_np.empty(0), hwidth=1000., ssize=0.05):
     '''    
     x = (x-lbc)/lbc*_phc.c.cgs*1e-5 #km/s
     idx = _np.where(_np.abs(x) <= hwidth)
-    flux = linfit(x[idx], flx[idx], yerr=flxerr, ssize=ssize)
-    return x[idx], flux
+    if len(flxerr) == 0:
+        flux = linfit(x[idx], flx[idx], ssize=ssize) #yerr=flxerr,
+        return x[idx], flux
+    else:
+        flux, flxerr = linfit(x[idx], flx[idx], yerr=flxerr[idx], ssize=ssize)
+        return x[idx], flux, flxerr
+    
 
 
 def linfit(x, y, ssize=0.05, yerr=_np.empty(0)):
@@ -487,6 +493,28 @@ def linfit(x, y, ssize=0.05, yerr=_np.empty(0)):
     para a media do contínuo. 'ssize' de .5 à 0 (exclusive).
 
     OUTPUT: y, yerr (if given)
+
+    .. code:: python
+
+        #Example:
+        import numpy as np
+        import matplotlib.pyplot as plt
+        import pyhdust.phc as phc
+        import pyhdust.spectools as spt
+        
+        wv = np.linspace(6500, 6600, 101)
+        flx = (np.arange(101)[::-1])/100.+1+phc.normgauss(4, x=wv, xc=6562.79)*5
+        
+        plt.plot(wv, flx)
+        normflx = spt.linfit(wv, flx)
+        plt.plot(wv, normflx, ls='--')
+        
+        plt.xlabel(r'$\lambda$ ($\AA$)')
+        plt.ylabel('Flux (arb. unit)')
+
+    .. image:: _static/spt_linfit.png
+        :align: center
+        :width: 500
     '''
     if ssize < 0 or ssize > .5:
         print('# Invalid ssize value...')
@@ -495,13 +523,40 @@ def linfit(x, y, ssize=0.05, yerr=_np.empty(0)):
     if ssize == 0:
         ssize = 1
     medx0, medx1 = _np.average(x[:ssize]),_np.average(x[-ssize:])
-    if ssize > 20:
+    if ssize > 9:
         medy0, medy1 = _np.median(y[:ssize]),_np.median(y[-ssize:])
     else:
         medy0, medy1 = _np.average(y[:ssize]),_np.average(y[-ssize:])
     new_y = medy0 + (medy1 - medy0) * (x - medx0) / (medx1 - medx0)
     idx = _np.where(new_y != 0)
     y[idx] = y[idx]/new_y[idx]
+    #~ 
+    #~ a = (medy1 - medy0)/(medx1 - medx0)
+    #~ b = -a*medx0+medy0
+    #~
+    #~ if ssize == 1:
+        #~ ssize = 2
+    #~ x0s = x[:ssize]
+    #~ y0s = y[:ssize]
+    #~ dif = [y0s[i]-(a*x0s[i]+b) for i in range(len(x0s))]
+    #~ idx = _np.argsort(_np.abs(dif))[:ssize/2]
+    #~ medx0 = _np.average(x0s[idx])
+    #~ if ssize/2 > 9:
+        #~ medy0 = _np.median(y0s[idx])
+    #~ else:
+        #~ medy0 = _np.average(y0s[idx])   
+    #~ x1s = x[-ssize:]
+    #~ y1s = y[-ssize:]
+    #~ dif = [y1s[i]-(a*x1s[i]+b) for i in range(len(x1s))]
+    #~ idx = _np.argsort(_np.abs(dif))[:ssize/2]
+    #~ medx1 = _np.average(x1s[idx])
+    #~ if ssize/2 > 9:
+        #~ medy1 = _np.median(y1s[idx])
+    #~ else:
+        #~ medy1 = _np.average(y1s[idx])    
+    #~ new_y = medy0 + (medy1 - medy0) * (x - medx0) / (medx1 - medx0)
+    #~ idx = _np.where(new_y != 0)
+    #~ y[idx] = y[idx]/new_y[idx]
     if len(yerr) == 0.:
         return y
     else:
@@ -522,57 +577,143 @@ def EWcalc(vels, flux, vw=1000):
     if len(outvels) < 3:
         #normflux = _np.ones(len(outvels))
         return ew
-    for i in range(len(outvels)-2):
+    for i in range(len(outvels)-1):
         dl = outvels[i+1]-outvels[i]
         ew += (1.-(normflux[i+1]+normflux[i])/2.)*dl
     return ew
 
 
-def ECcalc(vels, flux):
+def ECcalc(vels, flux, ssize=.05, gaussfit=False, doublegf=True):
     """
     Supoe que o fluxo jah estah normalizado, e vetores ordenad_os.
 
     Calcula o topo da emissao da linha, e retorna em que velocidade ela
     ocorre.
     """
-    idx = _np.where(_np.max(flux) == flux)
-    return flux[idx], vels[idx]
+    if not gaussfit:
+        idx = _np.where(_np.max(flux) == flux)
+        if len(idx[0]) > 1:
+            idx = idx[0][0]
+        return flux[idx], vels[idx]
+    else:
+        #check if there is a peak
+        ssize = int(ssize*len(vels))
+        if ssize == 0:
+            ssize = 1
+        contmax = _np.max(_np.append(flux[:ssize],flux[-ssize:]))
+        fluxmax = _np.max(flux)
+        if fluxmax < 1.01*contmax:
+            return 1., vels[-1]
+        # Define model function to be used to fit to the data above
+        def gauss(x, *p):
+            A, mu, sigma, cte = p
+            return A*_np.exp(-(x-mu)**2/(2.*sigma**2))+cte
+        #~
+        ivc = _np.abs(vels-0).argmin()
+        if doublegf:
+            i0 = _np.abs(flux[:ivc]-_np.max(flux[:ivc])).argmin()
+            i1 = _np.abs(flux[ivc:]-_np.max(flux[ivc:])).argmin()+ivc
+            p0 = [1., vels[i0], 40., 1.]
+            coeff0, tmp = curve_fit(gauss, vels[:ivc], flux[:ivc], p0=p0)
+            p1 = [1., vels[i1], 40., 1.]
+            coeff1, tmp = curve_fit(gauss, vels[ivc:], flux[ivc:], p0=p1)
+            EC = _np.max([coeff0[0]+coeff0[3],coeff1[0]+coeff1[3]])
+            vel = _np.abs(coeff0[1]/2)+_np.abs(coeff1[1]/2)
+            return EC, vel
+        else:
+            p0 = [1., 0, 40., 1.]
+            coeff0, tmp = curve_fit(gauss, vels[:ivc], flux[:ivc], p0=p0)
+            EC = coeff0[0]+coeff0[3]
+            return EC, coeff0[1]
 
-
-def VRcalc(vels, flux, vw=1000):
+def VREWcalc(vels, flux, vw=1000):
     """
     Supoe que o fluxo jah estah normalizado, e vetores ordenad_os.
 
     Calcula o ew para os dois lados (azul/vermelho) da linha, ajustando
-    a velocidade de repouso. 
+    a velocidade de repouso (TBD).
     """
     #calcula e aplica correcao de vel. repousp
     vc = 0.
     vels += vc
     #corta em vw, e faz o teste de tamanho
+    if len(vels) < 5:
+        vw = 0
     if vw > 0:
         idx = _np.where(_np.abs(vels) <= vw)
         outvels = vels[idx]
         normflux = flux[idx]
-    if len(vels) < 3:
-        ew0, ew1 = 0.
+    else:
+        ew0 = 0.
+        ew1 = 0.
         return ew0, ew1, vc
     #
     ivc = _np.abs(outvels-0).argmin()
     ew0 = 0.
-    for i in range(0,ivc+1-2):
+    for i in range(0,ivc):
         dl = outvels[i+1]-outvels[i]
         ew0 += (1.-(normflux[i+1]+normflux[i])/2.)*dl
     ew1 = 0.
-    for i in range(ivc,len(outvels)-2):
+    for i in range(ivc,len(outvels)-1):
         dl = outvels[i+1]-outvels[i]
         ew1 += (1.-(normflux[i+1]+normflux[i])/2.)*dl
     return ew0, ew1, vc
 
+def VRcalc(vels, flux, vw=1000, gaussfit=True, ssize=0.05):
+    """
+    Calcula o PICO para os dois lados (azul/vermelho) da linha, ajustando
+    a velocidade de repouso (TBD). 
+    """
+    #calcula e aplica correcao de vel. repousp
+    vc = 0.
+    vels += vc
+    #corta em vw, e faz o teste de tamanho
+    if len(vels) < 5:
+        vw = 0
+    if vw > 0:
+        idx = _np.where(_np.abs(vels) <= vw)
+        outvels = vels[idx]
+        normflux = flux[idx]
+    else:
+        ew0, ew1 = 0.
+        return ew0, ew1, vc
+    #
+    ivc = _np.abs(outvels-0).argmin()
+    if not gaussfit:
+        V = _np.max(normflux[:ivc])
+        R = _np.max(normflux[ivc:])
+    else:
+        #check if there is a peak
+        ssize = int(ssize*len(vels))
+        if ssize == 0:
+            ssize = 1
+        contmax = _np.max(_np.append(flux[:ssize],flux[-ssize:]))
+        fluxmax = _np.max(flux)
+        if fluxmax < 1.01*contmax:
+            #~ print('# Bad profile!')
+            return 0, 0, vc
+        # Define model function to be used to fit to the data above
+        def gauss(x, *p):
+            A, mu, sigma, cte = p
+            return A*_np.exp(-(x-mu)**2/(2.*sigma**2))+cte
+        #~
+        ivc = _np.abs(vels-0).argmin()
+        i0 = _np.abs(flux[:ivc]-_np.max(flux[:ivc])).argmin()
+        i1 = _np.abs(flux[ivc:]-_np.max(flux[ivc:])).argmin()+ivc
+        p0 = [1., vels[i0], 40., 1.]
+        coeff0, tmp = curve_fit(gauss, vels[:ivc], flux[:ivc], p0=p0)
+        p1 = [1., vels[i1], 40., 1.]
+        coeff1, tmp = curve_fit(gauss, vels[ivc:], flux[ivc:], p0=p1)
+        V = coeff0[0]+coeff0[3]
+        R = coeff1[0]+coeff1[3]
+    return V, R, vc
 
-def PScalc(vels, flux, vc=0., ssize=.05):
+def PScalc(vels, flux, vc=0., ssize=.05, gaussfit=False):
     """
     Calcula peak_separation
+
+    `doublegaussfit` = True, do it before and after zero velocity. False, use
+    maximum (default).
     """
     #check if there is a peak
     ssize = int(ssize*len(vels))
@@ -585,9 +726,20 @@ def PScalc(vels, flux, vc=0., ssize=.05):
     vels += vc
     ivc = _np.abs(vels-0).argmin()
     i0 = _np.abs(flux[:ivc]-_np.max(flux[:ivc])).argmin()
-    i1 = _np.abs(flux[ivc+1:]-_np.max(flux[ivc+1:])).argmin()+ivc+1
-    return vels[i0], vels[i1]
-
+    i1 = _np.abs(flux[ivc:]-_np.max(flux[ivc:])).argmin()+ivc
+    if not gaussfit:
+        return vels[i0], vels[i1]
+    else:
+        # Define model function to be used to fit to the data above
+        def gauss(x, *p):
+            A, mu, sigma, cte = p
+            return A*_np.exp(-(x-mu)**2/(2.*sigma**2))+cte
+        #~ 
+        p0 = [1., vels[i0], 20., 1.]
+        coeff0, tmp = curve_fit(gauss, vels[:ivc], flux[:ivc], p0=p0)
+        p1 = [1., vels[i1], 20., 1.]
+        coeff1, tmp = curve_fit(gauss, vels[ivc:], flux[ivc:], p0=p1)
+        return coeff0[1], coeff1[1]
 
 def DCcalc(vels, flux, vmax=None, vc=0., ssize=0.05):
     """
@@ -612,7 +764,8 @@ def DCcalc(vels, flux, vmax=None, vc=0., ssize=0.05):
     return flux[ivmax], flux[ivc]
 
 
-def analline(lbd, flux, lbdc, hwidth=1000, verb=True):
+def analline(lbd, flux, lbdc, hwidth=1000, verb=True, gaussfit=False,
+    doublegf=True):
     """
     Return the analysis of a line.
 
@@ -644,13 +797,13 @@ def analline(lbd, flux, lbdc, hwidth=1000, verb=True):
     flux = linfit(vels, flux)
     #Output:
     EW = EWcalc(vels, flux, vw=hwidth)
-    EC, velEC = ECcalc(vels, flux)
+    EC, velEC = ECcalc(vels, flux, gaussfit=gaussfit, doublegf=doublegf)
     ew0, ew1, vc = VRcalc(vels, flux, vw=hwidth)
     if ew1 == 0:
         VR = 1
     else:
         VR = ew0/ew1
-    vel0, vel1 = PScalc(vels, flux)
+    vel0, vel1 = PScalc(vels, flux, gaussfit=gaussfit)
     peaksep = vel1-vel0
     EC2, F0 = DCcalc(vels, flux, vmax=velEC)
     depthcent = EC2-F0
@@ -1188,31 +1341,58 @@ def overplotsubdirs2(path, star, limits=(6540,6600)):
     return
 
 
-def overPlotLineSeries(fullseds, obsers=[0], lbc=.6564606, formats=['png']):
+def overPlotLineSeries(fullseds, obsers=[0], lbc=.6564606, formats=['png'],
+    convgauss=0., frac=0., addsuf='', labels=None, hwidth=1000., ssize=.05):
     """Generate overplot spec. line from a HDUST mod list, separated by
     observers.
 
     Observers config. must be the same between models in `fullseds` list.
+
+    If `convgauss` > 0, do a gaussian convolution.
     """
+    if labels is None:
+        labels = ['']*len(fullseds)
     for obs in obsers:
         fig, ax = _plt.subplots()
+        fig2, ax2 = _plt.subplots()
         k = obsers.index(obs)
         for file in fullseds:
             i = fullseds.index(file)
-            sed2data = hdt.readfullsed2(file)
+            sed2data = _hdt.readfullsed2(file)
             obsdegs = (_np.arccos(sed2data[:,0,0])*180/_np.pi)[obsers]
             obsdegs = list(obsdegs)
-            (x,y) = lineProf(sed2data[obs,:,2], sed2data[obs,:,3], lbc=lbc)
+            (x,yo) = lineProf(sed2data[obs,:,2], sed2data[obs,:,3], lbc=lbc, hwidth=hwidth+3*convgauss, ssize=ssize)
+            y1 = yo
+            y2 = 0.
+            if convgauss > 0:
+                step = _np.min([x[j+1]-x[j] for j in range(len(x)-1)])
+                xn = _np.arange(-hwidth-3*convgauss,hwidth+3*convgauss+step,step)
+                cf = _phc.normgauss(convgauss, x=xn)
+                yo = _np.interp(xn, x, yo)
+                x = xn
+                y1 = yo*(1-frac)
+                y2 = _np.convolve(yo*frac,cf/_np.trapz(cf), 'same')
+                ax2.plot(x, y1, color=_phc.colors[_np.mod(i, len(_phc.colors))])
+                ax2.plot(x, y2, color=_phc.colors[_np.mod(i, len(_phc.colors))])
+            y = y1+y2
+            #~ y = linfit(x, y1+y2)
             if file == fullseds[0]:
-                ax.plot(x, y, label='{0:02.1f} deg.'.format(obsdegs[k]), \
+                ax.plot(x, y, label='{0:02.1f} deg. {1}'.format(obsdegs[k], labels[i]), \
                 color=_phc.colors[_np.mod(i, len(_phc.colors))])
+                ew0 = EWcalc(x, y, vw=hwidth)
             else:
-                ax.plot(x, y, color=_phc.colors[_np.mod(i, len(_phc.colors))])
-        ax.set_title(u'lbc = {0:.5f} $\mu$m'.format(lbc))
-        ax.legend()
+                ax.plot(x, y, color=_phc.colors[_np.mod(i, len(_phc.colors))], label=labels[i])
+        ewf = EWcalc(x, y, vw=hwidth)
+        ax.set_title(u'lbc = {0:.5f} $\mu$m, EW0 = {1:.2f}, EWf = {2:.2f}'.format(lbc, ew0, ewf))
+        ax.legend(fontsize=8)
         for fmt in formats:
-            fig.savefig('modsover_lbc{2:.4f}_obs{0:02.1f}.{1}'.format(obsdegs[k], fmt,\
-            lbc), transparent=True)
+            ax.set_ylim([.7,2.2])
+            ax.set_xlim([-hwidth,hwidth])
+            fig.savefig('modsover_lbc{2:.4f}_obs{0:02.1f}{3}.{1}'.format(obsdegs[k], fmt,\
+            lbc, addsuf), transparent=True)
+            ax2.set_xlim([-hwidth,hwidth])
+            fig2.savefig('modsover_lbc{2:.4f}_obs{0:02.1f}{3}Extra.{1}'.format(obsdegs[k], fmt,\
+            lbc, addsuf), transparent=True)
         _plt.close()
     return
 
@@ -1295,13 +1475,15 @@ def incrPlotLineFits(specs, lbc=.6564606, formats=['png'], hwidth=1500., \
         elif dateobs.find('/') > 0:
             dtobs = dateobs.split('/')[::-1]
             dateobs = "-".join(dtobs)
+        ls = 2*['-.'] + ['-'] + 3*['-.'] + 2*['-']
         ax.plot(x, y+0.1*i, label='{0}'.format(dateobs), \
-        color=_phc.colors[_np.mod(i, len(_phc.colors))])
+        color=_phc.colors[_np.mod(i, len(_phc.colors))], ls=ls[i])
     if yzero:
         ylim = ax.get_ylim()
         ax.plot([0,0], ylim, ls='-', color='Gray')
-    ax.set_title(u'lbc = {0:.5f} $\mu$m'.format(lbc))
+    ax.set_title(r'$\lambda_c$ = {0:.5f} $\mu$m'.format(lbc))
     ax.set_ylabel('Spaced spectra')
+    ax.set_xlabel(r'Velocity (km s$^{-1}$)')
     legend = ax.legend(loc=(1.05, .01), labelspacing=0.1)
     _plt.setp(legend.get_texts(),  fontsize='small')
     _plt.subplots_adjust(left=0.1, right=0.78, top=0.9, bottom=0.1)#, hspace=0.3, wspace=.3)   
@@ -1691,7 +1873,7 @@ def writeFits(flx, lbd, extrahead=None, savename=None, quiet=False, path=None,
     return
 
 
-def plotSpecData(dtb, limits=[56470.,56720.], civcfg=[1,'m',2013,1,1],
+def plotSpecData(dtb, limits=None, civcfg=[1,'m',2013,1,1],
     fmt=['png'], ident=None, lims=None, setylim=False, addsuf=''):
     """ Plot spec class database `vs` MJD e civil date
 
@@ -1708,6 +1890,7 @@ def plotSpecData(dtb, limits=[56470.,56720.], civcfg=[1,'m',2013,1,1],
 
     OUTPUT: Written image."""
     if isinstance(dtb, basestring):
+        print('# Loading dtb {0}'.format(dtb))
         dtb = _np.loadtxt(dtb)
     if ident is not None:
         idref = _np.unique(ident)
@@ -1740,7 +1923,8 @@ def plotSpecData(dtb, limits=[56470.,56720.], civcfg=[1,'m',2013,1,1],
         ax[0].legend(bbox_to_anchor=(1.05,1), loc=2, borderaxespad=0., prop={'size':6})
 
     if limits is None:
-        limits = ax[0].get_xlim()
+        #~ limits = ax[0].get_xlim()
+        limits = [dtb[0,0], dtb[-1,0]]
     else:
         ax[0].set_xlim(limits)
     mjd0, mjd1 = limits

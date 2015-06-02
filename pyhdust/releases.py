@@ -6,10 +6,14 @@ PyHdust auxiliary module: PyHdust releases control.
 History
 ============
 ..
-    v0.956 @ 2015-0
+    v0.957 @ 2015-0
     ----------------------
 
-v0.955 @ 2015-05-12
+v0.956 @ 2015-05-
+----------------------
+
+
+v0.955 @ 2015-05-15
 ----------------------
 - spt.fitzpatrick included
 - intt.img2fits and intt.data2fitscube rotation correction

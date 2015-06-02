@@ -155,27 +155,29 @@ def hdtpath():
     return fulldir[:fulldir[:-1].rfind('/') + 1]
 
 
-def doFilterConv(x0, y0, filter):
+def doFilterConv(x0, y0, filter, pol=False):
     """
     Return the convolved filter total flux for a given flux profile y0,
-    at wavelengths x0 (cm).
+    at wavelengths x0 (um).
 
-    INPUT: x0 lambda array, y0 flux array, filter (string)
+    INPUT: x0 lambda array (um), y0 flux array, filter (string)
 
     OUTPUT: summed flux (y0 units)
     """
     fdat = _np.loadtxt('{}/filters/{}.dat'.format(hdtpath(), filter.lower()), \
                        skiprows=1)
     fdat[:, 0] /= 10000.  # from Angs to microns
-    # interpfunc = interpolate.interp1d(fdat[:,0], fdat[:,1], kind='linear')
-    interpfunc = _interpolate.InterpolatedUnivariateSpline(fdat[:, 0], fdat[:, 1])
-
     idx = _np.where((x0 >= fdat[0, 0]) & (x0 <= fdat[-1, 0]))
     x0 = x0[idx]
     y0 = y0[idx]
-    y = interpfunc(x0) * y0
+    # interpfunc = interpolate.interp1d(fdat[:,0], fdat[:,1], kind='linear')
+    interpfunc = _interpolate.InterpolatedUnivariateSpline(fdat[:, 0], fdat[:, 1])
 
-    return _np.trapz(y, x0)
+    if not pol:
+        y = interpfunc(x0) * y0
+        return _np.trapz(y, x0)
+    else:
+        return phc.wg_avg_and_std(y0, 1/interpfunc(x0))[0]
 
 
 def doPlotFilter(pref, obs, filter, fsed2data, pol=False):
@@ -592,6 +594,13 @@ def mergesed2(models, Vrots, path=None):
             #_np.core.records.fromarrays(a.transpose(), names='a,b,c', formats='f4,f4,f4')
             #fullsed2 = fullsed2[fullsed2[:,2].argsort()]
             #fullsed2 = fullsed2[fullsed2[:,0].argsort()]
+            if _np.max(fullsed2[_np.isfinite(fullsed2)]) < 100000:
+                fmt = '%13.6f'
+            elif _np.max(fullsed2[_np.isfinite(fullsed2)]) < 1000000:
+                fmt = '%13.5f'
+            else:
+                print('# ERROR at max values of fullsed2!!!!!!!!')
+                raise SystemExit(0)
             fullsed2 = _np.core.records.fromarrays(fullsed2.transpose(), names= \
                 'MU,PHI,LAMBDA,FLUX,SCT FLUX,EMIT FLUX,TRANS FLUX,Q,U,Sig FLUX,\
                 Sig SCT FLUX,Sig EMIT FLUX,Sig TRANS FLU,Sig Q,Sig U',
@@ -608,9 +617,8 @@ def mergesed2(models, Vrots, path=None):
                                                                       'Sig FLUX', 'Sig FLUX', \
                                                                       'SigSCTFLX', 'SigEMITFLX', 'SigTRANSFLX',
                                                                       'Sig Q', 'Sig U')
-
             _np.savetxt(path + 'fullsed/fullsed_' + modelname.replace('.txt', '.sed2'), \
-                        fullsed2, header=hd, comments="", fmt='%13.6f', delimiter='')
+                        fullsed2, header=hd, comments="", fmt=fmt, delimiter='')
         else:
             print('# WARNING: No SED2 found for {0}'.format(model))
     return

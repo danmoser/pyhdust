@@ -218,10 +218,30 @@ def img2fits(img, lbd, xmax, dist, outname='model', rot=0., lum=0.,
     to BeAtlas is performed, and the final results are in 10^-17 erg/s/cm^2/Ang.
     If `lum` = 0, no change is done.
 
-    `coordsinf` = [RA,DEC].
-    Example: ['21:51:12.055', '+28:51:38.72']
+    `coordsinf` = [RA,DEC], as ['21:51:12.055', '+28:51:38.72']
 
     `deg` = angles in degrees (instead of radians).
+
+    Example: image at 21 cm, rotated 45 degrees, 2 AU long at 10 parsecs.
+
+    .. code-block:: python
+
+        img = np.arange(900).reshape((30,30))
+    
+        intt.img2fits(img, 21., [2*phc.au.cgs/phc.Rsun.cgs], 10, orient=45., 
+        coordsinf=['21:51:12.055', '-28:51:38.72'], ulbd='cm', deg=True)
+    
+    .. image:: _static/modelfits.png
+        :align: center
+
+    .. code-block:: python
+    
+        intt.img2fits(img, 21., [2*phc.au.cgs/phc.Rsun.cgs], 10, rot=45., 
+        coordsinf=['21:51:12.055', '-28:51:38.72'], ulbd='cm', deg=True, 
+        outname='model_rotated')
+
+    .. image:: _static/modelrotfits.png
+        :align: center
     """
     if deg:
         rot = rot*_np.pi/180
