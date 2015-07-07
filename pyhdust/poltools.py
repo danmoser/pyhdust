@@ -4,7 +4,8 @@
 PyHdust *poltools* module: polarimetry tools
 
 History:
--Added options `force` and `chknames` to genStdLog and genObjLog
+-grafpol working for *_WP1110....log files!
+-grafpol working for log/out files with more than a single star
 
 :co-author: Daniel Bednarski
 :license: GNU GPL v3.0 (https://github.com/danmoser/pyhdust/blob/master/LICENSE)
@@ -46,17 +47,17 @@ ccd = '---'
 # Dictionary for the tags entered by the user
 dictags = {0: ['bad modulation','bad-mod'],
            1: ['very bad modulation','very-bad-mod'],
-           2: ['wrong object suspected','wrong-obj?'],
-           3: ['polarimeter problem suspected','iagpol-prob?'],
-           4: ['another relevant problem','other-prob'],
+           2: ['some modulations are incompatible','incomp-mods'],
+           3: ['some observational problem/error','obs-prob'],
+           4: ['polarimeter problem suspected','iagpol-prob'],
+           5: ['another relevant problem','other-prob'],
           }
 
 # Dictionary for the tags assigned automatically
 # If you want to add another value, add inside verout routin also.
-dictests = {0: ['no reduced','no-red', 'E'],
-            1: ['std incompatible with the published','wrong-std?', 'W'],
-            2: ['sig < theorical_sig','s<theor_s', 'W'],
-            3: ['no standard in the night','no-std', 'W'],
+dictests = {0: ['std incompatible with the published','obs!=pub', 'W'],
+            1: ['sig >> theorical_sig','s>>theor_s', 'W'],
+            2: ['no standard in the night','no-std', 'W'],
            }
 
 
@@ -65,8 +66,10 @@ dictests = {0: ['no reduced','no-red', 'E'],
 #################################################
 #################################################
 def stdchk(stdname):
-    """ Check it the standard star name contains an known name, and return
-    its position in `padroes.txt` """
+    """
+    Check if the standard star name contains an known name, and return
+    its position in `padroes.txt`.
+    """
     lstds = list(_np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str,\
     usecols=[0]))
     chk = False
@@ -76,22 +79,68 @@ def stdchk(stdname):
             chk = True
             i = lstds.index(std)
     return chk, i
-    
 
 
+
 #################################################
 #################################################
 #################################################
-def readout(out):
+def countStars(objdir, f):
+    """
+    Count how many stars there are inside outfiles in 'objdir'
+    and filter f. Return 0 if there are no outfiles
+    """
+    louts = _glob('{0}/*_{1}_*.out'.format(objdir,f))
+    if len(louts) == 0:
+        counts = 0
+    else:
+        file0 = _np.loadtxt(louts[0], dtype=str, delimiter='\n', comments=None)
+        counts = len(file0)-1    # -1 because the header line
+
+    return counts
+
+
+
+#################################################
+#################################################
+#################################################
+def thtFactor(MJD):
+    """
+    Return the factor for polarization angle 'theta'. This factor
+    indicates when theta must be taken as 180-theta (factor==-1)
+    or +theta (factor==+1).
+
+    It's based on engine of IAGPOL polarimeter.
+    If MJD < 57082.5, return -1 (including MJD=-1, for no assigned
+    value); otherwise, return +1.
+
+    """
+
+    if float(MJD) < 57082.5: # before 2015, March 1st
+        factor=-1.
+    else:
+        factor=1.
+
+    return factor
+
+
+
+#################################################
+#################################################
+#################################################
+def readout(out, nstar=1):
     """
     Read the *.out file from IRAF reduction and return a float array
 
     Q   U        SIGMA   P       THETA  SIGMAtheor.  APERTURE  STAR
+
+    'nstar' == star number inside 'out' file (usefull when there are
+               more than a single star inside .out)
     """
     f0 = open(out)
     data = f0.readlines()
     f0.close()
-    data = data[1].split()
+    data = data[nstar].split()
     return [float(x) for x in data]
 
 
@@ -99,34 +148,23 @@ def readout(out):
 #################################################
 #################################################
 #################################################
-def readoutMJD(out, obj=None, verbose=True):
+def readoutMJD(out, nstar=1):
     """
     Read the 'out' file from IRAF reduction in a float array (fout),
     appending the MJD date and the angle of the beams from
-    calcite. Stack error/warning messages in a string (log).
+    calcite.
 
-    Return: fout, log    
-    - If unable to read 'out' file, assign fout as []
-    - If unable to read JD file, assign MJD value as -1
-    - If unable to read coords file, assign beams angle as -1
-
-    If verbose==True, print log also.
-    'obj' (object name) is optional and used only in error messages
+    'nstar' == star number inside 'out' file. PS: calcice angle
+            is allways evaluated using the first star coordinates.
     """
 
-    loglines = ''
     path = _phc.trimpathname(out)[0]
     outn = _phc.trimpathname(out)[1]
     try:
-        data = readout(out)
+        data = readout(out, nstar=nstar)
     except:
-        if obj != None:
-            loglines += '# ERROR: {0}: Can\'t open/read file {1}. Verify and write the values manually.\n'.format(obj,out)
-        else:
-            loglines += 'ERROR: Can\'t open/read file {0}. Verify and write the values manually.\n'.format(out)
-        if verbose:
-            print(loglines)
-        return [], loglines
+        print('# ERROR: Can\'t open/read file {0}. Verify and run again.\n'.format(out))
+        raise SystemExit(1)
         
     WP = False
     if '_WP' in outn:
@@ -145,12 +183,9 @@ def readoutMJD(out, obj=None, verbose=True):
         datei = float(date[npos-1].split()[-1])-2400000.5
         datef = float(date[npos-1+seq-1].split()[-1])-2400000.5
     except:
-#        print obj, f, _glob('{0}/JD_*_{1}'.format(path,f))
-        if obj != None:
-            loglines += '# CAUTION: {0}_{1}: No JD file found. Edit the value manually.\n'.format(obj,f)
-        else:
-            loglines += '# CAUTION: No JD file found as {0}/JD_*_{1}. Edit the value manually.\n'.format(path,f)           
-        date = -1
+        print(('# ERROR: Found *_{0}_*.out files, but none JD file found as {1}/JD_*_{2}. '+\
+                            'Verify and run again.\n').format(f,path,f))
+        raise SystemExit(1)
 
     if WP:
         ver = outn[-1]
@@ -164,11 +199,9 @@ def readoutMJD(out, obj=None, verbose=True):
         if len(coords) == 0:
             coords = _glob('{0}/coord_*_{1}_[0-9]*.ord'.format(path,f))
             if len(coords) == 0:
-                if obj != None:
-                    loglines += '# CAUTION: {0}_{1}: No COORDS file found. Edit the value manually.\n'.format(obj,f)
-                else:
-                    loglines += '# CAUTION: No COORDS file found as {0}/coord_*_{1}_*.ord. Edit the value manually.\n'.format(path,f)
-                ang = -1
+                print(('# ERROR: Found *_{0}_*.out files, but none COORD file found as '+\
+                        '{1}/coord_*_{2}_*.ord. Verify and run again.\n').format(f,path,f))
+                raise SystemExit(1)
 
     if len(coords) != 0:
         try:
@@ -177,79 +210,23 @@ def readoutMJD(out, obj=None, verbose=True):
             while ang < 0:
                 ang += 180.
         except:
-            if obj != None:
-                loglines += '# CAUTION: {0}_{1}: Can\'t open coords file. Edit the value manually.\n'.format(obj,f)
-            else:
-                loglines += '# CAUTION: Can\'t open coords file at {0}/coord_*_{1}_*.ord. Edit the value manually.\n'.format(path,f)
-            ang = -1
+            print('# ERROR: Can\'t open coords file {0}/coord_*_{1}_*.ord. Verify and run again.\n'.format(path,f))
+            raise SystemExit(1)
 
     if date != -1:
         if datei == datef:
             print('# Strange JD file for '+out)
         date = (datef+datei)/2
 
-    if verbose and loglines != '':
-        print(loglines)
 
-    return [float(x) for x in data]+[date]+[ang], loglines
+    return [float(x) for x in data]+[date]+[ang]
 
 
 
 #################################################
 #################################################
 #################################################
-def minErrBlk16(night,f,i):
-    """Retorna o menor erro num bloco de 16 posicoes polarimetricas
-    (i.e., arquivo de menor erro entre [08(i),08(i+9)] e [16(i)]).
-    """
-
-    err = _np.ones(3)
-    out = _np.zeros(3, dtype='|S256')
-
-    # First: Get 1st 8WP group
-    # Bednarski: substituí pra usar regexp e funcionar com o sufixo depois do filtro nos nomes.
-    ls = [night+'/'+fl for fl in _os.listdir('{0}'.format(night)) if _re.search(r'_{0}'. \
-                format(f,night) + r'_.*_?08' + r'{0:03d}\..\.out'.format(i), fl)]
-    if len(ls) > 0:
-        err[0] = float(readout(ls[0])[2])
-        out[0] = ls[0]
-        for outi in ls:
-            if float(readout(ls[0])[2]) < err[0]:
-                err[0] = float(readout(outi)[2])
-                out[0] = outi
-    
-    # Second: Get 2nd 8WP group
-    ls = [night+'/'+fl for fl in _os.listdir('{0}'.format(night)) if _re.search(r'_{0}'. \
-                format(f) + r'_.*_?08' + r'{0:03d}\..\.out'.format(i+8), fl)]
-    if len(ls) > 0:
-        err[1] = float(readout(ls[0])[2])
-        out[1] = ls[0]
-        for outi in ls:
-            if float(readout(ls[0])[2]) < err[0]:
-                err[1] = float(readout(outi)[2])
-                out[1] = outi
-
-    # Third: Get 16WP group
-    ls = [night+'/'+fl for fl in _os.listdir('{0}'.format(night)) if _re.search(r'_{0}'. \
-                format(f) + r'_.*_?16' + r'{0:03d}\..\.out'.format(i), fl)]
-    if len(ls) > 0:
-        err[2] = float(readout(ls[0])[2])
-        out[2] = ls[0]
-        for outi in ls:
-            if float(readout(ls[0])[2]) < err[0]:
-                err[2] = float(readout(outi)[2])
-                out[2] = outi
-
-    j = _np.where(err == _np.min(err))[0]
-
-    return err[j], out[j]
-
-
-
-#################################################
-#################################################
-#################################################
-def chooseout(objdir, obj, f, sigtol=lambda sig: 1.1*sig +0.00005):
+def chooseout(objdir, obj, f, nstar=1, sigtol=lambda sig: 1.2*sig):
     """
     Olha na noite, qual(is) *.OUT(s) de um filtro que tem o menor erro.
 
@@ -257,193 +234,142 @@ def chooseout(objdir, obj, f, sigtol=lambda sig: 1.1*sig +0.00005):
     Criterios definidos no anexo de polarimetria.
 
     minerror == True: recebe o out de menor erro em qualquer caso.
-                False: so ocorre se numero de posicoes <= 16.
 
-    sigtol: tolerancia para o sigma (válido apenas se houver < 16 posicoes
-    de lamina). Se ha N<=16 pos de lâmina e o erro do agrupamento de N
-    posicoes for menor que a funcao sigtol sobre o erro do agrupamento de menor erro,
-    entao usa o agrupamento com as N posicoes; do contrario usa o de menor erro.
-    Exemplo com 16 posicoes: erro do grupo de 16 posicoes == 0.000140;
-        menor erro == 0.000100. Se sigtol(sig) = 1.1*sig+0.00005, como
-        sigtol(0.000100) == 0.000160 > 0.000140, usa o agrupamento de 16 posicoes.
+    sigtol: condicao de tolerancia para pegar o agrupamento de menor erro.
+    Se o sigma do agrupamento com todas N posicoes for menor que a funcao
+    sigtol sobre o sigma do agrupamento de menor erro, entao usa o agrupamento
+    com as N posicoes; do contrario usa o de menor erro.
+    Exemplo com 16 posicoes: erro do grupo de 16 posicoes == 0.000230;
+        menor erro == 0.000200. Se sigtol(sig) = 1.2*sig, como
+        sigtol(0.000200) == 0.000240 > 0.000230, usa o agrupamento de 16 posicoes.
 
     O numero de posicoes eh baseado no numero de arquivos *.fits daquele
     filtro.
+
+    'nstar' == star number inside 'out' file (usefull when there are
+               more than a single star inside .out)
     """
 
-    # Verify if queryout was the function that has called this chooseout
-    if _getouterframes(_currentframe(), 2)[1][3] == 'queryout':
-        queryverif = True
-    else:
-        queryverif = False
 
-    loglines = ''
+    def minErrBlk16(serie='16001'):
+        """
+        Calculate the out with best error out of type *_f_*serie.?.out
+        for star number 'nstar' (where 'f' is the filter, 'serie' is
+        the five-numbers concerning to the WP positions (like 16001)
+        and ? is some char.
+
+        Return err, out. If not found, return 100.,''.
+        """
+
+        err = 100.
+        out = ''
+        ls = [objdir+'/'+fl for fl in _os.listdir('{0}'.format(objdir)) if _re.search(r'_{0}'. \
+                    format(f) + r'_.*_?{0}\..\.out'.format(serie), fl)]
+
+        if len(ls) > 0:
+            err = float(readout(ls[0],nstar=nstar)[2])
+            out = ls[0]
+            for outi in ls:
+                if float(readout(outi,nstar=nstar)[2]) < err:
+    #                print float(readout(outi,nstar=nstar)[2])
+                    err = float(readout(outi,nstar=nstar)[2])
+                    out = outi
+
+        return err, out
+
+
     npos = len(_glob('{0}/*_{1}_*.fits'.format(objdir,f)))
     louts = _glob('{0}/*_{1}_*.out'.format(objdir,f))
 
-    # Verify if there are more than one star inside outfiles (working only to the star #1)
-    for fout in louts:
-        tmpfile = open(fout)
-        count = sum(1 for line in tmpfile if line.rstrip('\n'))
-        tmpfile.close()
-        if count > 2:
-            print('\n# CAUTION: {0}_{1}: There are more than one star inside .out files.'\
-               .format(obj, f)+' Only star #1 was used! Check and add the others manually.')
-            loglines += '# CAUTION: {0}_{1}: There are more than one star inside .out files.'\
-               .format(obj, f)+' Only star #1 was used! Check and add the others manually.\n'
-            break
-
     # Check reduction
-    if len(louts) == 0:
-#        print obj, objdir, f
-        outs = []
-        if npos != 0:
-            tests, loglines = verout('', obj, f, verbose=True)
-            return [''], tests, loglines
-    #Se ateh 16 npos, pega o de menor erro
-    elif npos <= 16:
-        err0 = 10.
-        err1 = 10.
-        for outi in louts:
-            # Calculate min error for .out file with all WP positions
-            if outi.find('_{0:2d}'.format(npos)) != -1:
-                if float(readout(outi)[2]) < err0:
-                    err0 = float(readout(outi)[2])
-                    out0 = outi
-            # Calculate min error for the others .out files
-            else:
-                if float(readout(outi)[2]) < err1:
-                    err1 = float(readout(outi)[2])
-                    out1 = outi
-        if err0 == 10. and err1 == 10.:
-            print npos,louts
-            print('# ERROR: Something went wrong with *.out sigma values!')
-            raise SystemExit(1)
-        elif err1 == 10. or err0 <= sigtol(err1): outs = [out0]
-        elif err0 == 10. or err0 > sigtol(err1): outs = [out1]
+    if len(louts) == 0 and npos != 0:
+        print(('# ERROR: There are observations not reduced for {0}/{1}_{2}_*.fits. ' +\
+                            'Verify and run again.\n').format(objdir,obj,f))
+        raise SystemExit(1)
+
+    # Calculate the number of outfiles to be returned.
+    n=npos/16   # operacao em formato int!
+    rest = npos%16
+    if n!=0:
+        if rest == 0:
+            nlast = 16
+        elif rest >= 8:
+            n += 1
+            nlast = rest
+        elif rest < 8:
+            nlast = 16+rest
+    elif rest > 0:
+        n = 1
+        nlast = rest
+
+#    print n, rest, nlast
+    err = [100.]*n
+    outs = ['']*n
+    # n contem o numero de outs que serao obtidos
+    # nlast contem o numero de posicoes para o ultimo out
+
+    # Loop to get the n outfiles
+    for i in range(n):
+
+        # Get the best outfile with all WP positions.
+        if i+1 < n or (i+1==n and nlast >= 16):
+            serie='{0:02d}{1:03d}'.format(16,i*16+1)
         else:
-            print('# ERROR: It shouldn\'t enter here in chooseout!')
-            raise SystemExit(1)
-        
-    # Se a partir de 16, faz o seguinte criterio: dentro de npos%8, ve qual
-    # posicao inicial do block de 16 (ou 8+8) tem o menor erro, e joga no valor
-    # de i.
-    else:
-        i = 1
-        err1 = minErrBlk16(objdir,f,i)[0]
-        #outs = list(minErrBlk16(objdir,f,i)[1])
-        #print 'b',outs
-        # Case lamina position is among 17,18,...,23 , 25,26,...,31 , 33,34,...,39 , ...
-        for j in range(1,npos%8+1):
-            if minErrBlk16(objdir,f,j+1)[1] < err1:
-                err1 = minErrBlk16(objdir,f,j+1)[0]
-                i = j+1
-                #outs = list(minErrBlk16(objdir,f,j+1)[1])
-                #print 'c',outs
-        outs = []
-        while i+16-1 <= npos:
-            outi = minErrBlk16(objdir,f,i)[1][0]
-            if outi.find('_{0}_16'.format(f)) > -1:
-                outs += [outi]
+            serie='{0:02d}{1:03d}'.format(nlast,i*16+1)
+
+        err[i], outs[i] = minErrBlk16(serie)
+        errtmp = err[i]   # errtmp==100 if no outfiles were found by minErrBlk16
+
+        # Tests if there is some better group, with smaller error
+        for outi in louts:
+            if outi.find('_WP') == -1:
+                indx = outi.rfind('_')+1
             else:
-                for j in [i,i+8]:
-#                    ls = _glob('{0}/*_{1}_08{2:03d}*.out'.format(objdir,f,j))
-                    ls = [objdir+'/'+fl for fl in _os.listdir('{0}'.format(objdir)) \
-                            if _re.search(r'_{0}'.format(f) + r'_.*_?08' + \
-                                        r'{0:03d}\..\.out'.format(j), fl)]
-                    if len(ls) != 2:
-                        print(('# Warning! Check the *.out 2 '+\
-                        'versions for filter {0} of {1}').format(f,obj))
-                        if len(ls) == 1:
-                            out = ls[0]
-                        #else:
-                        #    raise SystemExit(1)
-                    else:
-                        if float(readout(ls[0])[2]) < float(readout(ls[0])[2]):
-                            out = ls[0]
-                        else:
-                            out = ls[1]
-                        outs += [out]
-            i += 16
-        #Se apos o bloco de 16 ha 8 pontos independentes, ve dentre eles qual
-        #tem o menor erro.
-        if i <= npos-8+1:
-            outi = [objdir+'/'+fl for fl in _os.listdir('{0}'.format(objdir)) \
-                            if _re.search(r'_{0}'.format(f) + r'_.*_?08' +  \
-                                r'{0:03d}\..\.out'.format(i), fl)]
-            if len(outi) == 0:
-                print('# ERROR! Strange *.out selection! Case 1')
-                print('# Probably 08pos files missing.')
-                print('{0}/*_{1}_[suf_]08{2:03d}*.out'.format(objdir,f,i))
-                print i,npos,npos-8+1,objdir,f
-                raise SystemExit(1)
+                indx = outi[:outi.find('_WP')].rfind('_')+1
+            combi = outi[indx:indx+5]
+            n1= int(combi[:2]) # First part of '16001', etc 
+            n2= int(combi[2:]) # Last part of '16001', etc 
+#            if i+1==n:
+#                print n1, n2
+            # Default case
+            if i+1 != n or (i+1 == n and nlast == 16):
+                # Get only the groups with independent data
+                if n2  >= 16*i+1 and n2 <= 16*i+1 + (16-n1):
+                    if float(readout(outi,nstar=nstar)[2]) < errtmp:
+                        errtmp = float(readout(outi,nstar=nstar)[2])
+                        outtmp = outi
+            # Case i==n (and nlast!=16)
             else:
-                err1 = float(readout(outi[0])[2])
-                if len(outi) == 1:
-                    outi = outi[0]
-                elif len(outi) == 2:
-                    if float(readout(outi[1])[2]) < err1:
-                        err1 = float(readout(outi[1])[2])
-                        outi = outi[1]
-                    else:
-                        err1 = float(readout(outi[0])[2])
-                        outi = outi[0]                
-                else:
-                    print('# ERROR! Strange *.out selection! Case 2')
-                    print('# Probably there is position-excluded POLRAP *.out...')
-                    print('{0}/*_{1}_[suf_]08{2:03d}*.out'.format(objdir,f,i))
-                    print i,npos,npos-8+1,outi,objdir,f
-                    raise SystemExit(1)
-            for j in range(i+1,npos+1-8+1):
-                tmp = [objdir+'/'+fl for fl in _os.listdir('{0}'.format(objdir)) \
-                                if _re.search(r'_{0}'.format(f) + r'_.*_?08' + \
-                                r'{0:03d}\..\.out'.format(j), fl)]
-                #print j, npos+1-8+1, len(tmp), tmp
-                if len(tmp) == 1:
-                    tmp = tmp[0]
-                elif len(tmp) == 2:
-                    if float(readout(tmp[1])[2]) < float(readout(tmp[0])[2]):
-                        tmp = tmp[1]
-                    else:
-                        tmp = tmp[0]
-                else:
-                    print('# ERROR! Strange *.out selection! Case 3')
-                    print('# Probably there is position-excluded POLRAP *.out...')
-                    print('{0}/*_{1}_[suf_]08{2:03d}*.out'.format(objdir,f,j))
-                    print i,npos,npos-8+1,tmp,outi
-                    raise SystemExit(1)                
-                if float(readout(tmp)[2]) < err1:
-                    err1 = float(readout(tmp)[2])
-                    outi = tmp
-            outs += [outi]
+#                print 'entrou1'
+#                print n1,n2,16*i+1
+                if n2  >= 16*i+1:
+                    if float(readout(outi,nstar=nstar)[2]) < errtmp:
+                        errtmp = float(readout(outi,nstar=nstar)[2])
+                        outtmp = outi
 
-    # If there is no fits files for such object/filter
-    if outs == []:
-#        print('********* HEY: Here didn\'t reduced? ')
-        return [''], [[]], loglines
-    else:
-        tests = []
-        for out in outs:
-            testout, logout = verout(out, obj, f, verbose=False)
-            tests += [testout]
-            if not queryverif:
-                loglines += logout
+        if errtmp != err[i] and err[i] > sigtol(errtmp):
+            outs[i] = outtmp
 
-    return outs, tests, loglines
+    # if some element of outs is '', chooseout has failed to find the best out in such 16-position serie.
+    # But don't panic. It can happen due some espurious .fits file
+#    print [out for out in outs if out != '']
+    return [out for out in outs if out != '']
 
 
 
 #################################################
 #################################################
 #################################################
-def verout(out, obj, f, verbose=True):
+def verout(out, obj, f, nstar=1, verbose=True, delta=2.5):
     """
     Function to do tests on outfile 'out' concerning to
-    object 'obj' in filter 'f'.
-    Tests: (1) test if file 'out' exists.
-           (2) test if P_pub for standards is compatible with
-               P_obs value.
-           (3) test if sig > sig_theorical.
+    star number 'nstar', object name 'obj' in filter 'f'.
+    Tests: (1) test if P_pub for standards is compatible with
+               P_obs value within 10 sigmas (10 because
+               std pol can changes with the time).
+           (2) test if sig < 3*sig_theorical.
+           (3) test if there are some standard star (only if
+                'obj' is a target star)
 
     - If verbose==True, show warnings in screen
     - In objdir==None, outfile is supposed in current dir
@@ -453,37 +379,41 @@ def verout(out, obj, f, verbose=True):
     the concerning value is assigned as \"True\"; otherwise,
     \"False\".
     """
+
     tests = [False]*len(dictests)
     loglines = ''
-#    if objdir != None:
-#        out = objdir+'/'+out
+    # The complex lines below is to extract 'path' from 'out' (considering) fixing consecutives '//'
+    if out[0] == '/':
+        path = '/'+'/'.join(s for s in [s for s in out.split('/') if s][:-2])
+    else:
+        path = '/'.join(s for s in [s for s in out.split('/') if s][:-2])
 
-    try:
-        [Q,U,sig,P,th,sigT,ap,star,MJD,calc],loglines = readoutMJD(out, obj=obj, verbose=False)
-        sig_ratio = float(sig)/float(sigT)
-        ztest = verStdPol(obj, f, float(P)*100, float(sig*100))
-    except:
-        tests[0] = True
-        loglines += '# ERROR: {0}_{1}: Reduction files were not found.\n'.format(obj,f)
-        if verbose:
-            print(loglines)
-        return tests, loglines
+    [Q,U,sig,P,th,sigT,ap,star,MJD,calc] = readoutMJD(out, nstar=nstar)
+    sig_ratio = float(sig)/float(sigT)
+    ztest = verStdPol(obj, f, float(P)*100, float(sig*100))
     
     # Some tests.
-    if ztest > 2.5:     # Case the object is not a standard, ztest==-1 and tests[0] remains False.
+    if ztest > 10.0:     # Case the object is not a standard, ztest==-1 and tests[0] remains False.
+        tests[0] = True
+    if sig_ratio > 3.:
         tests[1] = True
-    if sig_ratio <= 1.:
-        tests[2] = True
+    if not stdchk(obj)[0]:  # Only if object is not a standard star, tests if there exists some standard star for it
+        tests[2] = not chkStdLog(f, calc, path=path, delta=delta, verbose=False)
     
     # Print tests
-    if tests[1]:
+    if tests[0]:
         loglines += ('# WARNING: {0}_{1}: The standard has polarization only compatible '+\
                                   'within {2:.1f} sigma with the published value.\n').format(obj, f, ztest)
+    if tests[1]:
+        loglines += ('# WARNING: {0}_{1}: Polarization has sig >> theorical_sig ' +\
+                        '({2:.4f} >> {3:.4f}).\n').format(obj, f, sig*100, sigT*100)
     if tests[2]:
-        loglines += ('# WARNING: {0}_{1}: Polarization has sig < theorical_sig ' +\
-                        '({2:.4f} < {3:.4f}).\n').format(obj, f, sig*100, sigT*100)
+        loglines += ('# WARNING: {0}_{1}: Standard star not found yet '+\
+                                             '(calc. {2:.1f})\n').format(obj, f, calc)
+
     if verbose and loglines != '':
         print('\n'+loglines)
+
     
     return tests, loglines
 
@@ -492,133 +422,124 @@ def verout(out, obj, f, verbose=True):
 #################################################
 #################################################
 #################################################
-def queryout(obj, objdir, f, sigtol=lambda sig: 1.1*sig +0.005):
+def queryout(objdir, obj, f, nstar=1, sigtol=lambda sig: 1.2*sig):
     """
     Call chooseout for 'obj' at filter 'f' (in 'objdir'),
     print the graphs and query to the user if he wants
     to use the selected outs. If not, he musts answer
     what to use.
 
+    'nstar' == star number inside 'out' file (usefull when there are
+               more than a single star inside .out)
+
     """
 
-    loglines = ''
     _plt.close('all')
-    outs, tests, loglines = chooseout(objdir, obj, f, sigtol=sigtol)
-
+    outs = chooseout(objdir, obj, f, nstar=nstar, sigtol=sigtol)
     if outs == ['']:
-        return outs, tests, None, None, loglines
+        return outs, None, None
 
-    sortout = grafall(objdir, f, bestouts=outs)
+    # Initialize the components for each outfile
+    tags = [[]]*len(outs)
+    flag = ['']*len(outs)
 
-    while True:
-        print('\n'+'_'*80)
-        print(' {0:<10s} {1:<5s} {2:<7s} {3:<8s} {4:<10s} {5:<7s} {6:<s}'.format('Obj', 'Filt', \
-                'P(%)', 'sig(%)', 'sig/ThSig', 'ztest', 'out/num'))
+    for i in range(len(outs)):
 
-        for out in outs:
-            if out != '':
-                try:
-                    [Q,U,sig,P,th,sigT,ap,star,MJD,calc],loglixo = readoutMJD(out, obj=obj, verbose=False)
-                    sig_ratio = float(sig)/float(sigT)
-                    z = verStdPol(obj, f, float(P)*100, float(sig*100))
-                    numout = '(#{0})'.format(sortout.index(out))
-                except:
-                    print('ERROR! It shouldn\'t enter here in queryout!')
-                    raise SystemExit(1)
-
-                # Reassigns ztest value for printing
-                if z == -1:
-                    zstr = '-----'
-                else:
-                    zstr = '{0:.1f}'.format(z)
-                print(' {0:<10s} {1:<5s} {2:<7.4f} {3:<8.4f} {4:<10.3f} {5:<7s} {6:<s} {7:<s}'.\
-                         format(obj.upper(), f.upper(), float(P)*100, float(sig)*100, \
-                                sig_ratio, zstr, _phc.trimpathname(out)[1], numout))
-        print('_'*80+'\n')
-
-        # Get tests for outfiles
-        tests = []
-        logs = ''
-        # All out files shouldn't be '', unless the object was not reduced
-        # and the task should has enter in a previous 'if'
-        for out in outs:
-            if out == '':  # Case is not to use such out
-                tests += [[True] + [False]*(len(dictests)-1)]
-            else:          # Otherwise, test the out file
-                testout, logout = verout(out, obj, f, verbose=True)
-                tests += [testout]
-                logs += logout
-
+        sortout = []
         while True:
-            verif = raw_input('Use this(ese) out(s)? (y/n): ')
-            if verif not in ('y','Y','n','N'):
-                print('Invalid choise!')
-            else:
-                break
 
-        if verif in ('y', 'Y'):
-            break
-        elif verif in ('n', 'N'):
-            opt=''  # for the first iteration
-            for i in range(len(outs)):
+            _plt.close('all')
+            # Only in the first iteration stack the values in sortout
+            if sortout == []:
+                sortout = grafall(objdir, f, n=i+1 ,nstar=nstar, bestouts=[outs[i]], shortmode=True)
+            else: 
+                lixo = grafall(objdir, f, n=i+1 ,nstar=nstar, bestouts=[outs[i]], shortmode=True)
+
+            print('\n'+'_'*80)
+            print(' {0:<10s} {1:<5s} {2:<7s} {3:<8s} {4:<10s} {5:<7s} {6:<s}'.format('Obj', 'Filt', \
+                    'P(%)', 'sig(%)', 'sig/ThSig', 'ztest', 'out/num'))
+            try:
+                [Q,U,sig,P,th,sigT,ap,star,MJD,calc] = readoutMJD(outs[i], nstar=nstar)
+                sig_ratio = float(sig)/float(sigT)
+                z = verStdPol(obj, f, float(P)*100, float(sig*100))
+                numout = '(#{0})'.format(sortout.index(outs[i]))
+            except:
+                print('# ERROR: It shouldn\'t enter here in queryout!\n')
+                raise SystemExit(1)
+
+            # Reassigns ztest value for printing
+            if z == -1:
+                zstr = '-----'
+            else:
+                zstr = '{0:.1f}'.format(z)
+
+            # Prints the values
+            print(' {0:<10s} {1:<5s} {2:<7.4f} {3:<8.4f} {4:<10.3f} {5:<7s} {6:<s} {7:<s}'.\
+                     format(obj.upper(), f.upper(), float(P)*100, float(sig)*100, \
+                            sig_ratio, zstr, _phc.trimpathname(outs[i])[1], numout))
+            print('_'*80+'\n')
+
+            # Test the out file to print tests
+            testout, logout = verout(outs[i], obj, f, nstar=nstar, verbose=True)
+
+            while True:
+                verif = raw_input('Use this out? (y/n): ')
+                if verif not in ('y','Y','n','N'):
+                    print('Invalid choise!')
+                else:
+                    break
+
+            if verif in ('y', 'Y'):
+                break
+            elif verif in ('n', 'N'):
+                opt=''  # for the first iteration
                 while True:
-                    if len(outs) == 1:
-                        # At least one out file shall be attributed
-                        opt = raw_input('Type the out number: '.format(i, len(outs)))
-                    else:
-                        if opt != '0':
-                            # At least one out file shall be attributed
-                            if i == 0: opt = raw_input('Type the 1st out number: ')
-                            elif i == 1: opt = raw_input('Type the 2nd out number or \'0\' to finish: ')
-                            elif i == 2: opt = raw_input('Type the 3rd out number or \'0\' to finish: ')
-                            else: opt = raw_input('Type the {0}th out number or \'0\' to finish: '.format(i+1))
-                    # if opt == '0', don't use the outfiles for current and next i values of loop
-                    if opt == '0' and i != 0:
-                        outs[i] = ''
-                        break
+                    opt = raw_input('Type the out number: ')
                     # If opt is a valid value, assign the input number with the concerning out file
-                    elif opt in [str(j) for j in range(1,len(sortout))]:
+                    if opt in [str(j) for j in range(1,len(sortout)) if sortout[j] != '']:
                         outs[i] = sortout[int(opt)]
                         break
                     else:
                         print('Wrong value!')
                         opt=''
 
-    # Request what tags assign (flexible by means of dictags global dictionary)
-    print('\n# TAGS LIST\n  0: none')
-    for i in dictags.keys():
-        print('  {0}: {1}'.format(i+1, dictags[i][0]))
-    print('')
+        # Request what tags to assign (flexible through the dictags global dictionary)
+        print('\n# TAGS LIST\n  0: none')
+        for j in dictags.keys():
+            print('  {0}: {1}'.format(j+1, dictags[j][0]))
+        print('')
 
-    while True:
-        verif = True
-        tags = [False for i in dictags.keys()]
-        strin = raw_input('Select all tags that apply separated by commas (\'0\' for none): ')
-        if strin == '0':
-            flag='OK'
-            break
-        opts = strin.split(',')
-        for opt in opts:
-            if opt in [str(j+1) for j in dictags.keys()]:
-                opt = int(opt)-1
-                tags[opt] = True
-            else:
-                print('Invalid choise!')
-                verif = False
+        while True:
+            verif = True
+            tags[i] = [False for j in dictags.keys()]
+            strin = raw_input('Select all tags that apply separated by commas (\'0\' for none): ')
+            if strin == '0':
+                flag[i]='OK'
+                break
+            opts = strin.split(',')
+            for opt in opts:
+                if opt in [str(j+1) for j in dictags.keys()]:
+                    opt = int(opt)-1
+                    tags[i][opt] = True
+                else:
+                    print('Invalid choise!')
+                    verif = False
+                    break
+
+            # If some tag was selected, request a flag below
+            if verif:
+                verif2=''
+                while verif2 not in ('y','Y','n','N'):
+                    verif2 = raw_input('For you, this data should appear as usable? (y/n): ')
+                if verif2 in ('y','Y'):
+                    flag[i] = 'W'
+                else:
+                    flag[i] = 'E'
                 break
 
-        # If some tag was selected, request a flag below
-        if verif:
-            flag=''
-            while flag not in ('E','e','W','w','OK','ok','Ok'):
-                flag = raw_input('Select one flag for usage: [W]arning, [E]rror or [OK]: ')
-            flag = flag.upper()
-            break
-
-    loglines += logs
     _plt.close('all')
 
-    return outs, tests, tags, flag, loglines
+    return outs, tags, flag
 
 
 
@@ -720,22 +641,27 @@ def plotfrompollog(path, star, filters=None, colors=None):
     return
 
 
+
 #################################################
 #################################################
 #################################################
 # Bednarski: This function generates the graphs for all filter "filt" logfiles found inside "objdir"
-def grafall(objdir, filt, bestouts=[], onlyhigh=False):
+def grafall(objdir, filt, nstar=1, n=1, bestouts=[], shortmode=False):
     """
-    Multiple plot modulations for the object inside \'objdir\'
-    in filter \'filt\'.
+    Multiple plot modulations for the object inside 'objdir'
+    in filter 'filt'.
     Return a list 'sortout' with the log files sorted by plot
     number. Allways sortout[0]=='' and sortout[i] is the plot #i.
 
     Optional:
-        bestouts - list of outs which have least error to
+        bestouts - list of outs which have smaller error to
                    highlight in figures
-        onlyhigh - plot only the group with the highest number
-                   of WP? (True/False)
+        shortmode - case True, plot only the groups 16001, 08001,
+                    08009 (ver .1 and .2) and an eventual 7th group.
+        n - is concerning to the n-esim 16-sequence to use.
+            Exemple, if there are 40 WP positions, n=1 is to plot
+            the graphs for positions 1-16; n=2 is for 17-32;
+            n=3 is for 33-40.
     """
 
     # Receive a list of logfiles and return lists for each group of WP/version:
@@ -746,7 +672,7 @@ def grafall(objdir, filt, bestouts=[], onlyhigh=False):
     # Ex, sublogs == [[*16001.1.log], [*16001.2.log], [*0800[1-9].1.log], [*0800[1-9].2.log]]
     #      groups == [   [16, 1, .1],    [16, 1, .2],         [8, 9, .1],         [8, 9, .2]]
     #         ver == [          [.1],         [best],           [.1 ...],          [.2, ...]]
-    def combineout(logs):
+    def combineout(logs, n):
 
         logsplit, groups, sublogs, ver = [], [], [[]], [[]]
         
@@ -761,7 +687,12 @@ def grafall(objdir, filt, bestouts=[], onlyhigh=False):
                 indx = log.rfind('_')+1
             else:
                 indx = log[:log.find('_WP')].rfind('_')+1
-            logsplit += [[log[:indx], log[indx:]]]
+            combi = log[indx:indx+5]
+            n1= int(combi[:2])
+            n2= int(combi[2:])
+
+            if n2  >= 16*(n-1)+1 and n2 <= 16*(n-1)+1 + (16-n1):
+                logsplit += [[log[:indx], log[indx:]]]
 
         # Sort by lamina (high to low) -> version (including versions with _WP111100 ...)
         logsplit.sort(key=lambda x: [x[1][6:8],x[1][:]])
@@ -781,37 +712,124 @@ def grafall(objdir, filt, bestouts=[], onlyhigh=False):
                 groups += [[int(logsplit[i][1][0:2]), len(sublogs[j]), \
                                                         logsplit[i][1][5:-4]]]
                 if i != len(logsplit)-1:
-                    if onlyhigh and logsplit[i][1][0:2] != logsplit[i+1][1][0:2]:
-                        break
                     j+=1
                     sublogs[:] += [[]]
                     ver[:] += [[]]
-                    
+            
         return groups, sublogs, ver
         
 
     # Generate background color for the graphs, depending the reduction version
     def gencolour(ver):
 
-        if ver == 'best': bkg = '#ffbbbb'
-        elif ver == '.1': bkg = '#f3ffd8'
-        elif ver == '.2': bkg = '#e3ecf9'
-        elif ver == '.3': bkg = '#ffeee5'
-        elif ver[:4] == '.1_WP': bkg = '#f3ffd3'
-        elif ver[:4] == '.2_WP': bkg = '#e3ecf4'
-        elif ver[:4] == '.3_WP': bkg = '#faeee7'
+        if ver == 'best': bkg = '#d3dcf9'
+        elif ver == '.1' or ver[:4] == '.1_WP': bkg = '#f0ffe0'
+        elif ver == '.2' or ver[:4] == '.2_WP': bkg = '#f0fff0'
         else: bkg = '#f5f5f5'
 
         return bkg
+        
 
+    # Plot graphs for 'shortmode' and return 'sortout' list. Shortmode consists in the
+    # processing of groups nn001.1, nn001.2 (nn is the number of WP), 08001.1, 08001.2,
+    # 08009.1, 08009.2 and an eventual 7th element in 'bestouts' variable.
+    # The variable returned is a list with the outfiles displayed, sorted in same order
+    # that the showed.
+    # The input variables are exactly the outuput sublogs and groups from combineout subroutine.
+    def gengraphshort (sublogs, groups):
+
+        # Variables below are to mark the positions in lists
+        pos8ver1, pos8ver2, posnver1, posnver2 = -1,-1,-1,-1
+        maxver1, maxver2 = 0,0
+
+        # Find index for 16 and 08 groups positions
+        for i in range(len(groups)):
+            # Only shows the groups with 8 positions if there are 08001 to 08009 files
+            if groups[i][0] == 8 and groups[i][1] == 9 and groups[i][2] == '.1':
+                pos8ver1 = i
+                if maxver1 < 8:
+                    maxver1 = 8
+            elif groups[i][0] > maxver1 and groups[i][2] == '.1':
+                maxver1 = groups[i][0]
+                posnver1 = i
+            if groups[i][0] == 8 and groups[i][1] == 9 and groups[i][2] == '.2':
+                pos8ver2 = i
+                if maxver2 < 8:
+                    maxver2 = 8
+            elif groups[i][0] > maxver2 and groups[i][2] == '.2':
+                maxver2 = groups[i][0]
+                posnver2 = i
+
+        # Set the logfiles in a first time
+        tlogs = ['']*6
+        tver = ['.1','.2']*3
+        if posnver1 != -1:
+            tlogs[0] = sublogs[posnver1][0]
+        if posnver2 != -1:
+            tlogs[1] = sublogs[posnver2][0]
+        if pos8ver1 not in (-1,posnver1):
+            tlogs[2], tlogs[4] = sublogs[pos8ver1][0], sublogs[pos8ver1][8]
+        if pos8ver2 not in (-1,posnver2):
+            tlogs[3], tlogs[5] = sublogs[pos8ver2][0], sublogs[pos8ver2][8]
+
+        # Set the bestout
+        if bestouts != []:
+            if len(bestouts) > 1:
+                print('# WARNING: grafall: more than one value of best .out passed as' + \
+                ' parameter in short mode. Only using the first one...\n')
+            if bestouts[0][:-4]+'.log' not in tlogs:
+                tlogs += [bestouts[0][:-4]+'.log']
+                tver += ['best']
+            else:
+                tver[tlogs.index(bestouts[0][:-4]+'.log')] = 'best'
+
+        # Set the logfiles once, erasing some void components
+        if (posnver1 == -1 and pos8ver1 == -1) or (posnver2 == -1 and pos8ver2 == -1):
+            logs = [tlogs[i] for i in range(len(tlogs)) if tlogs[i] != '']
+            ver = [tver[i] for i in range(len(tlogs)) if tlogs[i] != '']
+            mode='lin'
+        else:
+            mode='col'
+            logs = []
+            ver = []
+            if posnver1 != -1 or posnver2 != -1:
+                logs += tlogs[:2]
+                ver += tver[:2]
+            if pos8ver1 != -1 or pos8ver2 != -1:
+                logs += tlogs[2:6]
+                ver += tver[2:6]
+            if len(tlogs) == 7:
+                logs += tlogs[6:]
+                ver += tver[6:]
+
+        # Run gengraphl4!
+        gengraphl4(logs,ver,1,align=mode)
+
+        # Return the 'sortlog' file (sorted outfiles with extension '.log')
+        return [''] + [log[:-4]+'.out' for log in logs if log != '']
+        
     
     # Generate graphs for the cases nlog <= 8
-    def gengraphl4(logs, ver, count):
+    # align: align by lines or columns? 1234//5678 ('lin') or 1357//2468 ('col')?
+    def gengraphl4(logs, ver, count, align='lin'):
 
-        nlin = 2
-        ncol = len(logs)/2
+        if align=='lin':
+            if len(logs) < 4:
+                nlin, ncol = 1, len(logs)
+            else:
+                nlin, ncol = 2, 4
+        elif align=='col':
+            if len(logs) == 1:
+                nlin, ncol = 1, 1
+            else:
+                nlin, ncol = 2, len(logs)/2
+                if len(logs)%2 != 0:
+                    ncol += 1
+        else:
+            print('# ERROR: align mode {0} is not valid in grafall! Graphs not displayed!'.format(align))
+            return            
         if ncol > 4:
-            print("Error: one figure was not displayed")
+            print('# ERROR: {0} figure was not displayed by grafall'.format(len(logs)-8))
             return
 
         if   ncol == 1: linit=0.15
@@ -826,19 +844,46 @@ def grafall(objdir, filt, bestouts=[], onlyhigh=False):
         grids += [ _plt.GridSpec(2*nlin, ncol, hspace=0, wspace=0.35, \
                         top=0.81, bottom=0.06, left=linit, right=0.95) ]
         ax = []
-        for j in range(ncol):
-            ax += [ fig.add_subplot(grids[0][0,j]),\
-                    fig.add_subplot(grids[0][1,j]) ]
-        for j in range(ncol):
-            ax += [ fig.add_subplot(grids[1][2,j]),\
-                    fig.add_subplot(grids[1][3,j]) ]
+        if align == 'lin':
+            for j in range(ncol):
+                if logs[j] != '':
+                    ax += [ fig.add_subplot(grids[0][0,j]),\
+                            fig.add_subplot(grids[0][1,j]) ]
+                else:
+                    ax += [None,None]
+            for j in range(len(logs)-ncol):
+                if logs[j+ncol] != '':
+                    ax += [ fig.add_subplot(grids[1][2,j]),\
+                            fig.add_subplot(grids[1][3,j]) ]
+                else:
+                    ax += [None,None]
+        elif align == 'col':
+            for j in range(ncol):
+                if logs[2*j] != '':
+                    ax += [ fig.add_subplot(grids[0][0,j]),\
+                            fig.add_subplot(grids[0][1,j]) ]
+                else:
+                    ax += [None,None]
+                if 2*j+1 < len(logs) and logs[2*j+1] != '':
+                    ax += [ fig.add_subplot(grids[1][2,j]),\
+                            fig.add_subplot(grids[1][3,j]) ]
+                else:
+                    ax += [None,None]
+
+        k=0
         for j in range(len(logs)):
-            grafpol(logs[j], fig, ax[2*j], ax[2*j+1])
-            ax[2*j].set_axis_bgcolor(gencolour(ver[j]))
-            ax[2*j+1].set_axis_bgcolor(gencolour(ver[j]))
-            ax[2*j].text(0.85, 0.85, '#{0:<2d}'.format(count+j), \
-                horizontalalignment='left', verticalalignment='center', style='italic', \
-                transform=ax[2*j].transAxes, fontsize=20, color='red')
+            # Case of even logs, breaks after the last one
+#            print logs[j]
+            if len(logs) <= j:
+                break
+            elif logs[j] != '':
+                grafpol(logs[j], nstar, fig, ax[2*j], ax[2*j+1])
+                ax[2*j].text(0.85, 0.85, '#{0:<2d}'.format(count+k), \
+                    horizontalalignment='left', verticalalignment='center', style='italic', \
+                    transform=ax[2*j].transAxes, fontsize=20, color='red')
+                ax[2*j].set_axis_bgcolor(gencolour(ver[j]))
+                ax[2*j+1].set_axis_bgcolor(gencolour(ver[j]))
+                k += 1
             
         _plt.show(block=False)
 
@@ -900,7 +945,7 @@ def grafall(objdir, filt, bestouts=[], onlyhigh=False):
 
             # Generates the plots on the axes
             for j in range(0,nlog):
-                grafpol(logs[j+12*i], fig, ax[2*j], ax[2*j+1])
+                grafpol(logs[j+12*i], nstar, fig, ax[2*j], ax[2*j+1])
                 ax[2*j].set_axis_bgcolor(gencolour(ver[j]))
                 ax[2*j+1].set_axis_bgcolor(gencolour(ver[j]))
                 ax[2*j].text(0.85, 0.85, '#{0:<2d}'.format(count+j+i*12), \
@@ -912,63 +957,68 @@ def grafall(objdir, filt, bestouts=[], onlyhigh=False):
 
     logs = _glob('{0}/*_{1}_*.log'.format(objdir, filt))
     if logs == []:
-        print('ERROR: log files not found to plot. May the file names \
+        print('# ERROR: log files not found to plot. May the file names \
               {0}/*_{1}_*.log are wrong!'.format(objdir, filt))
         return 1
-    gps, sublogs, ver = combineout(logs)
-    nlog = sum([len(subb) for subb in sublogs])
-#    print(gps, sublogs, ver)
+    gps, sublogs, ver = combineout(logs, n)
 
-    # If a few logfiles, tries to use only one window
-    if nlog <= 8:
-        test=True
-        # Test if all groups have two reduction versions
-        if len(gps)%2 == 0:
-            for i in range(0,len(gps),2):
-                # [:2] and not [:1] because gps is a list of lists
-                if gps[i][:2] != gps[i+1][:2]:
-                    test=False
-                    break
-        else:
-            test=False
-        if test:
-            tver = []
-            tlogs = []
-            for i in range(len(sublogs)):
-                tlogs += sublogs[i]
-                tver += ver[i]
-            gengraphl4(tlogs, tver, 1)
-    # Otherwise, loop on lamina groups
+    # 1) Case short mode
+    if shortmode:
+        sortout = gengraphshort(sublogs, gps)
+
+    # 2) Case long mode
     else:
-        i = 0
-        count = 1       # variable to print the graph number
-        while i < len(gps):
-            nout = 0
-            iver = []
-            ilogs = []
-#            print i
-            for j in range(i,len(gps)):
-                if nout <= 8 and gps[j][:2] == gps[i][:2]:
-                    nout += gps[j][1]
-                    iver += ver[j]
-                    ilogs += sublogs[j]
-                else:
-                    break
-            # if isn't last gps element, nout<=8 and number of versions is 2, 4, 6, etc
-            if j != len(gps)-1 and nout <= 8 and (j-i)%2 == 0:
-                gengraphl4(ilogs,iver,count)
-                count += nout
-                i = j
-#                print('entrou 1')
+        nlog = sum([len(subb) for subb in sublogs])
+        # If a few logfiles, tries to use only one window
+        if nlog <= 8:
+            test=True
+            # Test if all groups have two reduction versions
+            if len(gps)%2 == 0:
+                for i in range(0,len(gps),2):
+                    # [:2] and not [:1] because gps is a list of lists
+                    if gps[i][:2] != gps[i+1][:2]:
+                        test=False
+                        break
             else:
-                gengraphm4(sublogs[i],ver[i],count)
-                count += len(sublogs[i])
-#                print('entrou 2')
-                i += 1
+                test=False
+            if test:
+                tver = []
+                tlogs = []
+                for i in range(len(sublogs)):
+                    tlogs += sublogs[i]
+                    tver += ver[i]
+                gengraphl4(tlogs, tver, 1)
+        # Otherwise, loop on lamina groups
+        else:
+            i = 0
+            count = 1       # variable to print the graph number
+            while i < len(gps):
+                nout = 0
+                iver = []
+                ilogs = []
+    #            print i
+                for j in range(i,len(gps)):
+                    if nout <= 8 and gps[j][:2] == gps[i][:2]:
+                        nout += gps[j][1]
+                        iver += ver[j]
+                        ilogs += sublogs[j]
+                    else:
+                        break
+                # if isn't last gps element, nout<=8 and number of versions is 2, 4, 6, etc
+                if j != len(gps)-1 and nout <= 8 and (j-i)%2 == 0:
+                    gengraphl4(ilogs,iver,count)
+                    count += nout
+                    i = j
+    #                print('entrou 1')
+                else:
+                    gengraphm4(sublogs[i],ver[i],count)
+                    count += len(sublogs[i])
+    #                print('entrou 2')
+                    i += 1
 
-    sortout = ['']
-    for ilogs in sublogs:
-        sortout += [log[:-4]+'.out' for log in ilogs]
+        sortout = ['']
+        for ilogs in sublogs:
+            sortout += [log[:-4]+'.out' for log in ilogs]
 
     # returns the sorted logs/outs, with '.log' changed to '.out'
     return sortout
@@ -978,12 +1028,14 @@ def grafall(objdir, filt, bestouts=[], onlyhigh=False):
 #################################################
 #################################################
 #################################################
-def grafpol(filename, fig=None, ax1=None, ax2=None, save=False, extens='png'):
+def grafpol(filename, nstar=1, fig=None, ax1=None, ax2=None, save=False, extens='png'):
     """
     Program to plot the best adjust and its residuals of IRAF reduction.
     'filename' is the path to the .log output file from reduction.
+    nstar is the star number inside out/log files to be plotted.
 
     NEW: Working for *_WP1110....log files!
+    NEW (2): Working for logfiles with more than a single star!
 
     Two working modes:
 
@@ -1000,49 +1052,85 @@ def grafpol(filename, fig=None, ax1=None, ax2=None, save=False, extens='png'):
     
     def readlog(filename):
 
-        file = _np.loadtxt(filename, dtype=str, delimiter='\n')
+        try:
+            # CAUTION! BLANK LINES WILL BE SKIPPED!
+            file0 = _np.loadtxt(filename, dtype=str, delimiter='\n', comments=None)
+        except:
+            print('# ERROR: File {0} not found!\n'.format(filename))
+            raise SystemExit(1)
+
+        [lixo,lixo,lixo,lixo,lixo,lixo,lixo,lixo,MJD,lixo] = \
+                readoutMJD(filename.replace('.log','.out'), nstar=nstar)
+        MJD = float(MJD)
+
 
         # npts: number of WP valid to be plotted.
         # totpts: used for the total number of WP (for the *.2_WP11110...1.out)
-        npts = int(file[9].split()[-1])
-        tnpts = int(file[8].split()[-1])
-        delta = float(file[14].split()[-1])
+        nstars = int(file0[6].split()[-1])
+        npts = int(file0[9].split()[-1])    # Blank lines were SKIPPED!
+        tnpts = int(file0[8].split()[-1])
+        delta = float(file0[14].split()[-1])
         sigma = 1.
+        isinstar=False
 
-        # Bednarski: corrected (25 -> 20, because the blank lines had been ignorated by
+        if nstars < nstar:
+            print('# ERROR: File {0} has {1} stars (you have selected star #{2}).'.\
+                                                        format(filename, nstars, nstar))
+            raise SystemExit(1)
+            
+        # Bednarski: corrected (25 -> 19, because the blank lines had been ignorated by
         #            np.loadtext function)
-        for i in range(20, len(file)):
-            if 'APERTURE' in file[i]:
-                sig = float(file[i+2].split()[2])
+        for i in range(19, len(file0)):
+            if 'STAR # {0:d}'.format(nstar) in file0[i]:
+                isinstar=True
+            elif 'STAR # {0:d}'.format(nstar+1) in file0[i]:
+                break
+            if isinstar and 'APERTURE' in file0[i]:
+                sig = float(file0[i+2].split()[2])
                 if sig < sigma:
                     sigma = sig
 
+                    fator = thtFactor(MJD)
+                    thet = fator * float(file0[i+2].split()[4])
+                    while thet >= 180:
+                        thet -= 180
+                    while thet < 0:
+                        thet += 180
+                        
+                    '''
                     # Bed: Os Q e U sao os abaixo, conforme copiei da rotina graf.cl
-                    if float(file[i+2].split()[4]) < 0:
-                        thet = - float(file[i+2].split()[4])
+                    if float(file0[i+2].split()[4]) < 0:
+                        thet = - float(file0[i+2].split()[4])
                     else:
-                        thet = 180. - float(file[i+2].split()[4])
+                        thet = 180. - float(file0[i+2].split()[4])
+                    '''
 
                     # Recalculating the new QU parameters
-                    Q = float(file[i+2].split()[3])*_np.cos(2.*thet*_np.pi/180.)
-                    U = float(file[i+2].split()[3])*_np.sin(2.*thet*_np.pi/180.)
+                    Q = float(file0[i+2].split()[3])*_np.cos(2.*thet*_np.pi/180.)
+                    U = float(file0[i+2].split()[3])*_np.sin(2.*thet*_np.pi/180.)
+#                    print Q, U, thet, float(file0[i+2].split()[3])
                     n = npts/4 
                     if npts%4 != 0:
                         n = n+1
                     P_pts = []
                     for j in range(n):
-                        P_pts += file[i+4+j].split()
-#                    print P_pts
+                        P_pts += file0[i+4+j].split()
+                    # I think the P values are in reverse order inside Pereyra's .log files:
+                    # Uncomment the two lines below if you want to show the ascending x-axes
+                    # (and not descending x-axes) and comment the next two lines.
+#                    P_pts = _np.array(P_pts, dtype=float)[::-1]
+#                    th_pts = fator*(22.5*_np.arange(1,tnpts+1)+delta/2.)
                     P_pts = _np.array(P_pts, dtype=float)
-                    th_pts = 22.5*_np.arange(tnpts)-delta/2.
+                    th_pts = -fator*(22.5*_np.arange(tnpts)-delta/2.)
                     j = filename.find('.')
                     delta2 = int(filename[-2+j:j])-1
                     # Bed: Funcionando para nlam >= 10  para impressão correta
+#                    str_pts = map(str, _np.arange(1,tnpts+1)+delta2)[::-1]
                     str_pts = map(str, _np.arange(1,tnpts+1)+delta2)
 
                     # Case _WP11110...1.log file
                     if npts != tnpts:
-                        refs = file[9].split()[3:-2]
+                        refs = file0[9].split()[3:-2]
                         rm = [j for j in range(tnpts) if refs[j] == '0']
                         th_pts = _np.delete(th_pts, rm)
                         str_pts = _np.delete(str_pts, rm)
@@ -1053,10 +1141,10 @@ def grafpol(filename, fig=None, ax1=None, ax2=None, save=False, extens='png'):
             P_pts = th_pts = _np.arange(1)
             str_pts = ['0','0']
 
-        return(Q, U, sigma, P_pts, th_pts,str_pts)
+        return(Q, U, sigma, P_pts, th_pts, str_pts, nstars)
 
 
-    def plotlog(ax1, ax2, Q,U,sigma,P_pts,th_pts,str_pts,filename):    
+    def plotlog(ax1, ax2, Q,U,sigma,P_pts,th_pts,str_pts,filename):
 
         # extract the group number
         WPpos = filename.find('_WP')
@@ -1080,11 +1168,13 @@ def grafpol(filename, fig=None, ax1=None, ax2=None, save=False, extens='png'):
         ax1.plot(th_det, P_det*100)
         ax1.plot([th_det[0],th_det[-1]], [0,0], 'k--')    
         ax1.set_xlim([th_pts[0]-4,th_pts[-1]*1.02+3])
+#        ax1.set_xlim([th_pts[0]-4,th_pts[-1]*1.02+3][::-1])
 #        ax1.set_ylim([min(P_pts*100)*1.1, max(P_pts*100)*1.1])
 
         ax2.set_xlabel('WP position', size=9)
         ax2.set_ylabel('Residuals', size=9)
         ax2.set_xlim([th_pts[0]-4,th_pts[-1]*1.02+3])
+#        ax2.set_xlim([th_pts[0]-4,th_pts[-1]*1.02+3][::-1])
         ax2.plot([th_det[0],th_det[-1]], [0,0], 'k--')
 
         _plt.setp(ax1.get_xticklabels(), visible=False)
@@ -1120,14 +1210,17 @@ def grafpol(filename, fig=None, ax1=None, ax2=None, save=False, extens='png'):
         ax1 = _plt.subplot(2, 1, 1)
         ax2 = _plt.subplot(2, 1, 2, sharex=ax1)
         _plt.subplots_adjust(hspace = 0)
-        Q, U, sigma, P_pts, th_pts, str_pts = readlog(filename)
+        Q, U, sigma, P_pts, th_pts, str_pts, nstars = readlog(filename)
         plotlog(ax1,ax2, Q,U,sigma,P_pts,th_pts,str_pts,filename)
         if save:
-            _plt.savefig(filename.replace('.log','.'+extens))
+            if nstars == 1:
+                _plt.savefig(filename.replace('.log','.'+extens))
+            else:
+                _plt.savefig(filename.replace('.log','_star{0}.{1}'.format(nstar,extens)))
         else:
             _plt.show()
     else:
-        Q, U, sigma, P_pts, th_pts, str_pts = readlog(filename)
+        Q, U, sigma, P_pts, th_pts, str_pts, nstars = readlog(filename)
         plotlog(ax1,ax2, Q,U,sigma,P_pts,th_pts,str_pts,filename)
             
     return
@@ -1177,14 +1270,17 @@ def readTests(tests, tags=None, flag=None):
     the flag value ('OK','E','W')
 
     'tags' and 'flag' are optional and are concerning to
-    another tags already assigned and current flag.
-    If they are given as input, return 'tags'+tags
-    concerning to 'tests' list and the resulting flag.
+    another tags already assigned and current flag. The flag
+    returned is the worst flag between that and those found
+    (e.g., if input 'flag' is 'W' and tests results on flag
+    'OK', return flag 'W'; if tests results on flag 'E',
+    return 'E'). Also, if they are given as input, return
+    'tags'+tags concerning to 'tests' list.
     """
 
     tagstr = ''
 
-    # Generate a string for such tags
+    # Generate a string for such tests tags
     for i in dictests.keys():
         if tests[i]:
             if tagstr != '':
@@ -1217,95 +1313,6 @@ def readTests(tests, tags=None, flag=None):
 
     
 
-#################################################
-#################################################
-#################################################
-def genStdLog(path, subdirs, stds, sigtol=lambda sigm: 1.1*sigm + 0.00005, \
-                    autochoose=False):
-    """
-    Generate Standards Log
-    """
-
-    if len(stds) != len(subdirs):
-        print('\nERROR: polt.genStdLog() NOT RUNNED! (len(stds) != len(subdirs))')
-        writeLog(path, '# ERROR: polt.genStdLog() NOT RUNNED! (len(stds) != len(subdirs))\n')
-        return 1
-
-    lstds = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str)
-
-    i=0
-    lines=''
-    loglines = ''
-    maxsize = 7  # var to align the columns (initial value concerning to 'outfile' header)
-
-    # Loop on list of standards
-    for i in range(len(stds)):
-        obj = stds[i]
-        objdir = subdirs[i]
-        if obj == '':
-            continue
-#        print('\n\n**{0}**: outfile(s) with least error '.format(obj.upper()))
-        for f in filters:
-            if autochoose:
-                outs, tests, logs = chooseout('{0}/{1}'.format(path,objdir), obj, f, sigtol=sigtol)
-                tags=None
-                flag=None
-            else:
-                outs, tests, tags, flag, logs = queryout(obj, '{0}/{1}'.format(path,objdir), f, sigtol=sigtol)
-            loglines += logs
-
-            logs=''
-            # Loop on outfiles
-            for j in range(len(outs)):
-                if outs[j] != '':
-                    [Q,U,sig,P,th,sigT,ap,star,MJD,calc],loglixo = readoutMJD(outs[j],obj=obj,verbose=False)
-                    tagstr, flagout = readTests(tests[j], tags=tags, flag=flag)
-                    lines += '{0:12.6f} {1:>7s} {2:>10s} {3:>4s} {4:>5.1f} {5:<s} {6:>5s}  {7:<s}\n'.\
-                                format(MJD, ccd, obj, f, float(calc), ':::'+_os.path.relpath(outs[j], path)+':::', flagout, tagstr)
-                    if len(_os.path.relpath(outs[j], path)) > maxsize:
-                        maxsize = len(_os.path.relpath(outs[j], path))
-
-            # Only the last 'logs' (concerning to the outs[-1]), not each one
-#            if logs != '':
-#                loglines += logs
-
-            # Case all components of outs are the void string '' (object not reduced)
-            # tests != [[]] is to filter objects+filter not observed
-            if outs.count('') == len(outs) and tests != [[]]:
-                tagstr, flagout = readTests([True] + [False]*(len(dictests)-1), tags=tags, flag=flag)
-                lines += '{0:12.6f} {1:>7s} {2:>10s} {3:>4s} {4:>5.1f} {5:<s} {6:>5s}  {7:<s}\n'.\
-                        format(-1, ccd, obj, f, -1, ':::'+objdir+'/-----:::', flagout, tagstr)
-                if len(objdir)+6 > maxsize:
-                    maxsize = len(objdir)+6
-
-    if lines == '':
-        loglines += '# WARNING! No valid standards were found by polt.genStdLog().\n'
-    else:
-        lines = '{:12s} {:>7s} {:>10s} {:4s} {:>5s} {:<s} {:>5s}  {:<s}\n'.format('#MJD','ccd',\
-        'target','filt','calc',':::outfile:::','flag','tags')+lines
-
-    # Realign columns
-    lines_tmp = lines.split('\n')
-    lines = ''
-    for line in lines_tmp:
-        if line == '':
-            continue
-#        print line
-        line = line.split(':::')
-#        print line
-        lines += line[0][:]
-        lines += line[1][:].rjust(maxsize+2)
-        lines += line[2][:]
-        lines += '\n'
-    
-    f0 = open('{0}/std.dat'.format(path), 'w')
-    f0.writelines(lines)
-    f0.close()
-    writeLog(path, loglines)
-
-    return 0
-
-
     
 #################################################
 #################################################
@@ -1322,10 +1329,6 @@ def chkStdLog(f, calc, path=None, delta=2.5, verbose=True):
     beams for one same calcite.
     """
 
-    # If calcite is not known, standard star can't be applied
-    if calc == -1:
-        return False
-
     loglines = ''
     if path == None:
         path = _os.getcwd()
@@ -1335,24 +1338,27 @@ def chkStdLog(f, calc, path=None, delta=2.5, verbose=True):
     try:
         std = _np.loadtxt('{0}/std.dat'.format(path), dtype=str)
     except:
-        std = _np.array([''], dtype=str)
+        std = _np.array([], dtype=str)
 
     # Verify if std.dat has more than one line. Caso no, do reshape (transform
     # list type [] in [[]] for further compatibility)
     if _np.size(std) != 0:
-        # If std is of type [] -- one line with 6 elements (5 collums + 6th element for data type):
-        if type(std[0]) != _np.ndarray and _np.size(std) == 8:
-            std = std.reshape(-1,8)
-        elif (type(std[0]) == _np.ndarray and _np.size(std[0]) != 8) \
+        # If std is of type [] -- one line with 9 elements:
+        if type(std[0]) != _np.ndarray and _np.size(std) == 9:
+            std = std.reshape(-1,9)
+        elif (type(std[0]) == _np.ndarray and _np.size(std[0]) != 9) \
                                 or (type(std[0]) != _np.ndarray and _np.size(std) != 8):
-            verif = False
-            loglines += '# ERROR: polt.chkStdLog() not runned! Incompatible number '+ \
-                                                            'of collumns in `std.dat`.\n'
+            # Save loglines only if this function was called by genLog
+            if _getouterframes(_currentframe(), 2)[1][3] == 'genLog':
+                writeLog(path, '# ERROR: polt.chkStdLog() not runned! Incompatible number '+ \
+                                                            'of columns in `std.dat`.\n')
+            else:
+                print('# ERROR: Incompatible number of columns in `std.dat`.\n')
 
     foundstd = False
     for stdi in std:
-    # If stdi is reduced and is not to use ('Error' flag)
-        if stdi[6] == 'E' and 'no-red' not in stdi[7]:
+    # Skip if stdi is not to use ('Error' flag)
+        if stdi[7] == 'E':
             continue
         fst = stdi[3]
         calcst = float(stdi[4])
@@ -1363,9 +1369,6 @@ def chkStdLog(f, calc, path=None, delta=2.5, verbose=True):
         print(('# WARNING: Standard star not found for filt. {0} and '+\
             'calc. {1:.1f}\n').format(f, calc))
 
-    if loglines != '':
-        writeLog(path, loglines)
-
     return foundstd
 
 
@@ -1374,6 +1377,10 @@ def chkStdLog(f, calc, path=None, delta=2.5, verbose=True):
 #################################################
 #################################################
 def writeLog(path, strin):
+    """
+    Append 'strin' string into 'path'/polt.log file
+
+    """
     
     f0 = open('{0}/polt.log'.format(path), 'a')
     f0.writelines(strin)
@@ -1386,96 +1393,186 @@ def writeLog(path, strin):
 #################################################
 #################################################
 #################################################
-def genObjLog(path, subdirs, tgts, sigtol=lambda sigm: 1.1*sigm + 0.00005, \
+def genLog(path, subdirs, tgts, fileout, sigtol=lambda sigm: 1.2*sigm, \
                     autochoose=False, delta=2.5):
     """
-    Generate Objects Log.
-    Must be runned after genStdLog, because uses its results.
+    Generate the .dat file with data of objects 'tgts[:]' inside
+    'path'/'subdirs[:]' directories
 
-    delta is the allowed variation for the angles between
-    the two beams for one same calcite.
+    Save the results in 'path'/'fileout'
+    Usable to generate target and standard lists (obj.dat and std.dat)
+
+    delta: tolerance for the angle between the two beams of calcite.
+           If abs(angle1 - angle2) < delta, both observations 1 and 2
+           are assigned as the same calcite.
+    sigtol: tolerance to use the outfiles with all WP instead the
+            out with best error. Must be a 'function' that receives
+            a pol sigma value (in decimal system and NOT in per cent,
+            i.e., value from 0. to 1., where 1 is a 100% polarized
+            source) and return the maximum sigma for which to ignore
+            the best out. Its format must be a 'python's lambda function'!
+            The default values is sigtol=lambda sigm: 1.2*sigm, while
+            the old value was sigtol=lambda sigm: 1.1*sigm + 0.00005. If
+            you want to take just the groups with all WP, and none other,
+            you can specify sigtol=lambda sigm: 1000.*sigm, for example.
+    autochoose: choose best outfiles automatically, without
+                interaction?
     """
 
+    if fileout.split('.')[0] == 'std':
+        typ = 'standards'
+    elif fileout.split('.')[0] == 'obj':
+        typ = 'targets'
+    else:
+        typ = fileout
+
+#    if mode not in ('std','obj'):
+#        print('\n# ERROR: mode \'{0}\' not valid (it\'s only valid \'std\' and \'obj\')'.format(mode))
+#        return 1
+
     if len(tgts) != len(subdirs):
-        print('\n# ERROR: polt.genObjLog() NOT RUNNED! (len(tgts) != len(subdirs))')
-        writeLog(path, '# ERROR: polt.genObjLog() NOT RUNNED! (len(tgts) != len(subdirs))\n')
+        print('\n# ERROR: polt.genLog() NOT RUNNED for {0} (len(tgts) != len(subdirs))'.format(typ))
+        writeLog(path, '# ERROR: polt.genLog() NOT RUNNED for {0}! (len(tgts) != len(subdirs))\n'.format(typ))
         return 1
 
-    loglines = ''
-    lines=''
-    i=0
-    maxsize = 7 
+    continuerun = False
+    # Checking if there exists a previous run and if it has generated unless one line.
+    if _os.path.exists('{0}/{1}.tmp'.format(path,fileout)) and len(_np.loadtxt('{0}/{1}.tmp'.format(path,fileout), dtype=str)) != 0:
+        opt = ''
+        while opt not in ('y','Y','n','N'):
+            opt = raw_input(('There exists one file concerning to a uncompleted previous run for {0}. ' +\
+                            'Do you want to continue where it was stopped? (y/n): ').format(typ))
+            if opt in ('y','Y'):
+                continuerun = True
 
-    # Loop on list of standards
+    if not continuerun:
+        f0 = open('{0}/{1}.tmp'.format(path,fileout), 'w')
+        f0.writelines('{:12s} {:>7s} {:>10s} {:4s} {:>5s} {:<s} {:>4s} {:>5s}  {:<s}\n'.format('#MJD','ccd',\
+                    'target','filt','calc',':::outfile:::','star','flag','tags'))
+        f0.close()
+    # Case continuing a previous run, identify the stars already runned
+    else:
+        ftemp = _np.loadtxt('{0}/{1}.tmp'.format(path,fileout), dtype=str)
+        odone=[]  # odone and fdone is lists that contains subdirectories, star number and the
+        fdone=[]                                    # filters already done by the previous run
+        # If there is just one line, transform np array type [] for [[]]
+        if len(ftemp) > 0 and len(ftemp[-1]) != 9:
+            ftemp = ftemp.reshape(-1,9)
+        for line in ftemp:
+            # [3:] because the firsts characters are ':::'
+            objct = [line[5].split('/')[0][3:], line[6]]
+            if objct in odone:
+                indx = odone.index(objct)
+                fdone[indx] += [line[3]]
+            else:
+                odone += [objct]
+                fdone += [[line[3]]]
+#        print odone
+#        print fdone
+        
+    # Loop on list of objects
     for i in range(len(tgts)):
+
         obj = tgts[i]
         objdir = subdirs[i]
         if obj == '':
             continue
-#        print('\n\n**{0}**: outfile(s) with least error '.format(obj.upper()))
+
+        # Loop on filters
         for f in filters:
-            if autochoose:
-                outs, tests, logs = chooseout('{0}/{1}'.format(path,objdir), obj, f, sigtol=sigtol)
-                tags=None
-                flag=None
-            else:
-                outs, tests, tags, flag, logs = queryout(obj, '{0}/{1}'.format(path,objdir), f, sigtol=sigtol)
-            loglines += logs
 
-            logs=''
-            # Loop on outfiles
-            for j in range(len(outs)):
-                if outs[j] != '':
-                    [Q,U,sig,P,th,sigT,ap,star,MJD,calc],loglixo = readoutMJD(outs[j],obj=obj,verbose=False)
-                    # Verify if there are standard star and assigns the 3rd element of tests list
-                    tests[j][3] = not chkStdLog(f, calc, path=path, delta=delta, verbose=False)
-                    if tests[j][3] == True:
-                        loglines += ('# WARNING: {0}_{1}: Standard star not found '+\
-                                        '(calc. {2:.1f})\n').format(obj, f, calc)
-                    tagstr, flagout = readTests(tests[j], tags=tags, flag=flag)
-                    lines += '{0:12.6f} {1:>7s} {2:>10s} {3:>4s} {4:>5.1f} {5:<s} {6:>5s}  {7:<s}\n'.\
-                                format(MJD, ccd, obj, f, float(calc), ':::'+_os.path.relpath(outs[j], path)+':::', flagout, tagstr)
-                    if len(_os.path.relpath(outs[j], path)) > maxsize:
-                        maxsize = len(_os.path.relpath(outs[j], path))
+            nstars = countStars('{0}/{1}'.format(path,objdir), f)
 
-            # Only the last 'logs' (concerning to the outs[-1]), not each one
-#            if logs != '':
-#                loglines += logs
+            # Check if there exist fits files for object/filter, but not .out files (target not reduced)
+            if nstars == 0 and len(_glob('{0}/{1}/*_{2}_*.fits'.format(path,objdir,f))) > 0:
+                print(('\n# ERROR: {0}_{1}: Fits files found, but the object was not reduced! ' +\
+                        'Reduce and run again...\n\n - HINT: if these fits files compose some ' +\
+                        'non-valid serie but need be kept in, move them for a subdir {2}/tmp, ' +\
+                        'and hence, the path will not be sweept by routine.\n').format(objdir,f,objdir))
+                raise SystemExit(1)
+            # Check if there exist some .out file for such object/filter, but not the fits files
+            elif nstars != 0 and len(_glob('{0}/{1}/*_{2}_*.fits'.format(path,objdir,f))) == 0:
+                print(('\n# ERROR: {0}_{1}: Fits files not found, but were found another *_{2}_* files. ' +\
+                        'It can be by three reasons:\n'+\
+                        '  1) Fits files missing (in this case, search by them and add in such directory);\n' +\
+                        '  2) The found *_{3}_* files can be \'spurious files\' (in this case, delete them);\n' +\
+                        '  3) The preffix of *_{4}_*.fits files can be different of the rest of *_{5}_* ' +\
+                        'files (in this case, rename them).\n').format(objdir,f,f,f,f,f))
+                raise SystemExit(1)
 
-            # Case all components of outs are the void string '' (object not reduced)
-            # tests != [[]] is to filter objects+filter not observed
-            if outs.count('') == len(outs) and tests != [[]]:
-                tagstr, flagout = readTests([True] + [False]*(len(dictests)-1), tags=tags, flag=flag)
-                lines += '{0:12.6f} {1:>7s} {2:>10s} {3:>4s} {4:>5.1f} {5:<s} {6:>5s}  {7:<s}\n'.\
-                        format(-1, ccd, obj, f, -1, ':::'+objdir+'/-----:::', flagout, tagstr)
-                if len(objdir)+6 > maxsize:
-                    maxsize = len(objdir)+6
+            # Working for more than a single star inside .out files
+            for nstar in range(1,nstars+1):
 
-    if lines == '':
-        loglines += '# WARNING: No valid targets were found by polt.genObjLog().\n'
+                loglines = ''
+                # Skip if the object/filter was done already in a previous run
+                if continuerun and [objdir,str(nstar)] in odone and \
+                                                f in fdone[odone.index([objdir,str(nstar)])]:
+                    continue
+                elif nstars == 1:
+                    obj = tgts[i]   # It is needed this line here again
+                else:
+                    while True:
+                        obj = raw_input(('Type a name for star #{0:d} (of {1:d}) ' +\
+                               'inside {2} dir, filter {3}: '). format(nstar, nstars, objdir, f))
+                        if obj != '' and ' ' not in obj and '#' not in obj and ':' not in obj:
+                            loglines += '# WARNING: {0}_{1}: There are more than one star inside .out files.'\
+                                     .format(objdir, f)+' Star #{0:d} was named as {1}.\n'.format(nstar, obj)
+                            break
+
+                if autochoose:
+                    outs = chooseout('{0}/{1}'.format(path,objdir), obj, f, nstar=nstar, sigtol=sigtol)
+                    tags=None
+                    flag=None
+                else:
+                    outs, tags, flag = queryout('{0}/{1}'.format(path,objdir), obj, f, nstar=nstar, sigtol=sigtol)
+                    print('')
+                        
+                # Loop on outfiles
+                lines = ''
+                for j in range(len(outs)):
+                    if outs[j] != '':
+                        [Q,U,sig,P,th,sigT,ap,star,MJD,calc] = readoutMJD(outs[j], nstar=nstar)
+                        tests, logs = verout(outs[j], obj, f, nstar=nstar, verbose=False, delta=delta)
+                        loglines += logs
+                        if tags!=None and flag!=None:
+                            tagstr, flagout = readTests(tests, tags=tags[j], flag=flag[j])
+                        else:
+                            tagstr, flagout = readTests(tests, tags=None, flag=None)
+                        
+                        # It is needed to open and close in each object
+                        lines += ('{0:12.6f} {1:>7s} {2:>10s} {3:>4s} {4:>5.1f} {5:<s} {6:>4d} ' \
+                                    '{7:>5s}  {8:<s}\n').format(MJD, ccd, obj, f, float(calc), \
+                                    ':::'+_os.path.relpath(outs[j], path)+':::', nstar, flagout, tagstr)
+
+                # Write lines after process all outfiles for object in one filter
+                if lines != '':
+                    writeLog(path, loglines)
+                    f0 = open('{0}/{1}.tmp'.format(path,fileout), 'a')
+                    f0.writelines(lines)
+                    f0.close()
+
+
+    # Read fileout+'.tmp', realign columns to fileout and delete fileout+'.tmp'
+    fin = open('{0}/{1}.tmp'.format(path,fileout), 'r')
+    lines = [li.split(':::') for li in fin.readlines()]
+    fin.close()
+    if len(lines) == 1:
+        writeLog(path, '# WARNING: No valid {0} were found by polt.genLog().\n'.format(typ))
     else:
-        lines = '{:12s} {:>7s} {:>10s} {:4s} {:>5s} {:<s} {:>5s}  {:<s}\n'.format('#MJD','ccd',\
-        'target','filt','calc',':::outfile:::','flag','tags')+lines
+        maxsize = max([len(li[1]) for li in lines])
+        linesout = []
+        for i in range(len(lines)):
+            if lines[i] in ('','\n'):
+                continue        
+            linesout += [lines[i][0]+lines[i][1].rjust(maxsize+2)+lines[i][2]]
+        fout = open('{0}/{1}'.format(path,fileout), 'w')
+        fout.writelines(linesout)
+        fout.close()
+    try:
+        _os.unlink('{0}/{1}.tmp'.format(path,fileout))
+    except:
+        pass
 
-    # Realign columns
-    lines_tmp = lines.split('\n')
-    lines = ''
-    for line in lines_tmp:
-        if line == '':
-            continue
-#        print line
-        line = line.split(':::')
-#        print line
-        lines += line[0][:]
-        lines += line[1][:].rjust(maxsize+2)
-        lines += line[2][:]
-        lines += '\n'
-
-    f0 = open('{0}/obj.dat'.format(path), 'w')
-    f0.writelines(lines)
-    f0.close()
-
-    writeLog(path, loglines)
 
     return 0
 
@@ -1484,65 +1581,70 @@ def genObjLog(path, subdirs, tgts, sigtol=lambda sigm: 1.1*sigm + 0.00005, \
 #################################################
 #################################################
 #################################################
-def genAllLog(path=None, delta=2.5, sigtol=lambda sigm: 1.1*sigm + 0.00005, autochoose=False):
+def genAllLog(path=None, sigtol=lambda sigm: 1.2*sigm, autochoose=False, delta=2.5):
     """
     Generate the std.dat/obj.dat for one reduced night
     
     path: path of night
-    delta: allowed variation for the angles between the two
-           beams for one same calcite.
-    sigtol: tolerance to use the outfiles with all WP instead
-            the out with best error. Must be a 'function' that
-            receives a sigma value and return the maximum
-            sigma for which ignore the best out. Python's
-            lambda function can be usefull (e.g., default is
-            sigtol=lambda sig: 1.1*sig + 0.00005).
+    delta: tolerance for the angle between the two beams of calcite.
+           If abs(angle1 - angle2) < delta, both observations 1 and 2
+           are assigned as the same calcite.
+    sigtol: tolerance to use the outfiles with all WP instead the
+            out with best error. Must be a 'function' that receives
+            a pol sigma value (in decimal system and NOT in per cent,
+            i.e., value from 0. to 1., where 1 is a 100% polarized
+            source) and return the maximum sigma for which to ignore
+            the best out. Its format must be a 'python's lambda function'!
+            The default values is sigtol=lambda sigm: 1.2*sigm, while
+            the old value was sigtol=lambda sigm: 1.1*sigm + 0.00005. If
+            you want to take just the groups with all WP, and none other,
+            you can specify sigtol=lambda sigm: 1000.*sigm, for example.
     autochoose: choose best outfiles automatically, without
                 interaction?
-
     """
 
     if path == None:
         path = _os.getcwd()
-    try:
-        _os.remove(path+'/polt.log')
-    except:
-        pass
-    
-    # Verifies if any log exists
-    if _os.path.exists('{0}/std.dat'.format(path)) or _os.path.exists('{0}/obj.dat'.format(path)):
-        
-        print('\nCAUTION: obj.dat and/or std.dat file already exists for {0} night. '.\
-        format(path) + 'Are you sure to continue, overwriting all manual' + \
-        'changes on these files? (y/n):')
-        while True:
-            verif = raw_input('  ')
-            if verif in ['y', 'Y']:
-                for arq in (path+'/obj.dat', path+'/std.dat', path+'/polt.log'):
-                    try:
-                        _os.rename(arq, arq+'.back')
-                    except:
-                        try:
-                            _os.unlink(arq+'.back')
-                        except:
-                            pass
-                break
-            elif verif in ['n', 'N']:
-                print('\nAborted!')
-                return
-            else:
-               print('Value not valid. Please, type \'y\' ou \'n\':')
+
+    # Verifies if std.dat and obj.dat files exist. Case True, queries to delete
+    # Doesn't delete polt.log because the aiming is keep every information about the previous run
+    if _os.path.exists('{0}/std.dat'.format(path)):
+        if _os.path.exists('{0}/obj.dat'.format(path)):
+            while True:
+                verif = raw_input('Caution: obj.dat and std.dat already exists. Are you sure to overwrite it/them (y/n): ')
+                if verif in ('n','N'):
+                    print('Aborted!')
+                    return
+                elif verif in ('y','Y'):
+                    break
+            for arq in (path+'/obj.dat', path+'/std.dat'): #, path+'/polt.log'):
+                try:
+                    _os.unlink(arq)
+                except:
+                    pass
+        elif not _os.path.exists('{0}/obj.dat'.format(path)) and _os.path.exists('{0}/obj.dat.tmp'.format(path)):
+            print('# WARNING: keeping file std.dat and processing only obj.dat...\n')
 
     # Generates lists
-    ltgts = _np.loadtxt('{0}/refs/pol_alvos.txt'.format(_hdtpath()), dtype=str)
-    lstds = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str,\
-            usecols=[0])
+    try:
+        ltgts = _np.loadtxt('{0}/refs/pol_alvos.txt'.format(_hdtpath()), dtype=str)
+        if _os.path.exists('{0}/refs/pol_hip.txt'.format(_hdtpath())):
+            try:
+                ltgts = _np.concatenate((ltgts,_np.loadtxt('{0}/refs/pol_hip.txt'.\
+                                                    format(_hdtpath()), dtype=str)))
+            except:
+                pass
+        lstds = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), \
+                                                           dtype=str, usecols=[0])
+    except:
+        print('# ERROR: Can\'t read files pyhdust/refs/pol_alvos.txt and/or pyhdust/refs/pol_padroes.txt.\n')
+        raise SystemExit(1)
+
     subdirs = [fld for fld in _os.listdir('{0}'.format(path)) if \
             _os.path.isdir(_os.path.join('{0}'.format(path), fld))]
     tgts=[]    # variable for real target names, not the subdirectory names
     stds=[]    # variable for real standard names, not the subdirectory names
     lines = ''
-    loglines = ''
 
     # set ccd name from first .fits file
     try:
@@ -1555,36 +1657,37 @@ def genAllLog(path=None, delta=2.5, sigtol=lambda sigm: 1.1*sigm + 0.00005, auto
     # (Works on directories with suffix also (like 'dsco_a0'))
     for obj in [elem.split('_')[0] for elem in subdirs]:
         obj_curr = obj
-        while obj not in _np.hstack((ltgts,lstds,_np.array(['calib','']))):
-            print('\nObject {0} is not a known target or standard!!'.format(obj))
-            obj = raw_input('Type the common name or press -Enter- to ignore it: ')
+        while obj not in _np.hstack((ltgts,lstds,_np.array(['calib']))):
+            if obj_curr == obj:
+                print('\nObject {0} is not a known target or standard!!'.format(obj_curr))
+            else:
+                print('\nObject {0} (and {1}) is not a known target or standard!!'.format(obj_curr, obj))
+            obj = raw_input('Type the common name (you can add a new target inside pyhdust/ref/pol_*.txt files, but be careful!): ')
         if obj in lstds:
             tgts.append('')
-            stds.append(obj)
+            # Only assigns standard's name if there is no std.dat file. Otherwise,
+            # it's because the actual run will process only the targets, not standards.
+            if not _os.path.exists('{0}/std.dat'.format(path)):
+                stds.append(obj)
         elif obj in ltgts:
             tgts.append(obj)
             stds.append('')
-        else:
-            if obj != 'calib':
-                loglines += ('# CAUTION: Object inside {0} directory '.format(obj_curr) + \
-                                'was left out of obj.dat/std.dat files.\n')
+        elif obj == 'calib':
             tgts.append('')
             stds.append('')
 
-#    print subdirs
-#    print tgts
-#    print stds
     print('')
-    writeLog(path, loglines)
-    genStdLog(path, subdirs, stds, sigtol=sigtol, autochoose=autochoose)
-    genObjLog(path, subdirs, tgts, delta=delta, sigtol=sigtol, autochoose=autochoose)
+    writeLog(path, '#### BEGIN\n')
+    if not _os.path.exists('{0}/std.dat'.format(path)):
+        genLog(path, subdirs, stds, fileout='std.dat', delta=delta, sigtol=sigtol, autochoose=autochoose)
+    genLog(path, subdirs, tgts, fileout='obj.dat', delta=delta, sigtol=sigtol, autochoose=autochoose)
 
     # Write user name and date+time
     username = _pwd.getpwuid(_os.getuid())[4]
     if username.find != -1:
         username = username[:username.find(',')]
     loglines = _time.strftime("\nGenerated at: %Y/%m/%d - %I:%M %p\n")
-    loglines += '          by: ' + _pwd.getpwuid(_os.getuid())[0] + ' (' + username + ')'
+    loglines += '          by: ' + _pwd.getpwuid(_os.getuid())[0] + ' (' + username + ')\n\n'
     writeLog(path, loglines)
     
     with open('{0}/polt.log'.format(path), 'r') as fl:
@@ -1599,10 +1702,10 @@ def genAllLog(path=None, delta=2.5, sigtol=lambda sigm: 1.1*sigm + 0.00005, auto
 #################################################
 def corObjStd(night, f, calc, path=None, delta=2.5):
     """
-    Correlate a target observer at one filter and calcite
-    (`f` and `calc`) and return the values for matching
-    standard stars inside `night`'s std.dat of those which
-    are not marked with `E` flag.
+    Correlate a target observed at filter 'f' and calcite
+    'calc' (expected the angle between ord. and extraord. beams)
+    and return the values for matching standard stars inside
+    'night'/std.dat file, except by those marked with 'E' flag.
 
     delta: tolerance, in degree, of angle of two beams for
            one same calcite (default: +/-2.5 degree)
@@ -1612,14 +1715,20 @@ def corObjStd(night, f, calc, path=None, delta=2.5):
       - thstd: list with theta measured values (the angle
                returned is the same from .out, NOT 180-theta!)
       - angref: list with theta published values
-      - flastd: list with flags concerning to the data.
+      - flastd: list with flags concerning to the target data.
     """
     if path == None:
         path = _os.getcwd()
     try:
-        std = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str)
+        stdref = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str)
+#        f0 = open('{0}/refs/pol_padroes.txt'.format(_hdtpath()))
+#        data = f0.readlines()
+#        f0.close()
+#        stdref = []
+#        for datai in data:
+#            stdref += [datai.split()]
     except:
-        print('ERROR: Can\'t read files pyhdust/refs/pol_padroes.txt')
+        print('# ERROR: Can\'t read files pyhdust/refs/pol_padroes.txt')
         raise SystemExit(1)
 
     calc = float(calc)
@@ -1631,42 +1740,52 @@ def corObjStd(night, f, calc, path=None, delta=2.5):
 
     if _os.path.exists('{0}/{1}/std.dat'.format(path,night)):
         stds = _np.loadtxt('{0}/{1}/std.dat'.format(path,night), dtype=str)
-        if len(stds) > 0 and len(stds[-1]) != 8:
-            stds = stds.reshape(-1,8)
+#        print stds
+        if len(stds) > 0 and len(stds[-1]) != 9:
+            stds = stds.reshape(-1,9)
+#        print stds
         k = 0
         sigs = []
         for stdinf in stds:
-            if stdinf[6] == 'E' and 'no-red' in stdinf[7] and stdinf[3] == f:
-                print('WARNING: {0} night: standard {1}_{2} not reduced and unknown calcite.'.format(night,stdinf[2],f))
+            if stdinf[7] == 'E' and stdchk(stdinf[2])[0] and stdinf[3] == f and \
+                                                    abs(float(stdinf[4])-calc) <= delta:
+                print(('{0:<10s} WARNING! Standard `{1}` ({2}) wasn\'t used because it ' +\
+                                'had `E` flag. Skipping this standard...').format(night+':',stdinf[2],f))
                 continue
-            elif stdinf[6] == 'E' and stdchk(stdinf[2])[0] and stdinf[3] == f and abs(float(stdinf[4])-calc) <= delta:
-                print('WARNING: {0} night: standard {1}_{2} wasn\'t used because has `E` flag.'.format(night,stdinf[2],f))
-                continue
-            elif stdinf[6] != 'E' and stdchk(stdinf[2])[0] and stdinf[3] == f and abs(float(stdinf[4])-calc) <= delta:
+            elif stdinf[7] != 'E' and stdchk(stdinf[2])[0] and stdinf[3] == f and \
+                                                    abs(float(stdinf[4])-calc) <= delta:
                 # Bednarski: Show error message now
                 try:
+                    nstar = int(stdinf[6])
                     Q, U, sig, P, th, sigT, tmp, tmp2 = readout('{0}/{1}'.\
-                                            format(path+'/'+night,stdinf[5]))
+                                            format(path+'/'+night,stdinf[5]), nstar=nstar)
                 except:
-                    print('WARNING: {0} night: standard {1}_{2} wasn\'t used because can\'t open/read {3}.'.format(night, stdinf(2), f, stdinf[5]))
+                    print(('{0:<10s} WARNING! Standard `{1}` ({2}) wasn\'t used because' +\
+                                            ' can\'t open/read {3}. Skipping this standard...').\
+                                            format(night+':', stdinf(2), f, stdinf[5]))
                     continue
                 stdname += [ stdinf[2] ]
                 thstd += [ float(th) ]
-                flagstd += [stdinf[6]]
-                tagstd += [stdinf[7]]
+                flagstd += [stdinf[7]]
+                tagstd += [stdinf[8]]
                 if thstd == 0.:
                     thstd = 0.01
                 sigs += [ float(sig)*100 ]
                 sigth = 28.65*sig/P 
                 i = stdchk(stdinf[2])[1]
                 j = filters.index(f)+1 #+1 devido aos nomes na 1a coluna
-                angref += [ float(std[i,j]) ]
+                angref += [ float(stdref[i,j]) ]
+
+#                print stdname, thstd, angref, flagstd, tagstd
+                
         if stdname == []:
-            print('# WARNING: {0} night: no standard found for filt. {1} and calc. {2:.1f}.'.format(night, f, calc))
+            print(('{0:<10s} WARNING! None standard found in `std.dat` for filter {1}.').format(night+':', f))
+
     else:
-        print('# ERROR: {0} night: `std.dat` not found. Ignoring its standards...'.format(night))
+        print('{0:<10s} ERROR! `std.dat` file not found (filter {1}).'.format(night+':', f))
 #    print stdname, thstd, angref
 
+#    print stdname, thstd, angref, flagstd, tagstd
     return stdname, thstd, angref, flagstd, tagstd
 
 
@@ -1689,14 +1808,18 @@ def genTarget(target, path=None, PAref=None, skipdth=False, delta=2.5, epssig=2.
              standard star?
 
     Formulas:
-        * th_eq = -th_measured + th^std_measured + th^std_published
-        * th_eq = 180 - th_measured - dth
-        * dth = 180 - th^std_measured - th^std_published
+        * th_eq = fact*th_measured - fact*th^std_measured + th^std_published
+        * th_eq = fact*th_measured - dth
+        * dth = fact*th^std_measured - th^std_published
+        * fact = -1 for observations before 2015 March 1st
+                 +1 otherwise
         * Q_eq = P*cos(2*th_eq*pi/180)
         * U_eq = P*sin(2*th_eq*pi/180)
         * sigth = 28.65*sig/P
     """
 
+    verbose = ''
+    
     if path == None or path == '.':
         path = _os.getcwd()
 
@@ -1704,7 +1827,7 @@ def genTarget(target, path=None, PAref=None, skipdth=False, delta=2.5, epssig=2.
     if PAref is not None:
         for line in PAref:
             if len(line) < 21:
-                print('# ERROR! Wrong PAref matrix format')
+                print('# ERROR: Wrong PAref matrix format.')
                 raise SystemExit(1)
     else:
         PAref = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str)
@@ -1713,15 +1836,19 @@ def genTarget(target, path=None, PAref=None, skipdth=False, delta=2.5, epssig=2.
 
     try:
         obj = _np.loadtxt('{0}/refs/pol_alvos.txt'.format(_hdtpath()), dtype=str)
+        if _os.path.exists('{0}/refs/pol_hip.txt'.format(_hdtpath)):
+            obj = _np.concatenate((obj,v_np.loadtxt('{0}/refs/pol_hip.txt'.format(_hdtpath()), dtype=str)))
         std = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str)
     except:
-        print('ERROR: Can\'t read files pyhdust/refs/pol_alvos.txt and/or pyhdust/refs/pol_padroes.txt.')
+        print('# ERROR: Can\'t read files pyhdust/refs/pol_alvos.txt and/or pyhdust/refs/pol_padroes.txt.')
         raise SystemExit(1)
         
     if target not in _np.hstack((std[:,0],obj)):
-        print('# Warning: Target {0} is not a default target or standard!!'.\
+        print('# WARNING: Target {0} is not a default target or standard!'.\
         format(target))
-        tmp = raw_input('# Type something to continue...')
+        tmp = raw_input('Type something to continue...')
+
+    print('\n'+'='*30+'\n')
 
     nights = [fld for fld in _os.listdir(path) if _os.path.isdir(_os.path.join(path, fld))]
     lines = ''
@@ -1733,15 +1860,14 @@ def genTarget(target, path=None, PAref=None, skipdth=False, delta=2.5, epssig=2.
             try:
                 objs = _np.loadtxt('{0}/{1}/obj.dat'.format(path,night), dtype=str)
             except:
-                print('# ERROR! {0} night: Can\'t read obj.dat file. Ignoring it...'.format(night))
+                print('{0:<10s} ERROR! Can\'t read obj.dat file. Ignoring this night...'.format(night+':'))
                 continue
-#                raise SystemExit(1)
 
             # Verify if std has more than one line. Case not, do the reshape
-            if _np.size(objs) == 8:
-                objs = objs.reshape(-1,8)
-            elif _np.size(objs) % 8 != 0:
-                print('# ERROR! {0} night: Wrong column type in obj.dat file. Ignoring it...'.format(night))
+            if _np.size(objs) == 9:
+                objs = objs.reshape(-1,9)
+            elif _np.size(objs) % 9 != 0:
+                print('{0:<10s} ERROR! Wrong column type in obj.dat file. Ignoring this night...'.format(night+':'))
                 continue
 #                raise SystemExit(1)
 
@@ -1749,31 +1875,56 @@ def genTarget(target, path=None, PAref=None, skipdth=False, delta=2.5, epssig=2.
             for objinf in objs:
                 dth = []
                 stdnames = ''
-
                 if objinf[2] == target:
-                    MJD, ccd, obj, f, calc, out, flag, tags = objinf
+                    MJD, ccd, obj, f, calc, out, nstar, flag, tags = objinf
                     if flag == 'E':
-                        print('Warning: {0} night: {1}_{2} with `E` flag and tags `{3}`. Ignoring it...'.format(night,obj,f,tags))
+                        print(('{0:<10s} WARNING! Star found ({1}), but with `E` flag ' +\
+                                        'and tags `{2}`. Ignoring this data...').format(night+':',f,tags))
                         continue
                     try:
+                        # Fator is a var to indicate when polarization angle must be taken as 180-theta or +theta
+                        fator = thtFactor(float(MJD))
                         Q, U, sig, P, th, sigT, tmp, tmp2 = readout('{0}/{1}'.\
-                                                    format(path+'/'+night,out))
+                                                    format(path+'/'+night,out), nstar=int(nstar))
                     except:
-                        print('ERROR: {0} night: Can\'t open/read out file {1}. Ignoring it...'.format(night,out))
+                        print('{0:<10s} ERROR! Can\'t open/read out file {1}. Ignoring this data...'.format(night+':',out))
                         continue
 
                     P = float(P)*100
                     th = float(th)
                     sig = float(sig)*100
                     sigth = 28.65*sig/P
+#                    print objinf, objinf[2], target, tags
                     if 'no-std' not in tags:
+#                        print('entrou1')
                         stdname, thstd, angref, flagstd, tagstd = corObjStd(night, f, calc, path=path, delta=delta)
+#                        print stdname, thstd, angref, flagstd, tagstd
                     else:
-#                        FURTHER: APPLY ALTERNATIVE METHOD TO COMPUTE DTHETA HERE
-                        pass
+#                       FURTHER: APPLY ALTERNATIVE METHOD TO COMPUTE DTHETA HERE AND DELETE LIKE BELLOW.
+#                                CAUTION because the line "if stdname == [] and 'no-std' not in tags:" must be changed also
+#                        print('entrou2')
+                        stdname, thstd, angref, flagstd, tagstd = corObjStd(night, f, calc, path=path, delta=delta)
+#                        print stdname, thstd, angref, flagstd, tagstd
+
+                    # Refresh tags and flags
+                    if stdname == [] and 'no-std' not in tags:
+                        if tags == '---':
+                            tags = 'no-std'
+                        else:
+                            tags += ',no-std'
+                        if flag == 'OK':
+                            flag = 'W'
+                    elif stdname != [] and 'no-std' in tags:
+                        if tags == 'no-std':
+                            tags = '---'
+                        elif tags[0:6] == 'no-std,':
+                            tags = tags.replace('no-std,','')
+                        else:
+                            tags = tags.replace(',no-std','')
 
                     # Bednarski: working for more than one standard star
-                    if 'no-std' in tags or stdname==[]:
+                    # 1) Case there is no standard star, set the variables
+                    if 'no-std' in tags: # or stdname==[]:
                         mdth = 0.
                         devth = 0.
                         stdnames = '---'
@@ -1781,13 +1932,7 @@ def genTarget(target, path=None, PAref=None, skipdth=False, delta=2.5, epssig=2.
                         angref=[]
                         flagstd=[]
                         tagstd=[]
-                        # Case, for some reason, target observation was not marked with 'no-std' tag and flag=='OK'
-                        if 'no-std' not in tags:
-                            tags += ',no-std'
-                        if flag == 'OK':
-                            flag = 'W'
-                        ##print('# ERROR with thstd ou angref!')
-                        ##print(night, f, calc)
+                    # 2) Case there is some standard star, correct the angle and set variables
                     else:
                         for i in range(len(thstd)):
                             if flag == 'OK' and flagstd[i] == 'W':
@@ -1800,7 +1945,7 @@ def genTarget(target, path=None, PAref=None, skipdth=False, delta=2.5, epssig=2.
                                     else:
                                         tags += ','
                                     tags += tagi
-                            dth += [ -thstd[i]-angref[i] ]
+                            dth += [ fator*thstd[i]-angref[i] ]
                             while dth[i] >= 180:
                                 dth[i]-= 180
                             while dth[i] < 0:
@@ -1810,7 +1955,8 @@ def genTarget(target, path=None, PAref=None, skipdth=False, delta=2.5, epssig=2.
                             stdnames += stdname[i]
                         mdth=sum(dth)/len(dth)  # evalute the mean dth
                         devth=_np.std(dth)
-                    th = -th-mdth
+
+                    th = fator*th-mdth
                     # Bednarski: I changed 'if' for 'while' because it can be necessary more than once
                     while th >= 180:
                         th-= 180
@@ -1825,20 +1971,38 @@ def genTarget(target, path=None, PAref=None, skipdth=False, delta=2.5, epssig=2.
                             outn = out[out.find('_WP')-7:]
                         lines += ('{:12s} {:>7s} {:>7s} {:>4s} {:>5s} {:>12s} {:>6.1f} {:>6.1f}'+
                         ' {:>8.4f} {:>8.4f} {:>8.4f} {:>7.2f} {:>7.4f} '+
-                        '{:>6.2f} {:>13s} {:>5s} {:>s}\n').format(MJD, night, ccd, f, calc, stdnames, \
-                                    mdth, devth, P, Q, U, th, sig, sigth, outn, flag, tags)
+                        '{:>6.2f} {:>13s} {:>4s} {:>5s} {:>s}\n').format(MJD, night, ccd, f, calc, stdnames, \
+                                    mdth, devth, P, Q, U, th, sig, sigth, outn, nstar, flag, tags)
+                        print('{0:<10s} One line added to {1}.log...'.format(night+':', obj))
+                    else:
+                        print(('{0:<10s} WARNING! No valid delta_theta value estimated in filter {1}.' +\
+                                        ' Ignoring this data...').format(night+':', f))
+
+#            print('')
         else:
-            print('# Warning: {0} night: `obj.dat` not found. Ignoring it...'.format(night))
+            if verbose != '':
+                verbose += ', '
+            verbose += night
+
+    # Print "no obj.dat found" messages
+    if verbose != '':
+        print('{0:<10s} WARNING! No `obj.dat` file found for the following nights: {1}. Ignoring these nights...'.format('-------',verbose))
+
+    print('\n'+'='*30+'\n')
     #arquivo de saida
     if lines != '':
-        print('\n# Output written: {0}/{1}.log'.format(path,target))
+        print('DONE! Output written in {0}/{1}.log.'.format(path,target))
         f0 = open('{0}/{1}.log'.format(path,target),'w')
-        lines = ('#MJD            night     ccd filt  calc     stdstars    dth devdth' +\
-                '        P        Q        U      th    sigP  sigth       outfile flag   tags\n')+lines
+        lines = ('{:12s} {:>7s} {:>7s} {:>4s} {:>5s} {:>12s} {:>6s} {:>6s}' +\
+                        ' {:>8s} {:>8s} {:>8s} {:>7s} {:>7s} {:>6s} {:>13s}' +\
+                        ' {:>4s} {:>5s} {:>s}\n').format('#MJD', 'night',\
+                        'ccd', 'filt', 'calc', 'stdstars', 'dth', 'devdth', 'P', 'Q', 'U',\
+                        'th', 'sigP', 'sigth', 'outfile', 'star', 'flag', 'tags')+lines
         f0.writelines(lines)
         f0.close()
     else:
-        print('\n# ERROR! No valid observation was found for target {0}'.format(target))
+        print('NOT DONE! No valid observation was found for target `{0}`.'.format(target))
+      
     return
 
 
@@ -2020,15 +2184,15 @@ def plotMagStar(tgt, path=None):
 #################################################
 #################################################
 #################################################
-def sortLog(file):
+def sortLog(filename):
     """ Sort the *.out file """
-    f0 = open(file)
+    f0 = open(filename)
     lines = f0.readlines()
     f0.close()
-    log = _np.loadtxt(file, dtype=str)
+    log = _np.loadtxt(filename, dtype=str)
     log = log[log[:,0].argsort()]
     fmt = '%12s %7s %1s %5s %5s %6s %5s %6s %6s %6s %5s %5s'
-    _np.savetxt(file.replace('.log','.txt'), log, fmt=fmt, header=lines[0])
+    _np.savetxt(filename.replace('.log','.txt'), log, fmt=fmt, header=lines[0])
     return
 
 
@@ -2054,17 +2218,6 @@ def filtraobs(data, r=20):
     idx = data['P']/data['sigP'] > r
     return data[idx]
 
-<<<<<<< HEAD
-def loadpol(txt):
-    """ Load polarization txt file. """
-    dtb = _np.loadtxt(txt, dtype=str)
-    dtb = _np.core.records.fromarrays(dtb.transpose(), names='MJD,night,filt,\
-    calc,stdstars,dth,devdth,P,Q,U,th,sigP,sigth', formats='f8,{0},{0},f8,{0},\
-    f8,f8,f8,f8,f8,f8,f8,f8'.format(dtb.dtype))
-    return dtb
-    
-
-=======
 
 
 #################################################
@@ -2115,11 +2268,11 @@ def graf_dtheta(fname, save=False):
 
     # Read file
     try:
-        file = _np.loadtxt(fname, dtype=str, delimiter=' ')
+        file0 = _np.loadtxt(fname, dtype=str, delimiter=' ')
     except:
         print('Error when reading the file or file doesn\'t exist!')
         return
-    flist = file.tolist()
+    flist = file0.tolist()
     flist.sort(key=lambda x: [x[1],x[0],x[2]])
 
     # Delete void lines
@@ -2396,7 +2549,6 @@ def splitData301(night, path_raw='raw', path_red='red'):
 #################################################
 #################################################
 #################################################
->>>>>>> fc99335737a6bfbdfe97e395429d8392b603cd59
 ### MAIN ###
 if __name__ == "__main__":
     pass
