@@ -26,13 +26,14 @@ import struct as _struct
 import numpy as _np
 from glob import glob as _glob
 import pyhdust.phc as _phc
-import pyhdust.oifits as _oifits
+import pyhdust.spectools as _spt
 from pyhdust.spectools import linfit as _linfit
 
 try:
     import matplotlib.pyplot as _plt
     import matplotlib.ticker as _mtick
     import pyfits as _pyfits
+    import pyhdust.oifits as _oifits
 except:
     print('# Warning! matplotlib and/or pyfits module not installed!!!')
 
@@ -475,6 +476,8 @@ def fastnumvis(img, lbd, Bproj, PA, rad_per_pixel, PAdisk=90.):
         it returns the visibility and phase.
 
     PA and PAdisk in degrees.
+
+    output: complexVis, VisAmp, VisPhase
     """
     PA = PA-PAdisk+90.
     idx = _np.where(img > 0)
@@ -500,6 +503,42 @@ def fastnumvis(img, lbd, Bproj, PA, rad_per_pixel, PAdisk=90.):
     VisAmp = _np.abs(complexVis)
     VisPhase = _np.arctan2(complexVis.imag, complexVis.real)*_np.double(180./_np.pi)
     return complexVis, VisAmp, VisPhase
+
+
+def mapinterf(modf, im=0, obs=0, iflx=0, dist=10, PA=0., B=100., PAdisk=90.,
+    quiet=False):
+    """ Return Squared Visibilities (V2) and Diferential Phases (DP) for a given
+    `hdust` map(s) file.
+
+    If *.map file format, it takes `iflx` image layer.
+
+    input: *.map(s) path (string), `dist` (float, parsecs)
+
+    output: lbdc, V2, DP (float arrays) """
+    data, obslist, lbdc, Ra, xmax = readmap(modf, quiet=quiet)
+    pixsize = 2*xmax[0]/_np.shape(data)[-1]
+    rad_per_pixel = _np.double(pixsize*6.96E10/(dist*3.08567758E18))
+    npts = len(lbdc)
+    V2 = _np.zeros(npts)
+    DP = _np.zeros(npts)
+    for i in range(npts):
+        if len(_np.shape(data)) == 5:
+            img = data[im, obs, i, :, :]
+        else:
+            img = data[im, obs, i, :, :, iflx]
+        tmp, V, DP[i] = fastnumvis(img, lbdc[i]*1e-6, B, PA, rad_per_pixel,
+            PAdisk=PAdisk)
+        V2[i] = V**2
+    #~ avg = (DP[0]+DP[-1])/2.
+    ssize = int(.05*len(DP))
+    if ssize == 0:
+        ssize = 1
+    medx0, medx1 = _np.average(DP[:ssize]),_np.average(DP[-ssize:])
+    avg = (medx0+medx1)/2.
+    DP = DP-avg
+    #~ DP = _spt.linfit(lbdc, DP)-1.
+    #~ lbdc = _spt.air2vac(lbdc*1e4)*1e-4
+    return lbdc, V2, DP
 
 
 def fastnumvis3(img, lbd, Bprojs, PAs, rad_per_pixel, PAdisk=90.):
@@ -1276,13 +1315,14 @@ def checkESOdownload(path=None):
 def printinfo(file, extract=False):
     """ Print AMBER OIFITS observational log, as appendix of Faes, D. M. (2015)
 
-    DATE-OBS    MJD PA  B   PA  B   PA  B"""
+    DATE-OBS    MJD  B   PA  B   PA  B  PA"""
     oidata = _oifits.open(file, quiet='True')
     info = list(oidata.hdrinfo.returninfo())
     info2 = []
     for vis in oidata.vis:
         info2+= ['{0:.1f}'.format(_np.sqrt(vis.ucoord**2 + vis.vcoord**2))]
-        info2+= ['{0:.1f}'.format(_np.arctan(vis.ucoord / vis.vcoord) * 180.0 / _np.pi % 180.0)]
+        info2+= ['{0:.1f}'.format(_np.arctan2(vis.ucoord , vis.vcoord) * 180.0 / _np.pi % 180.0)]
+        print vis.ucoord, vis.vcoord
     if extract:
         wav = []
         info3 = []

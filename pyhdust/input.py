@@ -192,7 +192,7 @@ def makeDiskGrid(modn='01', mhvals=[1.5], hvals=[60.], rdvals=[18.6], mvals=None
     sources = _glob('source/'+selsources)
     
     #Load disk model
-    f0 = open('{0}/refs/REF_disco.txt'.format(_hdt.hdtpath()))
+    f0 = open('{0}refs/REF_disco.txt'.format(_hdt.hdtpath()))
     mod = f0.readlines()
     f0.close()
 
@@ -360,7 +360,7 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'],
         
     def doJobs(mod, sel, nodes, addtouch='\n'):
         #load Ref
-        f0 = open('{0}/refs/REF.{1}'.format(_hdt.hdtpath(),sel))
+        f0 = open('{0}refs/REF.{1}'.format(_hdt.hdtpath(),sel))
         wout = f0.readlines()
         f0.close()
         
@@ -440,7 +440,7 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'],
     mods = _glob('mod{0}/mod{0}*.txt'.format(modn))
     
     #load REF_inp
-    f0 = open('{0}/refs/REF_inp.txt'.format(_hdt.hdtpath()))
+    f0 = open('{0}refs/REF_inp.txt'.format(_hdt.hdtpath()))
     inp = f0.readlines()
     f0.close()
     
@@ -517,7 +517,7 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'],
                 h+=1
             idx = _np.where(simchk==True)
             if len(idx[0])>0:
-                extra = 0+6*len(idx[0])
+                extra = 0+4*len(idx[0])
                 h = h+extra*48/nodes
             walltime = '{0}:0:0'.format(h)
         
@@ -580,7 +580,7 @@ def makeNoDiskGrid(modn, selsources, path=None):
     sources = _glob('source/'+selsources)
     
     #Load disk model
-    f0 = open('{0}/refs/REF_disco.txt'.format(_hdt.hdtpath()))
+    f0 = open('{0}refs/REF_disco.txt'.format(_hdt.hdtpath()))
     mod = f0.readlines()
     f0.close()
     
@@ -643,7 +643,7 @@ def makeSimulLine(vrots, basesims, Rs, hwidth, Ms, Obs, suffix):
         vel = '{0:.1f}'.format(hwidth+vrots[i][j])
         nmod[103] = nmod[103].replace('1020.',vel)
         n = str(int(round(2*(hwidth+vrots[i][j])*R/c*1e5)))
-        print(srcid, n)
+        #~ print(srcid, n)
         nmod[100] = nmod[100].replace('100',n)
     
         f0 = open(basesim.replace('.txt','_{0}_{1}.txt'.format(srcid, suffix)),'w')
@@ -683,7 +683,7 @@ def makeStarGrid(oblats, Hfs, path=None):
     if runIDL:
         import pidly
         idl = pidly.IDL()
-        propath = _hdt.hdtpath()+'/refs/'
+        propath = _hdt.hdtpath()+'refs/'
         idl('cd,"{0}"'.format(propath))
         idl('.r geneve_par')
         for ob in oblats:
@@ -694,7 +694,7 @@ def makeStarGrid(oblats, Hfs, path=None):
                 _os.system('mv {}/geneve_par.txt stmodels/oblat{}_h{}.txt'.format(propath,ob,H))
         idl.close()
     
-    f0 = open('{0}/refs/REF_estrela.txt'.format(_hdt.hdtpath()))
+    f0 = open('{0}refs/REF_estrela.txt'.format(_hdt.hdtpath()))
     mod = f0.readlines()
     f0.close()
 

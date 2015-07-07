@@ -22,7 +22,7 @@ try:
 except:
     print('# Warning! matplotlib and/or scipy module not installed!!!')
 
-__version__ = 0.955
+__version__ = 0.96
 __release__ = "Beta"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -279,10 +279,10 @@ def chkObsLog(path=None, nights=None, badweath=None):
     if path == None:
         path = _os.getcwd()
     if nights == None:
-        nights = '{0}/refs/noites.txt'.format(hdtpath())
+        nights = '{0}refs/noites.txt'.format(hdtpath())
     lnights = _np.loadtxt(nights, dtype=str)
     if badweath == None:
-        badweath = '{0}/refs/maltempo.txt'.format(hdtpath())
+        badweath = '{0}refs/maltempo.txt'.format(hdtpath())
     lbadweath = _np.loadtxt(badweath, dtype=str)
     for night in lnights:
         if night in lbadweath:
@@ -515,8 +515,8 @@ def mergesed2(models, Vrots, path=None):
     # wavelength in microns
     suflines = {'H12': .372300, 'H11': .373543, 'H10': .375122, 'H9': .377170,
     'H8': .379899, 'H7': .383649, 'H6': .389017, 'H5': .397120, 'Hd': .410289,
-    'Hg': .434169, 'Hb':.486271, 'Ha':.656461, 'Br13':1.61137, 'Br12':1.6416,
-    'Brg': 2.166}
+    'Hg': .434169, 'Hb': .486271, 'Ha': .656461, 'Br13':1.61137, 'Br12':1.6416,
+    'Brg':2.166}
 
     for model in models:
         model = model.replace('.inp', '.txt')
@@ -1159,13 +1159,13 @@ def obsCalc():
     ##dmax = julian_date(dg[0],dg[1],dg[2]+1,3+6,0,-rt/2) #seg. so' >0!!!
 
     #carrega lista de alvos
-    alvos = _np.loadtxt('{0}/refs/obs_alvos.txt'.format(hdtpath()), dtype=str, \
+    alvos = _np.loadtxt('{0}refs/obs_alvos.txt'.format(hdtpath()), dtype=str, \
                         delimiter='\t')
     #carrega tempo das declinacoes
-    obsdec = _np.loadtxt('{0}/refs/obs_dec.txt'.format(hdtpath()), delimiter='\t')
+    obsdec = _np.loadtxt('{0}refs/obs_dec.txt'.format(hdtpath()), delimiter='\t')
     #carrega efemerides
-    if _os.path.exists('{0}/refs/obs_ef.txt'):
-        ef_alvos = _np.loadtxt('{0}/refs/obs_ef.txt'.format(hdtpath()), \
+    if _os.path.exists('{0}refs/obs_ef.txt'):
+        ef_alvos = _np.loadtxt('{0}refs/obs_ef.txt'.format(hdtpath()), \
                                delimiter='\t', dtype=str)
         ef_alvos = ef_alvos.T
 

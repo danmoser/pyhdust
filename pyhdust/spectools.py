@@ -83,7 +83,7 @@ class Spec(object):
     """
     def __init__(self, wl=None, flux=None, lbc=None, hwidth=1000., EW=_np.NaN,
         EC=_np.NaN, VR=_np.NaN, peaksep=_np.NaN, depthcent=_np.NaN, F0=_np.NaN,
-        dateobs='', MJD=0., datereduc='', file=''):
+        dateobs='', MJD=0., datereduc='', file='', gaussfit=False):
         self.wl = wl
         self.flux = flux
         self.lbc = lbc
@@ -101,6 +101,7 @@ class Spec(object):
         self.count = 0
         self.data = _np.empty(0)
         self.metadata = _np.empty(0)
+        self.gaussfit = gaussfit
 
     def reset(self):
         """Reset the class parameters
@@ -178,7 +179,7 @@ class Spec(object):
             self.count = len(self.data)
         return
 
-    def loadspec(self, file, gaussfit=False):
+    def loadspec(self, file):
         """Load a fits file (parameters `wl`, `flux`, `MJD`, `dateobs`,
         `datareduc` and `file`).
 
@@ -191,7 +192,7 @@ class Spec(object):
         = loadfits(file)
         (self.EW, self.EC, self.VR, self.peaksep, self.depthcent, self.F0) = \
         analline(self.wl, self.flux, self.lbc, hwidth=self.hwidth, verb=False,\
-        gaussfit=gaussfit)
+        gaussfit=self.gaussfit)
         return
 
     def plotspec(self, outname=''):
@@ -376,6 +377,18 @@ def air2vac(wl):
     -2.75708212e+08 / wl**4)
 
 
+def vel2wl(vel, lbc):
+    """ Vel. to wavelength. Vel must be in km/s and output is in `lbc` units. """
+    wl = (vel/_phc.c.cgs*1e5+1)*lbc
+    return wl
+    
+    
+def wl2vel(wl, lbc):
+    """ Wavelength to vel., in km/s. `wl` and `lbc` units must be the same. """
+    vels = (wl-lbc)/lbc*_phc.c.cgs*1e-5
+    return vels
+    
+
 def checksubdirs(path, star, lbc, hwidth=1000, showleg=True, plots=False):
     """
     Faz o que tem que fazer.
@@ -472,7 +485,7 @@ def lineProf(x, flx, lbc, flxerr=_np.empty(0), hwidth=1000., ssize=0.05):
     OUTPUT: vel (array), flx (array)
     '''    
     x = (x-lbc)/lbc*_phc.c.cgs*1e-5 #km/s
-    idx = _np.where(_np.abs(x) <= hwidth)
+    idx = _np.where(_np.abs(x) <= 1.001*hwidth)
     if len(flxerr) == 0:
         flux = linfit(x[idx], flx[idx], ssize=ssize) #yerr=flxerr,
         return x[idx], flux
@@ -606,25 +619,31 @@ def ECcalc(vels, flux, ssize=.05, gaussfit=False, doublegf=True):
             return 1., vels[-1]
         # Define model function to be used to fit to the data above
         def gauss(x, *p):
-            A, mu, sigma, cte = p
-            return A*_np.exp(-(x-mu)**2/(2.*sigma**2))+cte
+            A, mu, sigma = p
+            return A*_np.exp(-(x-mu)**2/(2.*sigma**2))+1
         #~
         ivc = _np.abs(vels-0).argmin()
         if doublegf:
             i0 = _np.abs(flux[:ivc]-_np.max(flux[:ivc])).argmin()
             i1 = _np.abs(flux[ivc:]-_np.max(flux[ivc:])).argmin()+ivc
-            p0 = [1., vels[i0], 40., 1.]
-            coeff0, tmp = curve_fit(gauss, vels[:ivc], flux[:ivc], p0=p0)
-            p1 = [1., vels[i1], 40., 1.]
-            coeff1, tmp = curve_fit(gauss, vels[ivc:], flux[ivc:], p0=p1)
-            EC = _np.max([coeff0[0]+coeff0[3],coeff1[0]+coeff1[3]])
-            vel = _np.abs(coeff0[1]/2)+_np.abs(coeff1[1]/2)
-            return EC, vel
+            try: 
+                p0 = [1., vels[i0], 40.]
+                coeff0, tmp = curve_fit(gauss, vels[:ivc], flux[:ivc], p0=p0)
+                p1 = [1., vels[i1], 40.]
+                coeff1, tmp = curve_fit(gauss, vels[ivc:], flux[ivc:], p0=p1)
+                EC = _np.max([coeff0[0]+1.,coeff1[0]+1.])
+                vel = _np.abs(coeff0[1]/2)+_np.abs(coeff1[1]/2)
+                return EC, vel
+            except:
+                return 1., vels[-1]
         else:
-            p0 = [1., 0, 40., 1.]
-            coeff0, tmp = curve_fit(gauss, vels[:ivc], flux[:ivc], p0=p0)
-            EC = coeff0[0]+coeff0[3]
-            return EC, coeff0[1]
+            try:
+                p0 = [1., 0, 40.]
+                coeff0, tmp = curve_fit(gauss, vels[:ivc], flux[:ivc], p0=p0)
+                EC = coeff0[0]+1.
+                return EC, coeff0[1]
+            except:
+                return 1., vels[-1]
 
 def VREWcalc(vels, flux, vw=1000):
     """
@@ -659,7 +678,7 @@ def VREWcalc(vels, flux, vw=1000):
         ew1 += (1.-(normflux[i+1]+normflux[i])/2.)*dl
     return ew0, ew1, vc
 
-def VRcalc(vels, flux, vw=1000, gaussfit=True, ssize=0.05):
+def VRcalc(vels, flux, vw=1000, gaussfit=False, ssize=0.05):
     """
     Calcula o PICO para os dois lados (azul/vermelho) da linha, ajustando
     a velocidade de repouso (TBD). 
@@ -694,18 +713,21 @@ def VRcalc(vels, flux, vw=1000, gaussfit=True, ssize=0.05):
             return 0, 0, vc
         # Define model function to be used to fit to the data above
         def gauss(x, *p):
-            A, mu, sigma, cte = p
-            return A*_np.exp(-(x-mu)**2/(2.*sigma**2))+cte
+            A, mu, sigma = p
+            return A*_np.exp(-(x-mu)**2/(2.*sigma**2))+1.
         #~
         ivc = _np.abs(vels-0).argmin()
         i0 = _np.abs(flux[:ivc]-_np.max(flux[:ivc])).argmin()
         i1 = _np.abs(flux[ivc:]-_np.max(flux[ivc:])).argmin()+ivc
-        p0 = [1., vels[i0], 40., 1.]
-        coeff0, tmp = curve_fit(gauss, vels[:ivc], flux[:ivc], p0=p0)
-        p1 = [1., vels[i1], 40., 1.]
-        coeff1, tmp = curve_fit(gauss, vels[ivc:], flux[ivc:], p0=p1)
-        V = coeff0[0]+coeff0[3]
-        R = coeff1[0]+coeff1[3]
+        try:
+            p0 = [1., vels[i0], 40.]
+            coeff0, tmp = curve_fit(gauss, vels[:ivc], flux[:ivc], p0=p0)
+            p1 = [1., vels[i1], 40.]
+            coeff1, tmp = curve_fit(gauss, vels[ivc:], flux[ivc:], p0=p1)
+            V = coeff0[0]+1.
+            R = coeff1[0]+1.
+        except:
+            return 1., 1., vc
     return V, R, vc
 
 def PScalc(vels, flux, vc=0., ssize=.05, gaussfit=False):
@@ -732,14 +754,18 @@ def PScalc(vels, flux, vc=0., ssize=.05, gaussfit=False):
     else:
         # Define model function to be used to fit to the data above
         def gauss(x, *p):
-            A, mu, sigma, cte = p
-            return A*_np.exp(-(x-mu)**2/(2.*sigma**2))+cte
-        #~ 
-        p0 = [1., vels[i0], 20., 1.]
-        coeff0, tmp = curve_fit(gauss, vels[:ivc], flux[:ivc], p0=p0)
-        p1 = [1., vels[i1], 20., 1.]
-        coeff1, tmp = curve_fit(gauss, vels[ivc:], flux[ivc:], p0=p1)
-        return coeff0[1], coeff1[1]
+            A, mu, sigma = p
+            return A*_np.exp(-(x-mu)**2/(2.*sigma**2))+1.
+        #~
+        try:
+            p0 = [1., vels[i0], 20.]
+            coeff0, tmp = curve_fit(gauss, vels[:ivc], flux[:ivc], p0=p0)
+            p1 = [1., vels[i1], 20.]
+            coeff1, tmp = curve_fit(gauss, vels[ivc:], flux[ivc:], p0=p1)
+            return coeff0[1], coeff1[1]
+        except:
+            return 0, 0
+        
 
 def DCcalc(vels, flux, vmax=None, vc=0., ssize=0.05):
     """
@@ -798,7 +824,7 @@ def analline(lbd, flux, lbdc, hwidth=1000, verb=True, gaussfit=False,
     #Output:
     EW = EWcalc(vels, flux, vw=hwidth)
     EC, velEC = ECcalc(vels, flux, gaussfit=gaussfit, doublegf=doublegf)
-    ew0, ew1, vc = VRcalc(vels, flux, vw=hwidth)
+    ew0, ew1, vc = VRcalc(vels, flux, vw=hwidth, gaussfit=gaussfit)
     if ew1 == 0:
         VR = 1
     else:
@@ -1637,7 +1663,7 @@ def kurlog(file=None, output=None):
 
     If output is not specified, it is saved as `file`+.log """
     if file == None:
-        file = '{0}/refs/fp00k0.pck'.format(_hdt.hdtpath())
+        file = '{0}refs/fp00k0.pck'.format(_hdt.hdtpath())
     teffs = []
     loggs = []
     fp = open(file)
@@ -1656,7 +1682,7 @@ def kuruczflux(teff, logg, range=None):
     nm).
 
     OUTPUT: wv, flux, info"""
-    kurfile = '{0}/refs/fp00k0.pck'.format(_hdt.hdtpath())
+    kurfile = '{0}refs/fp00k0.pck'.format(_hdt.hdtpath())
     kurwvlines = (174-22)
     kurflxcol = 10
     #wave
@@ -1792,14 +1818,15 @@ def splitKurucz(file, path=None):
 
 
 def din_spec(refspec, metadata, lbc=6562.86, hwidth=1500., res=50, interv=None,
-    fmt=['png'], outname='din_spec', pxsize=8):
+    fmt=['png'], outname='din_spec', pxsize=8, vmin=None, vmax=None, avg=True):
     """ Plot dynamical specs. from metadata table of the Spec class.
 
     `interv` controls the interval between specs.
 
     `res` is the resolution in km/s.
 
-    TBD: average, binned specs.
+    By default (`avg`=True), the average of spectra in that bin is show. If 
+    `avg`=False, the nearest bin-centered (in time) spectra will be shown.
     """
     #Define MJD and bins
     dates = _np.array(metadata[:,0], dtype=float)
@@ -1811,29 +1838,42 @@ def din_spec(refspec, metadata, lbc=6562.86, hwidth=1500., res=50, interv=None,
         interv = _np.arange(t0,tf+interv,interv)
     dt = interv[1]-interv[0]
     #Select specs 
-    interv_names = _np.zeros(len(interv), dtype="|S512")
     wl0 = _np.arange(-hwidth,hwidth+res,res)
     fluxes = _np.ones(( len(wl0),len(interv) ))
     for i in range(len(interv)):
-        date = _phc.find_nearest(dates,interv[i])
-        #check if it is inside bin
-        if date > interv[i]-dt/2 and date < interv[i]+dt/2:
-            j = list(dates).index(date)
-            interv_names = metadata[j,3]
-            wl, flux, tmp, tmp, tmp, tmp = loadfits(refspec)
-            wl, flux = lineProf(wl, flux, lbc=lbc, hwidth=hwidth)
-            fluxes[:,i] = _np.interp(wl0, wl, flux)
+        #method 1
+        if not avg:
+            date = _phc.find_nearest(dates,interv[i])
+            if date < interv[i]+dt/2 and date > interv[i]-dt/2:
+                j = list(dates).index(date)
+                wl, flux, tmp, tmp, tmp, tmp = loadfits(metadata[j,3])
+                wl, flux = lineProf(wl, flux, lbc=lbc, hwidth=hwidth)
+                fluxes[:,i] = _np.interp(wl0, wl, flux)
+        #method 2
+        else:
+            k = 0
+            for j in range(len(dates)):
+                if dates[j] < interv[i]+dt/2 and dates[j] > interv[i]-dt/2:
+                    wl, flux, tmp, tmp, tmp, tmp = loadfits(metadata[j,3])
+                    wl, flux = lineProf(wl, flux, lbc=lbc, hwidth=hwidth)
+                    fluxes[:,i]+= _np.interp(wl0, wl, flux)
+                    k+= 1
+            if k > 0:
+                #~ fluxes[:,i]/= k
+                wl = vel2wl(wl0, lbc)
+                tmp, fluxes[:,i] = lineProf(wl, fluxes[:,i], lbc=lbc, hwidth=hwidth)
     #Create image
     img = _np.empty((pxsize*len(interv),len(wl0)))
     for i in range(len(interv)):
         img[i*pxsize:(i+1)*pxsize] = _np.tile(fluxes[:,i],pxsize).reshape(pxsize,len(wl0))
     #Save image
-    _plt.imshow(img)
+    _plt.figure(figsize=(len(wl0)/16, pxsize*len(interv)/16), dpi=80)
+    print _np.min(img), _np.max(img)
+    _plt.imshow(img, vmin=vmin, vmax=vmax)
     for ext in fmt:
-        print(_os.getcwd(), 'hdt/{}.{}'.format(outname, ext))
-        _plt.savefig('hdt/{}.{}'.format(outname, ext))
+        print(_os.getcwd(), '{}.{}'.format(outname, ext))
+        _plt.savefig('{}.{}'.format(outname, ext))
     _plt.close()
-    return
 
 
 def writeFits(flx, lbd, extrahead=None, savename=None, quiet=False, path=None,
