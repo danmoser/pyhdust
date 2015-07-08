@@ -22,7 +22,7 @@ try:
 except:
     print('# Warning! matplotlib and/or scipy module not installed!!!')
 
-__version__ = 0.96
+__version__ = 0.961
 __release__ = "Beta"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -164,7 +164,7 @@ def doFilterConv(x0, y0, filter, pol=False):
 
     OUTPUT: summed flux (y0 units)
     """
-    fdat = _np.loadtxt('{}/filters/{}.dat'.format(hdtpath(), filter.lower()), \
+    fdat = _np.loadtxt('{0}/filters/{1}.dat'.format(hdtpath(), filter.lower()), \
                        skiprows=1)
     fdat[:, 0] /= 10000.  # from Angs to microns
     idx = _np.where((x0 >= fdat[0, 0]) & (x0 <= fdat[-1, 0]))
@@ -187,12 +187,12 @@ def doPlotFilter(pref, obs, filter, fsed2data, pol=False):
     x0 = fsed2data[obs, :, 2]
     if pol:
         y0 = fsed2data[obs, :, 7]
-        savename = 'pol_{}_{}_{}'.format(pref, obs, filter)
+        savename = 'pol_{0}_{1}_{2}'.format(pref, obs, filter)
     else:
         y0 = fsed2data[obs, :, 3] / x0
-        savename = '{}_{}_{}'.format(pref, obs, filter)
+        savename = '{0}_{1}_{2}'.format(pref, obs, filter)
 
-    fdat = _np.loadtxt('{}filters/{}.dat'.format(hdtpath(), filter.lower()), \
+    fdat = _np.loadtxt('{0}filters/{1}.dat'.format(hdtpath(), filter.lower()), \
                        skiprows=1)
     fdat[:, 0] /= 10000.
     # interpfunc = interpolate.interp1d(fdat[:,0], fdat[:,1], kind='linear')
@@ -760,7 +760,7 @@ def printN0(modn):
     #5,5,3,4), usecols=(4,10,12), dtype=None) 
     #cols = (0#, 1type, 2typeVal, 3#, 4sig, 5#, 6h, 7#, 8Rd, 9#, 10M, 11#,
     # 12ob, 13#)
-    n0file = _np.genfromtxt('n0_mod{}.txt'.format(modn), delimiter= \
+    n0file = _np.genfromtxt('n0_mod{0}.txt'.format(modn), delimiter= \
         (22, 4, 18, 5, 3, 4, 35, 8), usecols=(1, 3, 5, 7), dtype=None)
     #cols = (sig0, M, ob, n0)
 
@@ -779,7 +779,7 @@ def printN0(modn):
     _plt.clf()
     for item in obs:
         idx = _np.where(n0file[:, 2] == item)
-        _plt.title('Sig0 range: [{}, {}] (g cm-2)'.format(sig0s[0], sig0s[-1]))
+        _plt.title('Sig0 range: [{0}, {1}] (g cm-2)'.format(sig0s[0], sig0s[-1]))
         _plt.plot(n0file[:, 0][idx], n0file[:, 3][idx], 'o')
         _plt.yscale('log')
         _plt.xscale('log')
@@ -792,7 +792,7 @@ def printN0(modn):
     _plt.clf()
     for item in obs:
         idx = _np.where(n0file[:, 2] == item)
-        _plt.title('Sig0 range: [{}, {}] (g cm-2)'.format(sig0s[0], sig0s[-1]))
+        _plt.title('Sig0 range: [{0}, {1}] (g cm-2)'.format(sig0s[0], sig0s[-1]))
         _plt.plot(n0file[:, 1][idx], n0file[:, 3][idx], 'o')
         _plt.plot([3.4, 14.6], [1e13, 1e14], 'r-')
         _plt.plot([3.4, 14.6], [1e12, 1e12], 'r-')
@@ -808,7 +808,7 @@ def printN0(modn):
     _plt.clf()
     for item in obs:
         idx = _np.where(n0file[:, 2] == item)
-        _plt.title('Sig0 range: [{}, {}] (g cm-2)'.format(sig0s[0], sig0s[-1]))
+        _plt.title('Sig0 range: [{0}, {1}] (g cm-2)'.format(sig0s[0], sig0s[-1]))
         _plt.plot(n0file[:, 2][idx], n0file[:, 3][idx], 'o')
         _plt.yscale('log')
         _plt.ylabel('n0 (# cm-3)')
@@ -868,15 +868,15 @@ def diskcalcs(M, R, Tpole, T, alpha, R0, mu, rho0, Rd):
     MdiskG = 2 * Mdot * (_phc.G.cgs * M / R) ** .5 * R ** .5 / 3 / alpha / a ** 2 * (
         R0 ** .5 * _np.log(Rd / R) + 2 * R ** .5 - 2 * Rd ** .5)
 
-    print('R0/R  = {:.1f}'.format(R0 / R))
-    print('Valid sigma (1)?: {}'.format(round(sigp / sig) == 1))
-    print('Valid sigma (2)?: {}'.format(round(rho0 / rho0p) == 1))
-    print('rho0  = {:.2e} g/cm3'.format(rho0))
-    print('sigma0= {:.2e} g/cm2'.format(sig / alpha / a ** 2))
-    print('Mdot  = {:.2e} Msun/yr'.format(Mdot / _phc.Msun.cgs * _phc.yr.cgs))
-    print('Mdisk0= {:.2e} Msun [#from rho0]'.format(Mdisk0 / _phc.Msun.cgs))
-    print('Mdisk = {:.2e} Msun [#approx.]'.format(Mdisk / _phc.Msun.cgs))
-    print('MdiskG= {:.2e} Msun'.format(MdiskG / _phc.Msun.cgs))
+    print('R0/R  = {0:.1f}'.format(R0 / R))
+    print('Valid sigma (1)?: {0}'.format(round(sigp / sig) == 1))
+    print('Valid sigma (2)?: {0}'.format(round(rho0 / rho0p) == 1))
+    print('rho0  = {0:.2e} g/cm3'.format(rho0))
+    print('sigma0= {0:.2e} g/cm2'.format(sig / alpha / a ** 2))
+    print('Mdot  = {0:.2e} Msun/yr'.format(Mdot / _phc.Msun.cgs * _phc.yr.cgs))
+    print('Mdisk0= {0:.2e} Msun [#from rho0]'.format(Mdisk0 / _phc.Msun.cgs))
+    print('Mdisk = {0:.2e} Msun [#approx.]'.format(Mdisk / _phc.Msun.cgs))
+    print('MdiskG= {0:.2e} Msun'.format(MdiskG / _phc.Msun.cgs))
     print('PS: Mdisk for both isothermal Sigma(r) and H(r)')
     return
 

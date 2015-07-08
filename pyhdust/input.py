@@ -185,8 +185,8 @@ def makeDiskGrid(modn='01', mhvals=[1.5], hvals=[60.], rdvals=[18.6], mvals=None
     else:
         path = ''
     #Check modN folder
-    if not _os.path.exists('mod{}'.format(modn)):
-        _os.system('mkdir mod{}'.format(modn))
+    if not _os.path.exists('mod{0}'.format(modn)):
+        _os.system('mkdir mod{0}'.format(modn))
     
     #Select sources
     sources = _glob('source/'+selsources)
@@ -552,7 +552,7 @@ def makeNoDiskGrid(modn, selsources, path=None):
         Given a src, generates the noCS model input
         '''
         srcname = src.replace('source/','').replace('.txt','')
-        suffix = '_noCS_{}'.format(srcname)
+        suffix = '_noCS_{0}'.format(srcname)
         
         wmod = mod[:]
         #Remove a disk does not work:
@@ -573,8 +573,8 @@ def makeNoDiskGrid(modn, selsources, path=None):
     else:
         path = ''
     #Check modN folder
-    if not _os.path.exists('mod{}'.format(modn)):
-        _os.system('mkdir mod{}'.format(modn))
+    if not _os.path.exists('mod{0}'.format(modn)):
+        _os.system('mkdir mod{0}'.format(modn))
     
     #Select sources
     sources = _glob('source/'+selsources)
@@ -587,7 +587,7 @@ def makeNoDiskGrid(modn, selsources, path=None):
     for prodI in _product(sources):
         prodI = prodI[0]
         doNoCS(prodI)
-    print('# {:.0f} arquivos foram gerados !!'.format(len(sources)))
+    print('# {0:.0f} arquivos foram gerados !!'.format(len(sources)))
     if path is not "":
         _os.chdir(path0)
     ###END PROGRAM
@@ -688,10 +688,10 @@ def makeStarGrid(oblats, Hfs, path=None):
         idl('.r geneve_par')
         for ob in oblats:
             for H in Hfs:
-                idl('geneve_par, {}, {}, /oblat,/makeeps'.format(ob,H))
-                _os.system('mv {}/geneve_lum.eps stmodels/geneve_lum_{:.2f}_{:.2f}.eps'.format(propath,ob,H))
-                _os.system('mv {}/geneve_rp.eps stmodels/geneve_rp_{:.2f}_{:.2f}.eps'.format(propath,ob,H))
-                _os.system('mv {}/geneve_par.txt stmodels/oblat{}_h{}.txt'.format(propath,ob,H))
+                idl('geneve_par, {0}, {1}, /oblat,/makeeps'.format(ob,H))
+                _os.system('mv {0}/geneve_lum.eps stmodels/geneve_lum_{1:.2f}_{2:.2f}.eps'.format(propath,ob,H))
+                _os.system('mv {0}/geneve_rp.eps stmodels/geneve_rp_{1:.2f}_{2:.2f}.eps'.format(propath,ob,H))
+                _os.system('mv {0}/geneve_par.txt stmodels/oblat{1}_h{2}.txt'.format(propath,ob,H))
         idl.close()
     
     f0 = open('{0}refs/REF_estrela.txt'.format(_hdt.hdtpath()))
@@ -703,7 +703,7 @@ def makeStarGrid(oblats, Hfs, path=None):
     
     for ob in oblats:                        
         for H in Hfs:  
-            f0 = open('stmodels/oblat{}_h{}.txt'.format(ob,H))                     
+            f0 = open('stmodels/oblat{0}_h{1}.txt'.format(ob,H))                     
             matriz = f0.readlines() 
             f0.close()
             Omega,W,Beta = map(float, matriz[1].split())
@@ -738,7 +738,7 @@ def makeStarGrid(oblats, Hfs, path=None):
                         d = L.index(LI)
                         for ZI in Z:
                             g = Z.index(ZI)
-                            suffix = '_M{:05.2f}_ob{:.2f}_H{:.2f}_Z{}_bE_Ell'. \
+                            suffix = '_M{0:05.2f}_ob{1:.2f}_H{2:.2f}_Z{3}_bE_Ell'. \
                                         format(MI,ob,H,ZI,Beta,RpI,LI)
     
                             #REGISTRA VALORES
@@ -778,10 +778,10 @@ def makeSimulDens(dbase, basesim):
         alpha = 0.34588
         beta =  8.50927
         newd = int(10**(-alpha*_np.log10(d)+beta))
-        print('{}, N_f = {:.2f}e+9'.format(srcid, newd/1e9))
+        print('{0}, N_f = {1:.2f}e+9'.format(srcid, newd/1e9))
         nmod = mod[:]
-        nmod[9]=nmod[9].replace('500000000','{}'.format(newd))
-        f0 = open(basesim.replace('.txt','_{}.txt'.format(srcid)),'w')
+        nmod[9]=nmod[9].replace('500000000','{0}'.format(newd))
+        f0 = open(basesim.replace('.txt','_{0}.txt'.format(srcid)),'w')
         f0.writelines(nmod)
         f0.close()
     #a = raw_input('asdads')

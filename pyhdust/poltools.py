@@ -636,7 +636,7 @@ def plotfrompollog(path, star, filters=None, colors=None):
     for f in filters:
         ind = _np.where(filt == f)
         avg,sigm = _phc.wg_avg_and_std(P[ind], sigP[ind])
-        print('# Averaged {} band is {:.3f} +/- {:.3f} %'.format(f.upper(),avg,\
+        print('# Averaged {0} band is {1:.3f} +/- {2:.3f} %'.format(f.upper(),avg,\
         sigm))
     return
 

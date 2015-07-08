@@ -44,7 +44,7 @@ class Constant(object):
         self.info = info
 
     def __repr__(self):
-        return str('{:.7e} in {} (cgs)'.format(self.cgs, self.unitscgs))
+        return str('{0:.7e} in {1} (cgs)'.format(self.cgs, self.unitscgs))
 
 
 def fltTxtOccur(s, lines, n=1, seq=1, after=False, asstr=False):
@@ -91,7 +91,7 @@ def outfld(fold='hdt'):
     OUTPUT: *system [folder creation]
     """
     if not _os.path.exists(fold):
-        _os.system('mkdir {}'.format(fold))
+        _os.system('mkdir {0}'.format(fold))
     return
 
 
@@ -269,7 +269,7 @@ def recsearch(path, star, fstr):
     OUTPUT: list of strings
     """
     outfilelist = []
-    nights = [o for o in _os.listdir(path) if _os.path.isdir('{}/{}'.format(path,\
+    nights = [o for o in _os.listdir(path) if _os.path.isdir('{0}/{1}'.format(path,\
     o))]
     for night in nights:
         targets = [o for o in _os.listdir('%s/%s' % (path,night)) if
@@ -600,7 +600,7 @@ def gradColor(val, cmapn='jet', min=None, max=None, log=False):
         for i in range(0,10):
             cor = phc.gradColor(arange(10), cmapn='gist_heat')[i]
             print cor
-            plt.plot(arange(5)+i, color=cor, label='GB='+('{:4.2f},'*3).format(*cor)[:-1])
+            plt.plot(arange(5)+i, color=cor, label='GB='+('{0:4.2f},'*3).format(*cor)[:-1])
         
         plt.legend(fontsize=8)
 

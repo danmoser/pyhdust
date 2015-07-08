@@ -199,7 +199,7 @@ class Spec(object):
         """Export current spec into a PNG file.
         """
         if self.wl == None or self.flux == None:
-            print('# ERROR: wrong Spec() parameters! {}'.format(self.file))
+            print('# ERROR: wrong Spec() parameters! {0}'.format(self.file))
             return
         if outname == '':
             path, file = _phc.trimpathname(self.file)
@@ -213,7 +213,7 @@ class Spec(object):
         ax.set_ylabel('norm. flux')
         ax.set_xlabel('wavelength (arb. units)')
         ax.set_title(outname)
-        _plt.savefig('{}/{:.2f}_{}.png'.format(_outfold,self.MJD,outname))
+        _plt.savefig('{0}/{1:.2f}_{2}.png'.format(_outfold,self.MJD,outname))
         if self.lbc > 0:
             vels = (self.wl-self.lbc)/self.lbc*_phc.c.cgs*1e-5
             idx = _np.where(_np.abs(vels) <= self.hwidth)
@@ -224,8 +224,8 @@ class Spec(object):
             ax.plot(vels, flux)
             ax.set_ylabel('norm. flux')
             ax.set_xlabel('vel. (km/s)')
-            ax.set_title('{:.2f} {} {:.2f}'.format(self.MJD,outname,self.lbc))
-            _plt.savefig('{}/{:.2f}_{}_{:.2f}.png'.format(_outfold,self.MJD,\
+            ax.set_title('{0:.2f} {1} {2:.2f}'.format(self.MJD,outname,self.lbc))
+            _plt.savefig('{0}/{1:.2f}_{2}_{3:.2f}.png'.format(_outfold,self.MJD,\
             outname,self.lbc))
         _plt.close()
         return
@@ -289,7 +289,7 @@ def check_dtobs(dtobs):
     elif dtobs[2] == '/':
         dtobs = dtobs.split('/')[::-1]
     else:
-        print('# ERROR! Wrong "DATE-OBS" in header! {}'.format(fitsfile))
+        print('# ERROR! Wrong "DATE-OBS" in header! {0}'.format(fitsfile))
         raise systemExit(1)
     dtobs = _np.array(dtobs, dtype='int32')
     return dtobs, tobs
@@ -338,7 +338,7 @@ def loadfits(fitsfile):
         MJD = _jdcal.gcal2jd(*dtobs)[1]+tobs
     else:
         MJD = _jdcal.MJD_JD2000
-        print('# Warning! No DATE-OBS information is available! {}'.\
+        print('# Warning! No DATE-OBS information is available! {0}'.\
         format(fitsfile))
         print('# Assuming MJD_JD2000')
     if 'DATE-OBS' in imfits[0].header:
@@ -393,10 +393,10 @@ def checksubdirs(path, star, lbc, hwidth=1000, showleg=True, plots=False):
     """
     Faz o que tem que fazer.
     """
-    if not _os.path.exists('{}/{}'.format(path,star)):
-        _os.system('mkdir {}/{}'.format(path,star))
+    if not _os.path.exists('{0}/{1}'.format(path,star)):
+        _os.system('mkdir {0}/{1}'.format(path,star))
 
-    nights = [o for o in _os.listdir(path) if _os.path.isdir('{}/{}'.format(path,\
+    nights = [o for o in _os.listdir(path) if _os.path.isdir('{0}/{1}'.format(path,\
     o))]
 
     fig = _plt.figure()
@@ -431,10 +431,10 @@ def checksubdirs(path, star, lbc, hwidth=1000, showleg=True, plots=False):
     if showleg:
         legend = _plt.legend(loc=(0.75, .05), labelspacing=0.1)
         _plt.setp(legend.get_texts(),  fontsize='small')    
-    _plt.savefig('{}/{}_at_{}.png'.format(_outfold,star,lbc))
+    _plt.savefig('{0}/{1}_at_{2}.png'.format(_outfold,star,lbc))
     _plt.close()
-    spdtb.savedata(datafile='{}/{}.txt'.format(_outfold,star),\
-    metafile='{}/meta_{}.txt'.format(_outfold,star))
+    spdtb.savedata(datafile='{0}/{1}.txt'.format(_outfold,star),\
+    metafile='{0}/meta_{1}.txt'.format(_outfold,star))
     return
 
 
@@ -861,11 +861,11 @@ def overplotsubdirs(path, star, limits=(6540,6600), showleg=True):
 
     ref0,ref1 = limits
     
-    if not _os.path.exists('{}/{}'.format(path,star)):
-        _os.system('mkdir {}/{}'.format(path,star))
+    if not _os.path.exists('{0}/{1}'.format(path,star)):
+        _os.system('mkdir {0}/{1}'.format(path,star))
     f0 = open('{0}/{1}/{1}.log'.format(path,star), 'w')
     
-    nights = [o for o in _os.listdir(path) if _os.path.isdir('{}/{}'.format(path,\
+    nights = [o for o in _os.listdir(path) if _os.path.isdir('{0}/{1}'.format(path,\
         o))]
     
     legendl = ()
@@ -894,7 +894,7 @@ def overplotsubdirs(path, star, limits=(6540,6600), showleg=True):
                             min_dif = min(abs(lbda-ref1))
                             a1 = _np.where(abs(lbda-ref1) == min_dif)[0][0]
                             spec = normalize_range(lbda,spec,a0,a1)
-                            msg = '{}, {}, {}'.format((0.1*i), night, cal)
+                            msg = '{0}, {1}, {2}'.format((0.1*i), night, cal)
                             print(msg)
                             f0.writelines(msg+'\n')
                             try:
@@ -906,7 +906,7 @@ def overplotsubdirs(path, star, limits=(6540,6600), showleg=True):
                             i+=1
                 else:
                     print('# Data not reduced for %s at %s!' % (star,night))
-                    msg =  '{}, {}, {}'.format('NC', night, 'None')
+                    msg =  '{0}, {1}, {2}'.format('NC', night, 'None')
                     f0.writelines(msg+'\n')
 
     if showleg:
@@ -976,11 +976,11 @@ def diffplotsubdirs(path, star, limits=(6540,6600)):
     """
     ref0,ref1 = limits
     
-    if not _os.path.exists('{}/{}'.format(path,star)):
-        _os.system('mkdir {}/{}'.format(path,star))
+    if not _os.path.exists('{0}/{1}'.format(path,star)):
+        _os.system('mkdir {0}/{1}'.format(path,star))
     f0 = open('{0}/{1}/{1}.log'.format(path,star), 'w')
     
-    nights = [o for o in _os.listdir(path) if _os.path.isdir('{}/{}'.format(path,\
+    nights = [o for o in _os.listdir(path) if _os.path.isdir('{0}/{1}'.format(path,\
         o))]    
 
     legendl = ()
@@ -1081,11 +1081,11 @@ def refplotsubdirs(path, star, limits=(6540,6600)):
     """
     ref0,ref1 = limits
     
-    if not _os.path.exists('{}/{}'.format(path,star)):
-        _os.system('mkdir {}/{}'.format(path,star))
+    if not _os.path.exists('{0}/{1}'.format(path,star)):
+        _os.system('mkdir {0}/{1}'.format(path,star))
     f0 = open('{0}/{1}/{1}.log'.format(path,star), 'w')
     
-    nights = [o for o in _os.listdir(path) if _os.path.isdir('{}/{}'.format(path,\
+    nights = [o for o in _os.listdir(path) if _os.path.isdir('{0}/{1}'.format(path,\
         o))]
 
     legendl = ()
@@ -1240,11 +1240,11 @@ def overplotsubdirs2(path, star, limits=(6540,6600)):
     """
     ref0,ref1 = limits
     
-    if not _os.path.exists('{}/{}'.format(path,star)):
-        _os.system('mkdir {}/{}'.format(path,star))
+    if not _os.path.exists('{0}/{1}'.format(path,star)):
+        _os.system('mkdir {0}/{1}'.format(path,star))
     f0 = open('{0}/{1}/{1}.log'.format(path,star), 'w')
     
-    nights = [o for o in _os.listdir(path) if _os.path.isdir('{}/{}'.format(path,\
+    nights = [o for o in _os.listdir(path) if _os.path.isdir('{0}/{1}'.format(path,\
         o))]
 
     legendl = ()
@@ -1871,8 +1871,8 @@ def din_spec(refspec, metadata, lbc=6562.86, hwidth=1500., res=50, interv=None,
     print _np.min(img), _np.max(img)
     _plt.imshow(img, vmin=vmin, vmax=vmax)
     for ext in fmt:
-        print(_os.getcwd(), '{}.{}'.format(outname, ext))
-        _plt.savefig('{}.{}'.format(outname, ext))
+        print(_os.getcwd(), '{0}.{1}'.format(outname, ext))
+        _plt.savefig('{0}.{1}'.format(outname, ext))
     _plt.close()
 
 

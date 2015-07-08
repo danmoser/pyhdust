@@ -323,14 +323,14 @@ def createBAsed(fsedlist, xdrpath, lbdarr, param=True, savetxt=False,
 
     if savetxt:
         f0 = open(xdrpath+'.txt', 'w')
-        f0.writelines('{} \n'.format(header1))
-        f0.writelines('{} \n'.format(header2))
+        f0.writelines('{0} \n'.format(header1))
+        f0.writelines('{0} \n'.format(header2))
         for vals in listpar:
-            f0.writelines('{} \n'.format(vals))
-        f0.writelines('{} \n'.format(lbdarr))
+            f0.writelines('{0} \n'.format(vals))
+        f0.writelines('{0} \n'.format(lbdarr))
         for i in range(nm):
-            f0.writelines('{} \n'.format(minfo[i]))
-            f0.writelines('{} \n'.format(models[i]))
+            f0.writelines('{0} \n'.format(minfo[i]))
+            f0.writelines('{0} \n'.format(models[i]))
         f0.close()
         print('# TXT file {0} saved!'.format(xdrpath+'.txt'))
     return
