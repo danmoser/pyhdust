@@ -22,7 +22,7 @@ try:
 except:
     print('# Warning! matplotlib and/or scipy module not installed!!!')
 
-__version__ = 0.961
+__version__ = 0.962
 __release__ = "Beta"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -325,7 +325,7 @@ def readtemp(tfile, quiet=False):
 
     OUTPUT = ncr,ncmu,ncphi,nLTE,nNLTE,Rstar,Ra,beta,data,pcr,pcmu,pcphi
     """
-    f = open(tfile).read()
+    f = open(tfile, 'rb').read()
     ixdr=0
     ncr, ncmu, ncphi, nLTE, nNLTE = _struct.unpack('>5l', f[ixdr:ixdr+4*5])
     ixdr+=4*5

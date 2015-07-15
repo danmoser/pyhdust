@@ -128,7 +128,7 @@ def readmap(file, quiet=False):
     else:
         print('# ERROR: This is not a HDUST valid image!')
         return
-    f = open(file).read()
+    f = open(file, 'rb').read()
     #
     ixdr=0
     nobs,lnum,nx,ny = _struct.unpack('>4l', f[ixdr:ixdr+4*4])

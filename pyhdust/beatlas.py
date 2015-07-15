@@ -303,7 +303,7 @@ def createBAsed(fsedlist, xdrpath, lbdarr, param=True, savetxt=False,
                     models[k*header2[-1]+j] = sed2data[j,:,3]*iL/4/_np.pi/dist**2
             k += 1
     #
-    f0 = open(xdrpath, 'w')
+    f0 = open(xdrpath, 'wb')
     stfmt = '>{0}l'.format(3)
     f0.writelines(_struct.pack(stfmt, *header1))
     stfmt = '>{0}l'.format(nq)
@@ -351,7 +351,7 @@ def readBAsed(xdrpath, quiet=False):
     | OUTPUT: listpar, lbdarr, minfo, models 
     | (list of mods parameters, lambda array (um), mods index, mods flux)
     """
-    f = open(xdrpath).read()
+    f = open(xdrpath, 'rb').read()
     ixdr=0
     #~ 
     npxs = 3
