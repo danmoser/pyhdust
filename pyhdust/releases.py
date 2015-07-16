@@ -13,6 +13,7 @@ v0.956 @ 2015-05-08
 ----------------------
 - Contributions from Bednarski to poltools+fieldstars
 - Corrections to work on Windows (binary files)
+- Triangle added
 - 
 
 v0.955 @ 2015-05-15
