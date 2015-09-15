@@ -33,7 +33,8 @@ def corner(xs, bins=20, range=None, weights=None, color="k",
            show_titles=False, title_fmt=".2f", title_kwargs=None,
            truths=None, truth_color="#4682b4",
            scale_hist=False, quantiles=None, verbose=False, fig=None,
-           max_n_ticks=5, top_ticks=False, hist_kwargs=None, **hist2d_kwargs):
+           max_n_ticks=5, top_ticks=False, hist_kwargs=None, 
+           qtdiff=None, **hist2d_kwargs):
     """
     Make a *sick* corner plot showing the projections of a data set in a
     multi-dimensional space. kwargs are passed to hist2d() or used for
@@ -110,6 +111,8 @@ def corner(xs, bins=20, range=None, weights=None, color="k",
         title_kwargs = dict()
     if label_kwargs is None:
         label_kwargs = dict()
+    if qtdiff is None:
+        qtdiff = np.zeros(xs.shape[1])
 
     # Try filling in labels from pandas.DataFrame columns.
     if labels is None:
@@ -233,28 +236,45 @@ def corner(xs, bins=20, range=None, weights=None, color="k",
 
         # Plot quantiles if wanted.
         if len(quantiles) > 0:
-            qvalues = quantile(x, quantiles, weights=weights)
+            qts = np.array(quantiles)+qtdiff[i]
+            qts = np.where(qts<=0,0.01,qts)
+            qts = np.where(qts>=1,0.99,qts)
+            qts = list(qts)
+            qvalues = quantile(x, qts, weights=weights)
             for q in qvalues:
                 ax.axvline(q, ls="dashed", color=color)
 
             if verbose:
                 print("Quantiles:")
-                print([item for item in zip(quantiles, qvalues)])
+                print([item for item in zip(qts, qvalues)])                
 
         if show_titles:
             # Compute the quantiles for the title. This might redo
             # unneeded computation but who cares.
-            q_16, q_50, q_84 = quantile(x, [0.16, 0.5, 0.84], weights=weights)
+            qts = np.array(quantiles)+qtdiff[i]
+            qts = np.where(qts<=0,0.01,qts)
+            qts = np.where(qts>=1,0.99,qts)
+            qts = list(qts)
+            q_16, q_50, q_84 = quantile(x, qts, weights=weights)             
             q_m, q_p = q_50-q_16, q_84-q_50
 
             # Format the quantile display.
-            fmt = "{{0:{0}}}".format(title_fmt).format
-            title = r"${{{0}}}_{{-{1}}}^{{+{2}}}$"
-            title = title.format(fmt(q_50), fmt(q_m), fmt(q_p))
+            if q_50 < 1e6:
+                fmt = "{{0:{0}}}".format(title_fmt).format
+                title = r"${{{0}}}_{{-{1}}}^{{+{2}}}$"
+                title = title.format(fmt(q_50), fmt(q_m), fmt(q_p))
+            else:
+                expn = int(np.log10(q_50))
+                fmt = "{{0:{0}}}".format(title_fmt).format
+                title = r"${{{0}}}_{{-{1}}}^{{+{2}}}e{3}$"
+                title = title.format(fmt(q_50*10**-expn), fmt(q_m*10**-expn),
+                    fmt(q_p*10**-expn), expn)
 
             # Add in the column name if it's given.
             if labels is not None:
-                title = "{0} = {1}".format(labels[i], title)
+                j = labels[i].find(' ')
+                if j == -1: j = len(labels[i])
+                title = "{0} = {1}".format(labels[i][:j], title)
 
             # Add the title to the axis.
             ax.set_title(title, **title_kwargs)

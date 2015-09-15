@@ -13,6 +13,7 @@ import numpy as _np
 import re as _re
 import struct as _struct
 from glob import glob as _glob
+from itertools import product as _itprod
 import pyhdust.phc as _phc
 import pyhdust.jdcal as _jdcal
 
@@ -22,7 +23,7 @@ try:
 except:
     print('# Warning! matplotlib and/or scipy module not installed!!!')
 
-__version__ = 0.963
+__version__ = 0.964
 __release__ = "Beta"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -174,8 +175,7 @@ def doFilterConv(x0, y0, filter, pol=False):
     interpfunc = _interpolate.InterpolatedUnivariateSpline(fdat[:, 0], fdat[:, 1])
 
     if not pol:
-        y = interpfunc(x0) * y0
-        return _np.trapz(y, x0)
+        return _np.trapz(interpfunc(x0) * y0, x0)
     else:
         return phc.wg_avg_and_std(y0, 1/interpfunc(x0))[0]
 
@@ -314,8 +314,8 @@ def readtemp(tfile, quiet=False):
     - nLTE = number of atomic LTE levels
     - nNLTE = number of atomic NLTE levels
     - beta = flare disk parameter
-    - Rstar = raio da estrela
-    - Ra = raio máximo da simulação, onde acabam todas as poeiras
+    - Rstar = raio da estrela (Rsun)
+    - Ra = raio máximo da simulação, onde acabam todas as poeiras (Rsun)
     - pcrc = coordenadas das células em raio
     - pcmuc = coordenadas das células em mu
     - pcphic = coordenadas das células em phi
@@ -367,19 +367,78 @@ def readtemp(tfile, quiet=False):
     return ncr,ncmu,ncphi,nLTE,nNLTE,Rstar,Ra,beta,data,pcr,pcmu,pcphi
 
 
-def readdust(tfile):
-    """ TBD!!
+def readdust(dfile):
+    """ Read *.dust files
+    
+    - ncr = número de células da simulação na coordenada radial
+    - ncmu = número de células da simulação na coordenada latitudinal
+    - ncphi = número de células da simulação na coordenada azimutal
+    - Rstar = raio da estrela (Rsun)
+    - Ra = raio máximo da simulação, onde acabam todas as poeiras (Rsun)
+    - pcrc = coordenadas das células em raio
+    - pcmuc = coordenadas das células em mu
+    - pcphic = coordenadas das células em phi
+    - pcr = distância entre as células em raio
+    - pcmu = distância entre as células em mu
+    - pcphi = distância entre as células em phi
 
-    - ntip, = número de tipos de poeira determinados para a simulação (composição)
-    - na, = número do tipo da poeira (tamanhos)
-    - NdustShells, = número de camadas de poeiras da simulação
-    - Rdust, = raio onde está(ão) a(s) camada(s)
-    - Tdestruction, = temperatura na qual os grãos são evaporados
-    - Tdust, = temperatura da poeira numa da posição da grade da simulação (r,phi,mu)
-    - lacentro, = controla os tipos e tamanhos das poeiras
-
+    - ntip = número de tipos de poeira determinados para a simulação (composição)
+    - na = número de tamanho por tipo da poeira 
+    - NdustShells = número de camadas de poeiras da simulação
+    - Rdust = raio onde está(ão) a(s) camada(s)
+    - Tdestruction = temperatura na qual os grãos são evaporados
+    - Tdust = temperatura da poeira numa da posição da grade da simulação (r,phi,mu)
+    - lacentro = controla os tipos e tamanhos das poeiras
     """
-    return
+    f0 = f0.open(dfile).read()
+    f0 = f0.split('\n')
+    #~ Header
+    tmp = f0[0].split()
+    ncr, ncmu, ncphi, NdustShells = np.array(tmp[:4], dtype='int')
+    Rstar, Ra = np.array(tmp[4:], dtype='float')
+    tmp = f0[1].split()
+    ncrdust = int(tmp[0])
+    Rdust, Tdestruction = np.array(tmp[1:], dtype='float')
+    ntip = int(f0[2])
+    #~ 
+    pcrc = np.zeros(ncr)
+    pcmuc = np.zeros((ncmu,ncr))
+    pcphic = np.zeros(ncphi)
+    i = 3
+    for stip in range(ntip):
+        na = int(f0[i])
+        #~ 
+        if stip is 0:
+            Tdust = np.zeros((ntip,na,ncr,ncmu,ncphi))
+            lacentro = np.zeros((ntip,na))
+        i+=1
+        lacentro[stip] = np.array(f0[i])
+        for icphi,icmu,icr in _itprod(range(ncphi), range(ncmu), range(ncr)):
+            i+=1 
+            tmp = np.array(f0[i])
+            pcrc[icr] = tmp[0]
+            pcmuc[icmu,icr] = tmp[1]
+            pcphic[icphi] = tmp[2]
+            Tdust[stip,:,icr,icmu,icphi] = temp[3:3+na]
+    #~ 
+    pcr = np.zeros(ncr+1)
+    pcr[0] = Rdust[0]
+    for icr in range(1,ncr+1):
+        pcr[icr] = pcr[icr-1] + 2*(pcrc[icr-1]-pcr[icr-1])
+    #~ 
+    pcmu = np.zeros((ncmu+1,ncr))
+    for icr in range(ncr):
+        pcmu[0,icr] = -1.
+        for icmu in range(1, ncmu+1):
+            pcmu[icmu,icr] =  pcmu[icmu-1,icr] + 2.*(pcmuc[icmu-1]-\
+                pcmu[icmu-1,icr])
+    #~ 
+    pcphi = np.zeros(ncphi+1)
+    pcphi[0] = 0.
+    for icphi in range(1,ncphi+1):
+        pcphi[icphi] = pcphi[icphi-1] + 2*(pcphic[icphi-1]-pcphi[icphi-1])
+    return ncr,ncmu,ncphi,ntip,na,Rstar,Ra,NdustShells,Rdust,Tdestruction,\
+        Tdust,pcrc,pcmuc,pcphic,pcr,pcmu,pcphi,lacentro
 
 
 def plotdust(tfile):
@@ -605,7 +664,7 @@ def mergesed2(models, Vrots, path=None):
                 'MU,PHI,LAMBDA,FLUX,SCT FLUX,EMIT FLUX,TRANS FLUX,Q,U,Sig FLUX,\
                 Sig SCT FLUX,Sig EMIT FLUX,Sig TRANS FLU,Sig Q,Sig U',
                                                    formats='f8,f8,f8,f8,f8,f8,f8,f8,f8,f8,f8,f8,f8,f8,f8,f8')
-            idx = _np.argsort(fullsed2, order=('MU', 'LAMBDA'))
+            idx = _np.argsort(fullsed2, order=('MU', 'PHI', 'LAMBDA'))
             fullsed2 = fullsed2[idx]
 
             hd = '%CONTAINS: {0}\n'.format(' + '.join(sfound))
@@ -621,6 +680,38 @@ def mergesed2(models, Vrots, path=None):
                         fullsed2, header=hd, comments="", fmt=fmt, delimiter='')
         else:
             print('# WARNING: No SED2 found for {0}'.format(model))
+    return
+
+
+def fs2rm_nan(fsed2, cols=[3], refcol=None):
+    """ Remove ``nan`` values present in columns of a matrix file.
+    In a *fullsed2* file, ``cols=[3]`` and ``refcol=[2]``.
+
+    Input=filename, cols
+
+    Output=file overwritten.
+
+    TDB: refcol apparently is not working...
+    """
+    f2mtx = _np.loadtxt(fsed2, skiprows=5)
+    for col in cols:
+        nans, x = _phc.nan_helper(f2mtx[:,col])
+        if refcol is None:
+            f2mtx[:,col][nans] = _np.interp(x(nans), x(~nans), f2mtx[:,col][~nans])
+        else:
+            print('# WARNING! The output must be checked!')
+            f2mtx[:,col][nans] = _np.interp(f2mtx[:,refcol][nans], f2mtx[:,refcol][~nans], f2mtx[:,col][~nans])
+    #~
+    oldf = open(fsed2).read().split('\n')
+    if _np.max(f2mtx[_np.isfinite(f2mtx)]) < 100000:
+        fmt = '%13.6f'
+    elif _np.max(f2mtx[_np.isfinite(f2mtx)]) < 1000000:
+        fmt = '%13.5f'
+    else:
+        print('# ERROR at max values of fullsed2 {0}!!!!!!!!'.format(fsed2))
+        raise SystemExit(0)
+    _np.savetxt(fsed2, f2mtx, header='\n'.join(oldf[:5]), comments="", fmt=fmt, delimiter='')
+    print('# {0} file updated!'.format(fsed2))
     return
 
 
@@ -1164,7 +1255,7 @@ def obsCalc():
     #carrega tempo das declinacoes
     obsdec = _np.loadtxt('{0}refs/obs_dec.txt'.format(hdtpath()), delimiter='\t')
     #carrega efemerides
-    if _os.path.exists('{0}refs/obs_ef.txt'):
+    if _os.path.exists('{0}refs/obs_ef.txt'.format(hdtpath())):
         ef_alvos = _np.loadtxt('{0}refs/obs_ef.txt'.format(hdtpath()), \
                                delimiter='\t', dtype=str)
         ef_alvos = ef_alvos.T
@@ -1215,7 +1306,7 @@ def obsCalc():
             hpoe = _np.NaN
 
         #procura posicao nas efemerides (pef)
-        if _os.path.exists('database/obs_ef.txt'):
+        if _os.path.exists('{0}refs/obs_ef.txt'.format(hdtpath())):
             pef = [j for j, x in enumerate(ef_alvos[1]) if x.find(alvos[i][1]) > -1]
         else:
             pef = []

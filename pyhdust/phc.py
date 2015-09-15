@@ -19,8 +19,9 @@ import pyhdust.jdcal as _jdcal
 
 try:
     import matplotlib.pyplot as _plt
+    from scipy import optimize as _optimize
 except:
-    print('# Warning! matplotlib module not installed!!!')
+    print('# Warning! matplotlib and/or scipy module not installed!!!')
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -613,6 +614,66 @@ def gradColor(val, cmapn='jet', min=None, max=None, log=False):
     cmap = _plt.get_cmap(cmapn)
     return cmap(val)
 
+
+def nan_helper(y):
+    """Helper to handle indices and logical indices of NaNs.
+
+    Input:
+        - y, 1d numpy array with possible NaNs
+    Output:
+        - nans, logical indices of NaNs
+        - index, a function, with signature indices= index(logical_indices),
+          to convert logical indices of NaNs to 'equivalent' indices
+    Example:
+        >>> # linear interpolation of NaNs
+        >>> nans, x= nan_helper(y)
+        >>> y[nans]= np.interp(x(nans), x(~nans), y[~nans])
+    """
+    return _np.isnan(y), lambda z: z.nonzero()[0]
+
+
+def chi2calc(mod, obs, sig_obs = None, npar=1):
+    """ Calculate the chi2 """
+    if sig_obs is None: sig_obs = np.ones(len(obs))
+    return _np.sum( (mod-obs)**2/sig_obs**2 )/(len(sig_obs)-npar-1)
+
+
+def optim(p0,x,y,yerr,func,errfunc = None):
+    """ Do scipy.optimize.leastsq minimization. 
+    Default error function is the chi2 function.
+    
+    Requirements:
+        - func(p, x) is a previously user defined function.
+        - len(x)=len(y)=len(yerr)
+        
+    Output:
+        best parameters (p), chi2_red value
+    """
+    if errfunc is None:
+        def errfunc(p,x,y,yerr,func):
+            """ error function """
+            #~ return np.sum( ((y-func(p,x))/yerr)**2 )
+            return ((y-func(p,x))/yerr)**2    
+    bestp, tmp = _optimize.leastsq(errfunc, p0, args=(x,y,yerr,func))
+    c2red = chi2calc(func(bestp,x), y, yerr, npar=len(p0))
+    return bestp, c2red
+    
+    
+def optim2(p0,x,y,yerr,func):
+    """ Do scipy.optimize.curve_fit minimization. 
+    It returns errors to the parameters fitting!!!
+    
+    Requirements:
+        - func(p, x) is a previously user defined function.
+        - len(x)=len(y)=len(yerr)
+        
+    Output:
+        best params (p), params errors (perr), chi2_red value
+     """
+    bestp, cov = _optimize.curve_fit(func, x, y, p0=p0, sigma=yerr)
+    c2red = chi2calc(func(x,bestp), y, yerr, npar=len(p0))
+    return bestp, _np.sqrt(_np.diag(cov)), c2red
+    
 
 #Constants
 c = Constant(2.99792458e10, 299792458., 'cm s-1', 'speed of light in vacuum')

@@ -1,0 +1,107 @@
+III) PERTURBATIONS
+	!-----------------------------------------------------------------------
+	! This feature allows one to specify perturbations to the density
+	! distribution defined in section I.C.  The perturbation enhances (or
+	! diminishes) the density of a group of cells.  There are several 
+	! methods for requesting perturbations, selected using the keyword
+	! "PERTURBATION TYPE = n", where n is one of the following options:
+	! 0) NONE
+	!	No perturbations are requested.
+	! 1) REGION LIST
+	!	In this option you provide a list of regions that are described by 
+	!	geometrical shapes (spheres, cylindrical shells, etc.).  For each 
+	!	region, you must provide its shape, location, dimensions, and the 
+	!	amplitude of the density perturbation.
+	! 2) PERTURBATION FILE
+	!	Here an input file is used to specify the perturbation in each grid
+	!	cell.  This allows an arbitrary perturbation to be used.
+	! 3) SCALE HEIGHT
+	!	This option changes the scale height of the inner disk (between
+	!	the stellar surface and an outer radius for the perturbation).
+	!-----------------------------------------------------------------------
+
+	A) PERTURBATION TYPE = 0
+
+		0) NONE					 !(PERTURBATION TYPE = 0)
+			!---------------------------------------------------------------
+			! No perturbations will be employed.
+			!---------------------------------------------------------------
+
+		1) REGION LIST			  !(PERTURBATION TYPE = 1)
+			!---------------------------------------------------------------
+			! First specify the number of regions:
+			!
+			!	N_Regions = n
+			!
+			! Then for each region specify the perturbation as follows:
+			!
+			!	REGION i
+			!		Geometry = nn
+			!		parameter1 = xx
+			!		parameter2 = yy
+			!		...
+			!		Perturbation Method = j
+			!		Factor = zz (or Density = zz)
+			!		Switch = iw, id, idust
+			!
+			! where i is the region number (1 <= i <= n, but more regions
+			! can be present in the file).  The allowed geometry values, nn,
+			! are:
+			! 1) A spherical blob.  The required parameters are the blob
+			!	radius (Radius), and the coordinates of the blob center 
+			!	(R, Phi, and Theta).
+			! 2) A cylindrical shell.  A cylindrical shell requires, as 
+			!	parameters, its inner and outer radii (iRadius, oRadius).
+			!
+			! The density of the region must also be specified.  This is 
+			! done by specifying Perturbation Method = j.  The methods are:
+			! 1) a multiplicative factor is used, and the perturbed density
+			!		n_perturbed = Factor*n
+			! 2) the number density (cm^-3) is entered directly, so 
+			!		n_perturbed = Density
+			!
+			! Finally, the Switch parameter allows one to specify the
+			! density component (wind, disk, or dust) to which the 
+			! perturbation should be applied (0 = ignore; 1 = apply).  For 
+			! instance, if 
+			!	 Switch = 0, 1, 0
+			! only the disk component is altered.
+			!---------------------------------------------------------------
+			N_Regions = 2
+
+			REGION 1
+				Geometry = 1			!Spherical Blob in Wind
+				Radius = 3.				!Blob radius
+				R = 9.				 	!radial position of blob
+				Phi = 90.				!azimuth of blob
+				Theta = 80.				!co-latitude of blob
+				Perturbation Method = 2 !(1 = Factor) or (2 = Density)
+				Density = 3.E12			!number density after perturbation
+				Switch = 1,0,0		 	!apply this perturbation to the wind
+
+			REGION 2
+				Geometry = 2			!Cylindrical Shell (Ring in disk)
+				iRadius = 1.			!inner radius
+				oRadius = 2.			!outer radius
+				Perturbation Method = 1 !(1 = Factor) or (2 = Density)
+				Factor = 0.01			!density multiplier for perturbation
+				Switch = 0,1,0		 	!apply this perturbation to the disk
+
+		2) PERTURBATION FILE			!(PERTURBATION TYPE = 2)
+			!---------------------------------------------------------------
+			! Give the name of the clump file.
+			!---------------------------------------------------------------
+			File = 'clumps.txt'
+
+		3) SCALE HEIGHT			 		!(PERTURBATION TYPE = 3)
+			!---------------------------------------------------------------
+			! The scale height of the inner disk (R < r < oRadius) will be 
+			! changed so that H0 decreases linearly from 
+			!	 H0 = H0*Fac	at r = R
+			! to
+			!	 H0 = H0		at r = oRadius.
+			! Note that the surface density is unaltered by this option.
+			!---------------------------------------------------------------
+			oRadius = 2.			!outer radius of the perturbed region
+			Factor = 5.				!scale height enhancement factor
+

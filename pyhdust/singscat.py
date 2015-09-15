@@ -2,7 +2,7 @@
 
 """
 PyHdust *singscat* module: Single Scatering Dumbbell+disk model. This release
-contains a simplified version of the one applied to Sigma Ori E in
+contains a simplified version of the one applied to Sigma Ori E in 
 Carciofi+2013.
 
 | VARIABLES:
@@ -36,15 +36,17 @@ Carciofi+2013.
 import os as _os
 import numpy as _np
 import time as _time
+import pyhdust as _hdt
 import pyhdust.jdcal as _jdcal
 import pyhdust.poltools as _polt
 import pyhdust.phc as _phc
-
+import pyhdust.triangle as _triangle
 try:
     import matplotlib.pyplot as _plt
     import emcee as _emcee
+    from scipy.stats import percentileofscore as _perct
 except:
-    print('# Warning! matplotlib and/or emcee module not installed!!!')
+    print('# Warning! matplotlib, scipy and/or emcee module not installed!!!')
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -460,13 +462,20 @@ def obs2mod(pob,dobs):
     Ucob = _np.sqrt(Qcob**2+Ucob**2)*_np.sin(2*(ang-ths))         
     return Qcob,Ucob
 
-def chi2calc(Qobc,Uobc,dobs):
+def chi2calc_old(Qobc,Uobc,dobs):
     """ ### CHI2 CALC given Pobs and Pobc ### """
     Qobs,Uobs,sigobs = dobs
     Qchi2 = (Qobc-Qobs)**2/sigobs**2
     Uchi2 = (Uobc-Uobs)**2/sigobs**2
     return (Qchi2.sum()+Uchi2.sum())/(2*len(sigobs)-7.-1.)/2,\
     (Qchi2.sum()+Uchi2.sum())/(2*len(sigobs)-7.-1.)/2
+
+def chi2calc(Qobc,Uobc,dobs):
+    """ ### CHI2 CALC given Pobs and Pobc ### """
+    Qobs,Uobs,sigobs = dobs
+    Qchi2 = (Qobc-Qobs)**2/sigobs**2 + (Uobc-Uobs)**2/sigobs**2 
+    return Qchi2.sum()/(2*len(sigobs)-7.-1.)/2,\
+    Qchi2.sum()/(2*len(sigobs)-7.-1.)/2
 
 def Q0check(Q):
     """ ### Q0 check ### """
@@ -568,15 +577,17 @@ class BlobDiskMod(object):
     #
     def __init__ (self, tgt='sori', rs=4.28, diamb=2/3., distb=2.4, n0=5, ne=1e12, \
         iang=75., dlt0=-0.17, ths=150.3, Qis=-0.350, Uis=0.025, rdi=0., rdf=0., \
-        Hd=0.01, alpha=28, dh=1, ddr=3, dphi=180, ned=2.7e12, outname=None):
+        Hd=0.01, alpha=28, dh=1, ddr=3, dphi=180, ned=2.7e12, nbins=0, outname=None,
+        hasdata=True, path=None):
         """ Class initialiser """
         self.tgt = tgt
         if outname == None:
             self.outname = tgt
         else:
             self.outname = outname
+        self.path = path
         #star-fixed parameters
-        self.rs = rs*phc.Rsun.cgs
+        self.rs = rs*_phc.Rsun.cgs
         self.diamb = diamb*self.rs
         self.distb = distb*self.rs
         self.n0 = n0
@@ -606,23 +617,17 @@ class BlobDiskMod(object):
         self.ddr = ddr
         self.dphi = dphi
         self.ned = ned
-        self.setobs()
-        self.setRmPis()
-        self.setRot()
+        self.nbins = nbins
+        if hasdata == True:
+            self.setobs(path=path)
+            self.setRmPis()
+            self.setRot()
+        else:
+            self.phiobs = _np.linspace(0,2*_np.pi,80)[:-1]
         self.setmod()
-        #~ self.setbin()
+        if hasdata == True:
+            self.setbin(nbins)
         
-    #~ def setobs(self, phiobs=_np.empty(0), Qobs=_np.empty(0), Uobs=_np.empty(0), \
-        #~ sigP=_np.empty(0), sigth=_np.empty(0)):
-        #~ """ Observational info """
-        #~ self.phiobs = phiobs
-        #~ self.phiin = self.phiobs-self.phi0
-        #~ self.Qobs = Qobs
-        #~ self.Uobs = Uobs
-        #~ self.sigP = sigP
-        #~ self.sigth = sigth
-        #~ return
-
     def setobs(self, path=None, r=0):
         """ It reads the `tgt.log` file inside path and sets the observation
         variables ph0 and Period (from light-curve database) and phiobs, Pobs,
@@ -632,7 +637,7 @@ class BlobDiskMod(object):
         
         if path == None:
             path = _os.getcwd()
-        lmags = _np.loadtxt('{0}/pol/mags.txt'.format(hdtpath()), dtype=str)
+        lmags = _np.loadtxt('{0}/refs/pol_mags.txt'.format(_hdt.hdtpath()), dtype=str)
         if not _os.path.exists('{0}/{1}.log'.format(path,self.tgt)):
             self.phiobs = _np.empty(0)
             self.Qobs = _np.empty(0)
@@ -653,7 +658,7 @@ class BlobDiskMod(object):
         idx = _np.where(lmags[:,0] == self.tgt)
         Period, ph0 = lmags[idx][0][1:]
         self.Period = Period
-        ph0 = float(ph0) - jdcal.MJD_0
+        ph0 = float(ph0) - _jdcal.MJD_0
         self.ph0 = ph0
         #
         phase = data['MJD']-ph0
@@ -751,22 +756,22 @@ class BlobDiskMod(object):
         """ print mod """
         return self.phimodobs, self.phimod, self.Pmod, self.Qmod, self.Umod, self.angmod
 
-    def setbin(self, nbins=0):
+    def setbin(self, nbins):
         """ set bin """
         self.nbins = nbins
         if self.nbins > 0:
             self.outname += '_binned'
-            phiobsB, self.Pobs, sigPB = _phc.bindata(self.phiobs, self.Pobs, self.sigP, self.nbins)
-            self.Qobs = _phc.bindata(self.phiobs, self.Qobs, self.sigP, self.nbins)[1]
-            self.Uobs = _phc.bindata(self.phiobs, self.Uobs, self.sigP, self.nbins)[1]
+            phiobsB, self.Pobs, sigPB = _phc.bindata(self.phiobs, self.Pobs, self.nbins, yerr=self.sigP)
+            self.Qobs = _phc.bindata(self.phiobs, self.Qobs, self.nbins, yerr=self.sigP)[1]
+            self.Uobs = _phc.bindata(self.phiobs, self.Uobs, self.nbins, yerr=self.sigP)[1]
             self.sigP = sigPB
-            self.sigth = _phc.bindata(self.phiobs, self.sigth, self.sigth, self.nbins)[2]
+            self.sigth = _phc.bindata(self.phiobs, self.sigth, self.nbins, yerr=self.sigth)[2]
             self.phiobs = phiobsB
             self.setRmPis()
             self.setRot()
             self.setmod()
-        else:
-            print('# Warning! Invalid `nbins` value. Nothing done.')
+        #~ else:
+            #~ print('# Warning! Invalid `nbins` value. Nothing done.')
         return
 
     def calcavgU0(self):
@@ -778,7 +783,7 @@ class BlobDiskMod(object):
         for ths in lths:
             Qrot = self.P1*_np.cos(2*(self.ang1-ths))
             Urot = self.P1*_np.sin(2*(self.ang1-ths))
-            avg = _np.abs(phc.wg_avg_and_std(Urot, self.sigP)[0])
+            avg = _np.abs(_phc.wg_avg_and_std(Urot, self.sigP)[0])
             if avg < avgU:
                 avgU = avg
                 thmin = ths
@@ -920,7 +925,7 @@ def chi2f(params, p_info, tgt):
     ang1 = QUang((tgt.Qobs-Qis),(tgt.Uobs-Uis))
     for ths in lths:
         Urot = P1*_np.sin(2*(ang1-ths))
-        avg = _np.abs(phc.wg_avg_and_std(Urot, tgt.sigP)[0])
+        avg = _np.abs(_phc.wg_avg_and_std(Urot, tgt.sigP)[0])
         if avg < avgU:
             avgU = avg
             thmin = ths
@@ -975,7 +980,7 @@ def chi2fin(params, p_info, tgt):
     ang1 = QUang((tgt.Qobs-Qis),(tgt.Uobs-Uis))
     for ths in lths:
         Urot = P1*_np.sin(2*(ang1-ths))
-        avg = _np.abs(phc.wg_avg_and_std(Urot, tgt.sigP)[0])
+        avg = _np.abs(_phc.wg_avg_and_std(Urot, tgt.sigP)[0])
         if avg < avgU:
             avgU = avg
             thmin = ths
@@ -1174,6 +1179,117 @@ def plotClean(a, angopt1=False):
     fig.savefig('{0}_press3.png'.format(a.outname), transparent=True)
     #~ _plt.close()
     return
+    
+def mcmc(tgt, p_info, birun=50, emrun=500, nd_walk=10, a=2, threads=4,
+        savesteps=False):
+    """ 
+    | tgt = target (sst.BlobDiskMod class)
+    | p_info = parameters info matrix 
+    |
+    | birun = burn-in steps
+    | emrun = emcee run steps 
+    | nd_walk = nwalkers = nd_walk*ndim
+    
+    Returns a sst.BlodDiskMod as best-fit and the emcee smampler:
+        bestfit, sampler 
+    """
+    # Build the parameters to be minimized
+    ind = _np.where(p_info[:,3] == 0)
+    p0val = p_info[:,1][ind]
+    # Choose an initial set of positions for the walkers.
+    ndim = len(p0val)
+    # We'll sample with X (nwalkers; 250) walkers.
+    nwalkers = ndim*nd_walk
+    # Choose an initial set of positions for the walkers.
+    if False:
+        p0sig = (p_info[:,2][ind]-p_info[:,0][ind])/6.
+        p0 = _np.array([_np.random.normal(p0val,p0sig,ndim) for i in xrange(nwalkers)])
+    else:
+        p0 = _np.array([_np.random.uniform(p_info[:,0][ind],p_info[:,2][ind],ndim) for i in xrange(nwalkers)])
+    # Initialize the sampler with the chosen specs.
+    sampler = _emcee.EnsembleSampler(nwalkers, ndim, chi2f, args=[p_info, tgt], a=a, threads=threads)
+    # Run a burn-in.
+    print "Burning-in ..."
+    pos, prob, state = sampler.run_mcmc(p0, birun)
+    # Reset the chain to remove the burn-in samples.
+    sampler.reset()
+    # Starting from the final position in the burn-in chain, sample for 1500
+    # steps. (rstate0 is the state of the internal random number generator)
+    print "Running MCMC ..."
+    localtime = _time.localtime(_time.time())
+    if savesteps:
+        filename2 = 'r_mcmc%d%02d%02d_%02d%02d.txt' % (localtime[0:5])
+        f0 = open(filename2, 'w')
+        f0.writelines('# R_MCMC walkers=%d iterations=%d parameters=\n# ' % (nwalkers, nb_run_emcee))
+        f0.writelines( '%d\t'*len(ind[0]) % tuple(ind[0]) ) 
+        f0.writelines( 'lnprob\n' ) 
+        f0.close()
+    #~ 
+    for result in sampler.sample(pos, iterations=emrun, rstate0=state):
+        pos = result[0]
+        prob = result[1]
+        state = result[2]
+        if savesteps:
+            f_handle = file(filename2, 'a')
+            _np.savetxt( f_handle, np.hstack((pos,np.array([prob]).T)) )
+            f_handle.close()        
+    #~ 
+    # Print out the mean acceptance fraction. 
+    af = sampler.acceptance_fraction
+    print "Mean acceptance fraction:", _np.mean(af)
+    #Get the index with the highest probability
+    maxprob_index = _np.argmax(prob)
+    #Get the best parameters and their respective errors
+    params_fit = pos[maxprob_index]
+    errors_fit = [sampler.flatchain[:,i].std() for i in xrange(ndim) ]
+    #~ print("# Best fit ...")
+    #~ print('# 1 == Fixed; ',p_info[:,-1])
+    #~ print('# chi2_red = ',_np.max(prob)*-2)
+    p_info[:,1][ind] = params_fit
+    err = _np.zeros(len(p_info[:,1]))
+    err[ind] = errors_fit
+    fact = _np.array([180./_np.pi, 1, 2*_np.pi, 180./_np.pi, 1, 1, -180./_np.pi, 1])
+    outmtx = _np.hstack(( (_np.array(p_info[:,1])*fact).reshape(-1,1),\
+    (_np.array(err)*fact).reshape(-1,1) ))
+    for i in range(len(outmtx)):
+        print outmtx[i]
+    
+    bestfit = BlobDiskMod(tgt=tgt.tgt, rs=tgt.rs/_phc.Rsun.cgs, diamb=tgt.diamb/tgt.rs, distb=tgt.distb/tgt.rs, \
+    n0=tgt.n0, ne=p_info[:,1][1], iang=p_info[:,1][0]*180/_np.pi, dlt0=p_info[:,1][2], ths=p_info[:,1][3]*180/_np.pi, \
+    Qis=p_info[:,1][4], Uis=p_info[:,1][5], rdi=0., rdf=0., Hd=0.01, alpha=p_info[:,1][6]*-1*180/_np.pi, dh=1, ddr=3, \
+    dphi=180, ned=p_info[:,1][7], path=tgt.path)
+    
+    bestfit.outname=tgt.outname
+    
+    distrib = sampler.chain[:, :, :].reshape((-1, ndim))
+    labels = list(_np.array([r'$i$ (rad)',r'$n_e$ (cm$^{-3}$)',r'$\delta$ (rad)', r'$\theta$ (rad)', r'$Q_{IS}$ (%)', r'$U_{IS}$ (%)', r'$\alpha$ (rad)', r'$n_e^d$ (cm$^{-3}$)'])[ind])
+    
+    figure = _triangle.corner(distrib, labels=labels, truths=_np.median(distrib, axis=0), quantiles=[0.16, 0.5, 0.84],
+        show_titles=True, title_kwargs={"fontsize": 16}, label_kwargs={"fontsize": 16}, title_fmt='.3f')
+    print("{0}, median($\chi^2_{{red}}$)= {1:.2f}".format(tgt.tgt, _np.median(prob)*-2))
+    #~ figure.gca().annotate("{0}, median($\chi^2_{{red}}$)= {1:.2f}".format(tgt.tgt, _np.median(prob)*-2), xy=(0.5, 1.0), xycoords="figure fraction",xytext=(0, -5), textcoords="offset points",ha="center", va="top", fontsize=20)
+    figure.savefig('{0}_triangle{1}.png'.format(bestfit.outname,0), transparent=False)
+    figure.savefig('{0}_triangle{1}.eps'.format(bestfit.outname,0), transparent=False)
+    _plt.close()
+    
+    dif = _np.zeros(ndim)
+    for i in range(ndim):
+        dif[i] = _perct(distrib[:,i], params_fit[i])/100.-.5
+    figure = _triangle.corner(distrib, labels=labels, truths=params_fit, quantiles=[0.16, 0.5, 0.84], qtdiff=dif,
+        show_titles=True, title_kwargs={"fontsize": 16}, label_kwargs={"fontsize": 16}, title_fmt='.3f')
+    print("{0}, $\chi^2_{{red}}$= {1:.2f}".format(tgt.tgt, _np.max(prob)*-2))
+    #~ figure.gca().annotate("{0}, $\chi^2_{{red}}$= {1:.2f}".format(tgt.tgt, _np.max(prob)*-2), xy=(0.5, 1.0), xycoords="figure fraction",xytext=(0, -5), textcoords="offset points",ha="center", va="top", fontsize=20)
+    figure.savefig('{0}_triangle{1}.png'.format(bestfit.outname,1), transparent=False)
+    figure.savefig('{0}_triangle{1}.eps'.format(bestfit.outname,1), transparent=False)
+    _plt.close()
+    
+    f0 = open('{0}_triangle.txt'.format(bestfit.outname),'w')
+    for i in range(len(outmtx)):
+        f0.writelines(str(outmtx[i])+'\n')
+    f0.close()
+    
+    return bestfit, sampler, params_fit, prob, pos
+    
 
 ### MAIN ###
 if __name__ == "__main__":

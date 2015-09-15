@@ -6,15 +6,20 @@ PyHdust auxiliary module: PyHdust releases control.
 History
 ============
 ..
-    v0.957 @ 2015-0
+    v0.958 @ 2015-0
     ----------------------
+    
+v0.964 @ 2015-09-15
+----------------------
+- hdrpil module added
+- readdust function implemented
+- Other mirror changes
 
 v0.956 @ 2015-05-08
 ----------------------
 - Contributions from Bednarski to poltools+fieldstars
 - Corrections to work on Windows (binary files)
-- Triangle added
-- 
+- Triangle module added
 
 v0.955 @ 2015-05-15
 ----------------------

@@ -357,7 +357,7 @@ def data2fitscube(data, obs, lbdc, xmax, dist, zoom=0, outname='model',
         pass
     else:
         print('# ERROR! Rotation of CUBES not yet implemented!')
-        raise SystemExit(0)
+        raise SystemExit(1)
     if lum != 0:
         #~ iL = _phc.fltTxtOccur('L =', lines, seq=2)*_phc.Lsun.cgs
         imgs = imgs*(lum*_phc.Lsun.cgs)/4/_np.pi/(dist*_phc.pc.cgs)**2*1e-4*1e17
@@ -523,7 +523,7 @@ def mapinterf(modf, im=0, obs=0, iflx=0, dist=10, PA=0., B=100., PAdisk=90.,
     DP = _np.zeros(npts)
     for i in range(npts):
         if len(_np.shape(data)) == 5:
-            img = data[im, obs, i, :, :]
+            img = data[im, obs, i, ::-1, :]
         else:
             img = data[im, obs, i, :, :, iflx]
         tmp, V, DP[i] = fastnumvis(img, lbdc[i]*1e-6, B, PA, rad_per_pixel,
@@ -1279,7 +1279,7 @@ def readesoquery(file):
             if k%2 == 1:
                 print('# ERROR! Strange number os strings in line {} of {}'.format(\
                 i, file))
-                print lines[i]
+                #~ print lines[i]
                 raise SystemExit(1)
             itmp = 0
             for l in range(k/2):
@@ -1321,15 +1321,24 @@ def printinfo(file, extract=False):
     info2 = []
     for vis in oidata.vis:
         info2+= ['{0:.1f}'.format(_np.sqrt(vis.ucoord**2 + vis.vcoord**2))]
+        #~ info2+= ['{0:.1f}'.format(_np.arctan2(vis.ucoord , vis.vcoord) * 180.0 / _np.pi % 180.0)]
         info2+= ['{0:.1f}'.format(_np.arctan2(vis.ucoord , vis.vcoord) * 180.0 / _np.pi % 180.0)]
-        print vis.ucoord, vis.vcoord
+        #~ print vis.ucoord, vis.vcoord
     if extract:
         wav = []
+        info2 = []
         info3 = []
         info4 = []
         for vis in oidata.vis:
+            fact = 1.
+            PA = _np.arctan2(vis.ucoord , vis.vcoord) * 180.0 / _np.pi % 360.0
+            if PA > 180:
+                PA = PA%180
+                fact = -1.
+            info2+= ['{0:.1f}'.format(_np.sqrt(vis.ucoord**2 + vis.vcoord**2))]
+            info2+= ['{0:.1f}'.format(PA)]
             wav += [1e6*vis.wavelength.eff_wave]
-            info3 += [vis.visphi, vis.visphierr]
+            info3 += [fact*vis.visphi, vis.visphierr]
         for vis2 in oidata.vis2:
             info4 += [vis2.vis2data, vis2.vis2err]
         return [info[2][:10], '{0:.7f}'.format(info[1]), info[0]] + info2, wav, info3, info4

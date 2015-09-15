@@ -1,0 +1,40 @@
+VI) OBSERVERS
+	!---------------------------------------------------------------
+	! Direction binning for the emergent flux (SED or LINE PROFILE).
+	! The program has two methods for generating SEDs.  The first
+	! measures the SED by sampling the escaping photons and binning
+	! them in frequency and direction.  These results are stored in
+	! the files "*.sed1".  The second set (*.sed2), calculates the
+	! SED by sampling photon interactions (absorption, scattering,
+	! and emission) and measuring the escaping energy for a 
+	! specified collection of observers in different directions.
+	!---------------------------------------------------------------
+	A) ESCAPING PHOTONS	 
+		!-----------------------------------------------------------
+		! The cos(theta) interval (-1,1) and the phi interval 
+		! (0,2pi) is divided into N_theta and N_phi direction bins
+		! (equally spaced in mu and phi)
+		!-----------------------------------------------------------
+		N_theta = 10
+		N_phi = 1
+	B) INDIVIDUAL OBSERVERS
+		!-----------------------------------------------------------
+		! Give the total number of observers, N_obs, along with the
+		! direction for each observer.  The direction is specified
+		! by the observer's coordinates (theta and phi, in degrees).
+		! If N_obs is 0, no sampling is performed for this method
+		! and the *.sed2 files are not generated.
+		!-----------------------------------------------------------
+			N_obs = 10			!number of observers
+			COORDINATES:		!list of theta, phi for each observer
+			Obs 1 = 90.0, 0.
+			Obs 2 = 83.6, 0.
+			Obs 3 = 77.2, 0.
+			Obs 4 = 70.5, 0.
+			Obs 5 = 63.6, 0.
+			Obs 6 = 56.3, 0.
+			Obs 7 = 48.2, 0.
+			Obs 8 = 38.9, 0.
+			Obs 9 = 27.3, 0.
+			Obs 10 = 00.0, 0.
+

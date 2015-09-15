@@ -26,6 +26,7 @@ import pyhdust as _hdt
 
 try:
     import pyfits as _pyfits
+    import matplotlib as _mpl
     import matplotlib.pyplot as _plt
     import scipy.interpolate as _interpolate
     from scipy.interpolate import interp1d as _interp1d
@@ -1423,7 +1424,7 @@ def overPlotLineSeries(fullseds, obsers=[0], lbc=.6564606, formats=['png'],
     return
 
 def overPlotLineFits(specs, lbc=.6564606, formats=['png'], hwidth=1500., \
-    ylim=None, yzero=False, addsuf=''):
+    ylim=None, yzero=False, addsuf='', lims=None, cmapn='jet', xlims=None):
     """Generate overplot spec. line from a FITS file list.
     """
     fig, ax = _plt.subplots()
@@ -1437,19 +1438,32 @@ def overPlotLineFits(specs, lbc=.6564606, formats=['png'], hwidth=1500., \
         elif dateobs.find('/') > 0:
             dtobs = dateobs.split('/')[::-1]
             dateobs = "-".join(dtobs)
-        ax.plot(x, y, label='{0}'.format(dateobs), \
-        color=_phc.colors[_np.mod(i, len(_phc.colors))])
+        if lims is None:
+            cor = _phc.colors[_np.mod(i, len(_phc.colors))]
+        else:
+            cor = _phc.gradColor([MJD],min=lims[0], max=lims[1], cmapn=cmapn)[0]
+        ax.plot(x, y, label='{0}'.format(dateobs), color=cor)
     if ylim != None:
         ax.set_ylim(ylim)
     if yzero:
         ylim = ax.get_ylim()
         ax.plot([0,0], ylim, ls='-', color='Gray')
-    ax.set_title(u'lbc = {0:.5f} $\mu$m'.format(lbc))
-    ax.set_ylabel('Overplotted spectra')
+    ax.set_title(r'$\lambda_c$ = {0:.5f} $\mu$m'.format(lbc))
+    ax.set_ylabel('Overplotted spectra', size=14)
+    if xlims is not None:
+        ax.set_xlim(xlims)
+    ax.set_xlabel(r'Velocity (km s$^{-1}$)', size=14)
     legend = ax.legend(loc=(1.05, .01), labelspacing=0.1)
     _plt.setp(legend.get_texts(),  fontsize='small')
-    _plt.subplots_adjust(left=0.1, right=0.78, top=0.9, bottom=0.1)#, hspace=0.3, wspace=.3)   
+    _plt.subplots_adjust(left=0.1, right=0.78, top=0.9, bottom=0.1)#, hspace=0.3, wspace=.3)  
+    ax3 = fig.add_axes([0.82, 0.625, 0.025, 0.35])
+    cmap = _plt.get_cmap(cmapn)
+    norm = _mpl.colors.Normalize(vmin=lims[0], vmax=lims[1])
+    cb = _mpl.colorbar.ColorbarBase(ax3, cmap=cmap, norm=norm, 
+        orientation='vertical')
+    cb.set_label('MJD', size=14) 
     for fmt in formats:
+        print('fitsover_lbc{1:.4f}{2}.{0}'.format(fmt, lbc, addsuf))
         fig.savefig('fitsover_lbc{1:.4f}{2}.{0}'.format(\
         fmt, lbc, addsuf), transparent=True)
     _plt.close()
@@ -1486,7 +1500,7 @@ def incrPlotLineSeries(fullseds, obsers=[0], lbc=.6564606, formats=['png']):
 
 
 def incrPlotLineFits(specs, lbc=.6564606, formats=['png'], hwidth=1500., \
-    yzero=False, addsuf=''):
+    yzero=False, addsuf='', lims=None, cmapn='jet', xlims=None):
     """Generate incremented spec. line from FITS files list.
     The increment is 0.1 for each file in sequence.
     """
@@ -1502,17 +1516,28 @@ def incrPlotLineFits(specs, lbc=.6564606, formats=['png'], hwidth=1500., \
             dtobs = dateobs.split('/')[::-1]
             dateobs = "-".join(dtobs)
         ls = 2*['-.'] + ['-'] + 3*['-.'] + 2*['-']
-        ax.plot(x, y+0.1*i, label='{0}'.format(dateobs), \
-        color=_phc.colors[_np.mod(i, len(_phc.colors))], ls=ls[i])
+        if lims is None:
+            cor = _phc.colors[_np.mod(i, len(_phc.colors))]
+        else:
+            cor = _phc.gradColor([MJD],min=lims[0], max=lims[1], cmapn=cmapn)[0]
+        ax.plot(x, y+0.1*i, label='{0}'.format(dateobs), color = cor)
     if yzero:
         ylim = ax.get_ylim()
         ax.plot([0,0], ylim, ls='-', color='Gray')
     ax.set_title(r'$\lambda_c$ = {0:.5f} $\mu$m'.format(lbc))
-    ax.set_ylabel('Spaced spectra')
-    ax.set_xlabel(r'Velocity (km s$^{-1}$)')
+    ax.set_ylabel('Spaced spectra', size=14)
+    if xlims is not None:
+        ax.set_xlim(xlims)
+    ax.set_xlabel(r'Velocity (km s$^{-1}$)', size=14)
     legend = ax.legend(loc=(1.05, .01), labelspacing=0.1)
     _plt.setp(legend.get_texts(),  fontsize='small')
     _plt.subplots_adjust(left=0.1, right=0.78, top=0.9, bottom=0.1)#, hspace=0.3, wspace=.3)   
+    ax3 = fig.add_axes([0.82, 0.625, 0.025, 0.35])
+    cmap = _plt.get_cmap(cmapn)
+    norm = _mpl.colors.Normalize(vmin=lims[0], vmax=lims[1])
+    cb = _mpl.colorbar.ColorbarBase(ax3, cmap=cmap, norm=norm, 
+        orientation='vertical')
+    cb.set_label('MJD', size=14) 
     for fmt in formats:
         fig.savefig('fitsincr_lbc{1:.4f}{2}.{0}'.format(\
         fmt, lbc, addsuf), transparent=True)
@@ -1564,8 +1589,8 @@ def diffPlotLineSeries(fullseds, obsers=[0], lbc=.6564606, formats=['png'], \
     return
 
 
-def diffPlotLineFits(specs, lbc=.6564606, formats=['png'], \
-    rvel=None, rflx=None, hwidth=1500., addsuf='', cmapn='jet'):
+def diffPlotLineFits(specs, lbc=.6564606, formats=['png'], xlims=None,
+    rvel=None, rflx=None, hwidth=1500., addsuf='', cmapn='jet', lims=None):
     """Generate overplot of DIFFERENCE spec. line from a FITS files list.
     The observations will be linearly interpolated
     with the reference spec. If none is given as reference, 
@@ -1601,16 +1626,25 @@ def diffPlotLineFits(specs, lbc=.6564606, formats=['png'], \
         elif dateobs.find('/') > 0:
             dtobs = dateobs.split('/')[::-1]
             dateobs = "-".join(dtobs)
-        if cmapn == '' or cmapn == None:
-            color=_phc.colors[_np.mod(i, len(_phc.colors))]
+        if lims is None:
+            cor = _phc.colors[_np.mod(i, len(_phc.colors))]
         else:
-            color=_phc.gradColor(range(len(specs)), cmapn='jet')[i]
-        ax.plot(x, y-flx, label='{0}'.format(dateobs), color=color)
-    ax.set_title(u'lbc = {0:.5f} $\mu$m'.format(lbc))
-    ax.set_ylabel('Difference spectra (spec - ref.)')
+            cor = _phc.gradColor([MJD],min=lims[0], max=lims[1], cmapn=cmapn)[0]
+        ax.plot(x, y-flx, label='{0}'.format(dateobs), color=cor)
+    ax.set_title(r'$\lambda_c$ = {0:.5f} $\mu$m'.format(lbc))
+    ax.set_ylabel('Spaced spectra', size=14)
+    if xlims is not None:
+        ax.set_xlim(xlims)
+    ax.set_xlabel(r'Velocity (km s$^{-1}$)', size=14)
     legend = ax.legend(loc=(1.05, .01), labelspacing=0.1)
     _plt.setp(legend.get_texts(),  fontsize='small')
     _plt.subplots_adjust(left=0.1, right=0.78, top=0.9, bottom=0.1)#, hspace=0.3, wspace=.3)   
+    ax3 = fig.add_axes([0.82, 0.625, 0.025, 0.35])
+    cmap = _plt.get_cmap(cmapn)
+    norm = _mpl.colors.Normalize(vmin=lims[0], vmax=lims[1])
+    cb = _mpl.colorbar.ColorbarBase(ax3, cmap=cmap, norm=norm, 
+        orientation='vertical')
+    cb.set_label('MJD', size=14) 
     for fmt in formats:
         fig.savefig('fitsdiff_lbc{1:.4f}{2}.{0}'.format(\
         fmt, lbc, addsuf), transparent=True)
@@ -1987,6 +2021,7 @@ def plotSpecData(dtb, limits=None, civcfg=[1,'m',2013,1,1],
             _plt.setp( ax2.xaxis.get_majorticklabels(), rotation=45 )
     _plt.subplots_adjust(left=0.13, right=0.8, top=0.88, bottom=0.06, hspace=.15)
     for f in fmt:
+        print ('SpecQ{1}.{0}'.format(f, addsuf))
         _plt.savefig('SpecQ{1}.{0}'.format(f, addsuf), transparent=True)
     _plt.close()
     return
@@ -2157,6 +2192,29 @@ def fitzpatrick(wave, flux, ebv, Rv=3.1, LMC2=False, AVGLMC=False):
     curve *= -ebv
     
     return flux * 10.**(0.4*curve)
+
+
+def sort_specs(specs, path=None):
+    """ Specs in an (N,2) array, where specs[:,0] are the files paths and 
+    specs[:,1] the instrument name. 
+    
+    Return ordered_specs"""
+    if path is not None:
+        if path[-1] != '/': path+= '/'
+    else:
+        path = ''
+    nsp = _np.shape(specs)[0]
+    MJDs = _np.zeros(nsp)
+    specs = _np.array(specs)
+    lims = [_np.inf, -_np.inf]
+    for i in range(nsp):
+        wl, flux, MJD, dateobs, datereduc, fitsfile = loadfits(path+specs[i][0])
+        MJDs[i] = MJD
+        if MJDs[i] < lims[0]:
+            lims[0] = MJDs[i]
+        if MJDs[i] > lims[1]:
+            lims[1] = MJDs[i]
+    return specs[MJDs.argsort()], lims
 
 
 ### MAIN ###

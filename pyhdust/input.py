@@ -224,7 +224,7 @@ def makeDiskGrid(modn='01', mhvals=[1.5], hvals=[60.], rdvals=[18.6], mvals=None
 def makeInpJob(modn='01', nodes=512, simulations=['SED'],
     docases=[1,3], sim1='step1', sim2='step1_ref', composition='pureH',
     controls='controls', gridcells='grid', observers='observers',
-    images=[''], clusters=['job'], srcid='',
+    images=[''], perturbations=None, clusters=['job'], srcid='',
     walltime='24:00:00', wcheck=False, email='$USER@localhost', chkout=False,
     st1max=20, st1refmax=24, ctrM=False, touch=False, srcNf=None, path=None):
     """
@@ -300,6 +300,8 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'],
         case1[3] = case1[3].replace('grid',gridcells)
         case1[4] = case1[4].replace('step1',sim1)
         case1[5] = case1[5].replace('source',src)
+        if perturbations is not None:
+            case1.append("PERTURBATIONS = '{0}'\n".format(perturbations))
         if 1 not in cases:
             for i in range(len(case1)):
                 case1[i] = '!~ '+case1[i]
@@ -318,6 +320,8 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'],
         case1[3] = case1[3].replace('grid',gridcells)
         case1[4] = case1[4].replace('step1',sim2)
         case1[5] = case1[5].replace('source',src)
+        if perturbations is not None:
+            case1.append("PERTURBATIONS = '{0}'\n".format(perturbations))
         if 2 not in cases:
             for i in range(len(case1)):
                 case1[i] = '!~ '+case1[i]
@@ -351,6 +355,8 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'],
             case1.append("OBSERVERS   = '{0}'\n".format(observers))
             if images[i] != '':
                 case1.append("IMAGES      = '{0}'\n".format(images[i]))
+            if perturbations is not None:
+                case1.append("PERTURBATIONS = '{0}'\n".format(perturbations))
             case1.append('\n')
             if not simchk[i]:
                 for i in range(len(case1)):

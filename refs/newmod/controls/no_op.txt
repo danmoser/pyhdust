@@ -1,0 +1,72 @@
+VIII) CONTROLS
+	!-----------------------------------------------------------------------
+	! Here you can set various switches and options that control the 
+	! simulation.  Unless otherwise stated, 0 = no, 1 = yes.
+	!-----------------------------------------------------------------------
+	A) UPDATE TEMPERATURE = 1			!iterate cell temps, or hold fixed?
+	B) BIN PHI = 0						!bin phi-cells?
+	C) AVERAGE HEMISPHERES = 1			!average upper and lower cells?
+	D) LENGTH UNIT = 0					!0 = Stellar Radii; 1 = Parsec
+	E) RATE SWITCHES					!0 = off; 1 = on
+		Spontaneous emission		= 1
+		Radiative absorption	  	= 1
+		Photoionization				= 1
+		Radiative recombination		= 1
+		Collisional excitation		= 1
+		Collisional deexcitation  	= 1
+		Collisional ionization		= 1
+		Collisional recombination 	= 1
+	F) OPACITY SOURCES				  !0 = off; 1 = on
+		Bound-free  = 0
+		Free-free	= 0
+		Bound-bound = 0
+		Electron	= 0
+	G) USE GAUNT FACTORS				!0 uses g=1; 1 uses normal g values
+		Free-Free  = 1
+		Bound-Free = 1
+	H) UNIFORM CELL DENSITY = 1		!is density constant within cell?
+		!-------------------------------------------------------------------
+		! This flag controls how the optical depths are calculated.  When
+		! the flag is off, the optical depths are integrated numerically
+		! (which is more accurate, but substantially slower); when on, the
+		! density is presumed to be constant within the cell, in which case
+		! the solution for the photon interaction location is analytic (and
+		! much faster).  In general, this flag should be turned on.
+		!-------------------------------------------------------------------
+	I) 2-D -> 3-D SIMULATION = 0
+		!-------------------------------------------------------------------
+		! If this simulation is 3D (N_phi > 1), but one wants to use the
+		! level populations and temperatures of a previous 2D simulation
+		! (with N_phi = 1), turn this flag on.
+		!-------------------------------------------------------------------
+	J) INTERPOLATE ONTO GRID = 0		!Interpolate initialization files
+		!-------------------------------------------------------------------
+		! By default, the code gives an error message when it tries to read 
+		! a .temp file that was generated with different parameters from the
+		! current simulation. Turning this flag on tells the code to
+		! interpolate the input cell grid onto the current one.
+		!-------------------------------------------------------------------
+	K) PROFILE SHAPE = 0				!0 = Gaussian; 1 = Rectangular
+	L) INTERACTION DISTANCE				!Number of Doppler shifts that
+		N_sig = 3.						!define a line interaction region
+	M) WRITE ENERGY BALANCE = 0			!write energy balance & rate files
+	N) WRITE .tau FILE = 1				!write file with radial optical depth
+										!information
+	O) WRITE .tauz FILE = 1				!write file with vertical optical 
+										!depth information
+	P) ERROR FILE
+		!-------------------------------------------------------------------
+		! Enter the path and file name where run-time error messages will be
+		! written.  Ideally this should be a local directory on each node of
+		! the cluster, and a unique file name for each user.
+		!-------------------------------------------------------------------
+		Path = '../../tmp/'	!location of error file
+		File = hdust_beatlas			!root of error file name (File.err)
+	Q) RANDOM NUMBER GENERATOR
+		Iseed = -1						!random number seed; usually -1
+	R) ENHANCED UV SAMPLING = 0			!For source spectra with low UV flux
+										!(Teff <~ 15000 K), the sampling of
+										!the number of photoionizations from
+										!ghe ground level may be insuffitient,
+										!causing problems with the rate solver.
+										!In such cases, turn this option on.
