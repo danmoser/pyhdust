@@ -438,6 +438,52 @@ def interpolBA(params, ctrlarr, lparams, minfo, models, param=True):
     X0 = parlims[:,0]
     X1 = parlims[:,1]
     return _phc.interLinND(params, X0, X1, outmodels)
+    
+def interpolBA2(params, ctrlarr, lparams, minfo, models, param=True):
+    """ Interpola os `modelos` para os parametros `params` 
+
+    | -params = from emcee minimization
+    | -ctrlarr = the fixed value of M, ob(W), Z, H, sig, Rd, h, *n*, cos(i).
+    |            If it is not fixed, use np.NaN.
+    | -Parametric disk model default (`param` == True).
+
+    This function always returns a valid result (i.e., extrapolations from the
+    nearest values are always on).
+
+    If it is a 'Non-squared grid' (asymmetric), it will return a zero array if
+    a given model is not found.
+    """
+    nq = 9
+    if not param:
+        nq = 8
+    if len(ctrlarr) != nq:
+        print('# ERROR in ctrlarr!!')
+        return
+    params = params[:_np.sum(_np.isnan(ctrlarr))]
+    nlb = len(models[0])
+    outmodels = _np.empty((2**len(params),nlb))
+    mod = BAmod('')
+    parlims = _np.zeros((len(params), 2))
+    j = 0
+    for i in range(nq):
+        if ctrlarr[i] is _np.NaN:
+            parlims[j] = [_phc.find_nearest(lparams[i], params[j], bigger=False),
+            _phc.find_nearest(lparams[i], params[j], bigger=True)]
+            j+= 1
+    j = 0
+    for prod in _product(*parlims):
+        allpars = _np.array(ctrlarr)
+        idx = _np.isnan(allpars)
+        allpars[idx] = prod
+        mod.build(allpars, lparams)
+        idx = mod.getidx(minfo)
+        if _np.sum(idx) == 0:
+            return _np.zeros(nlb)
+        outmodels[j] = models[idx]
+        j+= 1
+    X0 = parlims[:,0]
+    X1 = parlims[:,1]
+    return _phc.interLinND(params, X0, X1, outmodels)
 
 
 def breakJob(n, file):

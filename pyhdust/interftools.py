@@ -1345,6 +1345,13 @@ def printinfo(file, extract=False):
     else:
         return [info[2][:10], '{0:.7f}'.format(info[1]), info[0]] + info2
 
+def lbdc2range(lbdc):
+    """ Function doc
+
+    """
+    dl = lbdc[1]-lbdc[0]
+    return _np.linspace(lbdc[0]-dl/2,lbdc[-1]+dl/2,len(lbdc)+1)
+
 
 ### MAIN ###
 if __name__ == "__main__":

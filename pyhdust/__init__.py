@@ -23,7 +23,7 @@ try:
 except:
     print('# Warning! matplotlib and/or scipy module not installed!!!')
 
-__version__ = 0.964
+__version__ = 0.965
 __release__ = "Beta"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -659,6 +659,7 @@ def mergesed2(models, Vrots, path=None):
                 fmt = '%13.5f'
             else:
                 print('# ERROR at max values of fullsed2!!!!!!!!')
+                print(_np.max(fullsed2[_np.isfinite(fullsed2)]))
                 raise SystemExit(0)
             fullsed2 = _np.core.records.fromarrays(fullsed2.transpose(), names= \
                 'MU,PHI,LAMBDA,FLUX,SCT FLUX,EMIT FLUX,TRANS FLUX,Q,U,Sig FLUX,\
