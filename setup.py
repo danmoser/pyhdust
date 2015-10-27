@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 # Modified by D. Moser in 2015-04-15
-
 try:
     from setuptools import setup, find_packages
 except ImportError:
@@ -23,10 +22,12 @@ if __name__ == "__main__":
     author='Daniel M. Faes',
     author_email='dmfaes@gmail.com',
     license='GNU GPLv3.0',
-    #~ packages=['pyhdust'],
+    #~ packages=['pyhdust','pyhdust_refs'],
     packages=find_packages(exclude=['build', 'docs', '*egg*', 'dist']),
-    package_data={'pyhdust': ['../LICENSE', '../README.md', '../filters/*',
-    '../refs/*', '../stmodels/*']},
+    include_package_data=True,
+    #~ include=['pyhdust_refs']),
+    #~ package_data={'pyhdust':['*']},
+    #~ , '../filters/*', '../refs/*', '../stmodels/*']},
     #~ include_package_data=True,
     zip_safe=False,
     install_requires=['numpy'],
@@ -43,4 +44,4 @@ if __name__ == "__main__":
         "Programming Language :: Python",
         ],
     )
-    
+

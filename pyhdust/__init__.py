@@ -279,10 +279,10 @@ def chkObsLog(path=None, nights=None, badweath=None):
     if path == None:
         path = _os.getcwd()
     if nights == None:
-        nights = '{0}refs/noites.txt'.format(hdtpath())
+        nights = '{0}pyhdust/refs/noites.txt'.format(hdtpath())
     lnights = _np.loadtxt(nights, dtype=str)
     if badweath == None:
-        badweath = '{0}refs/maltempo.txt'.format(hdtpath())
+        badweath = '{0}pyhdust/refs/maltempo.txt'.format(hdtpath())
     lbadweath = _np.loadtxt(badweath, dtype=str)
     for night in lnights:
         if night in lbadweath:
@@ -1251,13 +1251,13 @@ def obsCalc():
     ##dmax = julian_date(dg[0],dg[1],dg[2]+1,3+6,0,-rt/2) #seg. so' >0!!!
 
     #carrega lista de alvos
-    alvos = _np.loadtxt('{0}refs/obs_alvos.txt'.format(hdtpath()), dtype=str, \
+    alvos = _np.loadtxt('{0}pyhdust/refs/obs_alvos.txt'.format(hdtpath()), dtype=str, \
                         delimiter='\t')
     #carrega tempo das declinacoes
-    obsdec = _np.loadtxt('{0}refs/obs_dec.txt'.format(hdtpath()), delimiter='\t')
+    obsdec = _np.loadtxt('{0}pyhdust/refs/obs_dec.txt'.format(hdtpath()), delimiter='\t')
     #carrega efemerides
-    if _os.path.exists('{0}refs/obs_ef.txt'.format(hdtpath())):
-        ef_alvos = _np.loadtxt('{0}refs/obs_ef.txt'.format(hdtpath()), \
+    if _os.path.exists('{0}pyhdust/refs/obs_ef.txt'.format(hdtpath())):
+        ef_alvos = _np.loadtxt('{0}pyhdust/refs/obs_ef.txt'.format(hdtpath()), \
                                delimiter='\t', dtype=str)
         ef_alvos = ef_alvos.T
 
@@ -1307,7 +1307,7 @@ def obsCalc():
             hpoe = _np.NaN
 
         #procura posicao nas efemerides (pef)
-        if _os.path.exists('{0}refs/obs_ef.txt'.format(hdtpath())):
+        if _os.path.exists('{0}pyhdust/refs/obs_ef.txt'.format(hdtpath())):
             pef = [j for j, x in enumerate(ef_alvos[1]) if x.find(alvos[i][1]) > -1]
         else:
             pef = []

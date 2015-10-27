@@ -70,7 +70,7 @@ def stdchk(stdname):
     Check if the standard star name contains an known name, and return
     its position in `padroes.txt`.
     """
-    lstds = list(_np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str,\
+    lstds = list(_np.loadtxt('{0}/pyhdust/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str,\
     usecols=[0]))
     chk = False
     i = -1
@@ -1238,7 +1238,7 @@ def verStdPol(std, filt, p, sig):
     Return z = abs(ppub-p)/sqrt(sigpub^2+sig^2) or -1 if there is
     no such object or filter.
     """
-    lstds = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str)
+    lstds = _np.loadtxt('{0}/pyhdust/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str)
 
     # Get P_pub value
     i = stdchk(std)[1]
@@ -1627,17 +1627,17 @@ def genAllLog(path=None, sigtol=lambda sigm: 1.2*sigm, autochoose=False, delta=2
 
     # Generates lists
     try:
-        ltgts = _np.loadtxt('{0}/refs/pol_alvos.txt'.format(_hdtpath()), dtype=str)
-        if _os.path.exists('{0}/refs/pol_hip.txt'.format(_hdtpath())):
+        ltgts = _np.loadtxt('{0}/pyhdust/refs/pol_alvos.txt'.format(_hdtpath()), dtype=str)
+        if _os.path.exists('{0}/pyhdust/refs/pol_hip.txt'.format(_hdtpath())):
             try:
-                ltgts = _np.concatenate((ltgts,_np.loadtxt('{0}/refs/pol_hip.txt'.\
+                ltgts = _np.concatenate((ltgts,_np.loadtxt('{0}/pyhdust/refs/pol_hip.txt'.\
                                                     format(_hdtpath()), dtype=str)))
             except:
                 pass
-        lstds = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), \
+        lstds = _np.loadtxt('{0}/pyhdust/refs/pol_padroes.txt'.format(_hdtpath()), \
                                                            dtype=str, usecols=[0])
     except:
-        print('# ERROR: Can\'t read files pyhdust/refs/pol_alvos.txt and/or pyhdust/refs/pol_padroes.txt.\n')
+        print('# ERROR: Can\'t read files pyhdust/pyhdust/refs/pol_alvos.txt and/or pyhdust/pyhdust/refs/pol_padroes.txt.\n')
         raise SystemExit(1)
 
     subdirs = [fld for fld in _os.listdir('{0}'.format(path)) if \
@@ -1720,15 +1720,15 @@ def corObjStd(night, f, calc, path=None, delta=2.5):
     if path == None:
         path = _os.getcwd()
     try:
-        stdref = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str)
-#        f0 = open('{0}/refs/pol_padroes.txt'.format(_hdtpath()))
+        stdref = _np.loadtxt('{0}/pyhdust/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str)
+#        f0 = open('{0}/pyhdust/refs/pol_padroes.txt'.format(_hdtpath()))
 #        data = f0.readlines()
 #        f0.close()
 #        stdref = []
 #        for datai in data:
 #            stdref += [datai.split()]
     except:
-        print('# ERROR: Can\'t read files pyhdust/refs/pol_padroes.txt')
+        print('# ERROR: Can\'t read files pyhdust/pyhdust/refs/pol_padroes.txt')
         raise SystemExit(1)
 
     calc = float(calc)
@@ -1830,17 +1830,17 @@ def genTarget(target, path=None, PAref=None, skipdth=False, delta=2.5, epssig=2.
                 print('# ERROR: Wrong PAref matrix format.')
                 raise SystemExit(1)
     else:
-        PAref = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str)
+        PAref = _np.loadtxt('{0}/pyhdust/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str)
 
     # Read lists and verify if target is a valid target
 
     try:
-        obj = _np.loadtxt('{0}/refs/pol_alvos.txt'.format(_hdtpath()), dtype=str)
-        if _os.path.exists('{0}/refs/pol_hip.txt'.format(_hdtpath)):
-            obj = _np.concatenate((obj,v_np.loadtxt('{0}/refs/pol_hip.txt'.format(_hdtpath()), dtype=str)))
-        std = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str)
+        obj = _np.loadtxt('{0}/pyhdust/refs/pol_alvos.txt'.format(_hdtpath()), dtype=str)
+        if _os.path.exists('{0}/pyhdust/refs/pol_hip.txt'.format(_hdtpath)):
+            obj = _np.concatenate((obj,v_np.loadtxt('{0}/pyhdust/refs/pol_hip.txt'.format(_hdtpath()), dtype=str)))
+        std = _np.loadtxt('{0}/pyhdust/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str)
     except:
-        print('# ERROR: Can\'t read files pyhdust/refs/pol_alvos.txt and/or pyhdust/refs/pol_padroes.txt.')
+        print('# ERROR: Can\'t read files pyhdust/pyhdust/refs/pol_alvos.txt and/or pyhdust/pyhdust/refs/pol_padroes.txt.')
         raise SystemExit(1)
         
     if target not in _np.hstack((std[:,0],obj)):
@@ -2079,8 +2079,8 @@ def listNights(path, tgt):
     """
     List Nights
     """
-    ltgts = _np.loadtxt('{0}/refs/pol_alvos.txt'.format(_hdtpath()), dtype=str)
-    lstds = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str,\
+    ltgts = _np.loadtxt('{0}/pyhdust/refs/pol_alvos.txt'.format(_hdtpath()), dtype=str)
+    lstds = _np.loadtxt('{0}/pyhdust/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str,\
     usecols=[0])
     if tgt not in _np.hstack((ltgts,lstds)):
         print('# Warning! Target {0} is not a default target or standard!!'.\
@@ -2117,7 +2117,7 @@ def plotMagStar(tgt, path=None):
     """
     if path == None:
         path = _os.getcwd()
-    lmags = _np.loadtxt('{0}/refs/pol_mags.txt'.format(_hdtpath()), dtype=str)
+    lmags = _np.loadtxt('{0}/pyhdust/refs/pol_mags.txt'.format(_hdtpath()), dtype=str)
 
     if tgt not in lmags[:,0]:
         print('# ERROR! {0} is not a valid mag. star!'.format(tgt))

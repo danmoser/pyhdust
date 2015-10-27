@@ -258,6 +258,14 @@ def BBlbd(T,lbd=None):
     return 2*h.cgs*c.cgs**2/(lbd**5*(_np.exp(ft)-1))
 
 
+def longdate2MJD(ldate):
+    """ FROM YYYY-MM-HHThh:mm:ss.sss to MJD (float). """
+    ldate, hms = ldate.split('T')
+    ldate = _np.array(ldate.split('-'), dtype=int)
+    mjd = _jdcal.gcal2jd(*ldate)[1]
+    return mjd+hms2fracday(hms)
+
+
 def recsearch(path, star, fstr):
     """
     Do a recursive search in PATH, looking inside `*star*` folders for 
@@ -281,6 +289,12 @@ def recsearch(path, star, fstr):
                 for file in files:
                     outfilelist += [file]
     return outfilelist
+
+
+def hms2fracday(hms):
+    """ Enter hour:min:sec (string) and return fraction of a day (float) """
+    hms = _np.array(hms.split(':'), dtype='float')
+    return (hms[0]+60*hms[1]+3600*hms[2])/24.
 
 
 def fracday2hms(frac):
@@ -311,13 +325,15 @@ def fracday2hms(frac):
 
 def ra2degf(rastr):
     """ RA to degrees (decimal). Input is string. """
-    vals = _np.array(rastr.split(':')).astype(float)
+    vals = _np.array(rastr.replace(',','.').split(':')).astype(float)
     return (vals[0]+vals[1]/60.+vals[2]/3600.)*360./24
 
 
 def dec2degf(decstr, delimiter=":"):
     """ Sexagesimal to decimal. Input is string. """
     vals = _np.array(decstr.split(delimiter)).astype(float)
+    if vals[0] < 0:
+        vals[1:]*= -1
     return vals[0]+vals[1]/60.+vals[2]/3600.
 
 
@@ -704,6 +720,7 @@ Rsun = Constant(6.961e10, 696100e3, 'cm', 'Solar radius')
 Lsun = Constant(3.846e33, 3.846e26, 'erg s-1', 'Solar luminosity')
 Tsun = Constant(5778., 5778., 'K', 'Solar Temperature')
 
+deg2mas = Constant(206264.806247, 206264.806247, 'arcsec/rad', 'arcsec per radian')
 yr =  Constant(3.15569e7, 3.15569e7, 'sec', 'year')
 
 colors = ['Black','Blue','Green','red','orange','brown','purple','gray',

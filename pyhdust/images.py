@@ -88,7 +88,7 @@ def doColorConv(lbd, flx, fdat=None):
         OUTPUT = RGB values (0-255; uint8)
     """
     if fdat is None:
-        fdat = _np.loadtxt(_hdt.hdtpath()+'/refs/rgb_eff.txt', unpack=True)
+        fdat = _np.loadtxt(_hdt.hdtpath()+'/pyhdust/refs/rgb_eff.txt', unpack=True)
     idx = _np.where((lbd >= fdat[0, 0]) & (lbd <= fdat[0, -1]))
     lbd = lbd[idx]
     flx = flx[idx]
@@ -111,7 +111,7 @@ def doColorConvMaps(data, lbdc, fdat=None, di=0, oi=0, ii=0, outflt=False):
         OUTPUT = RGB images (n,m,3; [0-255; uint8])
     """
     if fdat is None:
-        fdat = _np.loadtxt(_hdt.hdtpath()+'/refs/rgb_eff.txt', unpack=True)
+        fdat = _np.loadtxt(_hdt.hdtpath()+'/pyhdust/refs/rgb_eff.txt', unpack=True)
     #~ 
     lbd = lbdc*1e3
     idx = _np.where((lbd >= fdat[0, 0]) & (lbd <= fdat[0, -1]))
@@ -167,4 +167,39 @@ def doHDR(RGB, levels=6, folder='hdr', ext='png', strength=[1.],
     #~ 
     proj = _hdr(case=folder, img_type=ext, cur_dir='./')
     proj.get_hdr(strength=strength,naturalness=naturalness)
+    return
+
+
+def doBackground(foreimg, backimg, savename=None, pos='1', cut=0.5, ext='png',
+    bga=.9):
+    """ add ``backimg`` as background of ``foreimg``. ``*img`` are regular
+    image files.
+
+    ``pos`` equals the dialpad (without 0). """
+    if savename is None:
+        savename = _time.strftime("%y%m%d-%H%M%S")
+    ext = ext.replace('.','')
+    #~ 
+    background = _PIL.Image.open(backimg)
+    bwd = background.size[0]
+    foreground = _PIL.Image.open(foreimg)
+    fwd = foreground.size[0]
+    #~ if fwd is not int(round(bwd/3.)):
+        #~ fact = bwd/3./fwd
+        #~ foreground = foreground.resize(np.round(foreground.size*fact).\
+            #~ astype('int')), _PIL.Image.ANTIALIAS)
+    #~ 
+    aB = _PIL.Image.open(backimg)
+    aF = _PIL.Image.open(foreimg)
+    #~ 
+    aB = _np.asarray(aB, dtype=float)
+    aF = _np.asarray(aF, dtype=float)
+    tF = _np.sum(aF, axis=2)
+    tF = _np.clip(tF, 0, 3*256*cut)
+    tF/= (3*256*cut)
+    tB = -1*tF+bga
+    tB = _np.clip(tB, 0, _np.max(tB))
+    out = aF*tF[...,_np.newaxis] + aB[...,:3]*tB[...,_np.newaxis]
+    img = _PIL.Image.fromarray(out.astype('uint8'))
+    img.save(savename+'.'+ext)
     return

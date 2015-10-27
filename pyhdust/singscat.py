@@ -637,7 +637,7 @@ class BlobDiskMod(object):
         
         if path == None:
             path = _os.getcwd()
-        lmags = _np.loadtxt('{0}/refs/pol_mags.txt'.format(_hdt.hdtpath()), dtype=str)
+        lmags = _np.loadtxt('{0}/pyhdust/refs/pol_mags.txt'.format(_hdt.hdtpath()), dtype=str)
         if not _os.path.exists('{0}/{1}.log'.format(path,self.tgt)):
             self.phiobs = _np.empty(0)
             self.Qobs = _np.empty(0)
