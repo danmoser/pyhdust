@@ -16,7 +16,7 @@ def rd(filename):
 
 if __name__ == "__main__":
     setup(name='pyhdust',
-    version=0.964,
+    version=0.965,
     description='BeACoN’s Python tools for Hdust',
     url='http://astroweb.iag.usp.br/~moser/doc/',
     author='Daniel M. Faes',

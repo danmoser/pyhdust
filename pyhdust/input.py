@@ -17,9 +17,9 @@ __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
 
     
-def makeDiskGrid(modn='01', mhvals=[1.5], hvals=[60.], rdvals=[18.6], mvals=None,
-    sig0vals=None, doFVDD=False, sBdays=None, sBfiles=None, selsources='*',
-    alpha=.5, mu=.5, R0r=300, Mdot11=False, path=None):
+def makeDiskGrid(modn='01', mhvals=[1.5], hvals=[60.], rdvals=[18.6], mvals=[2.0],
+    sig0vals=[1.], convSig2Rho=False, doFVDD=False, sBdays=None, sBfiles=None, 
+    selsources='*', alpha=.5, mu=.5, R0r=300, Mdot11=False, path=None):
     """
     | ###CONFIG. OPTIONS
     | #MODEL NUMBER
@@ -47,7 +47,17 @@ def makeDiskGrid(modn='01', mhvals=[1.5], hvals=[60.], rdvals=[18.6], mvals=None
     | # it, run it twice (or more)
     | R0r = 300
     | ###END CONFIG.
+    |
+    | Mdot11 = TODO
+    |
+    | WARNING: if convSig2Rho=True, the routine assumes ``sig0vals`` contains
+    |  rho0vals. For that, (sBfiles==None or sBdays==None) and doFVDD==False.
     """
+    # Consistency check
+    if convSig2Rho and not ((sBfiles==None or sBdays==None) and doFVDD==False):
+        print('# ERROR! There is an inconsistency in the input.')
+        print('# Check the *convSig2Rho*!')
+    #~ 
     G = _phc.G.cgs
     Msun = _phc.Msun.cgs
     Rsun = _phc.Rsun.cgs
@@ -73,15 +83,20 @@ def makeDiskGrid(modn='01', mhvals=[1.5], hvals=[60.], rdvals=[18.6], mvals=None
         #Th = a**2*mu*mH/kB
 
         srcname = src.replace('source/','').replace('.txt','')
-        suffix = '_PLn{0:.1f}_sig{1:.2f}_h{2:03.0f}_Rd{3:05.1f}_{4}'.format(\
-        (m+mh),sig0,h,rd,srcname)
         
         wmod = mod[:]
         wmod[13]=wmod[13].replace('18.6',('%.2f' % rd))
         wmod[20]=wmod[20].replace('2.0',('%.2f' % m))
         wmod[33]=wmod[33].replace('1.5',('%.2f' % mh))
         wmod[40]=wmod[40].replace('18000.',('%.1f' % Th))      
-        wmod[52]=wmod[52].replace('2.35E13',('%.2e' % n0))      
+        if convSig2Rho:
+            wmod[52]=wmod[52].replace('2.35E13',('%.2e' % sig0))    
+            suffix = '_PLn{0:.1f}_rho{1:5.2e}_h{2:03.0f}_Rd{3:05.1f}_{4}'.format(\
+            (m+mh),sig0,h,rd,srcname)  
+        else:
+            wmod[52]=wmod[52].replace('2.35E13',('%.2e' % n0))    
+            suffix = '_PLn{0:.1f}_sig{1:.2f}_h{2:03.0f}_Rd{3:05.1f}_{4}'.format(\
+            (m+mh),sig0,h,rd,srcname)  
               
         f0=open('mod'+modn+'/mod'+modn+suffix+'.txt', 'w')
         f0.writelines(wmod)
@@ -658,8 +673,52 @@ def makeSimulLine(vrots, basesims, Rs, hwidth, Ms, Obs, suffix):
     return
 
 
+def makeSourceGrid(masses, rps, lums, Ws, betas, path=None):
+    """ Arbitrary values (no stellar model info), for the SELF-CONSISTENT RIGID ROTATOR setup.
+    
+    OUTPUT: The combination of the values of all lists in the *path/source/* folder.
+    
+    Example: 2 of each parameters results in 32 models (2^5)
+    """
+    path0 = _os.getcwd()
+    if path != None:
+        _os.chdir(path)
+        if path[-1] != '/':
+            path += '/'
+    else:
+        path = ''
+    #~ 
+    f0 = open('{0}pyhdust/refs/REF_estrela.txt'.format(_hdt.hdtpath()))
+    mod = f0.readlines()
+    f0.close()
+    if not _os.path.exists('{0}source'.format(path)):
+        _os.system('mkdir {0}source'.format(path))
+    #~ 
+    for prod in _product(masses, rps, lums, Ws, betas):
+        MI, Raio, Lum, W, Beta = prod
+        #REGISTRA VALORES
+        wmod = mod[:]        
+        wmod[3]=wmod[3].replace('10.3065',('%.2f' % MI))
+        wmod[4]=wmod[4].replace('5.38462',('%.2f' % Raio))
+        wmod[5]=wmod[5].replace('0.775',('%.4f' % W))            
+        wmod[6]=wmod[6].replace('7500.',('%.2f' % Lum))
+        wmod[7]=wmod[7].replace('0.25',('%.5f' % Beta))
+        #~ 
+        suffix = '_M{0:05.2f}_W{1:.2f}_b{2:.2f}_rp{3:05.2f}_L{4:05.0f}_Ell'. \
+            format(MI,W,Beta,Raio,Lum)
+        f0=open('{0}source/Be'.format(path)+suffix+'.txt', 'w')
+        f0.writelines(wmod)
+        f0.close()
+    #
+    if path is not "":
+        _os.chdir(path0)    
+    return
+
+
 def makeStarGrid(oblats, Hfs, path=None):
     """
+    Based on GENEVA models.
+    
     | INPUT: oblats = [1.1,1.2,1.3,1.4,1.45] (example)
     | Hfs = [0.3] (example)
 

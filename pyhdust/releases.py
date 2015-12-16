@@ -9,10 +9,21 @@ History
     v0.958 @ 2015-0
     ----------------------
 
-v0.958 @ 2015-0
+v0.966 @ 201
 ----------------------
-- images module added
-- Other mirror changes
+
+v0.965 @ 2015-12-16
+----------------------
+hdt.mergesed2:
+- SED was the first because, if present, the code will check if other bands parameters are the same (i.e., observers, Rstar, Rwind).
+- The criteria I elected for distinguishing between broad-band and line (Sobolev 0/1) is the presence of "_SEI" extension in the filename, assumed that the line rest wavelength is the BAND CENTER WAVELENGTH. There is an option to the user manually put it.
+- A new output format of the numbers was done.
+
+inp.makeSourceGrid:
+- Function created as discussed
+
+inp.makeDiskGrid:
+- Define convSig2Rho=True, then all the values of sig0vals will be considered as rho0 values
     
 v0.964 @ 2015-09-15
 ----------------------
@@ -156,19 +167,19 @@ def setRelease():
     import pyhdust.phc as phc
     from pyhdust import __version__, hdtpath
     #~ 
-    f0 = open('{0}/setup.py'.format(hdtpath()))
+    f0 = open('{0}setup.py'.format(hdtpath()))
     lines = f0.readlines()
     f0.close()
     i = [lines.index(x) for x in lines if x.find('version') > -1]
     i = i[0]
     oldver = phc.fltTxtOccur('version', [lines[i]], asstr=True)
     lines[i] = lines[i].replace(oldver, str(__version__))
-    f0 = open('{0}/setup.py'.format(hdtpath()), 'w')
+    f0 = open('{0}setup.py'.format(hdtpath()), 'w')
     f0.writelines(lines)
     f0.close()
     print('# ../setup.py file updated!')
     #~
-    f0 = open('{0}/docs/index.rst'.format(hdtpath()))
+    f0 = open('{0}docs/index.rst'.format(hdtpath()))
     lines = f0.readlines()
     f0.close()
     i = [lines.index(x) for x in lines if x.find('at **version') > -1]
@@ -177,15 +188,18 @@ def setRelease():
     for i in range(len(lines)):
         if lines[i].find(oldver):
             lines[i] = lines[i].replace(oldver, str(__version__))
-    f0 = open('{0}/docs/index.rst'.format(hdtpath()), 'w')
+    f0 = open('{0}docs/index.rst'.format(hdtpath()), 'w')
     f0.writelines(lines)
     f0.close()    
     print('# docs/index.rst file updated!')
-    os.chdir('{0}/docs'.format(hdtpath()))
+    os.chdir('{0}docs'.format(hdtpath()))
     os.system('make html')
-    os.system('rsync -rP _build/html/ astroweb:/www/moser/www/doc')
+    #~ os.system('rsync -rP _build/html/ astroweb:/www/moser/www/doc')
+    os.system('rsync -rP build/html/ /data/Dropbox/Public/doc')
     print('# From version {0} to {1}'.format(oldver, __version__))
-    os.system('midori http://astroweb.iag.usp.br/~moser/doc &')
+    os.system('firefox https://dl.dropboxusercontent.com/u/6569986/doc/index.html &')
+    os.chdir('../..')
+    os.system('git push')
     #~ os.system('disown')
     return
 

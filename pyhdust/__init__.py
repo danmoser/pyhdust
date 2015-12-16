@@ -16,6 +16,7 @@ from glob import glob as _glob
 from itertools import product as _itprod
 import pyhdust.phc as _phc
 import pyhdust.jdcal as _jdcal
+from pyhdust.tabulate import tabulate as _tab
 
 try:
     import matplotlib.pyplot as _plt
@@ -553,29 +554,32 @@ def plottemp(tfiles, philist=[0], interpol=False, xax=0, fmts=['png'],
     return
 
 
-def mergesed2(models, Vrots, path=None):
+def mergesed2(models, Vrots, path=None, checklineval=False):
     """
     Merge all mod#/*.sed2 files into the fullsed file.
     
-    It will check if all sed2info are the same (i.e., nlbd, nobs, Rstar, Rwind).
+    It will check if all sed2info are the same (i.e., nobs, Rstar, Rwind). 
+    That's the reason why SED was the first band in previous versions.
     If not, it ask if you want to continue (and receive and error).
     
     The presence of the SED file is not required anymore.
     The structure is set by the first broadband sed2 found.
     
     NO AVERAGE is coded (yet).
+    
+    IMPORTANT: the line rest wavelength is assumed to be the center of the SEI band!
 
     INPUT: models lists (*.txt or *.inp), Vrots (array).
 
     OUTPUT: *files written (status printed).
     """
-    sufbands = ['SED', 'UV', 'IR', 'NIR', 'BALMER', 'PASCHEN', 'CM', 'MM',  # 0-7
-                'J', 'H', 'K', 'L', 'M', 'N', 'Q1', 'Q2']  # 8-14
+    #~ sufbands = ['SED', 'UV', 'IR', 'NIR', 'BALMER', 'PASCHEN', 'CM', 'MM',  # 0-7
+                #~ 'J', 'H', 'K', 'L', 'M', 'N', 'Q1', 'Q2']  # 8-14
     # wavelength in microns
-    suflines = {'H12': .372300, 'H11': .373543, 'H10': .375122, 'H9': .377170,
-    'H8': .379899, 'H7': .383649, 'H6': .389017, 'H5': .397120, 'Hd': .410289,
-    'Hg': .434169, 'Hb': .486271, 'Ha': .656461, 'Br13':1.61137, 'Br12':1.6416,
-    'Brg':2.166}
+    #~ suflines = {'H12': .372300, 'H11': .373543, 'H10': .375122, 'H9': .377170,
+    #~ 'H8': .379899, 'H7': .383649, 'H6': .389017, 'H5': .397120, 'Hd': .410289,
+    #~ 'Hg': .434169, 'Hb': .486271, 'Ha': .656461, 'Br13':1.61137, 'Br12':1.6416,
+    #~ 'Brg':2.166}
 
     for model in models:
         model = model.replace('.inp', '.txt')
@@ -583,16 +587,18 @@ def mergesed2(models, Vrots, path=None):
         path = _phc.trimpathname(modfld[:-1])[0]
         if not _os.path.exists('{0}fullsed'.format(path)):
             _os.system('mkdir {0}fullsed'.format(path))
-        #
-        #~ modelname = modelname.replace('.txt','.inp')
         sed2data = _np.empty(0)
         sfound = []
-        #Process broad-bands
-        for suf in sufbands:
-            file = modfld + '{0}_{1}.sed2'.format(suf, modelname.replace(".txt", ""))
-            if _os.path.exists(file):
-                sfound += [suf]
-                newdata = readsed2(file)
+        #Get all *.sed2 and choose if it is a broad-band or a line
+        lsed2 = _glob('{0}*{1}.sed2'.format(modfld, modelname[:-4]))
+        lsed2.extend(_glob('{0}*{1}_SEI.sed2'.format(modfld, modelname[:-4])))
+        print lsed2, '{0}*{1}*.sed2'.format(modfld, modelname[:-4])
+        for file in lsed2:
+            suf = _phc.trimpathname(file)[-1].split('_')[0]
+            sfound += [suf]
+            newdata = readsed2(file)
+            if file.find('_SEI.') == -1:
+                #Process broad-band
                 if len(sed2data) == 0:
                     sed2data = newdata.copy()
                     nlbd, nobs, Rstar, Rwind = sed2info(file)
@@ -606,16 +612,25 @@ def mergesed2(models, Vrots, path=None):
                             key = raw_input('Do you want do proceed? (y/other): ')
                     nlbd += sed2info(file)[0]
                     sed2data = _np.vstack((sed2data, newdata))
-        #Process lines
-        Vrot = Vrots[models.index(model)]
-        for suf in suflines:
-            file = modfld + '{0}_{1}_SEI.sed2'.format(suf, modelname.replace(".txt", ""))
-            if _os.path.exists(file):
-                sfound += [suf]
-                newdata = readsed2(file)
-                #print("# TRIMMING INPUT SPECTRUM {}".format(modelname))
-                #print("# TO ACCOUNT FOR THE NON-ZERO ROTATION VELOCITY.")
-                deltalbd = Vrot / _phc.c.cgs / 1e-5 * suflines[suf]
+            else:
+                #Process lines
+                Vrot = Vrots[models.index(model)]
+                nlbdSEI, tmp, tmp, tmp = sed2info(file)
+                #Rest wavelength
+                print nlbd, nlbdSEI, newdata[:nlbdSEI,2]
+                lbrest = (newdata[nlbdSEI-1,2]-newdata[0,2])/2.+newdata[0,2]
+                if checklineval:
+                    print('# I found {0} as wavelength for {1}'.format(lbrest,suf))
+                    print('# Type a number to change it (no sci. notation/or empty to continue)')
+                    loop = True
+                    while loop:
+                        userinp = raw_input('# lbd: ')
+                        if len(userinp) == 0:
+                            loop = False
+                        elif userinp.replace('.','',1).isdigit():
+                            lbrest = float(userinp)
+                            loop = False
+                deltalbd = Vrot / _phc.c.cgs / 1e-5 * lbrest
                 mini = newdata[0, 2] + deltalbd
                 maxi = newdata[-1, 2] - deltalbd
                 #print deltalbd, Vrot
@@ -639,7 +654,7 @@ def mergesed2(models, Vrots, path=None):
                     sed2data = sed2data[idx]
                     nlbd += sed2info(file)[0] - ncut / sed2info(file)[1]
                     sed2data = _np.vstack((sed2data, newdata))
-
+        #~ 
         if len(sfound) > 0:
             print('# PROCESSED: {0} with {1}'.format(model, sfound))
             fullsed2 = _np.zeros((len(sed2data), 16))
@@ -648,37 +663,39 @@ def mergesed2(models, Vrots, path=None):
             fullsed2[:, 5] = sed2data[:, 19]
             fullsed2[:, 6] = sed2data[:, 27]
             fullsed2[:, 7:8 + 1] = sed2data[:, 4:5 + 1]
-
-            #a = _np.arange(9).reshape(3,3)
-            #_np.core.records.fromarrays(a.transpose(), names='a,b,c', formats='f4,f4,f4')
-            #fullsed2 = fullsed2[fullsed2[:,2].argsort()]
-            #fullsed2 = fullsed2[fullsed2[:,0].argsort()]
-            if _np.max(fullsed2[_np.isfinite(fullsed2)]) < 100000:
-                fmt = '%13.6f'
-            elif _np.max(fullsed2[_np.isfinite(fullsed2)]) < 1000000:
-                fmt = '%13.5f'
-            else:
-                print('# ERROR at max values of fullsed2!!!!!!!!')
-                print(_np.max(fullsed2[_np.isfinite(fullsed2)]))
-                raise SystemExit(0)
+            #Old 
+            #~ if _np.max(fullsed2[_np.isfinite(fullsed2)]) < 100000:
+                #~ fmt = '%13.6f'
+            #~ elif _np.max(fullsed2[_np.isfinite(fullsed2)]) < 1000000:
+                #~ fmt = '%13.5f'
+            #~ else:
+                #~ print('# ERROR at max values of fullsed2!!!!!!!!')
+                #~ print(_np.max(fullsed2[_np.isfinite(fullsed2)]))
+                #~ raise SystemExit(0)
             fullsed2 = _np.core.records.fromarrays(fullsed2.transpose(), names= \
                 'MU,PHI,LAMBDA,FLUX,SCT FLUX,EMIT FLUX,TRANS FLUX,Q,U,Sig FLUX,\
                 Sig SCT FLUX,Sig EMIT FLUX,Sig TRANS FLU,Sig Q,Sig U',
                                                    formats='f8,f8,f8,f8,f8,f8,f8,f8,f8,f8,f8,f8,f8,f8,f8,f8')
             idx = _np.argsort(fullsed2, order=('MU', 'PHI', 'LAMBDA'))
             fullsed2 = fullsed2[idx]
-
             hd = '%CONTAINS: {0}\n'.format(' + '.join(sfound))
             hd += '%CREATED: {0}\n'.format(_time.asctime(_time.localtime(_time.time())))
-            hd += '%{0:>7s}{1:>8s}{2:>13s}{3:>13s}'.format('nlbd', 'nobs', 'Rstar', 'Rwind') + '\n'
+            hd += '%{0:>7s}{1:>8s}{2:>13s}{3:>13s}\n'.format('nlbd', 'nobs', 'Rstar', 'Rwind')
             hd += '{0:8d}{1:8d}{2:13.4f}{3:13.2f}\n'.format(int(nlbd), int(nobs), Rstar, Rwind)
-            hd += '%{0:>12s}'.format('MU') + (15 * '{:>13s}').format('PHI', 'LAMBDA', 'FLUX', \
-                                                                      'SCT FLUX', 'EMIT FLUX', 'TRANS FLUX', 'Q', 'U',
-                                                                      'Sig FLUX', 'Sig FLUX', \
-                                                                      'SigSCTFLX', 'SigEMITFLX', 'SigTRANSFLX',
-                                                                      'Sig Q', 'Sig U')
-            _np.savetxt(path + 'fullsed/fullsed_' + modelname.replace('.txt', '.sed2'), \
-                        fullsed2, header=hd, comments="", fmt=fmt, delimiter='')
+            #~ hd += '%{0:>12s}'.format('MU') + (15 * '{:>13s}').format('PHI', 'LAMBDA', 'FLUX', \
+                                                                      #~ 'SCT FLUX', 'EMIT FLUX', 'TRANS FLUX', 'Q', 'U',
+                                                                      #~ 'Sig FLUX', 'Sig FLUX', \
+                                                                      #~ 'SigSCTFLX', 'SigEMITFLX', 'SigTRANSFLX',
+                                                                      #~ 'Sig Q', 'Sig U')
+            #~ _np.savetxt(path + 'fullsed/fullsed_' + modelname.replace('.txt', '.sed2'), \
+                        #~ fullsed2, header=hd, comments="", fmt=fmt, delimiter='')
+            #New
+            header = ['% PHI', 'LAMBDA', 'FLUX', 'SCT FLUX', 'EMIT FLUX', 'TRANS FLUX', 'Q', 'U',
+                'Sig FLUX', 'Sig FLUX', 'SigSCTFLX', 'SigEMITFLX', 'SigTRANSFLX', 'Sig Q', 'Sig U']
+            outfile = hd + _tab(fullsed2, headers=header, tablefmt="plain")
+            f0 = open(path + 'fullsed/fullsed_' + modelname.replace('.txt', '.sed2'), 'w')
+            f0.writelines(outfile)
+            f0.close()
         else:
             print('# WARNING: No SED2 found for {0}'.format(model))
     return

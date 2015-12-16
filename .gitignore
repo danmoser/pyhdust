@@ -51,6 +51,7 @@ coverage.xml
 # docs/_build/
 docs
 
-# PyBuilder
+# Builder
+hdtbuilder.sh
 hdtbuilder.py
 target/

@@ -33,6 +33,17 @@ def dtflag():
     now = _dt.datetime.now()
     return '{0}-{1:02d}-{2:02d}_{3:02d}-{4:02d}'.format(now.year, now.month,
     now.day, now.hour, now.minute)
+
+
+def renlist(root, newr):
+    """ The routine changes each A_STR_B to A_NEW_B inside the running folder.
+    """
+    files = _glob('*{0}*'.format(root))
+    files.sort()
+    for i in range(len(files)):
+      _os.system( 'mv "'+files[i]+'" "'+files[i].replace(root,newr)+'"' )
+      print("# "+files[i]+" renamed to: "+files[i].replace(root,newr) )
+    return
     
 
 class Constant(object):
@@ -325,7 +336,9 @@ def fracday2hms(frac):
 
 def ra2degf(rastr):
     """ RA to degrees (decimal). Input is string. """
-    vals = _np.array(rastr.replace(',','.').split(':')).astype(float)
+    rastr = rastr.replace('::',':')
+    rastr = rastr.replace(',','.')
+    vals = _np.array(rastr.split(':')).astype(float)
     return (vals[0]+vals[1]/60.+vals[2]/3600.)*360./24
 
 
