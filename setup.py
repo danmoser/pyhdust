@@ -1,17 +1,31 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 
-try:
-    from setuptools import setup, find_packages
-except ImportError:
+#~ try:
+    #~ from setuptools import setup, find_packages
+    #~ errimport = False
+#~ except ImportError:
+if True:
     from distutils.core import setup
+    import os
+    from glob import glob
+    errimport = True
+    
+    def is_package(path):
+        return (
+        os.path.isdir(path) and
+        os.path.isfile(os.path.join(path, '__init__.py'))
+        )
 
-    def find_packages(path, base="" ):
+    def find_packages(path=".", base="", exclude=[]):
         """ Find all packages in path """
         packages = {}
+        lexc = []
+        for item in exclude:
+            lexc.extend(glob(item))
         for item in os.listdir(path):
             dir = os.path.join(path, item)
-            if is_package( dir ):
+            if is_package( dir ) and item not in lexc:
                 if base:
                     module_name = "%(base)s.%(item)s" % vars()
                 else:
@@ -30,9 +44,9 @@ def rd(filename):
 
 if __name__ == "__main__":
     setup(name='pyhdust',
-    version=0.966,
+    version='0.966',
     description='BeACoN’s Python tools for Hdust',
-    url='http://astroweb.iag.usp.br/~moser/doc/',
+    url='https://dl.dropboxusercontent.com/u/6569986/doc/index.html',
     author='Daniel M. Faes',
     author_email='dmfaes@gmail.com',
     license='GNU GPLv3.0',
@@ -59,3 +73,7 @@ if __name__ == "__main__":
         ],
     )
 
+    if errimport:
+        print('# You don\'t have "setuptools" installed!')
+        print('# Because of this, you need to ADAPT and run the following command: \n')
+        print('$ cp -r -f pyhdust ~/.local/lib/python2.7/site-packages/')

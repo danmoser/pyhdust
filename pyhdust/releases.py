@@ -196,7 +196,7 @@ def setRelease():
     os.chdir('{0}docs'.format(hdtpath()))
     os.system('make html')
     #~ os.system('rsync -rP _build/html/ astroweb:/www/moser/www/doc')
-    os.system('rsync -rP build/html/ /data/Dropbox/Public/doc')
+    os.system('rsync -rP _build/html/ /data/Dropbox/Public/doc')
     print('# From version {0} to {1}'.format(oldver, __version__))
     os.system('firefox https://dl.dropboxusercontent.com/u/6569986/doc/index.html &')
     os.chdir('../..')
