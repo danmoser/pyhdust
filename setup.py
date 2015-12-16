@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 
-#~ try:
-    #~ from setuptools import setup, find_packages
-    #~ errimport = False
-#~ except ImportError:
-if True:
+try:
+    from setuptools import setup, find_packages
+    errimport = False
+except ImportError:
+#~ if True:
     from distutils.core import setup
     import os
     from glob import glob
