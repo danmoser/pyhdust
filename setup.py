@@ -1,10 +1,24 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
-# Modified by D. Moser in 2015-04-15
+
 try:
     from setuptools import setup, find_packages
 except ImportError:
-    from distutils.core import setup, find_packages
+    from distutils.core import setup
+
+    def find_packages(path, base="" ):
+        """ Find all packages in path """
+        packages = {}
+        for item in os.listdir(path):
+            dir = os.path.join(path, item)
+            if is_package( dir ):
+                if base:
+                    module_name = "%(base)s.%(item)s" % vars()
+                else:
+                    module_name = item
+                packages[module_name] = dir
+                packages.update(find_packages(dir, module_name))
+        return packages
 
 
 def rd(filename):
