@@ -203,7 +203,7 @@ printf,lun1,'                       Mass            Rp              L'
 for im=0,nm-1 do begin
   for iv=0,nv-1 do begin
 
-    file='../stmodels/'+str_mass[im]+zsun+str_vel[iv]+'.dat'
+    file='./stmodels/'+str_mass[im]+zsun+str_vel[iv]+'.dat'
     openr,lun,file,/get_lun
     header=strarr(2)
     data=dblarr(55,400)

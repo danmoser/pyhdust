@@ -1,10 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""PyHdust auxiliary module: third-part pretty-print tabular data.
-
-:author: ?
-:license: ?
-"""
+"""Pretty-print tabular data."""
 
 from __future__ import print_function
 from __future__ import unicode_literals
@@ -37,7 +33,6 @@ else:
     _binary_type = bytes
 
     import io
-
     def _is_file(f):
         return isinstance(f, io.IOBase)
 
@@ -84,8 +79,7 @@ DataRow = namedtuple("DataRow", ["begin", "sep", "end"])
 # with_header_hide:
 #
 #   - either None, to display all table elements unconditionally,
-#   - or a list of elements not to be displayed if the table has column 
-#     headers.
+#   - or a list of elements not to be displayed if the table has column headers.
 #
 TableFormat = namedtuple("TableFormat", ["lineabove", "linebelowheader",
                                          "linebetweenrows", "linebelow",
@@ -110,31 +104,30 @@ def _pipe_segment_with_colons(align, colwidth):
 def _pipe_line_with_colons(colwidths, colaligns):
     """Return a horizontal line with optional colons to indicate column's
     alignment (as in `pipe` output format)."""
-    segments = [_pipe_segment_with_colons(a, w)
-                for a, w in zip(colaligns, colwidths)]
+    segments = [_pipe_segment_with_colons(a, w) for a, w in zip(colaligns, colwidths)]
     return "|" + "|".join(segments) + "|"
 
 
 def _mediawiki_row_with_attrs(separator, cell_values, colwidths, colaligns):
-    alignment = { "left": '',
-                  "right": 'align="right"| ',
-                  "center": 'align="center"| ',
+    alignment = { "left":    '',
+                  "right":   'align="right"| ',
+                  "center":  'align="center"| ',
                   "decimal": 'align="right"| ' }
     # hard-coded padding _around_ align attribute and value together
     # rather than padding parameter which affects only the value
     values_with_attrs = [' ' + alignment.get(a, '') + c + ' '
                          for c, a in zip(cell_values, colaligns)]
-    colsep = separator * 2
+    colsep = separator*2
     return (separator + colsep.join(values_with_attrs)).rstrip()
 
 
 def _html_row_with_attrs(celltag, cell_values, colwidths, colaligns):
-    alignment = { "left": '',
-                  "right": ' style="text-align: right;"',
-                  "center": ' style="text-align: center;"',
+    alignment = { "left":    '',
+                  "right":   ' style="text-align: right;"',
+                  "center":  ' style="text-align: center;"',
                   "decimal": ' style="text-align: right;"' }
-    values_with_attrs = ["<{0}{1}>{2}</{0}>".format(celltag, alignment.get(a, 
-      ''), c) for c, a in zip(cell_values, colaligns)]
+    values_with_attrs = ["<{0}{1}>{2}</{0}>".format(celltag, alignment.get(a, ''), c)
+                         for c, a in zip(cell_values, colaligns)]
     return "<tr>" + "".join(values_with_attrs).rstrip() + "</tr>"
 
 
@@ -223,14 +216,12 @@ _table_formats = {"simple":
                               datarow=DataRow("", "  ", ""),
                               padding=0, with_header_hide=None),
                   "mediawiki":
-                  TableFormat(lineabove=Line("{| class=\"wikitable\" style=" + 
-                              "\"text-align: left;\"", "", "", "\n|+ <!-- " + 
-                              "caption --> \n|-"),
+                  TableFormat(lineabove=Line("{| class=\"wikitable\" style=\"text-align: left;\"",
+                                             "", "", "\n|+ <!-- caption -->\n|-"),
                               linebelowheader=Line("|-", "", "", ""),
                               linebetweenrows=Line("|-", "", "", ""),
                               linebelow=Line("|}", "", "", ""),
-                              headerrow=partial(
-                                  _mediawiki_row_with_attrs, "!"),
+                              headerrow=partial(_mediawiki_row_with_attrs, "!"),
                               datarow=partial(_mediawiki_row_with_attrs, "|"),
                               padding=0, with_header_hide=None),
                   "html":
@@ -245,18 +236,15 @@ _table_formats = {"simple":
                   TableFormat(lineabove=_latex_line_begin_tabular,
                               linebelowheader=Line("\\hline", "", "", ""),
                               linebetweenrows=None,
-                              linebelow=Line(
-                                  "\\hline\n\\end{tabular}", "", "", ""),
+                              linebelow=Line("\\hline\n\\end{tabular}", "", "", ""),
                               headerrow=_latex_row,
                               datarow=_latex_row,
                               padding=1, with_header_hide=None),
                   "latex_booktabs":
-                  TableFormat(lineabove=partial(_latex_line_begin_tabular, 
-                              booktabs=True),
+                  TableFormat(lineabove=partial(_latex_line_begin_tabular, booktabs=True),
                               linebelowheader=Line("\\midrule", "", "", ""),
                               linebetweenrows=None,
-                              linebelow=Line(
-                                  "\\bottomrule\n\\end{tabular}", "", "", ""),
+                              linebelow=Line("\\bottomrule\n\\end{tabular}", "", "", ""),
                               headerrow=_latex_row,
                               datarow=_latex_row,
                               padding=1, with_header_hide=None),
@@ -271,18 +259,15 @@ _table_formats = {"simple":
 tabulate_formats = list(sorted(_table_formats.keys()))
 
 
-_invisible_codes = re.compile(
-    r"\x1b\[\d*m|\x1b\[\d*\;\d*\;\d*m")  # ANSI color codes
-_invisible_codes_bytes = re.compile(
-    b"\x1b\[\d*m|\x1b\[\d*\;\d*\;\d*m")  # ANSI color codes
+_invisible_codes = re.compile(r"\x1b\[\d*m|\x1b\[\d*\;\d*\;\d*m")  # ANSI color codes
+_invisible_codes_bytes = re.compile(b"\x1b\[\d*m|\x1b\[\d*\;\d*\;\d*m")  # ANSI color codes
 
 
 def simple_separated_format(separator):
     """Construct a simple TableFormat with columns separated by a separator.
 
     >>> tsv = simple_separated_format("\\t") ; \
-        tabulate([["foo", 1], ["spam", 23]], tablefmt=tsv) == 'foo \\t 1' + \
-        '\\nspam\\t23'
+        tabulate([["foo", 1], ["spam", 23]], tablefmt=tsv) == 'foo \\t 1\\nspam\\t23'
     True
 
     """
@@ -320,9 +305,9 @@ def _isint(string, inttype=int):
     False
     """
     return type(string) is inttype or\
-        (isinstance(string, _binary_type) or isinstance(string, _text_type))\
-        and\
-        _isconvertible(inttype, string)
+           (isinstance(string, _binary_type) or isinstance(string, _text_type))\
+            and\
+            _isconvertible(inttype, string)
 
 
 def _type(string, has_invisible=True):
@@ -395,8 +380,7 @@ def _padleft(width, s, has_invisible=True):
     True
 
     """
-    iwidth = width + \
-        len(s) - len(_strip_invisible(s)) if has_invisible else width
+    iwidth = width + len(s) - len(_strip_invisible(s)) if has_invisible else width
     fmt = "{0:>%ds}" % iwidth
     return fmt.format(s)
 
@@ -404,13 +388,11 @@ def _padleft(width, s, has_invisible=True):
 def _padright(width, s, has_invisible=True):
     """Flush left.
 
-    >>> _padright(6, '\u044f\u0439\u0446\u0430') == 
-        '\u044f\u0439\u0446\u0430  '
+    >>> _padright(6, '\u044f\u0439\u0446\u0430') == '\u044f\u0439\u0446\u0430  '
     True
 
     """
-    iwidth = width + \
-        len(s) - len(_strip_invisible(s)) if has_invisible else width
+    iwidth = width + len(s) - len(_strip_invisible(s)) if has_invisible else width
     fmt = "{0:<%ds}" % iwidth
     return fmt.format(s)
 
@@ -422,8 +404,7 @@ def _padboth(width, s, has_invisible=True):
     True
 
     """
-    iwidth = width + \
-        len(s) - len(_strip_invisible(s)) if has_invisible else width
+    iwidth = width + len(s) - len(_strip_invisible(s)) if has_invisible else width
     fmt = "{0:^%ds}" % iwidth
     return fmt.format(s)
 
@@ -452,10 +433,8 @@ def _visible_width(s):
 def _align_column(strings, alignment, minwidth=0, has_invisible=True):
     """[string] -> [padded_string]
 
-    >>> list(map(str,_align_column(["12.345", "-1234.5", "1.23", "1234.5", 
-        "1e+234", "1.0e234"], "decimal")))
-    ['   12.345  ', '-1234.5    ', '    1.23   ', ' 1234.5    ', '    1e+234 ', 
-    '    1.0e234']
+    >>> list(map(str,_align_column(["12.345", "-1234.5", "1.23", "1234.5", "1e+234", "1.0e234"], "decimal")))
+    ['   12.345  ', '-1234.5    ', '    1.23   ', ' 1234.5    ', '    1e+234 ', '    1.0e234']
 
     >>> list(map(str,_align_column(['123.4', '56.7890'], None)))
     ['123.4', '56.7890']
@@ -494,8 +473,7 @@ def _align_column(strings, alignment, minwidth=0, has_invisible=True):
 
 def _more_generic(type1, type2):
     types = { _none_type: 0, int: 1, float: 2, _binary_type: 3, _text_type: 4 }
-    invtypes = { 4: _text_type, 3: _binary_type,
-        2: float, 1: int, 0: _none_type }
+    invtypes = { 4: _text_type, 3: _binary_type, 2: float, 1: int, 0: _none_type }
     moregeneric = max(types.get(type1, 4), types.get(type2, 4))
     return invtypes[moregeneric]
 
@@ -529,13 +507,9 @@ def _format(val, valtype, floatfmt, missingval="", has_invisible=True):
 
     Unicode is supported:
 
-    >>> hrow = ['\u0431\u0443\u043a\u0432\u0430', '\u0446\u0438\u0444\u0440' +\
-        \u0430'] ; \
+    >>> hrow = ['\u0431\u0443\u043a\u0432\u0430', '\u0446\u0438\u0444\u0440\u0430'] ; \
         tbl = [['\u0430\u0437', 2], ['\u0431\u0443\u043a\u0438', 4]] ; \
-        good_result = '\\u0431\\u0443\\u043a\\u0432\\u0430      ' +\
-        '\\u0446\\u0438\\u0444\\u0440\\u0430\\n-------  -------' +\
-        '\\n\\u0430\\u0437             2\\n\\u0431\\u0443\\u043a\\u0438' +\
-        '           4' ; \
+        good_result = '\\u0431\\u0443\\u043a\\u0432\\u0430      \\u0446\\u0438\\u0444\\u0440\\u0430\\n-------  -------\\n\\u0430\\u0437             2\\n\\u0431\\u0443\\u043a\\u0438           4' ; \
         tabulate(tbl, headers=hrow) == good_result
     True
 
@@ -551,8 +525,7 @@ def _format(val, valtype, floatfmt, missingval="", has_invisible=True):
         except TypeError:
             return _text_type(val)
     elif valtype is float:
-        is_a_colored_number = has_invisible and isinstance(
-            val, (_text_type, _binary_type))
+        is_a_colored_number = has_invisible and isinstance(val, (_text_type, _binary_type))
         if is_a_colored_number:
             raw_val = _strip_invisible(val)
             formatted_val = format(float(raw_val), floatfmt)
@@ -605,39 +578,38 @@ def _normalize_tabular_data(tabular_data, headers):
         if hasattr(tabular_data.values, "__call__"):
             # likely a conventional dict
             keys = tabular_data.keys()
-            # columns have to be transposed
-            rows = list(izip_longest(*tabular_data.values()))
+            rows = list(izip_longest(*tabular_data.values()))  # columns have to be transposed
         elif hasattr(tabular_data, "index"):
-            # values is a property, has .index => it's likely a
-            # pandas.DataFrame (pandas 0.11.0)
+            # values is a property, has .index => it's likely a pandas.DataFrame (pandas 0.11.0)
             keys = tabular_data.keys()
-            # values matrix doesn't need to be transposed
-            vals = tabular_data.values
+            vals = tabular_data.values  # values matrix doesn't need to be transposed
             names = tabular_data.index
-            rows = [[v] + list(row) for v, row in zip(names, vals)]
+            rows = [[v]+list(row) for v,row in zip(names, vals)]
         else:
-            raise ValueError(
-                "tabular data doesn't appear to be a dict or a DataFrame")
+            raise ValueError("tabular data doesn't appear to be a dict or a DataFrame")
 
         if headers == "keys":
-            headers = list(map(_text_type, keys))  # headers should be strings
+            headers = list(map(_text_type,keys))  # headers should be strings
 
     else:  # it's a usual an iterable of iterables, or a NumPy array
         rows = list(tabular_data)
 
         if (headers == "keys" and
-            hasattr(tabular_data, "dtype") and getattr(tabular_data.dtype, 
-              "names")):
+            hasattr(tabular_data, "dtype") and
+            getattr(tabular_data.dtype, "names")):
             # numpy record array
             headers = tabular_data.dtype.names
-        elif (headers == "keys" and len(rows) > 0 and 
-              isinstance(rows[0], tuple) and hasattr(rows[0], "_fields")):
+        elif (headers == "keys"
+              and len(rows) > 0
+              and isinstance(rows[0], tuple)
+              and hasattr(rows[0], "_fields")):
             # namedtuple
             headers = list(map(_text_type, rows[0]._fields))
-        elif (len(rows) > 0 and isinstance(rows[0], dict)):
+        elif (len(rows) > 0
+              and isinstance(rows[0], dict)):
             # dict or OrderedDict
-            uniq_keys = set()  # implements hashed lookup
-            keys = []  # storage for set
+            uniq_keys = set() # implements hashed lookup
+            keys = [] # storage for set
             if headers == "firstrow":
                 firstdict = rows[0] if len(rows) > 0 else {}
                 keys.extend(firstdict.keys())
@@ -645,7 +617,7 @@ def _normalize_tabular_data(tabular_data, headers):
                 rows = rows[1:]
             for row in rows:
                 for k in row.keys():
-                    # Save unique items in input order
+                    #Save unique items in input order
                     if k not in uniq_keys:
                         keys.append(k)
                         uniq_keys.add(k)
@@ -662,8 +634,7 @@ def _normalize_tabular_data(tabular_data, headers):
                 else:
                     headers = []
             elif headers:
-                raise ValueError(
-                    'headers for a list of dicts is not a dict or a keyword')
+                raise ValueError('headers for a list of dicts is not a dict or a keyword')
             rows = [[row.get(k) for k in keys] for row in rows]
         elif headers == "keys" and len(rows) > 0:
             # keys are column indices
@@ -671,18 +642,18 @@ def _normalize_tabular_data(tabular_data, headers):
 
     # take headers from the first row if necessary
     if headers == "firstrow" and len(rows) > 0:
-        headers = list(map(_text_type, rows[0]))  # headers should be strings
+        headers = list(map(_text_type, rows[0])) # headers should be strings
         rows = rows[1:]
 
-    headers = list(map(_text_type, headers))
-    rows = list(map(list, rows))
+    headers = list(map(_text_type,headers))
+    rows = list(map(list,rows))
 
     # pad with empty headers for initial columns if necessary
     if headers and len(rows) > 0:
-        nhs = len(headers)
-        ncols = len(rows[0])
-        if nhs < ncols:
-            headers = [""] * (ncols - nhs) + headers
+       nhs = len(headers)
+       ncols = len(rows[0])
+       if nhs < ncols:
+           headers = [""]*(ncols - nhs) + headers
 
     return rows, headers
 
@@ -759,8 +730,8 @@ def tabulate(tabular_data, headers=(), tablefmt="simple",
 
     Various plain-text table formats (`tablefmt`) are supported:
     'plain', 'simple', 'grid', 'pipe', 'orgtbl', 'rst', 'mediawiki',
-     'latex', and 'latex_booktabs'. Variable `tabulate_formats` contains the 
-     list of currently supported formats.
+     'latex', and 'latex_booktabs'. Variable `tabulate_formats` contains the list of
+    currently supported formats.
 
     "plain" format doesn't use any pseudographics to draw tables,
     it separates columns with a double space:
@@ -771,8 +742,7 @@ def tabulate(tabular_data, headers=(), tablefmt="simple",
     spam         41.9999
     eggs        451
 
-    >>> print(tabulate([["spam", 41.9999], ["eggs", "451.0"]], 
-      tablefmt="plain"))
+    >>> print(tabulate([["spam", 41.9999], ["eggs", "451.0"]], tablefmt="plain"))
     spam   41.9999
     eggs  451
 
@@ -785,8 +755,7 @@ def tabulate(tabular_data, headers=(), tablefmt="simple",
     spam         41.9999
     eggs        451
 
-    >>> print(tabulate([["spam", 41.9999], ["eggs", "451.0"]], 
-      tablefmt="simple"))
+    >>> print(tabulate([["spam", 41.9999], ["eggs", "451.0"]], tablefmt="simple"))
     ----  --------
     spam   41.9999
     eggs  451
@@ -805,8 +774,7 @@ def tabulate(tabular_data, headers=(), tablefmt="simple",
     | eggs      |  451      |
     +-----------+-----------+
 
-    >>> print(tabulate([["spam", 41.9999], ["eggs", "451.0"]], 
-      tablefmt="grid"))
+    >>> print(tabulate([["spam", 41.9999], ["eggs", "451.0"]], tablefmt="grid"))
     +------+----------+
     | spam |  41.9999 |
     +------+----------+
@@ -835,8 +803,7 @@ def tabulate(tabular_data, headers=(), tablefmt="simple",
     | spam      |   41.9999 |
     | eggs      |  451      |
 
-    >>> print(tabulate([["spam", 41.9999], ["eggs", "451.0"]], 
-      tablefmt="pipe"))
+    >>> print(tabulate([["spam", 41.9999], ["eggs", "451.0"]], tablefmt="pipe"))
     |:-----|---------:|
     | spam |  41.9999 |
     | eggs | 451      |
@@ -854,8 +821,7 @@ def tabulate(tabular_data, headers=(), tablefmt="simple",
     | eggs      |  451      |
 
 
-    >>> print(tabulate([["spam", 41.9999], ["eggs", "451.0"]], 
-      tablefmt="orgtbl"))
+    >>> print(tabulate([["spam", 41.9999], ["eggs", "451.0"]], tablefmt="orgtbl"))
     | spam |  41.9999 |
     | eggs | 451      |
 
@@ -880,8 +846,8 @@ def tabulate(tabular_data, headers=(), tablefmt="simple",
     "mediawiki" produces a table markup used in Wikipedia and on other
     MediaWiki-based sites:
 
-    >>> print(tabulate([["strings", "numbers"], ["spam", 41.9999], ["eggs", 
-      "451.0"]], headers="firstrow", tablefmt="mediawiki"))
+    >>> print(tabulate([["strings", "numbers"], ["spam", 41.9999], ["eggs", "451.0"]],
+    ...                headers="firstrow", tablefmt="mediawiki"))
     {| class="wikitable" style="text-align: left;"
     |+ <!-- caption -->
     |-
@@ -894,8 +860,7 @@ def tabulate(tabular_data, headers=(), tablefmt="simple",
 
     "html" produces HTML markup:
 
-    >>> print(tabulate([["strings", "numbers"], ["spam", 41.9999], 
-      ["eggs", "451.0"]],
+    >>> print(tabulate([["strings", "numbers"], ["spam", 41.9999], ["eggs", "451.0"]],
     ...                headers="firstrow", tablefmt="html"))
     <table>
     <tr><th>strings  </th><th style="text-align: right;">  numbers</th></tr>
@@ -905,8 +870,7 @@ def tabulate(tabular_data, headers=(), tablefmt="simple",
 
     "latex" produces a tabular environment of LaTeX document markup:
 
-    >>> print(tabulate([["spam", 41.9999], ["eggs", "451.0"]], 
-      tablefmt="latex"))
+    >>> print(tabulate([["spam", 41.9999], ["eggs", "451.0"]], tablefmt="latex"))
     \\begin{tabular}{lr}
     \\hline
      spam &  41.9999 \\\\
@@ -917,8 +881,7 @@ def tabulate(tabular_data, headers=(), tablefmt="simple",
     "latex_booktabs" produces a tabular environment of LaTeX document markup
     using the booktabs.sty package:
 
-    >>> print(tabulate([["spam", 41.9999], ["eggs", "451.0"]], 
-      tablefmt="latex_booktabs"))
+    >>> print(tabulate([["spam", 41.9999], ["eggs", "451.0"]], tablefmt="latex_booktabs"))
     \\begin{tabular}{lr}
     \\toprule
      spam &  41.9999 \\\\
@@ -932,8 +895,8 @@ def tabulate(tabular_data, headers=(), tablefmt="simple",
 
     # optimization: look for ANSI control codes once,
     # enable smart width functions only if a control code is found
-    plain_text = '\n'.join(['\t'.join(map(_text_type, headers))] +
-      ['\t'.join(map(_text_type, row)) for row in list_of_lists])
+    plain_text = '\n'.join(['\t'.join(map(_text_type, headers))] + \
+                            ['\t'.join(map(_text_type, row)) for row in list_of_lists])
     has_invisible = re.search(_invisible_codes, plain_text)
     if has_invisible:
         width_fn = _visible_width
@@ -944,12 +907,11 @@ def tabulate(tabular_data, headers=(), tablefmt="simple",
     cols = list(zip(*list_of_lists))
     coltypes = list(map(_column_type, cols))
     cols = [[_format(v, ct, floatfmt, missingval, has_invisible) for v in c]
-            for c, ct in zip(cols, coltypes)]
+             for c,ct in zip(cols, coltypes)]
 
     # align columns
-    aligns = [numalign if ct in [int, float] else stralign for ct in coltypes]
-    minwidths = [width_fn(h) + MIN_PADDING for h in headers] if headers else \
-        [0] * len(cols)
+    aligns = [numalign if ct in [int,float] else stralign for ct in coltypes]
+    minwidths = [width_fn(h) + MIN_PADDING for h in headers] if headers else [0]*len(cols)
     cols = [_align_column(c, a, minw, has_invisible)
             for c, a, minw in zip(cols, aligns, minwidths)]
 
@@ -957,8 +919,7 @@ def tabulate(tabular_data, headers=(), tablefmt="simple",
         # align headers and add headers
         t_cols = cols or [['']] * len(headers)
         t_aligns = aligns or [stralign] * len(headers)
-        minwidths = [max(minw, width_fn(c[0]))
-                     for minw, c in zip(minwidths, t_cols)]
+        minwidths = [max(minw, width_fn(c[0])) for minw, c in zip(minwidths, t_cols)]
         headers = [_align_header(h, a, minw)
                    for h, a, minw in zip(headers, t_aligns, minwidths)]
         rows = list(zip(*cols))
@@ -995,14 +956,14 @@ def _build_line(colwidths, colaligns, linefmt):
     if hasattr(linefmt, "__call__"):
         return linefmt(colwidths, colaligns)
     else:
-        begin, fill, sep, end = linefmt
-        cells = [fill * w for w in colwidths]
+        begin, fill, sep,  end = linefmt
+        cells = [fill*w for w in colwidths]
         return _build_simple_row(cells, (begin, sep, end))
 
 
 def _pad_row(cells, padding):
     if cells:
-        pad = " " * padding
+        pad = " "*padding
         padded_cells = [pad + cell + pad for cell in cells]
         return padded_cells
     else:
@@ -1016,7 +977,7 @@ def _format_table(fmt, headers, rows, colwidths, colaligns):
     pad = fmt.padding
     headerrow = fmt.headerrow
 
-    padded_widths = [(w + 2 * pad) for w in colwidths]
+    padded_widths = [(w + 2*pad) for w in colwidths]
     padded_headers = _pad_row(headers, pad)
     padded_rows = [_pad_row(row, pad) for row in rows]
 
@@ -1024,26 +985,20 @@ def _format_table(fmt, headers, rows, colwidths, colaligns):
         lines.append(_build_line(padded_widths, colaligns, fmt.lineabove))
 
     if padded_headers:
-        lines.append(
-            _build_row(padded_headers, padded_widths, colaligns, headerrow))
+        lines.append(_build_row(padded_headers, padded_widths, colaligns, headerrow))
         if fmt.linebelowheader and "linebelowheader" not in hidden:
-            lines.append(
-                _build_line(padded_widths, colaligns, fmt.linebelowheader))
+            lines.append(_build_line(padded_widths, colaligns, fmt.linebelowheader))
 
     if padded_rows and fmt.linebetweenrows and "linebetweenrows" not in hidden:
         # initial rows with a line below
         for row in padded_rows[:-1]:
-            lines.append(
-                _build_row(row, padded_widths, colaligns, fmt.datarow))
-            lines.append(
-                _build_line(padded_widths, colaligns, fmt.linebetweenrows))
+            lines.append(_build_row(row, padded_widths, colaligns, fmt.datarow))
+            lines.append(_build_line(padded_widths, colaligns, fmt.linebetweenrows))
         # the last row without a line below
-        lines.append(
-            _build_row(padded_rows[-1], padded_widths, colaligns, fmt.datarow))
+        lines.append(_build_row(padded_rows[-1], padded_widths, colaligns, fmt.datarow))
     else:
         for row in padded_rows:
-            lines.append(
-                _build_row(row, padded_widths, colaligns, fmt.datarow))
+            lines.append(_build_row(row, padded_widths, colaligns, fmt.datarow))
 
     if fmt.linebelow and "linebelow" not in hidden:
         lines.append(_build_line(padded_widths, colaligns, fmt.linebelow))
@@ -1066,8 +1021,7 @@ def _main():
     -h, --help                show this message
     -1, --header              use the first row of data as a table header
     -o FILE, --output FILE    print table to FILE (default: stdout)
-    -s REGEXP, --sep REGEXP   use a custom column separator (default:
-                              whitespace)
+    -s REGEXP, --sep REGEXP   use a custom column separator (default: whitespace)
     -F FPFMT, --float FPFMT   floating point number format (default: g)
     -f FMT, --format FMT      set output table format; supported formats:
                               plain, simple, grid, fancy_grid, pipe, orgtbl,

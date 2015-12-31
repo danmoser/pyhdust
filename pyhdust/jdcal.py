@@ -528,6 +528,6 @@ def _test_jd2jcal():
         assert x[i][2] == day[i]
         assert x[i][3] <= 1e-15
 
-### MAIN ###
+# MAIN ###
 if __name__ == "__main__":
     pass

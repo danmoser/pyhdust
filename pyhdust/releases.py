@@ -9,23 +9,28 @@ History
     v0.958 @ 2015-0
     ----------------------
 
+v0.967 @ 2015-12-30
+----------------------
+- PEP8 Standardization
+- intt.I: Vieira+2015 models
+
 v0.966 @ 2015-12-16
 ----------------------
 - Correction on setup.py
 
 v0.965 @ 2015-12-16
 ----------------------
-hdt.mergesed2:
-- SED was the first because, if present, the code will check if other bands parameters are the same (i.e., observers, Rstar, Rwind).
-- The criteria I elected for distinguishing between broad-band and line (Sobolev 0/1) is the presence of "_SEI" extension in the filename, assumed that the line rest wavelength is the BAND CENTER WAVELENGTH. There is an option to the user manually put it.
-- A new output format of the numbers was done.
+- hdt.mergesed2: SED was the first because, if present, the code will check if 
+    other bands parameters are the same (i.e., observers, Rstar, Rwind).
+- hdt.mergesed2: The criteria I elected for distinguishing between broad-band 
+    and line (Sobolev 0/1) is the presence of "_SEI" extension in the filename, 
+    assumed that the line rest wavelength is the BAND CENTER WAVELENGTH. There 
+    is an option to the user manually put it.
+- hdt.mergesed2: A new output format of the numbers was done.
+- inp.makeSourceGrid: Function created as discussed
+- inp.makeDiskGrid: Define convSig2Rho=True, then all the values of sig0vals 
+will be considered as rho0 values.
 
-inp.makeSourceGrid:
-- Function created as discussed
-
-inp.makeDiskGrid:
-- Define convSig2Rho=True, then all the values of sig0vals will be considered as rho0 values
-    
 v0.964 @ 2015-09-15
 ----------------------
 - hdrpil module added
@@ -79,14 +84,15 @@ Previously
 - Added options `force` and `chknames` to genStdLog and genObjLog
 
 
-To Be Done
-============
+To Be Done (TODOs)
+======================
 General
 ---------
 - pip install for pyhdust
 - Transparent legend-box on the graphs
 - Change scipy interpolate with numpy.interp (hdt.doFilterConv, others...)
-- Define unique 'Planejamento_LNA' as MySQL (targets [coordinates], P and Ph0 [mags.], nights observed vs. bad weather, etc.)
+- Define unique 'Planejamento_LNA' as MySQL (targets [coordinates], P and Ph0 
+    [mags.], nights observed vs. bad weather, etc.)
 - Standardization at CGS/SI units
 - Finish help docs+translations to English
 - \*Define `path` policy
@@ -101,7 +107,8 @@ __init__
 - update obs_calcs (spherical triangles)
 - rotstars: add option for ellipsoidal star
 - genlog: add check for \*.sigma files
-- merge: be ``smart'' and be independent of filters definitions (e.g., continuum or line based on the number of points). 
+- merge: be ``smart'' and be independent of filters definitions (e.g., 
+    continuum or line based on the number of points). 
 
 beatlas
 ----------
@@ -111,13 +118,17 @@ input
 -----------
 - Implement Mdot11 option in makeDiskGrid
 
+intt
+-----------
+Ra, xmax issue when n-images > 1 (right now, only one value)
+
 phc
 ---------
-  
+
 spec
 -----------
 
-:license: GNU GPL v3.0 (https://github.com/danmoser/pyhdust/blob/master/LICENSE)
+:license: GNU GPL v3.0 https://github.com/danmoser/pyhdust/blob/master/LICENSE
 """
 
 __author__ = "Daniel Moser"
@@ -129,31 +140,31 @@ def listFunctions():
     import pyhdust as hdt
     print("# pyhdust")
     print("\n".join([x for x in dir(hdt) if x[0] != "_"]))
-    
+
     import pyhdust.beatlas as bat
     print("# pyhdust.beatlas")
     print("\n".join([x for x in dir(bat) if x[0] != "_"]))
-    
+
     import pyhdust.input as inp
     print("# pyhdust.input")
     print("\n".join([x for x in dir(inp) if x[0] != "_"]))
-    
+
     import pyhdust.interftools as intt
     print("# pyhdust.interftools")
     print("\n".join([x for x in dir(intt) if x[0] != "_"]))
-    
+
     import pyhdust.poltools as polt
     print("# pyhdust.poltools")
     print("\n".join([x for x in dir(polt) if x[0] != "_"]))
-    
+
     import pyhdust.phc as phc
     print("# pyhdust.phc")
     print("\n".join([x for x in dir(phc) if x[0] != "_"]))
-    
+
     import pyhdust.singscat as sst
     print("# pyhdust.singscat")
     print("\n".join([x for x in dir(sst) if x[0] != "_"]))
-    
+
     import pyhdust.spectools as spt
     print("# pyhdust.spectools")
     print("\n".join([x for x in dir(spt) if x[0] != "_"]))
@@ -167,7 +178,7 @@ def setRelease():
     import os
     import pyhdust.phc as phc
     from pyhdust import __version__, hdtpath
-    #~ 
+    #  
     f0 = open('{0}setup.py'.format(hdtpath()))
     lines = f0.readlines()
     f0.close()
@@ -179,7 +190,7 @@ def setRelease():
     f0.writelines(lines)
     f0.close()
     print('# ../setup.py file updated!')
-    #~
+    #
     f0 = open('{0}docs/index.rst'.format(hdtpath()))
     lines = f0.readlines()
     f0.close()
@@ -195,16 +206,17 @@ def setRelease():
     print('# docs/index.rst file updated!')
     os.chdir('{0}docs'.format(hdtpath()))
     os.system('make html')
-    #~ os.system('rsync -rP _build/html/ astroweb:/www/moser/www/doc')
+    # os.system('rsync -rP _build/html/ astroweb:/www/moser/www/doc')
     os.system('rsync -rP _build/html/ /data/Dropbox/Public/doc')
     print('# From version {0} to {1}'.format(oldver, __version__))
-    os.system('firefox https://dl.dropboxusercontent.com/u/6569986/doc/index.html &')
+    os.system(
+        'firefox https://dl.dropboxusercontent.com/u/6569986/doc/index.html &')
     os.chdir('../..')
     os.system('git push')
-    #~ os.system('disown')
+    #  os.system('disown')
     return
 
 
-### MAIN ###
+# MAIN ###
 if __name__ == "__main__":
     pass

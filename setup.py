@@ -44,7 +44,7 @@ def rd(filename):
 
 if __name__ == "__main__":
     setup(name='pyhdust',
-    version='0.966',
+    version='0.967',
     description='BeACoN’s Python tools for Hdust',
     url='https://dl.dropboxusercontent.com/u/6569986/doc/index.html',
     author='Daniel M. Faes',
@@ -67,7 +67,8 @@ if __name__ == "__main__":
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
         "Intended Audience :: Science/Research",
-        "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+        "License :: OSI Approved :: GNU General Public License v3 or later" + \
+        " (GPLv3+)",
         "Operating System :: OS Independent",
         "Programming Language :: Python",
         ],
@@ -75,5 +76,6 @@ if __name__ == "__main__":
 
     if errimport:
         print('# You don\'t have "setuptools" installed!')
-        print('# Because of this, you need to ADAPT and run the following command: \n')
+        print('# Because of this, you need to ADAPT and run this command: \n')
+        print('# Warning! The cmd path MAY change according to your system')
         print('$ cp -r -f pyhdust ~/.local/lib/python2.7/site-packages/')

@@ -1,30 +1,27 @@
 # -*- coding:utf-8 -*-
 
 """
-PyHdust *triangle* module: third-part MCMC plotting tools.
+PyHdust auxiliary module: third-part MCMC plotting tools.
 
 :co-author: Daniel Moser
 :license: Copyright 2013 Daniel Foreman-Mackey
 """
-
-from __future__ import print_function, absolute_import, unicode_literals
-
-__all__ = ["corner", "hist2d"]
-__version__ = "0.2.0"
-__author__ = "Dan Foreman-Mackey"
-__email__ = "danfm@nyu.edu"
-
 import logging
 import numpy as np
 import matplotlib.pyplot as pl
 import matplotlib.cm as cm
 from matplotlib.ticker import MaxNLocator
-from matplotlib.colors import LinearSegmentedColormap, colorConverter
+from __future__ import print_function, absolute_import, unicode_literals
 
 try:
     from scipy.ndimage import gaussian_filter
 except ImportError:
     gaussian_filter = None
+
+__all__ = ["corner", "hist2d"]
+__version__ = "0.2.0"
+__author__ = "Dan Foreman-Mackey"
+__email__ = "danfm@nyu.edu"
 
 
 def corner(xs, bins=20, range=None, weights=None, color="k",
@@ -162,7 +159,7 @@ def corner(xs, bins=20, range=None, weights=None, color="k",
             try:
                 emin, emax = range[i]
             except TypeError:
-                q = [0.5 - 0.5*range[i], 0.5 + 0.5*range[i]]
+                q = [0.5 - 0.5 * range[i], 0.5 + 0.5 * range[i]]
                 range[i] = quantile(xs[i], q, weights=weights)
 
     if len(range) != xs.shape[0]:
@@ -236,9 +233,9 @@ def corner(xs, bins=20, range=None, weights=None, color="k",
 
         # Plot quantiles if wanted.
         if len(quantiles) > 0:
-            qts = np.array(quantiles)+qtdiff[i]
-            qts = np.where(qts<=0,0.01,qts)
-            qts = np.where(qts>=1,0.99,qts)
+            qts = np.array(quantiles) + qtdiff[i]
+            qts = np.where(qts <= 0, 0.01, qts)
+            qts = np.where(qts >= 1, 0.99, qts)
             qts = list(qts)
             qvalues = quantile(x, qts, weights=weights)
             for q in qvalues:
@@ -251,12 +248,12 @@ def corner(xs, bins=20, range=None, weights=None, color="k",
         if show_titles:
             # Compute the quantiles for the title. This might redo
             # unneeded computation but who cares.
-            qts = np.array(quantiles)+qtdiff[i]
-            qts = np.where(qts<=0,0.01,qts)
-            qts = np.where(qts>=1,0.99,qts)
+            qts = np.array(quantiles) + qtdiff[i]
+            qts = np.where(qts <= 0, 0.01, qts)
+            qts = np.where(qts >= 1, 0.99, qts)
             qts = list(qts)
             q_16, q_50, q_84 = quantile(x, qts, weights=weights)             
-            q_m, q_p = q_50-q_16, q_84-q_50
+            q_m, q_p = q_50 - q_16, q_84 - q_50
 
             # Format the quantile display.
             if q_50 < 1e6:
@@ -267,13 +264,14 @@ def corner(xs, bins=20, range=None, weights=None, color="k",
                 expn = int(np.log10(q_50))
                 fmt = "{{0:{0}}}".format(title_fmt).format
                 title = r"${{{0}}}_{{-{1}}}^{{+{2}}}e{3}$"
-                title = title.format(fmt(q_50*10**-expn), fmt(q_m*10**-expn),
-                    fmt(q_p*10**-expn), expn)
+                title = title.format(fmt(q_50 * 10**-expn), fmt(q_m * 
+                    10**-expn), fmt(q_p * 10**-expn), expn)
 
             # Add in the column name if it's given.
             if labels is not None:
                 j = labels[i].find(' ')
-                if j == -1: j = len(labels[i])
+                if j == -1:
+                    j = len(labels[i])
                 title = "{0} = {1}".format(labels[i][:j], title)
 
             # Add the title to the axis.
@@ -317,7 +315,8 @@ def corner(xs, bins=20, range=None, weights=None, color="k",
             if hasattr(y, "compressed"):
                 y = y.compressed()
             hist2d(y, x, ax=ax, range=[range[j], range[i]], weights=weights,
-                   color=color, smooth=smooth, bins=[bins[j], bins[i]], **hist2d_kwargs)
+                   color=color, smooth=smooth, bins=[bins[j], bins[i]], 
+                   **hist2d_kwargs)
 
             if truths is not None:
                 if truths[i] is not None and truths[j] is not None:
@@ -389,30 +388,30 @@ def hist2d(x, y, bins=20, range=None, weights=None, levels=None, smooth=None,
         else:
             range = [[x.min(), x.max()], [y.min(), y.max()]]
 
-    #~ # Set up the default plotting arguments.
-    #~ if color is None:
-        #~ color = "k"
-#~ 
-    #~ # Choose the default "sigma" contour levels.
-    #~ if levels is None:
-        #~ levels = 1.0 - np.exp(-0.5 * np.arange(0.5, 2.1, 0.5) ** 2)
-#~ 
-    #~ # This is the color map for the density plot, over-plotted to indicate the
-    #~ # density of the points near the center.
-    #~ density_cmap = LinearSegmentedColormap.from_list(
-        #~ "density_cmap", [color, (1, 1, 1, 0)])
-#~ 
-    #~ # This color map is used to hide the points at the high density areas.
-    #~ white_cmap = LinearSegmentedColormap.from_list(
-        #~ "white_cmap", [(1, 1, 1), (1, 1, 1)], N=2)
-#~ 
-    #~ # This "color map" is the list of colors for the contour levels if the
-    #~ # contours are filled.
-    #~ rgba_color = colorConverter.to_rgba(color)
-    #~ contour_cmap = [rgba_color] + [list(rgba_color) for l in levels]
-    #~ for i, l in enumerate(levels):
-        #~ contour_cmap[i+1][-1] *= float(len(levels) - i) / (len(levels)+1)
-#~ 
+    # Set up the default plotting arguments.
+    # if color is None:
+        # color = "k"
+# 
+    # Choose the default "sigma" contour levels.
+    # if levels is None:
+        # levels = 1.0 - np.exp(-0.5 * np.arange(0.5, 2.1, 0.5) ** 2)
+# 
+    # This is the color map for the density plot, over-plotted to indicate the
+    # density of the points near the center.
+    # density_cmap = LinearSegmentedColormap.from_list(
+        # "density_cmap", [color, (1, 1, 1, 0)])
+# 
+    # This color map is used to hide the points at the high density areas.
+    # white_cmap = LinearSegmentedColormap.from_list(
+        # "white_cmap", [(1, 1, 1), (1, 1, 1)], N=2)
+# 
+    # This "color map" is the list of colors for the contour levels if the
+    # contours are filled.
+    # rgba_color = colorConverter.to_rgba(color)
+    # contour_cmap = [rgba_color] + [list(rgba_color) for l in levels]
+    # for i, l in enumerate(levels):
+        # contour_cmap[i+1][-1] *= float(len(levels) - i) / (len(levels)+1)
+# 
     # We'll make the 2D histogram to directly estimate the density.
     try:
         H, X, Y = np.histogram2d(x.flatten(), y.flatten(), bins=bins,
@@ -421,86 +420,88 @@ def hist2d(x, y, bins=20, range=None, weights=None, levels=None, smooth=None,
         raise ValueError("It looks like at least one of your sample columns "
                          "have no dynamic range. You could try using the "
                          "'range' argument.")
-#~ 
-    #~ if smooth is not None:
-        #~ if gaussian_filter is None:
-            #~ raise ImportError("Please install scipy for smoothing")
-        #~ H = gaussian_filter(H, smooth)
-#~ 
-    #~ # Compute the density levels.
-    #~ Hflat = H.flatten()
-    #~ inds = np.argsort(Hflat)[::-1]
-    #~ Hflat = Hflat[inds]
-    #~ sm = np.cumsum(Hflat)
-    #~ sm /= sm[-1]
-    #~ V = np.empty(len(levels))
-    #~ for i, v0 in enumerate(levels):
-        #~ try:
-            #~ V[i] = Hflat[sm <= v0][-1]
-        #~ except:
-            #~ V[i] = Hflat[0]
-#~ 
-    #~ # Compute the bin centers.
-    #~ X1, Y1 = 0.5 * (X[1:] + X[:-1]), 0.5 * (Y[1:] + Y[:-1])
-#~ 
-    #~ # Extend the array for the sake of the contours at the plot edges.
-    #~ H2 = H.min() + np.zeros((H.shape[0] + 4, H.shape[1] + 4))
-    #~ H2[2:-2, 2:-2] = H
-    #~ H2[2:-2, 1] = H[:, 0]
-    #~ H2[2:-2, -2] = H[:, -1]
-    #~ H2[1, 2:-2] = H[0]
-    #~ H2[-2, 2:-2] = H[-1]
-    #~ H2[1, 1] = H[0, 0]
-    #~ H2[1, -2] = H[0, -1]
-    #~ H2[-2, 1] = H[-1, 0]
-    #~ H2[-2, -2] = H[-1, -1]
-    #~ X2 = np.concatenate([
-        #~ X1[0] + np.array([-2, -1]) * np.diff(X1[:2]),
-        #~ X1,
-        #~ X1[-1] + np.array([1, 2]) * np.diff(X1[-2:]),
-    #~ ])
-    #~ Y2 = np.concatenate([
-        #~ Y1[0] + np.array([-2, -1]) * np.diff(Y1[:2]),
-        #~ Y1,
-        #~ Y1[-1] + np.array([1, 2]) * np.diff(Y1[-2:]),
-    #~ ])
-#~ 
-    #~ if plot_datapoints:
-        #~ if data_kwargs is None:
-            #~ data_kwargs = dict()
-        #~ data_kwargs["color"] = data_kwargs.get("color", color)
-        #~ data_kwargs["ms"] = data_kwargs.get("ms", 2.0)
-        #~ data_kwargs["mec"] = data_kwargs.get("mec", "none")
-        #~ data_kwargs["alpha"] = data_kwargs.get("alpha", 0.1)
-        #~ ax.plot(x, y, "o", zorder=-1, rasterized=True, **data_kwargs)
-#~ 
-    #~ # Plot the base fill to hide the densest data points.
-    #~ if plot_contours or plot_density:
-        #~ ax.contourf(X2, Y2, H2.T, [V[-1], H.max()],
-                    #~ cmap=white_cmap, antialiased=False)
-#~ 
-    #~ if plot_contours and fill_contours:
-        #~ if contourf_kwargs is None:
-            #~ contourf_kwargs = dict()
-        #~ contourf_kwargs["colors"] = contourf_kwargs.get("colors", contour_cmap)
-        #~ contourf_kwargs["antialiased"] = contourf_kwargs.get("antialiased",
-                                                             #~ False)
-        #~ ax.contourf(X2, Y2, H2.T, np.concatenate([[H.max()], V, [0]]),
-                    #~ **contourf_kwargs)
-#~ 
+# 
+    # if smooth is not None:
+        # if gaussian_filter is None:
+            # raise ImportError("Please install scipy for smoothing")
+        # H = gaussian_filter(H, smooth)
+# 
+    # Compute the density levels.
+    # Hflat = H.flatten()
+    # inds = np.argsort(Hflat)[::-1]
+    # Hflat = Hflat[inds]
+    # sm = np.cumsum(Hflat)
+    # sm /= sm[-1]
+    # V = np.empty(len(levels))
+    # for i, v0 in enumerate(levels):
+        # try:
+            # V[i] = Hflat[sm <= v0][-1]
+        # except:
+            # V[i] = Hflat[0]
+# 
+    # Compute the bin centers.
+    # X1, Y1 = 0.5 * (X[1:] + X[:-1]), 0.5 * (Y[1:] + Y[:-1])
+# 
+    # Extend the array for the sake of the contours at the plot edges.
+    # H2 = H.min() + np.zeros((H.shape[0] + 4, H.shape[1] + 4))
+    # H2[2:-2, 2:-2] = H
+    # H2[2:-2, 1] = H[:, 0]
+    # H2[2:-2, -2] = H[:, -1]
+    # H2[1, 2:-2] = H[0]
+    # H2[-2, 2:-2] = H[-1]
+    # H2[1, 1] = H[0, 0]
+    # H2[1, -2] = H[0, -1]
+    # H2[-2, 1] = H[-1, 0]
+    # H2[-2, -2] = H[-1, -1]
+    # X2 = np.concatenate([
+        # X1[0] + np.array([-2, -1]) * np.diff(X1[:2]),
+        # X1,
+        # X1[-1] + np.array([1, 2]) * np.diff(X1[-2:]),
+    # ])
+    # Y2 = np.concatenate([
+        # Y1[0] + np.array([-2, -1]) * np.diff(Y1[:2]),
+        # Y1,
+        # Y1[-1] + np.array([1, 2]) * np.diff(Y1[-2:]),
+    # ])
+# 
+    # if plot_datapoints:
+        # if data_kwargs is None:
+            # data_kwargs = dict()
+        # data_kwargs["color"] = data_kwargs.get("color", color)
+        # data_kwargs["ms"] = data_kwargs.get("ms", 2.0)
+        # data_kwargs["mec"] = data_kwargs.get("mec", "none")
+        # data_kwargs["alpha"] = data_kwargs.get("alpha", 0.1)
+        # ax.plot(x, y, "o", zorder=-1, rasterized=True, **data_kwargs)
+# 
+    # Plot the base fill to hide the densest data points.
+    # if plot_contours or plot_density:
+        # ax.contourf(X2, Y2, H2.T, [V[-1], H.max()],
+                    # cmap=white_cmap, antialiased=False)
+# 
+    # if plot_contours and fill_contours:
+        # if contourf_kwargs is None:
+            # contourf_kwargs = dict()
+        # contourf_kwargs["colors"] = contourf_kwargs.get("colors", contour_
+            # cmap)
+        # contourf_kwargs["antialiased"] = contourf_kwargs.get("antialiased",
+            # False)
+        # ax.contourf(X2, Y2, H2.T, np.concatenate([[H.max()], V, [0]]),
+                    # **contourf_kwargs)
+# 
     # Plot the density map. This can't be plotted at the same time as the
     # contour fills.
-    #~ elif plot_density:
-        #~ ax.pcolor(X, Y, H.max() - H.T, cmap=density_cmap)
+    # elif plot_density:
+        # ax.pcolor(X, Y, H.max() - H.T, cmap=density_cmap)
     if plot_density:
         ax.pcolor(X, Y, H.max() - H.T, cmap=cm.get_cmap('gist_heat'))
-#~ 
-    #~ # Plot the contour edge colors.
-    #~ if plot_contours:
-        #~ if contour_kwargs is None:
-            #~ contour_kwargs = dict()
-        #~ contour_kwargs["colors"] = contour_kwargs.get("colors", color)
-        #~ ax.contour(X2, Y2, H2.T, V, **contour_kwargs)
+# 
+    # Plot the contour edge colors.
+    # if plot_contours:
+        # if contour_kwargs is None:
+            # contour_kwargs = dict()
+        # contour_kwargs["colors"] = contour_kwargs.get("colors", color)
+        # ax.contour(X2, Y2, H2.T, V, **contour_kwargs)
 
     ax.set_xlim(range[0])
     ax.set_ylim(range[1])
+    return
