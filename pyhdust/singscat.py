@@ -445,7 +445,7 @@ def errorcalc(pst, pob, dobs, pdk, phiobs):
     return 
 
 
-def QUang(Q, U):
+def QUang(Q, U, filter=True):
     """ ### Q,U angles ### """
     ind = _np.where(Q == 0)
     Q[ind] = 1e-34
@@ -455,9 +455,17 @@ def QUang(Q, U):
     ang[ind] = ang[ind] + _np.pi
     ind = _np.where((Q > 0) & (U < 0))
     ang[ind] = ang[ind] + 2 * _np.pi
-    ang = ang / 2.    
-    ind = _np.where(ang >= _np.pi)
-    ang[ind] = ang[ind] - _np.pi    
+    ang = ang / 2.
+    # ind = _np.where(ang >= _np.pi)
+    # ang[ind] = ang[ind] - _np.pi
+    if filter:
+        avg = _np.median(ang)
+        avg = _phc.find_nearest(
+            [0, _np.pi / 4, _np.pi / 2, _np.pi * 3. / 4], avg)
+        ind = _np.where((ang - avg) > 2. / 4 * _np.pi)
+        ang[ind] = ang[ind] - _np.pi
+        ind = _np.where((ang - avg) < -2. / 4 * _np.pi)
+        ang[ind] = ang[ind] + _np.pi
     return ang
 
 
@@ -551,31 +559,6 @@ def poly_curve_output(best_params, errors):
             # print("{:e} +- {:e}" .format(value, sig))
         print(value, sig)
     return    
-
-
-# Old blobs2.py #####
-def QUang(Q, U, filter=True):
-    """ ### Q,U angles ### """
-    ind = _np.where(Q == 0)
-    Q[ind] = 1e-34
-    ang = _np.arctan(U / Q)
-    #
-    ind = _np.where(Q <= 0.)
-    ang[ind] = ang[ind] + _np.pi
-    ind = _np.where((Q > 0) & (U < 0))
-    ang[ind] = ang[ind] + 2 * _np.pi
-    ang = ang / 2.
-    # ind = _np.where(ang >= _np.pi)
-    # ang[ind] = ang[ind] - _np.pi
-    if filter:
-        avg = _np.median(ang)
-        avg = _phc.find_nearest(
-            [0, _np.pi / 4, _np.pi / 2, _np.pi * 3. / 4], avg)
-        ind = _np.where((ang - avg) > 2. / 4 * _np.pi)
-        ang[ind] = ang[ind] - _np.pi
-        ind = _np.where((ang - avg) < -2. / 4 * _np.pi)
-        ang[ind] = ang[ind] + _np.pi
-    return ang
 
 
 def phsort(ph, P):

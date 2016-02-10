@@ -2160,7 +2160,7 @@ def fitzpatrick(wave, flux, ebv, Rv=3.1, LMC2=False, AVGLMC=False):
              for the LMC2 field (including 30 Dor) by Misselt et al.
              Note that neither `AVGLMC` nor `LMC2` will alter the default value 
              of Rv, which is poorly known for the LMC.
-      
+
     Returns
     -------             
     new_flux : array 

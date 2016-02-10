@@ -235,3 +235,7 @@ class hdr:
         else:
             val = [float(v) for v in val]
         return val
+
+# MAIN ###
+if __name__ == "__main__":
+    pass

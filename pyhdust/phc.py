@@ -29,10 +29,10 @@ __email__ = "dmfaes@gmail.com"
 
 def dtflag():
     """ Return a "datetime" flag, i.e., a string the the current date and time
-    formated as yyyy-mm-dd_hh-MM."""
+    formated as yyyymmdd-hhMM."""
     now = _dt.datetime.now()
-    return '{0}-{1:02d}-{2:02d}_{3:02d}-{4:02d}'.format(now.year, now.month,
-    now.day, now.hour, now.minute)
+    return '{0}{1:02d}{2:02d}-{3:02d}{4:02d}{5:02d}'.format(now.year, 
+        now.month, now.day, now.hour, now.minute, now.second)
 
 
 def renlist(root, newr):
@@ -403,16 +403,22 @@ def gentkdates(mjd0, mjd1, fact, step, dtstart=None):
             mjd = _jdcal.gcal2jd(*basedata)[1]
     elif step.upper() in ['D', 'DD']:
         i = 2
-        daysvec = _np.arange(1, 29, fact)
-        if basedata[i] not in daysvec:
-            j = 0
-            while daysvec[j + 1] < basedata[i]:
-                j += 1
-            daysvec += basedata[i] - daysvec[j]
-            idx = _np.where(daysvec < 29)
-            daysvec = daysvec[idx]
-        else:
-            j = _np.where(daysvec == basedata[i])[0]
+        # daysvec = _np.arange(1, 29, fact)
+        # if basedata[i] not in daysvec:
+        #     j = 0
+        #     while daysvec[j + 1] < basedata[i]:
+        #         j += 1
+        #     daysvec += basedata[i] - daysvec[j]
+        #     idx = _np.where(daysvec < 29)
+        #     daysvec = daysvec[idx]
+        # else:
+        #     j = _np.where(daysvec == basedata[i])[0]
+        j = 0
+        daysvec = _np.arange(1, 29)[j::fact]
+        while basedata[i] not in daysvec:
+            j += 1
+            daysvec = _np.arange(1, 29)[j::fact]
+        j = 0
         while mjd < mjd1 + 1:
             dates += [_dt.datetime(*basedata).date()]
             j += 1
@@ -541,7 +547,7 @@ def rotate_coords(x, y, theta, ox, oy):
     return x * c - y * s + ox, x * s + y * c + oy
 
 
-def rotate_image(src, theta, ox, oy, fill=255):
+def rotate_image(src, theta, ox=None, oy=None, fill=0):
     """Rotate the image src by theta radians about (ox, oy).
     Pixels in the result that don't correspond to pixels in src are
     replaced by the value fill.
@@ -554,6 +560,10 @@ def rotate_image(src, theta, ox, oy, fill=255):
     # Dimensions of source image. Note that scipy.misc.imread loads
     # images in row-major order, so src.shape gives (height, width).
     sh, sw = src.shape
+    if ox is None:
+        ox = sw/2
+    if oy is None:
+        oy = sh/2
 
     # Rotated positions of the corners of the source image.
     cx, cy = rotate_coords([0, sw, sw, 0], [0, 0, sh, sh], theta, ox, oy)
@@ -718,9 +728,9 @@ def optim2(p0, x, y, yerr, func):
 
 
 def splitfilelines(n, file):
-    """ Break the *file* into *n* files.
+    """ Break the *file* into *n* files. It also erases the expression "qsub ".
 
-OUTPUT: *file*_##.txt """
+    OUTPUT: `file_##.txt` """
     f0 = open(file)
     lines = f0.readlines()
     f0.close()
@@ -734,6 +744,58 @@ OUTPUT: *file*_##.txt """
         f0.close()
     print('# {0} files created!'.format(n))
     return
+
+
+def cycles(i=0, ctype='cor'):
+    """ Cycle between values of the phc.colors, phc.line_styles and 
+    phc.filled_markers lists. 
+
+    INPUT: valid ctypes are: ['cor','ls','mk']
+
+    OUTPUT: the corresponding value of the list. """
+    if ctype not in ['cor', 'ls', 'mk']:
+        print('# Warning! Invalid ctype calling phc.cycles!')
+        return
+    elif ctype == 'cor':
+        return colors[_np.mod(i, len(colors))]
+    elif ctype == 'ls':
+        return line_styles[_np.mod(i, len(line_styles))]
+    elif ctype == 'mk':
+        return filled_markers[_np.mod(i, len(filled_markers))]
+
+
+def bin_ndarray(ndarray, new_shape, operation='avg'):
+    """
+    Bins an ndarray in all axes based on the target shape, by summing or
+        averaging.
+    Number of output dimensions must match number of input dimensions.
+    Example
+    -------
+    >>> m = np.arange(0,100,1).reshape((10,10))
+    >>> n = bin_ndarray(m, new_shape=(5,5), operation='sum')
+    >>> print(n)
+    [[ 22  30  38  46  54]
+     [102 110 118 126 134]
+     [182 190 198 206 214]
+     [262 270 278 286 294]
+     [342 350 358 366 374]]
+    """
+    if not operation.lower() in ['sum', 'mean', 'average', 'avg']:
+        raise ValueError("Operation {} not supported.".format(operation))
+    if ndarray.ndim != len(new_shape):
+        raise ValueError("Shape mismatch: {} -> {}".format(ndarray.shape,
+                                                           new_shape))
+    compression_pairs = [(d, c//d) for d, c in zip(new_shape,
+                                                   ndarray.shape)]
+    flattened = [l for p in compression_pairs for l in p]
+    print flattened
+    ndarray = ndarray.reshape(flattened)
+    for i in range(len(new_shape)):
+        if operation.lower() == "sum":
+            ndarray = ndarray.sum(-1*(i+1))
+        elif operation.lower() in ["mean", "average", "avg"]:
+            ndarray = ndarray.mean(-1*(i+1))
+    return ndarray
 
 
 # Constants
@@ -778,7 +840,10 @@ colors = ['Black', 'Blue', 'Green', 'red', 'orange', 'brown', 'purple', 'gray',
     'dodgerblue', 'lightgreen', 'tomato', 'yellow', 'peru', 'MediumVioletRed',
     'LightSteelBlue', 'cyan', 'darkred', 'olive']
 
-ls = ['-', '--', ':', '-.']
+filled_markers = ['o', 'v', '^', '<', '>', '8', 's', 'p', '*', 'h', 'H', 'D', 
+    'd']
+
+line_styles = ['-', '--', ':', '-.']
 
 bestars = [
     # The numbers below are based on Harmanec 1988

@@ -9,6 +9,14 @@ History
     v0.958 @ 2015-0
     ----------------------
 
+v.0970 @ 2016-01-xx
+-----------------------
+- New README.md
+- phc.cycles (new)
+- roadmap.TODO (new)
+- hdt.plot_obs (new)
+- bcd (new module)
+
 v0.967 @ 2015-12-30
 ----------------------
 - PEP8 Standardization
@@ -83,50 +91,6 @@ Previously
 ------------
 - Added options `force` and `chknames` to genStdLog and genObjLog
 
-
-To Be Done (TODOs)
-======================
-General
----------
-- pip install for pyhdust
-- Transparent legend-box on the graphs
-- Change scipy interpolate with numpy.interp (hdt.doFilterConv, others...)
-- Define unique 'Planejamento_LNA' as MySQL (targets [coordinates], P and Ph0 
-    [mags.], nights observed vs. bad weather, etc.)
-- Standardization at CGS/SI units
-- Finish help docs+translations to English
-- \*Define `path` policy
-- Replace if os.path.exists+os...mkdir with phc.outfld
-- Remove *rmext*. Replace with os.* tool (Bebnarski)
-- Remove *outfold* from spectools
-- Check *makeInpJob* `scrid` variable
-- Automatically Update of this list with TBD flag.
-
-__init__
------------
-- update obs_calcs (spherical triangles)
-- rotstars: add option for ellipsoidal star
-- genlog: add check for \*.sigma files
-- merge: be ``smart'' and be independent of filters definitions (e.g., 
-    continuum or line based on the number of points). 
-
-beatlas
-----------
-- Develop rotine correlations emcee (e.g., triangle.py)
-
-input
------------
-- Implement Mdot11 option in makeDiskGrid
-
-intt
------------
-Ra, xmax issue when n-images > 1 (right now, only one value)
-
-phc
----------
-
-spec
------------
 
 :license: GNU GPL v3.0 https://github.com/danmoser/pyhdust/blob/master/LICENSE
 """

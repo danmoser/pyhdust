@@ -1,0 +1,79 @@
+To Be Done (TODOs)
+======================
+In files, look for TBD and TODO flags.
+
+General:
+☐ pip install for pyhdust
+☐ Transparent legend-box on the graphs
+☐ Change scipy interpolate with numpy.interp (hdt.doFilterConv, others...)
+☐ Define unique 'Planejamento_LNA' as MySQL 
+(targets [coordinates], P and Ph0 [mags.], nights observed vs. bad weather, etc.)
+☐ Standardization at CGS/SI units
+☐ Finish help docs+translations to English
+☐ example module
+☐ extincao Riffel PyHdust?, 
+☐ Define `path` policy
+☐ Define `doc` policy
+☐ Replace if os.path.exists+os...mkdir with phc.outfld
+☐ Remove rmext*. Replace with os.* tool (Bebnarski)
+  ☐ dirn, filen = os.path.split(f)
+☐ Unittest...
+
+__init__:
+☐ update obs_calcs (spherical triangles)
+☐ rotstars: add option for ellipsoidal star
+☐ genlog: add check for *.sigma files
+✔ merge: be ``smart'' and be independent of filters definitions (e.g., continuum or line based on the number of points).  @done (16-01-04 22:52)
+
+bcd:
+☐ Export a FITS file in the function format
+☐ Adapt it to BeAtlas/HDUST
+
+beatlas:
+ ✔ Develop rotine correlations emcee (e.g., triangle.py) @done (16-01-04 22:51)
+
+fieldstars:
+☐ Comply with PyHdust standards (+ tests)
+
+hdrpil:
+✔ None @done (16-01-04 23:06)
+
+images (phim):
+✔ Do the background with a random position and a random orientation. @done (16-01-09 15:20)
+☐ Add a photospheric mask to cut/background
+
+input:
+☐ Implement Mdot11 option in makeDiskGrid
+☐ Check *makeInpJob* `scrid` variable
+
+intt:
+☐ @high Ra, xmax issue when n-images > 1 (right now, only one value)
+☐ Add orientation o I()
+☐ Add disk truncation (Rt)
+☐ I() over HDUST photosphere:
+    i) Read *.map(s) and set Rmax, i, grid
+   ii) Set a threshold (T) value for photosphere. Apply tenous disk
+       Where F < T (& R < Rt), apply formula.
+  iii) Apply thick disk. 
+       Where F < T (& R < barR), apply formula.
+       Think about the criteria over the stellar surface, como
+         if R > Rs & y > 0 & R < bar
+☐ rotation: middle figure
+
+jdcal:
+✔ None @done (16-01-04 23:07)
+
+phc:
+✔ None @done (16-01-04 22:51)
+
+singscat:
+✔ None @done (16-01-04 23:07)
+
+spec:
+☐ Remove *outfold* from spectools
+
+tabulate:
+✔ None @done (16-01-04 23:08)
+
+triangle:
+✔ None @done (16-01-04 23:08)

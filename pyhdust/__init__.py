@@ -23,37 +23,10 @@ try:
 except:
     print('# Warning! matplotlib and/or scipy module not installed!!!')
 
-__version__ = 0.967
+__version__ = 0.971
 __release__ = "Beta"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
-
-
-def readscr(file):
-    '''
-    Read source generated with `ref_estrela.txt`.
-
-    OUTPUT: M, Req and TP (2*solar units and K).
-    '''
-    f0 = open(file)
-    lines = f0.readlines()
-    f0.close()
-
-    n = int(_phc.fltTxtOccur('STAR =', lines, n=1))
-    M = _phc.fltTxtOccur('M =', lines, n=n)
-    Rp = _phc.fltTxtOccur('R_pole =', lines, n=n)
-    if n == 2:
-        ob = _phc.fltTxtOccur('R_eq/R_pole =', lines, n=1)
-        Tp = _phc.fltTxtOccur('Teff_pole =', lines, n=1)
-    else:
-        W = _phc.fltTxtOccur('W =', lines, n=1)
-        bet = _phc.fltTxtOccur('Beta_GD =', lines, n=1)
-        L = _phc.fltTxtOccur('L =', lines, n=n)
-        wfrac = _np.sqrt(27. / 8 * (1 + 0.5 * W**2)**-3 * W**2)
-        ob, Tp, A = rotStar(Tp=L, M=M, rp=Rp, beta=bet, wfrac=wfrac, 
-            quiet=True, LnotTp=True)
-    # print M,Rp*ob,Tp
-    return M, Rp * ob, Tp
 
 
 def n0toSigma0(n0, M, Req, f, Tp, mu):
@@ -130,7 +103,7 @@ def plotMJDdates(spec=None, pol=None, interf=None, limits=None):
     else:
         mjd0, mjd1 = limits
         ax.set_xlim(limits)
-    ticks = _phc.gentkdates(mjd0, mjd1, 3, 'm', dtstart=dt.datetime(2012, 7,
+    ticks = _phc.gentkdates(mjd0, mjd1, 3, 'm', dtstart=_dt.datetime(2012, 7,
         1).date())
     mjdticks = [_jdcal.gcal2jd(date.year, date.month, date.day)[1] for date in
                 ticks]
@@ -165,9 +138,9 @@ def doFilterConv(x0, y0, filter, pol=False):
 
     OUTPUT: summed flux (y0 units)
     """
-    fdat = _np.loadtxt('{0}/filters/{1}.dat'.format(hdtpath(), filter.lower()),
-                       skiprows=1)
-    fdat[:, 0] /= 10000.  # from Angs to microns
+    fdat = _np.loadtxt('{0}/pyhdust/refs/filters/{1}.dat'.format(hdtpath(), 
+        filter.lower()), skiprows=1)
+    # fdat[:, 0] /= 10000.  # from Angs to microns
     idx = _np.where((x0 >= fdat[0, 0]) & (x0 <= fdat[-1, 0]))
     x0 = x0[idx]
     y0 = y0[idx]
@@ -249,6 +222,7 @@ def readfullsed2(file):
     """
     nlbd, nobs, Rstar, Rwind = sed2info(file)
     sed2data = _np.loadtxt(file, skiprows=5)
+    print nobs, nlbd, _np.shape(sed2data)
     sed2data = sed2data.reshape((nobs, nlbd, -1))
     return sed2data
 
@@ -809,7 +783,7 @@ def calclogg(M, R):
     return logg
 
 
-def genlog(path=None, extrainfo=None):
+def genlog(mods=None, path=None, extrainfo=None):
     """Gen. log of the calculated models of the project.
 
     ppath = Project's path. If it is not given, it assumes the local pwd.
@@ -822,16 +796,17 @@ def genlog(path=None, extrainfo=None):
     | 'mod05':'i=60+70/?',\
     | 'mod06':'i=60+70/?'}
 
-    INPUT: *path (string), *extrainfo (dictionary with modn number as index)
+    INPUT: `path` (string), `extrainfo` (dictionary with modn number as index),
+    `mods` (list of model folders. If None, then all).
 
     OUTPUT: file written.
     """
     if path is None:
         path = _os.getcwd()
-    modfld = _glob('{0}/mod01'.format(path))
-    # while len(modfld) == 0:
-    #    proj = raw_input('Type the project name: ')
-    #    modfld = _glob('{0}/mod*'.format(proj))
+    if mods is None:
+        modfld = _glob('{0}/mod*'.format(path))
+    else:
+        modfld = mods
     modfld.sort()
 
     # MODN, steps, sed2, maps, extrainfo
@@ -842,8 +817,8 @@ def genlog(path=None, extrainfo=None):
         modnn = _phc.trimpathname(modn)[1]
         modglob = _glob('{0}/*'.format(modn))
         mods = [x for x in modglob if (x.find('.txt') > -1 and x.find('{0}_'.
-        format(modnn)) > -1 )]
-        print('# Catalogue of {0}'.format(modn))
+            format(modnn)) > -1 )]
+        print('# Running catalogue of {0}'.format(modn))
         for mod in mods:
             suf = mod[mod.rfind('/') + 1:-4]
 
@@ -862,6 +837,7 @@ def genlog(path=None, extrainfo=None):
             s2out = ''
             for sedi in sed2:
                 s2out += sedi[sedi.rfind('/') + 1:sedi.find('_')] + '+'
+            s2out += '+'
 
             # maps = _glob('{0}/*{1}_*.maps'.format(modn, suf))
             # maps += _glob('{0}/*{1}.maps'.format(modn, suf))
@@ -1036,129 +1012,6 @@ def diskcalcs(M, R, Tpole, T, alpha, R0, mu, rho0, Rd):
     print('MdiskG= {0:.2e} Msun'.format(MdiskG / _phc.Msun.cgs))
     print('PS: Mdisk for both isothermal Sigma(r) and H(r)')
     return
-
-
-def rotStar(Tp=20000., M=10.3065, rp=5.38462, star='B', beta=0.25, wfrac=0.8,
-            th_res=5001, quiet=False, LnotTp=False):
-    """ Return the photospheric parameters of a rotating star.
-
-    `LnotTp`: the value of "Tp" is the Luminosity (in solar units).
-
-    Calculation of Von Zeipel's Beta parameter as function of W: see math...
-
-    INPUT: th_res (theta resolution, integer)...
-
-    OUTPUT: printed status + (ob, Tp values, Area[cm2])
-    """
-    Rsun = _phc.Rsun.cgs
-    Msun = _phc.Msun.cgs
-    Lsun = _phc.Lsun.cgs
-    G = _phc.G.cgs
-    # AU = _phc.au.cgs
-    # pc = _phc.pc.cgs
-    sigma = _phc.sigma.cgs
-    M = M * Msun
-    rp = rp * Rsun
-    if wfrac == 0.:
-        wfrac = 1e-9
-    if LnotTp:
-        Tp = (Tp * Lsun / 4. / _np.pi / rp**2 / sigma)**.25
-
-    # DEFS ###
-    def rt(th, wfrac):
-        if th == 0:
-            r = 1.
-        else:
-            r = (-3. * _np.cos((_np.arccos(wfrac * _np.sin(th)) + 4 *
-                _np.pi) / 3)) / (wfrac * _np.sin(th))
-        return r
-
-    def area(wfrac):
-        ths = _np.linspace(_np.pi / 2, 0, th_res)
-        a = 0.
-        for i in range(len(ths)):
-            a = a + 2 * _np.pi * rt(ths[i], wfrac) ** 2 * _np.sin(ths[i])
-        return 2 * a * ths[-2]
-
-    def g(wfrac, M, rp, th):
-        wcrit = _np.sqrt(8 * G * M / (27 * rp ** 3))
-        g = (wcrit * wfrac) ** 2 * rp * rt(th, wfrac) * \
-            _np.sin(th) ** 2 - G * M / (rp * rt(th, wfrac)) ** 2
-        return g
-
-    def lum(wfrac, Tp, rp, M, C, beta):
-        ths = _np.linspace(_np.pi / 2, 0, th_res)
-        l = 0.
-        for i in range(len(ths)):
-            l = l + rt(ths[i], wfrac) ** 2 * _np.sin(ths[i]) * \
-                (abs(g(wfrac, M, rp, ths[i]))) ** (4 * beta)
-        return 2 * 2 * _np.pi * ths[-2] * sigma * rp ** 2 * C ** (4 * beta) * l
-
-    def lumf(wfrac, Tp, rp, M, beta):
-        ths = _np.linspace(_np.pi / 2, 0, th_res)
-        l = 0.
-        for i in range(len(ths)):
-            l = l + rt(ths[i], wfrac) ** 2 * _np.sin(ths[i]) * \
-                abs(g(wfrac, M, rp, ths[i])) ** (4 * beta)
-        return l * ths[-2] * rp ** 2
-
-    Bstars = _np.array(_phc.bestars, dtype=str)
-    if star in Bstars:
-        i = _np.where(Bstars[:, 0] == star)
-        i = i[0][0]
-        print Bstars[i][0]
-        Tp = float(Bstars[i][1])
-        M = float(Bstars[i][2]) * Msun
-        rp = float(Bstars[i][3]) * Rsun
-        # comentar linha abaixo se 1a. rodada:
-        # Tp = 27438.63 #K
-
-    wcrit = _np.sqrt(8 * G * M / (27 * rp ** 3))
-    C = Tp ** (1. / beta) / abs(G * M / rp ** 2)
-
-    vrot = wcrit * wfrac * rp * rt(_np.pi / 2, wfrac)
-    lum0 = 4 * _np.pi * rp ** 2 * sigma * Tp ** 4 / Lsun
-
-    # a = rp**2*Tp**4*abs(g(wfrac,M,rp,0.))**(4*beta)
-    # print('Teff_pol* = %.2f' % ( (a/b)**beta ) )
-    b = lumf(wfrac, Tp, rp, M, beta)
-    c = lumf(0.0001, Tp, rp, M, beta)
-    Cw = (c / b) ** (1. / (4. * beta)) * C
-    ob = rt(_np.pi / 2, wfrac)  # /(rp / Rsun)
-
-    # OUTPUT ###
-    if not quiet:
-        print('# Parameters:')
-        print('wfrac     = %.4f' % (wfrac))
-        print('W         = %.4f' % (_np.sqrt(2 * (ob - 1))))
-        print('Star Mass = %.2f Msun' % (M / Msun))
-        print('Rpole     = %.2f Rsun' % (rp / Rsun))
-        print('Req       = %.2f Rpole' % (rt(_np.pi / 2, wfrac)))
-        print('Teff_pol  = %.1f' % (Tp))
-
-        print('Star Area = %.2f' % (area(wfrac)))
-        print('Star Lum. = %.1f' % (lum(wfrac, Tp, rp, C, M, beta) / Lsun))
-        print('Star Lum.*= %.1f' % (lum0))
-
-        print('vrot(km/s)= %.1f' % (vrot / 1e5))
-        print('vorb(km/s)= %.1f' %
-              (_np.sqrt(G * M / rp / rt(_np.pi / 2, wfrac)) / 1e5) )
-        print('vcrt(km/s)= %.1f' % (wcrit * rp * rt(_np.pi / 2, 1.) / 1e5))
-
-        print('log(g)pole= %.2f' % (_np.log10(abs(g(wfrac, M, rp, 0.))) ))
-        print('log(g)eq  = %.2f' %
-              (_np.log10(abs(g(wfrac, M, rp, _np.pi / 2))) ))
-        print('Teff_eq   = %.1f' %
-              ( (C * abs(g(wfrac, M, rp, _np.pi / 2))) ** beta) )
-        print('Teff_eq*  = %.1f' %
-              ( (Cw * abs(g(wfrac, M, rp, _np.pi / 2))) ** beta) )
-
-        print('Teff_pol* = %.2f' % ( (Cw * abs(g(wfrac, M, rp, 0.))) ** beta) )
-        print('T_pol/eq* = %.4f' % ((Cw * abs(g(wfrac, M, rp, 0.))) ** beta / 
-            (Cw * abs(g(wfrac, M, rp, _np.pi / 2))) ** beta) )
-
-        print('# \"*\" == case where L is constant!')
-    return ob, (Cw * abs(g(wfrac, M, rp, 0.))) ** beta, area(wfrac) * (rp**2)
 
 
 def obsCalc():
@@ -1538,13 +1391,114 @@ def readSingleBe(sBfile):
     # Decretion rate (units?)  ##VARIABLE SIZE = not read
     # ldecrr =  _np.array([l.split() for l in f0[hs+8::9]]).astype(float)   
 
-    tauintvaldays = tauintval / omega0 / 24 / 3600       # time steps in days
+    tauintvaldays = tauintval / omega0 / 24 / 3600  # time steps in days
     rgrid = _np.array(f0[4].split()).astype(float)  # radial grid values
     # simulation total time in days
     simdays = ltausec[-1] / 24 / 3600
 
     return rgrid, lsig_r, nsnaps, simdays, alpha
 
+
+def plot_obs(observ_dates=[], legend=[], civcfg=[1, 'm'], civdt=None,  
+    fmt=['png'], addsuf=None, colors=None, ls=None, markers=None, 
+    mjdlims=None):
+    """ Plot observations as done in Faes+2016. 
+
+    INPUT: `observ_dates` in a list of arrays. Each array contains the dates of 
+    a given observation. Dates, in principle (TODO), must be in MJD.
+
+    `legend` is a list of names, one for each array.
+
+    `civcfg` = [step, 'd'|'m'|'y'] 
+
+    `civdt` = starting date at the Civil Date axis.
+
+    if `addsuf` is None, a date-time string will be added to the filename.
+
+    `colors` = colors for each observ_dates array. If `None`, then 
+    phc.cycles(ctype='cor').
+
+    `ls` same as above, for linestyle.
+
+    `markers` same as above, for markers.
+
+    OUTPUT: File saved.
+    """
+    if civdt is not None:
+        civdt = _dt.datetime(civdt[0], civdt[1], civdt[2]).date()
+    fig, ax = _plt.subplots(figsize=(8, 3))
+    ys = _np.linspace(0, 1, len(observ_dates) + 2)
+    for i in range(len(observ_dates)):
+        for j in range(len(observ_dates[i])):
+            dt = observ_dates[i][j]
+            ax.plot([dt, dt], [0, 1], color=_phc.cycles(i, 'cor'), 
+                ls=_phc.cycles(i, 'ls'))
+            if j == 0:
+                ax.scatter([dt], [ys[i+1]], color=_phc.cycles(i, 'cor'), 
+                    marker=_phc.cycles(i, 'mk'), s=10, label=legend[i])
+            else:
+                ax.scatter([dt], [ys[i+1]], color=_phc.cycles(i, 'cor'), 
+                    marker=_phc.cycles(i, 'mk'), s=10)
+    # 
+    flatdataes = [item for sublist in observ_dates for item in sublist]
+    mjd0, mjd1 = (_np.min(flatdataes), _np.max(flatdataes))
+    civvals = {'Y': 365, 'M': 30, 'D': 1}
+    extratick = civcfg[0]*civvals[civcfg[1][0].upper()]
+    ax.set_ylim([0, 1])
+    # ax.set_title('Title')
+    ax.legend(fontsize=10)
+    ax.set_xlabel('MJD')
+    dtticks = _phc.gentkdates(mjd0, mjd1+extratick, civcfg[0], civcfg[1], 
+        dtstart=civdt)
+    mjdticks = [_jdcal.gcal2jd(date.year, date.month, date.day)[1] for date in 
+        dtticks]
+    # ax.plot([mjdticks[-1], mjdticks[-1]], [0, 1], alpha=0)
+    # xlim = [mjdticks[0], ax.get_xlim()[-1]]
+    if mjdlims is None:
+        xlim = [mjd0, mjd1+extratick]
+    else:
+        xlim = mjdlims
+    print xlim
+    ax.set_yticks([])
+    ax.set_xlim(xlim)
+    # ax.set_xlim(limits)
+    ax2 = ax.twiny()
+    ax2.set_xlim(xlim)
+    ax2.set_xlabel('Civil date')
+    ax2.set_xticks(mjdticks)
+    ax2.set_xticklabels([date.strftime("%d %b %y") for date in dtticks])
+    _plt.setp( ax2.xaxis.get_majorticklabels(), rotation=45 )
+    _plt.subplots_adjust(left=0.045, right=0.94, top=0.7, bottom=0.15, 
+        hspace=.15)
+    if addsuf is None:
+        addsuf = _phc.dtflag()
+    for f in fmt:
+        print('# Saved ObsLog{0}.{1}'.format(addsuf, f))
+        _plt.savefig('ObsLog{0}.{1}'.format(addsuf, f), transparent=True)
+    _plt.close()
+    return
+
+
+def plot_gal(ra, dec, addsuf=None, fmt=['png']):
+    """ Plot in "Galatic Coordinates" (i.e., Mollweide projection).
+
+    Input: RA and DEC arrays in RADIANS (fraction)
+
+    Output: Saved images """
+
+    fig = _plt.figure()  # figsize=(8,6))
+    ax = fig.add_subplot(111, projection="mollweide")
+    ax.set_xticklabels(['14h', '16h', '18h', '20h', '22h', '0h', '2h', '4h', 
+        '6h', '8h', '10h'])
+    ax.scatter(ra, dec)
+
+    if addsuf is None:
+        addsuf = _phc.dtflag()
+    for f in fmt:
+        print('# Saved plot_gal{0}.{1}'.format(addsuf, f))
+        _plt.savefig('plot_gal{0}.{1}'.format(addsuf, f), transparent=True)
+    _plt.close()
+    return
 
 # MAIN ###
 if __name__ == "__main__":

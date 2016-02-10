@@ -860,13 +860,31 @@ def plot_pionier(oidata, ffile='last_run', fmt=['png'], legend=True,
     return
 
 
-def plot_pionier_res(oidata, model, ffile='last_run', fmt=['png'], legend=True,
-    obs=None, dist=42.75, quiet=True):
+def plot_pionier_res(oidata, model, ffile=None, fmt=['png'], legend=True,
+    obs=None, dist=42.75, quiet=True, xlim=None, bindata=0, 
+    PArange=[-180, 180], PArr=True, shv2sum=False):
     """  Obs-Model comparison for PIONIER
 
     model, obs are lists
     dist is a number
+    `PArange` is in deg., from -180 to 180.
     """
+    # PArange = _np.array(PArange)*2*_np.pi/180
+    v2sum = 0.
+    if ffile is None:
+        ffile = _phc.dtflag()
+    if PArr:
+        PArv = [0, 0]
+        if PArange[0] < 0:
+            PArv[0] = PArange[0] + 180
+        else:
+            # PArv[0] == 0 must be -180!
+            PArv[0] = PArange[0] - 180
+        if PArange[1] <= 0:
+            # PArv[1] == 0 must be +180!
+            PArv[1] = PArange[1] + 180
+        else:
+            PArv[1] = PArange[1] - 180
     fig = _plt.figure()  # figsize=(5.6,8))
     alp = .75
     ms = 3  # markersize
@@ -882,8 +900,11 @@ def plot_pionier_res(oidata, model, ffile='last_run', fmt=['png'], legend=True,
     colorid = 0
     names = []
     for vis2 in oidata.vis2:
-        ulbd = vis2.ucoord / vis2.wavelength.eff_wave
-        vlbd = vis2.vcoord / vis2.wavelength.eff_wave
+        u = vis2.ucoord
+        v = vis2.vcoord
+        ulbd = u / vis2.wavelength.eff_wave
+        vlbd = v / vis2.wavelength.eff_wave
+        PA = _np.arctan2(u, v) * 180 / _np.pi
         if (vis2.station[0] and vis2.station[1]):
             label = vis2.station[0].sta_name + vis2.station[1].sta_name
         else:
@@ -895,7 +916,9 @@ def plot_pionier_res(oidata, model, ffile='last_run', fmt=['png'], legend=True,
         # [u,-u] = W > E
         # [-u,u] = E < W
         # label=label,
-        ax1.plot([ulbd, -ulbd], [vlbd, -vlbd], '.', color=color)
+        if (PA >= PArange[0] and PA <= PArange[1]) or (PArr and 
+            (PA >= PArv[0]) and PA <= PArv[1]):
+            ax1.plot([ulbd, -ulbd], [vlbd, -vlbd], '.', color=color)
     ax1.get_xaxis().set_ticklabels([])
     # ax1.xaxis.tick_top()
     # ax1.xaxis.set_major_formatter(mtick.FormatStrFormatter('%.2e'))
@@ -912,6 +935,7 @@ def plot_pionier_res(oidata, model, ffile='last_run', fmt=['png'], legend=True,
     for vis2 in oidata.vis2:
         u = vis2.ucoord
         v = vis2.vcoord
+        PA = _np.arctan2(u, v) * 180 / _np.pi
         if (vis2.station[0] and vis2.station[1]):
             label = vis2.station[0].sta_name + vis2.station[1].sta_name
         else:
@@ -921,19 +945,24 @@ def plot_pionier_res(oidata, model, ffile='last_run', fmt=['png'], legend=True,
         # colorid = _np.mod(colorid+1, len(phc.colors))
         # [u,-u] = W > E
         # [-u,u] = E < W
-        if label not in leg:
-            ax2.plot([u, -u], [v, -v], '.', label=label, color=color)
-            leg.append(label)
-        else:
-            ax2.plot([u, -u], [v, -v], '.', color=color)  # label=label,
+        if (PA >= PArange[0] and PA <= PArange[1]) or (PArr and 
+            (PA >= PArv[0]) and PA <= PArv[1]):
+            if label not in leg:
+                ax2.plot([u, -u], [v, -v], '.', label=label, color=color)
+                leg.append(label)
+            else:
+                ax2.plot([u, -u], [v, -v], '.', color=color)  # label=label,
         # names.append(vis2.target.target)
     # names = list(_np.unique(names))
     ax2.xaxis.tick_top()
     ax2.set_ylabel(u'B$_{proj}$ (m)')
+    if xlim is not None:
+        ax2.set_xlim(xlim)
     ax2.axis('equal')
     _plt.grid(b=True, linestyle=':', alpha=alp)
     if legend:
-        ax2.legend(prop={'size': 8}, numpoints=1, bbox_to_anchor=(1.05, 1.0))
+        ax2.legend(prop={'size': 8}, numpoints=1, bbox_to_anchor=(1.05, 1.0),
+            framealpha=0.5, fancybox=True)
     # ax3 = VIS2 vs. B
     # ax4 = VIS2 vs. PA
     # names = []
@@ -956,8 +985,17 @@ def plot_pionier_res(oidata, model, ffile='last_run', fmt=['png'], legend=True,
         # colorid = _np.mod(colorid + 1, len(phc.colors))
         B = _np.sqrt(u**2 + v**2)
         PA = _np.arctan2(u, v) * 180 / _np.pi
-        line = ax3.errorbar(B / vis2.wavelength.eff_wave,
-        vis2.vis2data, yerr=vis2.vis2err, color=color, fmt='o', markersize=ms)
+        if (PA >= PArange[0] and PA <= PArange[1]) or (PArr and 
+            (PA >= PArv[0]) and PA <= PArv[1]):
+            if bindata <= 0:
+                line = ax3.errorbar(B / vis2.wavelength.eff_wave, 
+                    vis2.vis2data, yerr=vis2.vis2err, fmt='o', markersize=ms, 
+                    color=color)
+            else:
+                binned = _phc.bindata(B / vis2.wavelength.eff_wave, 
+                    vis2.vis2data, bindata, yerr=vis2.vis2err, xrange=xlim)
+                line = ax3.errorbar(binned[0], binned[1], yerr=binned[2], 
+                    fmt='o', markersize=ms, color=color)
             # , label=label)
         # _np.arctan(self.ucoord / self.vcoord) * 180.0 / _np.pi % 180.0
         if obs is None:
@@ -965,7 +1003,7 @@ def plot_pionier_res(oidata, model, ffile='last_run', fmt=['png'], legend=True,
         for mod in model:
             k = model.index(mod)
             data, obslist, lbdc, Ra, xmax = readmap(mod, quiet=quiet)
-            pixsize = 2 * xmax[0] / len(data[0, 0, 0, :, :])
+            pixsize = 2 * xmax[0] / len(data[0, 0, 0, :, :, 0])
             # *60.*60.*1000.*180./_np.pi)
             rad_per_pixel = _np.double(
                 pixsize * _phc.Rsun.cgs / (dist * _phc.pc.cgs))
@@ -978,16 +1016,27 @@ def plot_pionier_res(oidata, model, ffile='last_run', fmt=['png'], legend=True,
                         lbdc * 1e-6).index(_phc.find_nearest(lbdc * 1e-6, lbd))
                     # lbcalc = lbdc[j]*1e-6
                     lbcalc = lbd
-                    tmp, V, phvar = fastnumvis(data[ob, 0, j, :, :], lbcalc, B,
-                        PA, rad_per_pixel, PAdisk=(216.9 + 90.))
+                    tmp, V, phvar = fastnumvis(data[0, ob, j, :, :, 0], lbcalc, 
+                        B, PA, rad_per_pixel, PAdisk=(216.9 + 90.))
                     V2 += [V**2]
                     lbds += [lbcalc]
             lbds = _np.array(lbds)
             # V2 = _np.array(V2)+(.0875e-8*B/lbds-.026)
             V2 = _np.array(V2) + (.0875e-8 * B / lbds - .026)
-            ax3.plot(B / lbds, V2, color=mcolors[k], alpha=.3)
-            ax4.plot(B / lbds, (vis2.vis2data - V2) / vis2.vis2err,
-                color=mcolors[k], markersize=ms, marker='o', ls='')
+            if (PA >= PArange[0] and PA <= PArange[1]) or (PArr and 
+                (PA >= PArv[0]) and PA <= PArv[1]):
+                if bindata <= 0:
+                    v2sum += (vis2.vis2data - V2) / vis2.vis2err
+                    ax3.plot(B / lbds, V2, color=mcolors[k], alpha=.3)
+                    ax4.plot(B / lbds, (vis2.vis2data - V2) / vis2.vis2err,
+                        color=mcolors[k], markersize=ms, marker='o', ls='')
+                else:
+                    binned = _phc.bindata(B / lbds, V2, bindata, xrange=xlim)
+                    ax3.plot(binned[0], binned[1], color=mcolors[k], alpha=.3)
+                    binned = _phc.bindata(B / lbds, (vis2.vis2data - V2) / 
+                        vis2.vis2err, bindata, xrange=xlim)
+                    ax4.plot(binned[0], binned[1],
+                        color=mcolors[k], markersize=ms, marker='o', ls='')
                 # marker='s',
     Blim = ax3.get_xlim()
     ax4.set_xlim(Blim)
@@ -999,11 +1048,20 @@ def plot_pionier_res(oidata, model, ffile='last_run', fmt=['png'], legend=True,
     PAlim = [-180, 180]
     ax3.set_ylim([0, 1.1])
     ax3.set_ylabel(u'$V$ $^2$')
+    if xlim is not None:
+        ax3.set_xlim(xlim)
     ax3.grid(b=True, linestyle=':', alpha=alp)
     ax4.set_ylim([-9, 9])
     ax4.get_xaxis().set_ticklabels([])
     ax4.set_ylabel(u'$V$ $^2$(data-mod)/err')
+    if xlim is not None:
+        ax4.set_xlim(xlim)
     ax4.grid(b=True, linestyle=':', alpha=alp)
+    if shv2sum:
+        v2sum = _np.sum(v2sum)
+        print v2sum
+        ax4.text(0.4, 0.87, r'$\sum={0:.1f}$'.format(v2sum), transform=ax4.transAxes)
+        # ax4.text(0.4, 0.8, 'ADS', transform=ax4.transAxes)
     # ax5 = T3PHI vs. B
     # ax6 = T3PHI vs. PA
     # names = []
@@ -1043,15 +1101,23 @@ def plot_pionier_res(oidata, model, ffile='last_run', fmt=['png'], legend=True,
         # yerr = _np.repeat(t3.t3phierr, len(t3.wavelength.eff_wave))
         y = t3.t3phi
         yerr = t3.t3phierr
-        line = ax5.errorbar(B / t3.wavelength.eff_wave, y, yerr=yerr,
-            color=color, fmt='o', markersize=ms)
+        if (PA[0] >= PArange[0] and PA[0] <= PArange[1]) or (PArr and 
+            PA[0] >= PArv[0] and PA[0] <= PArv[1]):
+            if bindata <= 0:
+                line = ax5.errorbar(B / t3.wavelength.eff_wave, y, yerr=yerr,
+                    color=color, fmt='o', markersize=ms)
+            else:
+                binned = _phc.bindata(B / t3.wavelength.eff_wave, y, 
+                    bindata, yerr=yerr, xrange=xlim)
+                line = ax5.errorbar(binned[0], binned[1], yerr=binned[2], 
+                    color=color, fmt='o', markersize=ms)
             # , label=label)
         if obs is None:
             obs = [0]
         for mod in model:
             k = model.index(mod)
             data, obslist, lbdc, Ra, xmax = readmap(mod, quiet=True)
-            pixsize = 2 * xmax[0] / len(data[0, 0, 0, :, :])
+            pixsize = 2 * xmax[0] / len(data[0, 0, 0, :, :, 0])
             # *60.*60.*1000.*180./_np.pi)
             rad_per_pixel = _np.double(
                 pixsize * _phc.Rsun.cgs / (dist * _phc.pc.cgs))
@@ -1069,8 +1135,8 @@ def plot_pionier_res(oidata, model, ffile='last_run', fmt=['png'], legend=True,
                         lbdc * 1e-6).index(_phc.find_nearest(lbdc * 1e-6, lbd))
                     lcalc = lbdc[j] * 1e-6
                     lcalc = lbd
-                    tmp, V, phvar = fastnumvis3(data[ob, 0, j, :, :], lcalc, B,
-                        PA, rad_per_pixel, PAdisk=(216.9 + 90.))
+                    tmp, V, phvar = fastnumvis3(data[0, ob, j, :, :, 0], lcalc, 
+                        B, PA, rad_per_pixel, PAdisk=(216.9 + 90.))
                     t3m += [phvar]
                     Bmax += [_np.max(B)]
                     if _np.max(B) == B[0]:
@@ -1082,9 +1148,20 @@ def plot_pionier_res(oidata, model, ffile='last_run', fmt=['png'], legend=True,
             lbds = _np.array(lbds)
             t3m = _np.array(t3m)
             PAmax = _np.array(PAmax)
-            ax5.plot(Bmax / lbds, t3m, color=mcolors[k], alpha=.9)
-            ax6.plot(Bmax / lbds, (y - t3m) / yerr, color=mcolors[k],
-                markersize=ms, marker='o', ls='')  # alpha=.6,
+            # print PAmax
+            if (PA[0] >= PArange[0] and PA[0] <= PArange[1]) or (PArr and 
+                PA[0] >= PArv[0] and PA[0] <= PArv[1]):
+                if bindata <= 0:
+                    ax5.plot(Bmax / lbds, t3m, color=mcolors[k], alpha=.9)
+                    ax6.plot(Bmax / lbds, (y - t3m) / yerr, color=mcolors[k],
+                        markersize=ms, marker='o', ls='')  # alpha=.6,
+                else:
+                    binned = _phc.bindata(Bmax / lbds, t3m, bindata, xrange=xlim)
+                    ax5.plot(binned[0], binned[1], color=mcolors[k], alpha=.9)
+                    binned = _phc.bindata(Bmax / lbds, (y - t3m) / yerr, bindata)
+                    ax6.plot(binned[0], binned[1],
+                        color=mcolors[k], markersize=ms, marker='o', ls='')  
+                        # alpha=.6,                
     # ax5.get_xaxis().set_ticklabels([])
     # labels = ax5.get_yticks().tolist()
     # labels[-1] = ''
@@ -1096,9 +1173,13 @@ def plot_pionier_res(oidata, model, ffile='last_run', fmt=['png'], legend=True,
     ax6.set_ylim([-9, 9])
     ax5.set_xlabel(u'B$_{proj}$/$\lambda$')
     ax5.set_ylabel(u'$\phi_{123}$ (deg.)')
+    if xlim is not None:
+        ax5.set_xlim(xlim)
     ax5.grid(b=True, linestyle=':', alpha=alp)
     ax6.set_xlabel(u'B$_{proj}$/$\lambda$')
     ax6.set_ylabel(u'$\phi_{123}$(data-mod)/err')
+    if xlim is not None:
+        ax6.set_xlim(xlim)
     ax6.grid(b=True, linestyle=':', alpha=alp)
     # SAVING
     dir, name = _phc.trimpathname(ffile)
@@ -1626,7 +1707,8 @@ def I(Disk, Ms=7.7, Teff=20200., Rs=4.94, iang=0., bm2n=-5.5, fmin=5e-3,
 
 def fBBcor(T):
     """ Correction as appendix B Vieira+2015. Stellar atmospheric models
-    systematically UNDERESTIMATE the BB flux of a given Teff temperature.
+    systematically have a LOWER flux than a BB of a given Teff temperature in 
+    IR.
 
     fBBcor(T)*BBlbd(Teff) == Kurucz(Teff) 
 

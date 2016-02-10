@@ -6,12 +6,12 @@ PyHdust auxiliary module: third-part MCMC plotting tools.
 :co-author: Daniel Moser
 :license: Copyright 2013 Daniel Foreman-Mackey
 """
+from __future__ import print_function, absolute_import, unicode_literals
 import logging
 import numpy as np
 import matplotlib.pyplot as pl
 import matplotlib.cm as cm
 from matplotlib.ticker import MaxNLocator
-from __future__ import print_function, absolute_import, unicode_literals
 
 try:
     from scipy.ndimage import gaussian_filter
@@ -505,3 +505,7 @@ def hist2d(x, y, bins=20, range=None, weights=None, levels=None, smooth=None,
     ax.set_xlim(range[0])
     ax.set_ylim(range[1])
     return
+
+# Main
+if __name__ == '__main__':
+    pass

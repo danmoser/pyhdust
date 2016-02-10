@@ -1591,7 +1591,7 @@ def open(filename, quiet=False):
                 date = getDate(hdu, hdulist)
                 timeobs = _datetime.datetime(int(date[0]), int(date[1]), int(
                     date[2])) + _datetime.timedelta(seconds=_np.around(
-                    row.field('TIME'), 2))
+                        row.field('TIME'), 2))
                 int_time = row.field('INT_TIME')
                 visamp = _np.reshape(row.field('VISAMP'), -1)
                 visamperr = _np.reshape(row.field('VISAMPERR'), -1)

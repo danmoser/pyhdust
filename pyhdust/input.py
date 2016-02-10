@@ -261,7 +261,7 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'],
     | 
     | #clusters config
     | # job = AlphaCrucis; oar = MesoCentre Licallo; ge = MesoCentre FRIPP
-    | clusters = ['job','oar','ge','bgp']
+    | clusters = ['job','oar','ge','bgq']
     | clusters = ['oar']
     | nodes    = 48
     | #if wcheck == True, walltime will be AUTOMATICALLY estimated
@@ -408,8 +408,8 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'],
                 wout[24] = addtouch
                 modchmod = _phc.trimpathname(mod)
                 modchmod[1] = modchmod[1].replace('.txt', '*')
-                wout[31] = 'chmod 664 {0}/{1}/*{2}\nchmod 664 log/*\nchmod' +\
-                    '664 ../../tmp/*\n'.format(proj, *modchmod)
+                wout[31] = 'chmod -f 664 {0}/{1}/*{2}\nchmod -f 664 log/*\n' +\
+                    'chmod -f 664 ../../tmp/*\n'.format(proj, *modchmod)
             f0.writelines('qsub {0}/{1}s/{2}\n'.format(proj, sel, outname))
         elif sel == 'oar':
             wout[2] = wout[2].replace('12', '{0}'.format(nodes))
@@ -417,7 +417,7 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'],
             wout[10] = wout[10].replace('hdust_bestar2.02.inp', '{0}/{1}'.
             format(proj, mod.replace('.txt', '.inp')))
             f0.writelines(
-                'chmod a+x {0}/{1}s/{2}\n'.format(proj, sel, outname))
+                'chmod -f a+x {0}/{1}s/{2}\n'.format(proj, sel, outname))
             f0.writelines(
                 'oarsub -S ./{0}/{1}s/{2}\n'.format(proj, sel, outname))      
         elif sel == 'ge':
@@ -428,7 +428,7 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'],
             format(proj, mod.replace('.txt', '.inp')))
             f0.writelines(
                 'qsub -P hdust {0}/{1}s/{2}\n'.format(proj, sel, outname))
-        elif sel == 'bgp':
+        elif sel == 'bgq':
             wout[14] = wout[14].replace('512', '{0}'.format(nodes))
             nodes = int(nodes)
             if nodes % 512 != 0:
@@ -439,7 +439,8 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'],
             wout[5] = wout[5].replace('24:00:00', '{0}'.format(walltime))
             wout[14] = wout[14].replace('hdust_bestar2.02.inp', '{0}/{1}'.
             format(proj, mod.replace('.txt', '.inp')))
-            f0.writelines('chmod +x {0}/{1}s/{2}\n'.format(proj, sel, outname))
+            f0.writelines('chmod -f +x {0}/{1}s/{2}\n'.format(proj, sel, 
+                outname))
             f0.writelines(
                 'llsubmit ./{0}/{1}s/{2}\n'.format(proj, sel, outname))
         f0.close()
@@ -493,8 +494,8 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'],
         cases = docases[:]
         # Do the touch thing
         addtouch = '\n'
-        addtouch += 'chmod 664 ../../tmp/*\nchmod 664 {0}/mod{1}/*\n'.format(
-            proj, modn)
+        addtouch += 'chmod -f 664 ../../tmp/*\nchmod -f 664 {0}/mod{1}/*\n'.\
+            format(proj, modn)
         if touch and ( (1 in cases) or (2 in cases) ):
             addtouch += 'touch {0}/{1}\n'.format(proj,
                                                  mod.replace('.txt', '.log'))
@@ -701,9 +702,14 @@ def makeSimulLine(vrots, basesims, Rs, hwidth, Ms, Obs, suffix):
         k = basesims.index(basesim)
         R = Rs[k]
         nmod = mod[:]
-        vel = '{0:.1f}'.format(hwidth + vrots[i][j])
-        nmod[103] = nmod[103].replace('1020.', vel)
-        n = str(int(round(2 * (hwidth + vrots[i][j]) * R / c * 1e5)))
+        if len(_np.shape(vrots)) == 2:
+            vel = '{0:.1f}'.format(hwidth + vrots[i][j])
+            nmod[103] = nmod[103].replace('1020.', vel)
+            n = str(int(round(2 * (hwidth + vrots[i][j]) * R / c * 1e5)))
+        else:
+            vel = '{0:.1f}'.format(hwidth + vrots[0])
+            nmod[103] = nmod[103].replace('1020.', vel)
+            n = str(int(round(2 * (hwidth + vrots[0]) * R / c * 1e5)))
         # print(srcid, n)
         nmod[100] = nmod[100].replace('100', n)
 

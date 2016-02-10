@@ -31,6 +31,7 @@ import numpy as _np
 import time as _time
 import pyhdust as _hdt
 from pyhdust.hdrpil import hdr as _hdr
+import pyhdust.phc as _phc
 
 try:
     import PIL as _PIL
@@ -146,7 +147,7 @@ def doColorConvMaps(data, lbdc, fdat=None, di=0, oi=0, ii=0, outflt=False):
 def rgb2png(RGB, savename=None, ext='png', size=None):
     """ Save a array(n,m,3; uint8) as regular image file. """
     if savename is None:
-        savename = _time.strftime("%y%m%d-%H%M%S")
+        savename = _phc.dtflag()
     # 
     img = _PIL.Image.fromarray(RGB.astype('uint8'))
     if size is not None:
@@ -158,17 +159,17 @@ def rgb2png(RGB, savename=None, ext='png', size=None):
 
 
 def doHDR(RGB, levels=6, folder='hdr', ext='png', strength=[1.],
-        naturalness=[1.]):
+        naturalness=[1.], size=None):
     """ Do HDR of RGB images. """
     ext = ext.replace('.', '')
     i = 0
     while _os.path.exists(folder) is True:
         folder += str(i)
     _os.system('mkdir ' + folder)
-    for i in range(7):
+    for i in range(levels):
         img = _np.array(RGB, dtype='float') * 2**i
         img = _np.clip(img, 0, 255).astype('uint8')
-        rgb2png(img, size=[1024, 1024], savename='{}/hdr_{}'.format(folder, i),
+        rgb2png(img, savename='{}/hdr_{}'.format(folder, i), size=size, 
             ext=ext)
     # 
     proj = _hdr(case=folder, img_type=ext, cur_dir='./')
@@ -176,20 +177,54 @@ def doHDR(RGB, levels=6, folder='hdr', ext='png', strength=[1.],
     return
 
 
-def doBackground(foreimg, backimg, savename=None, pos='1', cut=0.5, ext='png',
-    bga=.9):
-    """ add ``backimg`` as background of ``foreimg``. ``*img`` are regular
-    image files.
+def do_background(foreimg, backimg, savename=None, pos=[.1, .9], cut=0.5, 
+    fmt=['png'], bga=.9, rotang=0., fsize=None):
+    """ Add `backimg` as background (bg) of `foreimg` (fg). `*img` are regular
+    image files (e.g., JPG or PNG).
 
-    ``pos`` equals the dialpad (without 0). """
+    `pos` is the position of the central pixel of fg as fraction size of the 
+    bg image. Example: 
+    pos = [.1, .1] puts the foreground image in the lowe left position; 
+    pos = [.5, .5] in the center. 
+
+    `cut` = limit the brightest pixels. `cut == 1` says that only white points 
+    will have no background (transparency. In other words, all fg will be 
+    transparent as bg). 
+    `cut == 0.5` says that every pixel with >= 50% of the white level will not  
+    be transparent. `cut == 0` says that all black points will not be 
+    transparent (i.e., no bg).
+
+    `bga` = background strength
+
+    METHOD: There the fg is brillhant (star), no bg. Where it is tenous, 
+    (disk), it is applied a combination of bg + fg with the transparency 
+    is proportiona to the fg brightness. 
+
+    Is it important to note that even if a "black background" is applied, the 
+    disk will be atenuated where it is below the cutting limit. 
+
+    DETAILS: a combination of images, without saturation (standard level) is 
+    equal to (img1 + img2 )/2.
+
+    Problem 1: the star becomes transparent! Solution: we define a `cut`, where 
+    pixels above a given level do not enter in the above sum, rather their 
+    foreground values are kept.
+
+    Problem 2: this procedure can create a big contrast between the star and 
+    the disk, making the disk 50% fainter. Solucion: define the transparency 
+    as function of the fg value (bigger the value, less transparent).
+
+    Problem 3: if the star is seen edge-on, one can have bg where it is the 
+    star! How to solve it? Analogous to the `cut`, if an mask can be created 
+    if the photospheric image is provided (and then, no gb where px_val > 0).
+
+    TODO: photospheric mask to cut.
+    """
+    if cut <= 0:
+        cut = 1e-3
     if savename is None:
         savename = _time.strftime("%y%m%d-%H%M%S")
-    ext = ext.replace('.', '')
     # 
-    background = _PIL.Image.open(backimg)
-    bwd = background.size[0]
-    foreground = _PIL.Image.open(foreimg)
-    fwd = foreground.size[0]
     # if fwd is not int(round(bwd/3.)):
         # fact = bwd/3./fwd
         # foreground = foreground.resize(np.round(foreground.size*fact).\
@@ -197,15 +232,103 @@ def doBackground(foreimg, backimg, savename=None, pos='1', cut=0.5, ext='png',
     # 
     aB = _PIL.Image.open(backimg)
     aF = _PIL.Image.open(foreimg)
-    # 
+    if fsize is not None:
+        minbd = _np.min(aB.size)
+        minfd = _np.min(aF.size)
+        f = minbd*fsize/minfd
+        fsize = ( _np.int(_np.round(f*aF.size[0])), _np.int(_np.round(f*aF.size[1])) )
+        aF = aF.resize(fsize, _PIL.Image.ANTIALIAS)
     aB = _np.asarray(aB, dtype=float)
     aF = _np.asarray(aF, dtype=float)
+    if rotang != 0:
+        aF = rotate_cube(aF, rotang)
+    aF = align_backfore(aB, aF, pos=pos)
+    # tF = sum + clip in the limit (i.e., `cut` the brightest parts)
+    # cut = mask to transparency (based on the values of the px, says if it 
+    # will be transparent.
     tF = _np.sum(aF, axis=2)
     tF = _np.clip(tF, 0, 3 * 256 * cut)
     tF /= (3 * 256 * cut)
+    # tB = inverse of tF, with the strength of `bga`
     tB = -1 * tF + bga
     tB = _np.clip(tB, 0, _np.max(tB))
-    out = aF * tF[..., _np.newaxis] + aB[..., :3] * tB[..., _np.newaxis]
+    out = aF[..., :3] * tF[..., _np.newaxis] + \
+        aB[..., :3] * tB[..., _np.newaxis]
     img = _PIL.Image.fromarray(out.astype('uint8'))
-    img.save(savename + '.' + ext)
+    for f in fmt:
+        f = f.replace('.', '')
+        img.save(savename + '.' + f)
     return
+
+
+def align_backfore(bkimg, frimg, pos=[.1, .9]):
+    """ doc """
+    bkh, bkv = _np.shape(bkimg)[:2]
+    f0h, f0v = _np.shape(frimg)[:2]
+    frh, frv = _np.shape(bkimg)[:2]
+    if len(_np.shape(frimg)) > 3:
+        # TODO: Resige bkimg to the size of frimg
+        print('# ERROR! foreground image wrong format (dimensions)!!')
+        return None
+    elif f0h == bkh and f0v == bkv and pos == [.5, .5]:
+        # Nothing to do!
+        print('# Nothing done!!')
+        return frimg
+    # Starting...
+    if pos[0] < 0:
+        pos[0] = 0
+    if pos[1] > 1:
+        pos[1] = 1
+    # Horizontal
+    ival = int(round(pos[0]*bkh))
+    x0 = ival - f0h/2
+    addx = 0
+    if x0 < 0:
+        x0 = 0
+        addx += f0h/2 - ival
+    elif bkh < x0 + f0h:
+        addx += x0 + f0h - bkh   
+    # vertical
+    ival = int(round(pos[1]*bkv))
+    y0 = ival - f0v/2
+    addy = 0
+    if y0 < 0:
+        y0 = 0
+        addy += f0v/2 - ival
+    elif bkv < y0 + f0v:
+        addy += y0 + f0v - bkv   
+
+    if len(_np.shape(frimg)) == 3:
+        d3 = _np.shape(frimg)[2]
+        frtmp = _np.zeros((bkh+addx, bkv+addy, d3))
+        # for i in range(d3):
+        #     frtmp[x0:x0+f0h, y0:y0+f0v, i] = frimg[:, :, i]
+    else:
+        frtmp = _np.zeros((bkh+addx, bkv+addy))
+
+    print bkh, bkv, f0h, f0v, x0, y0, addx, addy, pos
+    frtmp[x0:x0+f0h, y0:y0+f0v] = frimg
+    frnew = frtmp[:bkh, :bkv]
+    # print frnew.shape, bkimg.shape
+    return frnew
+
+
+def rotate_cube(src, theta, ox=None, oy=None, fill=0):
+    """ `src` must be a numpy array. """
+    dims = src.shape
+    if len(dims) == 2:
+        print('# Warning! It is a image, not a cube!')
+        return _phc.rotate_image(src, theta, ox, oy, fill)
+
+    tmp = _phc.rotate_image(src[:, :, 0], theta, ox, oy, fill)
+    dimsr = tmp.shape
+    rot = _np.zeros((dimsr[0], dimsr[1], dims[2]))
+    rot[:, :, 0] = tmp
+    for i in range(1, dims[2]):
+        rot[:, :, i] = _phc.rotate_image(src[:, :, i], theta, ox, oy, fill)
+    return rot
+
+
+# MAIN ###
+if __name__ == "__main__":
+    pass
