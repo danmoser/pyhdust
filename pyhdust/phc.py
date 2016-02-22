@@ -798,6 +798,36 @@ def bin_ndarray(ndarray, new_shape, operation='avg'):
     return ndarray
 
 
+def deg2rad(deg=1.):
+    """ :math:`1^\circ=\frac{pi}{180}` """
+    return deg*_np.pi/180.
+
+
+def rad2deg(rad=1.):
+    """ :math:`1^\circ=\frac{pi}{180}` """
+    return rad*180./_np.pi
+
+
+def arcmin2rad(arm=1.):
+    """ :math:`1'=\frac{pi}{10800}` """
+    return arm*_np.pi/10800.
+
+
+def rad2arcmin(rad=1.):
+    """ :math:`1^\circ=\frac{pi}{1800}` """
+    return rad*10800./_np.pi
+
+
+def arcsec2rad(ars=1.):
+    """ :math:`1'=\frac{pi}{648000}` """
+    return ars*_np.pi/648000.
+
+
+def rad2arcsec(rad=1.):
+    """ :math:`1^\circ=\frac{pi}{648000}` """
+    return rad*648000./_np.pi
+
+
 # Constants
 c = Constant(2.99792458e10, 299792458., 'cm s-1', 'speed of light in vacuum')
 h = Constant(6.6260755e-27, 6.62606957e-34, 'erg s-1', 'Planck constant')

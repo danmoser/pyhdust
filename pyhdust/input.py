@@ -11,6 +11,7 @@ import numpy as _np
 from glob import glob as _glob
 from itertools import product as _product
 import pyhdust.phc as _phc
+import pyhdust.rotstars as _rot
 import pyhdust as _hdt
 
 __author__ = "Daniel Moser"
@@ -74,7 +75,7 @@ def makeDiskGrid(modn='01', mhvals=[1.5], hvals=[60.], rdvals=[18.6],
         input
         '''
         src, sig0, rd, h, m, mh = prodI
-        M, Req, Tp = _hdt.readscr(src)
+        M, Req, Tp = _rot.readscr(src)
         Mstr = str(M)
         M *= Msun
         Req *= Rsun
@@ -112,7 +113,7 @@ def makeDiskGrid(modn='01', mhvals=[1.5], hvals=[60.], rdvals=[18.6],
         input
         '''
         src, sig0, rd, h, m, mh = prodI
-        M, Req, Tp = _hdt.readscr(src)
+        M, Req, Tp = _rot.readscr(src)
         Mstr = str(M)
         M *= Msun
         Req *= Rsun
@@ -157,7 +158,7 @@ def makeDiskGrid(modn='01', mhvals=[1.5], hvals=[60.], rdvals=[18.6],
         '''
 
         src, rd, h, mh, day, sfile = prodI
-        M, Req, Tp = _hdt.readscr(src)
+        M, Req, Tp = _rot.readscr(src)
         Mstr = str(M)
         M *= Msun
         Req *= Rsun

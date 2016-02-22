@@ -614,7 +614,7 @@ def ECcalc(vels, flux, ssize=.05, gaussfit=False, doublegf=True):
         idx = _np.where(_np.max(flux) == flux)
         if len(idx[0]) > 1:
             idx = idx[0][0]
-        return flux[idx], vels[idx]
+        return flux[idx][0], vels[idx][0]
     else:
         # check if there is a peak
         ssize = int(ssize*len(vels))

@@ -23,7 +23,7 @@ try:
 except:
     print('# Warning! matplotlib and/or scipy module not installed!!!')
 
-__version__ = 0.971
+__version__ = 0.98
 __release__ = "Beta"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -204,7 +204,7 @@ def sed2info(file):
     f0.close()
     info = ''
     i = 0
-    while info == '':
+    while info is '':
         if fcont[i][0] != '%':
             info = _np.array(fcont[i].split(), dtype=float)
         i += 1
@@ -222,7 +222,6 @@ def readfullsed2(file):
     """
     nlbd, nobs, Rstar, Rwind = sed2info(file)
     sed2data = _np.loadtxt(file, skiprows=5)
-    print nobs, nlbd, _np.shape(sed2data)
     sed2data = sed2data.reshape((nobs, nlbd, -1))
     return sed2data
 
@@ -299,6 +298,10 @@ def readtemp(tfile, quiet=False):
     - pcr = distância entre as células em raio
     - pcmu = distância entre as células em mu
     - pcphi = distância entre as células em phi
+
+    `data` format is: `data[nLTE+6, ncr, ncmu, ncphi]`
+
+    Temperature are in `data[3, ...]`. More info see *plottemp* function.
 
     OUTPUT = ncr,ncmu,ncphi,nLTE,nNLTE,Rstar,Ra,beta,data,pcr,pcmu,pcphi
     """
