@@ -657,7 +657,7 @@ def makeNoDiskGrid(modn, selsources, path=None):
     return
 
 
-def makeSimulLine(vrots, basesims, Rs, hwidth, Ms, Obs, suffix):
+def makeSimulLine(basesims, Rs, hwidth, Ms, Obs, lsuffix, path='source/'):
     """
     | vrots = [[167.023,229.187,271.072,301.299,313.702],
     |          [177.998,244.636,290.596,324.272,338.298],
@@ -689,33 +689,37 @@ def makeSimulLine(vrots, basesims, Rs, hwidth, Ms, Obs, suffix):
     """
     c = _phc.c.cgs
 
-    for prodI in _product(Ms, Obs, basesims):
-        M, Ob, basesim = prodI
+    for prodI in _product(Ms, Obs, basesims, lsuffix):
+        M, Ob, basesim, suffix = prodI
 
         f0 = open(basesim)
         mod = f0.readlines()
         f0.close()
 
-        srcid = 'Be_M{0:05.2f}_ob{1:.2f}'.format(M, Ob)
+        srcid = 'Be_M{0:05.2f}_ob{1:.2f}_{2}.txt'.format(M, Ob, suffix)
 
-        i = Ms.index(M)
-        j = Obs.index(Ob)
+        # i = Ms.index(M)
+        # j = Obs.index(Ob)
         k = basesims.index(basesim)
         R = Rs[k]
         nmod = mod[:]
-        if len(_np.shape(vrots)) == 2:
-            vel = '{0:.1f}'.format(hwidth + vrots[i][j])
-            nmod[103] = nmod[103].replace('1020.', vel)
-            n = str(int(round(2 * (hwidth + vrots[i][j]) * R / c * 1e5)))
-        else:
-            vel = '{0:.1f}'.format(hwidth + vrots[0])
-            nmod[103] = nmod[103].replace('1020.', vel)
-            n = str(int(round(2 * (hwidth + vrots[0]) * R / c * 1e5)))
+        vrot = _rot.vrot_scr(path+srcid)
+        vel = '{0:.1f}'.format(hwidth + vrot)
+        nmod[103] = nmod[103].replace('1020.', vel)
+        n = str(int(round(2 * (hwidth + vrot) * R / c * 1e5)))
+        # if len(_np.shape(vrots)) == 2:
+        #     vel = '{0:.1f}'.format(hwidth + vrots[i][j])
+        #     nmod[103] = nmod[103].replace('1020.', vel)
+        #     n = str(int(round(2 * (hwidth + vrots[i][j]) * R / c * 1e5)))
+        # else:
+        #     vel = '{0:.1f}'.format(hwidth + vrots[0])
+        #     nmod[103] = nmod[103].replace('1020.', vel)
+        #     n = str(int(round(2 * (hwidth + vrots[0]) * R / c * 1e5)))
         # print(srcid, n)
         nmod[100] = nmod[100].replace('100', n)
 
         f0 = open(
-            basesim.replace('.txt', '_{0}_{1}.txt'.format(srcid, suffix)), 'w')
+            basesim.replace('.txt', '_{0}.txt'.format(srcid)), 'w')
         f0.writelines(nmod)
         f0.close()
     return

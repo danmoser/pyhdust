@@ -50,7 +50,7 @@ class hdr:
         for img in imgs:
             samp = img.resize((50, 50))  # crop(box=((10,10,20,20)))
             drks.append(sum(samp.getdata(band=0)))
-        if self.resize:
+        if self.resize is not None:
             newsize = tuple([int(x * self.resize) for x in img.size])
             imgs = [img.resize(newsize) for img in imgs]
 
@@ -70,7 +70,7 @@ class hdr:
         case='',
         resize=None,
         img_type='.jpg',
-        cur_dir=r'C:\My Pictures\test_hdr' ):
+        cur_dir=r'./' ):
         """
         load a project
         all images of [img_type] are loaded from folder [case]
@@ -230,7 +230,8 @@ class hdr:
             self.save_im(im_dict[k], k)
 
     def to_list(self, val):
-        if type(val) != type(list()):
+        # if type(val) != type(list()):
+        if not isinstance(val, list):
             val = [float(val)]
         else:
             val = [float(v) for v in val]

@@ -1,4 +1,4 @@
-#-*- coding:utf-8 -*-
+# -*- coding:utf-8 -*-
 
 """
 PyHdust *poltools* module: polarimetry tools
@@ -8,7 +8,7 @@ History:
 -grafpol working for log/out files with more than a single star
 
 :co-author: Daniel Bednarski
-:license: GNU GPL v3.0 (https://github.com/danmoser/pyhdust/blob/master/LICENSE)
+:license: GNU GPL v3.0 https://github.com/danmoser/pyhdust/blob/master/LICENSE
 """
 
 import os as _os
@@ -19,19 +19,20 @@ import glob as _glob
 import numpy as _np
 import datetime as _dt
 import shutil as _shutil
-#from itertools import product as _product
-from glob import glob as _glob
+# from itertools import product as _product
+# from glob import glob as _glob
 from inspect import getouterframes as _getouterframes
 from inspect import currentframe as _currentframe
 import pyhdust.phc as _phc 
 import pyhdust.jdcal as _jdcal
 from pyhdust import hdtpath as _hdtpath
-#from sys import _argv
-#from matplotlib import rc as _rc
+# from sys import _argv
+# from matplotlib import rc as _rc
 
 try:
     import matplotlib.pyplot as _plt
     from matplotlib.transforms import offset_copy as _offset_copy
+    from scipy.optimize import leastsq as _leastsq 
     import pyfits as _pyfits
 except:
     print('# Warning! matplotlib and/or pyfits module not installed!!!')
@@ -40,7 +41,7 @@ __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
 
 
-filters = ['u','b','v','r','i']
+filters = ['u', 'b', 'v', 'r', 'i']
 # Setting an "initial value" for ccd
 ccd = '---'
 
@@ -2545,17 +2546,122 @@ def splitData301(night, path_raw='raw', path_red='red'):
                     return 2
 
             _shutil.copy2(file_old, file_new)
-
-
-    print('Done!\n')
+    print('# Done!\n')
     return 0
 
 
+def corPol(pol_obs, nbins=20):
+    """ Return polarization color from B, V, R filters fit. 
 
-#################################################
-#################################################
-#################################################
-### MAIN ###
+    INPUT: polarization std table.
+
+    OUTPUT: xarr, cores, corer (MJD, color, err-color arrays)
+    """
+    min, max = _np.min(pol_obs.MJD), _np.max(pol_obs.MJD)
+    shift = (max-min) / (nbins-1)
+    xarr = _np.arange(nbins)*shift+min
+    filters = ['b', 'v', 'r']
+    lbc = _np.array([445, 551, 658])*1e-3
+    pol = _np.zeros(( len(filters), len(xarr) ))
+    per = _np.zeros(( len(filters), len(xarr) ))
+    for f in filters:
+        idx = _np.where(pol_obs.filt == f)
+        x = pol_obs.MJD[idx]
+        y = pol_obs.P[idx]
+        yerr = pol_obs.sigP[idx]
+        tmp0, tmp1, tmp2 = _phc.bindata(x, y, nbins, yerr=yerr, 
+            xrange=[min, max])
+        i = filters.index(f)
+        pol[i, :] = _np.interp(xarr, tmp0, tmp1)
+        per[i, :] = _np.interp(xarr, tmp0, tmp2)
+        if i == 2:
+            pol[i, -5] = 0.0
+            per[i, -5] = _np.max(per)
+    cores = _np.zeros(len(xarr))
+    corer = _np.zeros(len(xarr))
+    fitfunc = lambda p, x: p[0]*x + p[1]
+    errfunc = lambda p, x, y, err: (y - fitfunc(p, x)) / err
+    pinit = [-1., 0.]
+    for i in range(nbins):
+        pout = _leastsq(errfunc, pinit, args=(lbc, pol[:, i], per[:, i]), 
+            full_output=1)
+        if pout[1] is not None:
+            cores[i] = pout[0][0]
+            corer[i] = _np.sqrt(_np.diag(pout[1]))[0]
+        else:
+            cores[i] = _np.NaN
+            corer[i] = _np.NaN
+    idx = _np.isnan(cores)
+    cores = _np.interp(xarr, xarr[~idx], cores[~idx])
+    corer = _np.interp(xarr, xarr[~idx], corer[~idx])
+    return xarr, cores, corer
+
+
+def plot_cor(fig, ax, xlim=None, ylim=None, mkC=[], civcfg=[1, 'm'], 
+    civdt=None, tklab='both'):
+    """ Configure polarization color plot. 
+
+    `mk0`: (list) dotted line at given values 
+
+    `civdt`: date to begin the Civil ticks (yyyy,mm,dd)
+
+    `civcfg`: [increment, 'd|m|y']
+
+    `tklab`: (string) 'upper'|'lower'|'none'|other
+
+    OUTPUT: fig, ax 
+    """
+    ax.set_ylabel(r'$P$ slope (% $\mu$m)')
+    ax.set_xlabel('MJD')
+    if xlim is not None:
+        ax.set_xlim(xlim)
+    if ylim is not None:
+        ax.set_ylim(ylim)
+    for m in mkC:
+        ax.plot(xlim, [m, m], ls=':', color='gray', zorder=0)
+    if tklab.lower() in ['upper', 'none']:
+        ax.set_xticklabels([])
+    lab = True
+    if tklab.lower() in ['lower', 'none']:
+        lab = False
+    ax = _phc.civil_ticks(ax, civcfg, civdt, tklab=lab)
+    return fig, ax
+
+
+def plot_filter(fig, ax, filt='', xlim=None, ylim=None, mkP=[], xlabel=True, 
+    civcfg=[1, 'm'], civdt=None, tklab='both'):
+    """ Configure polarization plot. 
+
+    `mkP`: dot-dashed line at given values. 
+
+    `civdt`: date to begin the Civil ticks (yyyy,mm,dd)
+
+    `civcfg`: [increment, 'd|m|y']
+
+    `tklab`: (string) 'upper'|'lower'|'none'|other
+
+    OUTPUT: fig, ax 
+    """
+    ax.set_ylabel(r'pol {0} (%)'.format(filt))
+    if xlabel:
+        ax.set_xlabel('MJD')
+    if xlim is not None:
+        ax.set_xlim(xlim)
+    else:
+        xlim = ax.get_xlim()
+    if ylim is not None:
+        ax.set_ylim(ylim)
+    for m in mkP:
+        ax.plot(xlim, [m, m], ls='-.', color='gray', zorder=0)
+    if tklab.lower() in ['upper', 'none']:
+        ax.set_xticklabels([])
+    lab = True
+    if tklab.lower() in ['lower', 'none']:
+        lab = False
+    ax = _phc.civil_ticks(ax, civcfg, civdt, tklab=lab)
+    return fig, ax
+
+
+# MAIN ###
 if __name__ == "__main__":
     pass
-

@@ -28,6 +28,7 @@ __init__:
 bcd:
 ☐ Export a FITS file in the function format
 ☐ Adapt it to BeAtlas/HDUST
+☐ Errors on the BCD determination
 
 beatlas:
  ✔ Develop rotine correlations emcee (e.g., triangle.py) @done (16-01-04 22:51)

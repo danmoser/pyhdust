@@ -63,6 +63,17 @@ triple products, etc.  See the notes on the individual classes for a
 list of all the "hidden" attributes.
 
 For further information, contact Paul Boley (boley@mpia-hd.mpg.de).
+
+Example of OIfits merge (same target):
+
+.. code:: python
+
+    import pyhdust.oifits as oifits
+    oidata1 = oifits.open('file1.fits')
+    oidata2 = oifits.open('file2.fits')
+    oifits.matchtargetbyname = True
+    merge = oidata1 + oidata2
+    oimerge.save('merged.fits')
 """
 import pyfits as _pyfits
 import datetime as _datetime
@@ -1049,11 +1060,11 @@ class oifits:
 
         hdulist = _pyfits.HDUList()
         hdu = _pyfits.PrimaryHDU()
-        hdu.header.update('DATE', _datetime._datetime.now().strftime(
+        hdu.header.update('DATE', _datetime.datetime.now().strftime(
             format='%F'), comment='Creation date')
         hdu.header.add_comment(
-            'Written by OIFITS Python module')  # version %s' % __version__)
-        hdu.header.add_comment('http://www.mpia-hd.mpg.de/homes/boley/oifits/')
+            'Written by a modified OIFITS Python module')  # version %s' % __version__)
+        hdu.header.add_comment('http://j.mp/pyhdust')
 
         wavelengthmap = {}
         hdulist.append(hdu)
@@ -1116,37 +1127,37 @@ class oifits:
                 _pyfits.Column(name='TARGET_ID', format='1I', array=target_id),
                 _pyfits.Column(name='TARGET', format='16A', array=target),
                 _pyfits.Column(
-                    name='RAEP0', format='D1', unit='DEGREES', array=raep0),
+                    name='RAEP0', format='1D', unit='DEGREES', array=raep0),
                 _pyfits.Column(
-                    name='DECEP0', format='D1', unit='DEGREES', array=decep0),
+                    name='DECEP0', format='1D', unit='DEGREES', array=decep0),
                 _pyfits.Column(
-                    name='EQUINOX', format='E1', unit='YEARS', array=equinox),
+                    name='EQUINOX', format='1E', unit='YEARS', array=equinox),
                 _pyfits.Column(
-                    name='RA_ERR', format='D1', unit='DEGREES', array=ra_err),
+                    name='RA_ERR', format='1D', unit='DEGREES', array=ra_err),
                 _pyfits.Column(
-                    name='DEC_ERR', format='D1', unit='DEGREES', 
+                    name='DEC_ERR', format='1D', unit='DEGREES', 
                     array=dec_err),
                 _pyfits.Column(
-                    name='SYSVEL', format='D1', unit='M/S', array=sysvel),
+                    name='SYSVEL', format='1D', unit='M/S', array=sysvel),
                 _pyfits.Column(name='VELTYP', format='A8', array=veltyp),
                 _pyfits.Column(name='VELDEF', format='A8', array=veldef),
                 _pyfits.Column(
-                    name='PMRA', format='D1', unit='DEG/YR', array=pmra),
+                    name='PMRA', format='1D', unit='DEG/YR', array=pmra),
                 _pyfits.Column(
-                    name='PMDEC', format='D1', unit='DEG/YR', array=pmdec),
+                    name='PMDEC', format='1D', unit='DEG/YR', array=pmdec),
                 _pyfits.Column(
-                    name='PMRA_ERR', format='D1', unit='DEG/YR', 
+                    name='PMRA_ERR', format='1D', unit='DEG/YR', 
                     array=pmra_err),
                 _pyfits.Column(
-                    name='PMDEC_ERR', format='D1', unit='DEG/YR', 
+                    name='PMDEC_ERR', format='1D', unit='DEG/YR', 
                     array=pmdec_err),
                 _pyfits.Column(
-                    name='PARALLAX', format='E1', unit='DEGREES', 
+                    name='PARALLAX', format='1E', unit='DEGREES', 
                     array=parallax),
                 _pyfits.Column(
-                    name='PARA_ERR', format='E1', unit='DEGREES', 
+                    name='PARA_ERR', format='1E', unit='DEGREES', 
                     array=para_err),
-                _pyfits.Column(name='SPECTYP', format='A16', array=spectyp)
+                _pyfits.Column(name='SPECTYP', format='16A', array=spectyp)
             )))
             hdu.header.update('EXTNAME', 'OI_TARGET')
             hdu.header.update(

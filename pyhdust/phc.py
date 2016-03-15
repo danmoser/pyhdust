@@ -3,9 +3,19 @@
 """
 PyHdust *phc* module: physical constants and general use functions
 
-`List of constants`_
+Includes functions for:
+- Data manipulation (average, bin, fitting)
+- Manipulation of 3D coordinates 
+- Convolution functions
+- Manipulation of strings and lists
+- Manipulation of angular coordinates and dates 
+- Files or directories manipulation
+- Plotting 
+- Physical functions
+- `List of constants`_
 
 .. _`List of constants`: phc_list.html
+
 
 :license: GNU GPL v3.0 https://github.com/danmoser/pyhdust/blob/master/LICENSE
 """
@@ -27,102 +37,7 @@ __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
 
 
-def dtflag():
-    """ Return a "datetime" flag, i.e., a string the the current date and time
-    formated as yyyymmdd-hhMM."""
-    now = _dt.datetime.now()
-    return '{0}{1:02d}{2:02d}-{3:02d}{4:02d}{5:02d}'.format(now.year, 
-        now.month, now.day, now.hour, now.minute, now.second)
-
-
-def renlist(root, newr):
-    """ The routine changes each A_STR_B to A_NEW_B inside the running folder.
-    """
-    files = _glob('*{0}*'.format(root))
-    files.sort()
-    for i in range(len(files)):
-        _os.system(
-            'mv "' + files[i] + '" "' + files[i].replace(root, newr) + '"' )
-        print("# " + files[i] + " renamed to: " +
-              files[i].replace(root, newr) )
-    return
-
-
-class Constant(object):
-
-    """ Class for a physical/astronomical constant
-    """
-
-    def __init__(self, cgs, SI, unitscgs='', info='No available description'):
-        self.cgs = cgs
-        self.SI = SI
-        self.unitscgs = unitscgs
-        self.info = info
-
-    def __repr__(self):
-        return str('{0:.7e} in {1} (cgs)'.format(self.cgs, self.unitscgs))
-
-
-def fltTxtOccur(s, lines, n=1, seq=1, after=False, asstr=False):
-    """ Return the seq-th float of the line after the n-th
-    occurrence of `s` in the array `lines`.
-
-    INPUT: s=string, lines=array of strings, n/seq=int (starting at 1)
-
-    OUTPUT: float"""
-    fltregex = r'[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?'
-    if after:
-        occur = [x[x.find(s) + len(s):] for x in lines if x.find(s) > -1]
-    else:
-        occur = [x for x in lines if x.find(s) > -1]
-    out = _np.NaN
-    if len(occur) >= n:
-        occur = occur[n - 1]
-        out = _re.findall(fltregex, occur)[seq - 1]
-    if not asstr:
-        out = float(out)
-    return out
-
-
-def sortfile(file, quiet=False):
-    """ Sort the file. """
-    f0 = open(file, 'r')
-    lines = f0.readlines()
-    f0.close()
-    lines.sort()
-    f0 = open(file, 'w')
-    f0.writelines(lines)
-    f0.close()
-    if not quiet:
-        print('# File {0} sorted!'.format(file))
-    return
-
-
-def outfld(fold='hdt'):
-    """
-    Check and create (if necessary) an (sub)folder - generally used for output.
-
-    INPUT: *fold=string
-
-    OUTPUT: *system [folder creation]
-    """
-    if not _os.path.exists(fold):
-        _os.system('mkdir {0}'.format(fold))
-    return
-
-
-def strrep(seq, n, newseq):
-    """ Insert `newseq` at position `n` of the string `seq`.
-
-    seq[n] = seq[:n]+newseq+seq[n+1:]
-
-    Note: the string at the position `n` is replaced!!!
-
-    OUTPUT: string
-    """
-    return seq[:n] + newseq + seq[n + 1:]
-
-
+# Data manipulation (includes fitting)
 def wg_avg_and_std(values, sigma):
     """
     Return the weighted average and standard deviation.
@@ -143,27 +58,7 @@ def wg_avg_and_std(values, sigma):
     return (avg, _np.sqrt(_np.sum(sigma**2)) / len(values) )
 
 
-def find_nearest(array, value, bigger=None):
-    """ Find nearest VALUE in the array and return it.
-
-    INPUT: array, value
-
-    OUTPUT: closest value (array dtype)
-    """
-    if bigger is None:
-        array = _np.array(array)
-        idx = (_np.abs(array - value)).argmin()
-        found = array[idx]
-    elif bigger:
-        found = min(x for x in array if x > value)
-    elif not bigger:
-        found = max(x for x in array if x < value)
-    else:
-        print('# ERROR at bigger!!')
-    return found
-
-
-def bindata(x, y, nbins, yerr=None, xrange=None):
+def bindata(x, y, nbins=20, yerr=None, xrange=None):
     """
     Return the weighted binned data.
 
@@ -175,21 +70,30 @@ def bindata(x, y, nbins, yerr=None, xrange=None):
 
     OUTPUT: xvals, yvals, new_yerr (arrays)
     """
-    if xrange is None:
-        max = _np.max(x)
-        min = _np.min(x)
-    else:
-        min, max = xrange
+    x = _np.array(x)
+    y = _np.array(y)
     if yerr is None:
         yerr = _np.ones(len(x))
-    shift = (max - min) / (nbins - 1)
-    tmpx = _np.arange(nbins) * shift + min
+    else:
+        yerr = _np.array(yerr)
+    nans, tmp = nan_helper(y)
+    x = x[~nans]
+    y = y[~nans]
+    yerr = yerr[~nans]
+    if xrange is None:
+        xmax = _np.max(x)
+        xmin = _np.min(x)
+    else:
+        xmin, xmax = xrange
+    shift = (xmax - xmin) / (nbins - 1)
+    tmpx = _np.arange(nbins) * shift + xmin
     tmpy = _np.zeros(nbins)
     tmpyerr = _np.zeros(nbins)
     idx = _np.zeros(nbins, dtype=bool)
     for i in range(nbins):
         selx = _np.where( abs(x - tmpx[i]) <= shift / 2. )
         if len(selx[0]) >= 1:
+            tmpx[i] = _np.average(x[selx])
             tmpy[i], tmpyerr[i] = wg_avg_and_std(y[selx], yerr[selx])
             idx[i] = True
     if _np.sum(yerr) / len(x) == 1:
@@ -198,28 +102,154 @@ def bindata(x, y, nbins, yerr=None, xrange=None):
         return tmpx[idx], tmpy[idx], tmpyerr[idx]
 
 
-def trimpathname(file):
-    """Trim the full path string to return path and filename.
-
-    INPUT: full file path
-
-    OUTPUT: folder path, filename (strings)"""
-    return [ file[:file.rfind('/') + 1], file[file.rfind('/') + 1:] ]
-
-
-def rmext(name):
-    """Remove the extension of a filename.
-    Criteria: last `.` sets the extension.
-
-    INPUT: filename (string)
-
-    OUTPUT: filename without extension (string) """
-    i = name.rfind('.')
-    if i == -1:
-        return name
-    return name[:name.rfind('.')]
+def chi2calc(mod, obs, sig_obs=None, npar=1):
+    """ Calculate the chi2 """
+    nans, tmp = nan_helper(obs)
+    obs = _np.array(obs)[~nans]
+    mod = _np.array(mod)[~nans]
+    if sig_obs is None:
+        sig_obs = _np.ones(len(obs))
+    else:
+        sig_obs = _np.array(sig_obs)[~nans]
+    return _np.sum( (mod - obs)**2 / sig_obs**2 ) / (len(sig_obs) - npar - 1)
 
 
+def splitequal(n, N):
+    """ Split `N` in approx. `n` igual parts 
+
+    `N` must be integer.
+
+    Suggestion: *phc.splitequal(N/8., N)* split N into sequences of 
+    approx. 8 itens.
+    """
+    n = int(round(n))
+    idx = []
+    for i in range(n):
+        idx.append([i * N / n, (i + 1) * N / n])
+    if n == 0:
+        idx = [[0, N]]
+    return idx
+
+
+def interBarND(point, grid, Zgrid):
+    """ TODO """
+    d = _np.sqrt( (point[0] - grid[:, 0])**2 + (point[1] - grid[:, 1])**2)
+    print(d)
+    return
+
+
+def interLinND(X, X0, X1, Fx, disablelog=False):
+    """
+    N-dimensional linear interpolation in LOG space!!
+
+    Pay attention: Fx must always be > 0. If not, put disablelog=True.
+
+    Other important thing: Fx must be regularly spaced (i.e., [Fx0y0, Fx0y1,
+    Fx1y0, Fx1y1] if X0=[x0,y0] and X1=[x1,y1]). 
+
+    If it is not the case, see *interBar?D* function.
+
+    | INPUT:
+    | X = position in with the interpolation is desired;
+    | X0 = minimal values of the interval;
+    | X1 = maximum values of the inveral
+    | Fx = function values along the interval, ORDERED BY DIMENSTION.
+    | Example: Fx = [F00, F01, F10, F11]
+
+    OUTPUT: interpolated value (float)"""
+    X = _np.array(X)
+    X0 = _np.array(X0)
+    X1 = _np.array(X1)
+    Xd = (X - X0) / (X1 - X0)
+    DX = _np.array([ [(1 - x), x] for x in Xd ])
+    #
+    i = 0
+    F = 0
+    for prod in _product(*DX):
+        if disablelog:
+            F += Fx[i] * _np.product(prod)
+        else:
+            F += _np.log(Fx[i]) * _np.product(prod)
+        i += 1
+    #
+    if not disablelog:
+        return _np.exp(F)
+    else:
+        return F
+
+
+def optim(p0, x, y, yerr, func, errfunc=None):
+    """ Do scipy.optimize.leastsq minimization. 
+    Default error function is the chi2 function.
+
+    Requirements:
+        - func(p, x) is a previously user defined function.
+        - len(x)=len(y)=len(yerr)
+
+    Output:
+        best parameters (p), chi2_red value
+    """
+    if errfunc is None:
+        def errfunc(p, x, y, yerr, func):
+            """ error function """
+            # return np.sum( ((y-func(p,x))/yerr)**2 )
+            return ((y - func(p, x)) / yerr)**2
+    bestp, tmp = _optimize.leastsq(errfunc, p0, args=(x, y, yerr, func))
+    c2red = chi2calc(func(bestp, x), y, yerr, npar=len(p0))
+    return bestp, c2red
+
+
+def optim2(p0, x, y, yerr, func):
+    """ Do scipy.optimize.curve_fit minimization. 
+    It returns errors to the parameters fitting!!!
+
+    Requirements:
+        - func(p, x) is a previously user defined function.
+        - len(x)=len(y)=len(yerr)
+
+    Output:
+        best params (p), params errors (perr), chi2_red value
+     """
+    bestp, cov = _optimize.curve_fit(func, x, y, p0=p0, sigma=yerr)
+    c2red = chi2calc(func(x, bestp), y, yerr, npar=len(p0))
+    return bestp, _np.sqrt(_np.diag(cov)), c2red
+
+
+def bin_ndarray(ndarray, new_shape, operation='avg'):
+    """
+    Bins an ndarray in all axes based on the target shape, by summing or
+        averaging.
+    Number of output dimensions must match number of input dimensions.
+    Example
+    -------
+    >>> m = np.arange(0,100,1).reshape((10,10))
+    >>> n = bin_ndarray(m, new_shape=(5,5), operation='sum')
+    >>> print(n)
+    [[ 22  30  38  46  54]
+     [102 110 118 126 134]
+     [182 190 198 206 214]
+     [262 270 278 286 294]
+     [342 350 358 366 374]]
+    """
+    if not operation.lower() in ['sum', 'mean', 'average', 'avg']:
+        raise ValueError("Operation {} not supported.".format(operation))
+    if ndarray.ndim != len(new_shape):
+        raise ValueError("Shape mismatch: {} -> {}".format(ndarray.shape,
+                                                           new_shape))
+    compression_pairs = [(d, c//d) for d, c in zip(new_shape,
+                                                   ndarray.shape)]
+    flattened = [l for p in compression_pairs for l in p]
+    print flattened
+    ndarray = ndarray.reshape(flattened)
+    for i in range(len(new_shape)):
+        if operation.lower() == "sum":
+            ndarray = ndarray.sum(-1*(i+1))
+        elif operation.lower() in ["mean", "average", "avg"]:
+            ndarray = ndarray.mean(-1*(i+1))
+    return ndarray
+
+
+# Convolution functions
 def normgauss(sig, x=None, xc=0.):
     """Normalized Gaussian function.
 
@@ -263,15 +293,226 @@ def convnorm(x, arr, pattern):
     return _np.convolve(pattern, arr)[cut:-cut] * dx
 
 
-def BBlbd(T, lbd=None):
-    """ Black body radiation as function of lambda. CGS units (erg s-1 sr−1 cm−3).
+# 3D Coordinates manipulation (rotation)
+def cart2sph(x, y, z):
+    """ Cartesian to spherical coordinates.
 
-    INPUT: lambda vector in cm. If None, lbd = _np.arange(1000, 10000, 100) *
-    1e-8 #Angs -> cm"""
-    if lbd is None:
-        lbd = _np.arange(1000, 10000, 100) * 1e-8  # Angs -> cm
-    ft = h.cgs * c.cgs / (lbd * kB.cgs * T)
-    return 2 * h.cgs * c.cgs**2 / (lbd**5 * (_np.exp(ft) - 1))
+    INPUT: arrays of same length
+
+    OUTPUT: arrays """
+    r = _np.sqrt(x**2 + y**2 + z**2)
+    idx = _np.where(r == 0)
+    r[idx] = 1e-9
+    th = _np.arccos(z / r)
+    phi = _np.arctan2(y, x)
+    # ind = (y<0) & (x<0)
+    # phi[ind] = phi+_np.pi
+    return r, th, phi
+
+
+def sph2cart(r, th, phi):
+    """  Spherical to Cartesian coordinates.
+
+    INPUT: arrays of same length
+
+    OUTPUT: arrays """
+    x = r * _np.sin(th) * _np.cos(phi)
+    y = r * _np.sin(th) * _np.sin(phi)
+    z = r * _np.cos(th)
+    return x, y, z
+
+
+def cart_rot(x, y, z, ang_xy, ang_yz, ang_zx):
+    """ Apply rotation in Cartesian coordinates.
+
+    INPUT: 3 arrays of same length, 3 angles (float, in radians).
+
+    OUTPUT: arrays """
+    rotmtx = _np.array([ [_np.cos(ang_zx) * _np.cos(ang_xy), -_np.cos(ang_yz) *
+        _np.sin(ang_xy) + _np.sin(ang_yz) * _np.sin(ang_zx) * _np.cos(ang_xy),
+        _np.sin(ang_yz) * _np.sin(ang_xy) + _np.cos(ang_yz) * _np.sin(ang_zx) *
+        _np.cos(ang_xy)],
+        [_np.cos(ang_zx) * _np.sin(ang_xy), _np.cos(ang_yz) * _np.cos(ang_xy) +
+        _np.sin(ang_yz) * _np.sin(ang_zx) * _np.sin(ang_xy), -_np.sin(ang_yz) *
+        _np.cos(ang_xy) + _np.cos(ang_yz) + _np.sin(ang_zx) * _np.sin(ang_xy)],
+        [-_np.sin(ang_zx), _np.sin(ang_yz) * _np.cos(ang_zx), _np.cos(ang_yz) *
+        _np.cos(ang_zx)] ])
+    vec = _np.array([x, y, z])
+    return _np.dot(rotmtx, vec)
+
+
+def rotate_coords(x, y, theta, ox, oy):
+    """Rotate arrays of coordinates x and y by theta radians about the
+    point (ox, oy).
+
+    This routine was inspired on a http://codereview.stackexchange.com post.
+    """
+    s, c = _np.sin(theta), _np.cos(theta)
+    x, y = _np.asarray(x) - ox, _np.asarray(y) - oy
+    return x * c - y * s + ox, x * s + y * c + oy
+
+
+def rotate_image(src, theta, ox=None, oy=None, fill=0):
+    """Rotate the image src by theta radians about (ox, oy).
+    Pixels in the result that don't correspond to pixels in src are
+    replaced by the value fill.
+
+    This routine was inspired on a http://codereview.stackexchange.com post.
+    """
+    # Images have origin at the top left, so negate the angle.
+    theta = -theta
+
+    # Dimensions of source image. Note that scipy.misc.imread loads
+    # images in row-major order, so src.shape gives (height, width).
+    sh, sw = src.shape
+    if ox is None:
+        ox = sw/2
+    if oy is None:
+        oy = sh/2
+
+    # Rotated positions of the corners of the source image.
+    cx, cy = rotate_coords([0, sw, sw, 0], [0, 0, sh, sh], theta, ox, oy)
+
+    # Determine dimensions of destination image.
+    dw, dh = (int(_np.ceil(c.max() - c.min())) for c in (cx, cy))
+
+    # Coordinates of pixels in destination image.
+    dx, dy = _np.meshgrid(_np.arange(dw), _np.arange(dh))
+
+    # Corresponding coordinates in source image. Since we are
+    # transforming dest-to-src here, the rotation is negated.
+    sx, sy = rotate_coords(dx + cx.min(), dy + cy.min(), -theta, ox, oy)
+
+    # Select nearest neighbour.
+    sx, sy = sx.round().astype(int), sy.round().astype(int)
+
+    # Mask for valid coordinates.
+    mask = (0 <= sx) & (sx < sw) & (0 <= sy) & (sy < sh)
+
+    # Create destination image.
+    dest = _np.empty(shape=(dh, dw), dtype=src.dtype)
+
+    # Copy valid coordinates from source image.
+    dest[dy[mask], dx[mask]] = src[sy[mask], sx[mask]]
+
+    # Fill invalid coordinates.
+    dest[dy[~mask], dx[~mask]] = fill
+
+    return dest
+
+
+# Lists and strings manipulation
+def keys_values(keys, text, delimiter='_'):
+    """ Return the values in a string coded as *KeyValueDelimiter*. The keys 
+    do not need to be in order in the text. 
+
+    Important! The text can not start with a keyword (if it is the case, add 
+    a delimiter first) and it must have a delimiter after the last key. 
+
+    TODO: Relax the important message considering starting with the first key 
+    and a sign as last delimiter.
+
+    Example: 
+
+    .. code:: python
+
+        keys = ['M', 'ob', 'H', 'Z', 'b']
+        text = 'Be_M04.20_ob1.30_H0.30_Z0.014_bE_Ell.txt'
+
+        print( phc.keys_values(keys, text) )
+        # 
+    """
+    d = delimiter
+    vals = []
+    for k in keys:
+        afterk = text[text.find(d+k)+len(d+k):]
+        vals.append( afterk[:afterk.find(d)] )
+    return vals
+
+
+def fltTxtOccur(s, lines, n=1, seq=1, after=False, asstr=False):
+    """ Return the seq-th float of the line after the n-th
+    occurrence of `s` in the array `lines`.
+
+    INPUT: s=string, lines=array of strings, n/seq=int (starting at 1)
+
+    OUTPUT: float"""
+    fltregex = r'[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?'
+    if after:
+        occur = [x[x.find(s) + len(s):] for x in lines if x.find(s) > -1]
+    else:
+        occur = [x for x in lines if x.find(s) > -1]
+    out = _np.NaN
+    if len(occur) >= n:
+        occur = occur[n - 1]
+        out = _re.findall(fltregex, occur)[seq - 1]
+    if not asstr:
+        out = float(out)
+    return out
+
+
+def strrep(seq, n, newseq):
+    """ Insert `newseq` at position `n` of the string `seq`.
+
+    seq[n] = seq[:n]+newseq+seq[n+1:]
+
+    Note: the string at the position `n` is replaced!!!
+
+    OUTPUT: string
+    """
+    return seq[:n] + newseq + seq[n + 1:]
+
+
+def find_nearest(array, value, bigger=None, idx=False):
+    """ Find nearest VALUE in the array and return it.
+
+    INPUT: array, value
+
+    OUTPUT: closest value (array dtype)
+    """
+    if bigger is None:
+        array = _np.array(array)
+        idx = (_np.abs(array - value)).argmin()
+        found = array[idx]
+    elif bigger:
+        found = _np.min([x for x in array if x > value])
+        idx = _np.where(array == found)
+    elif not bigger:
+        found = _np.max([x for x in array if x < value])
+        idx = _np.where(array == found)
+    else:
+        print('# ERROR at bigger!!')
+    # return
+    if not idx:
+        return found
+    else:
+        return idx[0]
+
+
+def nan_helper(y):
+    """Helper to handle indices and logical indices of NaNs.
+
+    Input:
+        - y, 1d numpy array with possible NaNs
+    Output:
+        - nans, logical indices of NaNs
+        - index, a function, with signature indices= index(logical_indices),
+          to convert logical indices of NaNs to 'equivalent' indices
+    Example:
+        >>> # linear interpolation of NaNs
+        >>> nans, x= nan_helper(y)
+        >>> y[nans]= np.interp(x(nans), x(~nans), y[~nans])
+    """
+    return _np.isnan(y), lambda z: z.nonzero()[0]
+
+
+# Angular coordinates and dates manipulation
+def dtflag():
+    """ Return a "datetime" flag, i.e., a string the the current date and time
+    formated as yyyymmdd-hhMM."""
+    now = _dt.datetime.now()
+    return '{0}{1:02d}{2:02d}-{3:02d}{4:02d}{5:02d}'.format(now.year, 
+        now.month, now.day, now.hour, now.minute, now.second)
 
 
 def longdate2MJD(ldate):
@@ -282,35 +523,10 @@ def longdate2MJD(ldate):
     return mjd + hms2fracday(hms)
 
 
-def recsearch(path, star, fstr):
-    """
-    Do a recursive search in PATH, looking inside `*star*` folders for
-    matching `fstr` (fullpath/night/star/files structure).
-
-    Alternatively, one can use _os.walk(path).
-
-    INPUT: path (string), folder (star, string), files (fstr, string)
-
-    OUTPUT: list of strings
-    """
-    outfilelist = []
-    nights = [o for o in _os.listdir(path) if _os.path.isdir('{0}/{1}'.format(
-        path, o))]
-    for night in nights:
-        targets = [o for o in _os.listdir('%s/%s' % (path, night)) if
-            _os.path.isdir('%s/%s/%s' % (path, night, o))]
-        for target in targets:
-            if target.find(star) > -1:
-                files = _glob('%s/%s/%s/*%s' % (path, night, target, fstr))
-                for file in files:
-                    outfilelist += [file]
-    return outfilelist
-
-
 def hms2fracday(hms):
     """ Enter hour:min:sec (string) and return fraction of a day (float) """
     hms = _np.array(hms.split(':'), dtype='float')
-    return (hms[0] + 60 * hms[1] + 3600 * hms[2]) / 24.
+    return (hms[0] + hms[1]/60. + hms[2]/3600) / 24.
 
 
 def fracday2hms(frac):
@@ -383,6 +599,8 @@ def gentkdates(mjd0, mjd1, fact, step, dtstart=None):
             dtstart = _dt.datetime(
                 *_jdcal.jd2gcal(_jdcal.MJD_0, mjd0)[:3]).date()
     # define step 'position' and vector:
+    if dtstart.day > 28:
+        dtstart = dtstart.replace(day=28)
     basedata = [dtstart.year, dtstart.month, dtstart.day]
     dates = []
     mjd = mjdst
@@ -436,51 +654,104 @@ def gentkdates(mjd0, mjd1, fact, step, dtstart=None):
     return dates
 
 
-def cart2sph(x, y, z):
-    """ Cartesian to spherical coordinates.
-
-    INPUT: arrays of same length
-
-    OUTPUT: arrays """
-    r = _np.sqrt(x**2 + y**2 + z**2)
-    idx = _np.where(r == 0)
-    r[idx] = 1e-9
-    th = _np.arccos(z / r)
-    phi = _np.arctan2(y, x)
-    # ind = (y<0) & (x<0)
-    # phi[ind] = phi+_np.pi
-    return r, th, phi
+def deg2rad(deg=1.):
+    """ :math:`1^\circ=\frac{pi}{180}` """
+    return deg*_np.pi/180.
 
 
-def sph2cart(r, th, phi):
-    """  Spherical to Cartesian coordinates.
-
-    INPUT: arrays of same length
-
-    OUTPUT: arrays """
-    x = r * _np.sin(th) * _np.cos(phi)
-    y = r * _np.sin(th) * _np.sin(phi)
-    z = r * _np.cos(th)
-    return x, y, z
+def rad2deg(rad=1.):
+    """ :math:`1^\circ=\frac{pi}{180}` """
+    return rad*180./_np.pi
 
 
-def cart_rot(x, y, z, ang_xy, ang_yz, ang_zx):
-    """ Apply rotation in Cartesian coordinates.
+def arcmin2rad(arm=1.):
+    """ :math:`1'=\frac{pi}{10800}` """
+    return arm*_np.pi/10800.
 
-    INPUT: 3 arrays of same length, 3 angles (float, in radians).
 
-    OUTPUT: arrays """
-    rotmtx = _np.array([ [_np.cos(ang_zx) * _np.cos(ang_xy), -_np.cos(ang_yz) *
-        _np.sin(ang_xy) + _np.sin(ang_yz) * _np.sin(ang_zx) * _np.cos(ang_xy),
-        _np.sin(ang_yz) * _np.sin(ang_xy) + _np.cos(ang_yz) * _np.sin(ang_zx) *
-        _np.cos(ang_xy)],
-        [_np.cos(ang_zx) * _np.sin(ang_xy), _np.cos(ang_yz) * _np.cos(ang_xy) +
-        _np.sin(ang_yz) * _np.sin(ang_zx) * _np.sin(ang_xy), -_np.sin(ang_yz) *
-        _np.cos(ang_xy) + _np.cos(ang_yz) + _np.sin(ang_zx) * _np.sin(ang_xy)],
-        [-_np.sin(ang_zx), _np.sin(ang_yz) * _np.cos(ang_zx), _np.cos(ang_yz) *
-        _np.cos(ang_zx)] ])
-    vec = _np.array([x, y, z])
-    return _np.dot(rotmtx, vec)
+def rad2arcmin(rad=1.):
+    """ :math:`1^\circ=\frac{pi}{10800}` """
+    return rad*10800./_np.pi
+
+
+def arcsec2rad(ars=1.):
+    """ :math:`1'=\frac{pi}{648000}` """
+    return ars*_np.pi/648000.
+
+
+def rad2arcsec(rad=1.):
+    """ :math:`1^\circ=\frac{pi}{648000}` """
+    return rad*648000./_np.pi
+
+
+def mas2rad(mas=1.):
+    """ :math:`1^\circ=\frac{pi}{648000000}` """
+    return mas*_np.pi/648000000.
+
+
+def rad2mas(rad=1.):
+    """ :math:`1^\circ=\frac{pi}{648000000}` """
+    return rad*648000000./_np.pi
+
+
+def deg2mas(deg=1.):
+    """ :math:`1^\circ = 3600000` """
+    return deg*3600000.
+
+
+def mas2deg(mas=1.):
+    """ :math:`1^\circ = 3600000` """
+    return mas/3600000.
+
+
+# Files manipulation
+def sortfile(file, quiet=False):
+    """ Sort the file. """
+    f0 = open(file, 'r')
+    lines = f0.readlines()
+    f0.close()
+    lines.sort()
+    f0 = open(file, 'w')
+    f0.writelines(lines)
+    f0.close()
+    if not quiet:
+        print('# File {0} sorted!'.format(file))
+    return
+
+
+def outfld(fold='hdt'):
+    """
+    Check and create (if necessary) an (sub)folder - generally used for output.
+
+    INPUT: *fold=string
+
+    OUTPUT: *system [folder creation]
+    """
+    if not _os.path.exists(fold):
+        _os.system('mkdir {0}'.format(fold))
+    return
+
+
+def trimpathname(file):
+    """Trim the full path string to return path and filename.
+
+    INPUT: full file path
+
+    OUTPUT: folder path, filename (strings)"""
+    return [ file[:file.rfind('/') + 1], file[file.rfind('/') + 1:] ]
+
+
+def rmext(name):
+    """Remove the extension of a filename.
+    Criteria: last `.` sets the extension.
+
+    INPUT: filename (string)
+
+    OUTPUT: filename without extension (string) """
+    i = name.rfind('.')
+    if i == -1:
+        return name
+    return name[:name.rfind('.')]
 
 
 def readrange(file, i0, ie):
@@ -502,106 +773,107 @@ def readrange(file, i0, ie):
     return lines
 
 
-def interLinND(X, X0, X1, Fx, disablelog=False):
+def splitfilelines(n, file):
+    """ Break the *file* into *n* files. It also erases the expression "qsub ".
+
+    OUTPUT: `file_##.txt` """
+    f0 = open(file)
+    lines = f0.readlines()
+    f0.close()
+    lines.sort()
+    lines = [line.replace('qsub ', '') for line in lines]
+    outname = trimpathname(file)[1].replace('.sh', '')
+    N = len(lines)
+    for i in range(n):
+        f0 = open('{0}_{1:02d}.txt'.format(outname, i), 'w')
+        f0.writelines(lines[i * N / n:(i + 1) * N / n])
+        f0.close()
+    print('# {0} files created!'.format(n))
+    return
+
+
+def recsearch(root='./', fstr=[''], allfstr=True):
     """
-    | N-dimensional linear interpolation in LOG space!!
-    | Pay attention: Fx must always be > 0. If not, put disablelog=True.
+    Do a recursive search in `root` looking for files containg `fstr`.
 
-    | INPUT:
-    | X = position in with the interpolation is desired;
-    | X0 = minimal values of the interval;
-    | X1 = maximum values of the inveral
-    | Fx = function values along the interval, ORDERED BY DIMENSTION.
-    | Example: Fx = [F00, F01, F10, F11]
+    `fstr` must be a list!
 
-    OUTPUT: interpolated value (float)"""
-    X = _np.array(X)
-    X0 = _np.array(X0)
-    X1 = _np.array(X1)
-    Xd = (X - X0) / (X1 - X0)
-    DX = _np.array([ [(1 - x), x] for x in Xd ])
-    #
-    i = 0
-    F = 0
-    for prod in _product(*DX):
-        if disablelog:
-            F += Fx[i] * _np.product(prod)
-        else:
-            F += _np.log(Fx[i]) * _np.product(prod)
-        i += 1
-    #
-    if not disablelog:
-        return _np.exp(F)
+    If `allfstr` is True, *all* itens in fstr must be in the path+file names 
+    structure. If False, *any* of the itens must be.
+
+    INPUT: root (string), fstr (list of strings)
+
+    OUTPUT: list of strings
+    """
+    outflist = []
+    for i in range(len(fstr)):
+        fstr[i] = fstr[i].replace('*', '')
+    for root, subfolders, files in _os.walk(root):
+        for f in files:
+            if allfstr:
+                if all(x in f for x in fstr):
+                    outflist.append(root+'/'+f)
+            else:
+                if any(x in f for x in fstr):
+                    outflist.append(root+'/'+f)
+    return outflist
+
+
+def renlist(root, newr):
+    """ The routine changes each A_STR_B to A_NEW_B inside the running folder.
+    """
+    files = _glob('*{0}*'.format(root))
+    files.sort()
+    for i in range(len(files)):
+        _os.system(
+            'mv "' + files[i] + '" "' + files[i].replace(root, newr) + '"' )
+        print("# " + files[i] + " renamed to: " +
+              files[i].replace(root, newr) )
+    return
+
+
+# Plot-related
+def civil_ticks(ax, civcfg=[1, 'm'], civdt=None, tklab=True):
+    """ Add the civil ticks in the axis.  """
+    if civdt is not None:
+        civdt = _dt.datetime(civdt[0], civdt[1], civdt[2]).date()
+    mjd0, mjd1 = ax.get_xlim()
+    dtticks = gentkdates(mjd0, mjd1, civcfg[0], civcfg[1], dtstart=civdt)
+    mjdticks = [_jdcal.gcal2jd(date.year, date.month, date.day)[1] for 
+        date in dtticks]
+    ax2 = ax.twiny()
+    ax2.set_xlim( ax.get_xlim() )
+    ax2.set_xticks(mjdticks)
+    if tklab:
+        ax2.set_xticklabels([date.strftime("%d %b %y") for date in dtticks])
     else:
-        return F
+        ax2.set_xticklabels([])
+    return ax
 
 
-def rotate_coords(x, y, theta, ox, oy):
-    """Rotate arrays of coordinates x and y by theta radians about the
-    point (ox, oy).
-
-    This routine was inspired on a http://codereview.stackexchange.com post.
-    """
-    s, c = _np.sin(theta), _np.cos(theta)
-    x, y = _np.asarray(x) - ox, _np.asarray(y) - oy
-    return x * c - y * s + ox, x * s + y * c + oy
-
-
-def rotate_image(src, theta, ox=None, oy=None, fill=0):
-    """Rotate the image src by theta radians about (ox, oy).
-    Pixels in the result that don't correspond to pixels in src are
-    replaced by the value fill.
-
-    This routine was inspired on a http://codereview.stackexchange.com post.
-    """
-    # Images have origin at the top left, so negate the angle.
-    theta = -theta
-
-    # Dimensions of source image. Note that scipy.misc.imread loads
-    # images in row-major order, so src.shape gives (height, width).
-    sh, sw = src.shape
-    if ox is None:
-        ox = sw/2
-    if oy is None:
-        oy = sh/2
-
-    # Rotated positions of the corners of the source image.
-    cx, cy = rotate_coords([0, sw, sw, 0], [0, 0, sh, sh], theta, ox, oy)
-
-    # Determine dimensions of destination image.
-    dw, dh = (int(_np.ceil(c.max() - c.min())) for c in (cx, cy))
-
-    # Coordinates of pixels in destination image.
-    dx, dy = _np.meshgrid(_np.arange(dw), _np.arange(dh))
-
-    # Corresponding coordinates in source image. Since we are
-    # transforming dest-to-src here, the rotation is negated.
-    sx, sy = rotate_coords(dx + cx.min(), dy + cy.min(), -theta, ox, oy)
-
-    # Select nearest neighbour.
-    sx, sy = sx.round().astype(int), sy.round().astype(int)
-
-    # Mask for valid coordinates.
-    mask = (0 <= sx) & (sx < sw) & (0 <= sy) & (sy < sh)
-
-    # Create destination image.
-    dest = _np.empty(shape=(dh, dw), dtype=src.dtype)
-
-    # Copy valid coordinates from source image.
-    dest[dy[mask], dx[mask]] = src[sy[mask], sx[mask]]
-
-    # Fill invalid coordinates.
-    dest[dy[~mask], dx[~mask]] = fill
-
-    return dest
+def savefig(fig, figname=None, fmt=['png'], keeppt=False):
+    """ Standard way of saving a figure in PyHdust. """
+    if figname is None or figname == "":
+        figname = dtflag()
+    elif not keeppt:
+        figname = figname.replace('.', 'p')
+    if _os.path.basename(figname) == figname:
+        figname = _os.getcwd() + '/' + figname
+    for f in fmt:
+        print('# Saved {1}.{0}'.format(f, figname))
+        fig.savefig(figname+'.{0}'.format(f), transparent=True)
+    _plt.close(fig)
+    return
 
 
 def normGScale(val, min=None, max=None, log=False):
-    """ Return the normalized value(s) between 0 and 255 (gray scale).
+    """ Return the normalized values of a given array to 0 and 255 (gray 
+    scale).
 
     If `log` then the normalization is done in this scale.
 
-    If `min` and `max` are not set, it is assumed that val is a list.
+    If `min` and `max` are not set, it is assumed that the values are from the 
+    list.
 
     .. code::
 
@@ -666,86 +938,6 @@ def gradColor(val, cmapn='jet', min=None, max=None, log=False):
     return cmap(val)
 
 
-def nan_helper(y):
-    """Helper to handle indices and logical indices of NaNs.
-
-    Input:
-        - y, 1d numpy array with possible NaNs
-    Output:
-        - nans, logical indices of NaNs
-        - index, a function, with signature indices= index(logical_indices),
-          to convert logical indices of NaNs to 'equivalent' indices
-    Example:
-        >>> # linear interpolation of NaNs
-        >>> nans, x= nan_helper(y)
-        >>> y[nans]= np.interp(x(nans), x(~nans), y[~nans])
-    """
-    return _np.isnan(y), lambda z: z.nonzero()[0]
-
-
-def chi2calc(mod, obs, sig_obs=None, npar=1):
-    """ Calculate the chi2 """
-    if sig_obs is None:
-        sig_obs = _np.ones(len(obs))
-    return _np.sum( (mod - obs)**2 / sig_obs**2 ) / (len(sig_obs) - npar - 1)
-
-
-def optim(p0, x, y, yerr, func, errfunc=None):
-    """ Do scipy.optimize.leastsq minimization. 
-    Default error function is the chi2 function.
-
-    Requirements:
-        - func(p, x) is a previously user defined function.
-        - len(x)=len(y)=len(yerr)
-
-    Output:
-        best parameters (p), chi2_red value
-    """
-    if errfunc is None:
-        def errfunc(p, x, y, yerr, func):
-            """ error function """
-            # return np.sum( ((y-func(p,x))/yerr)**2 )
-            return ((y - func(p, x)) / yerr)**2
-    bestp, tmp = _optimize.leastsq(errfunc, p0, args=(x, y, yerr, func))
-    c2red = chi2calc(func(bestp, x), y, yerr, npar=len(p0))
-    return bestp, c2red
-
-
-def optim2(p0, x, y, yerr, func):
-    """ Do scipy.optimize.curve_fit minimization. 
-    It returns errors to the parameters fitting!!!
-
-    Requirements:
-        - func(p, x) is a previously user defined function.
-        - len(x)=len(y)=len(yerr)
-
-    Output:
-        best params (p), params errors (perr), chi2_red value
-     """
-    bestp, cov = _optimize.curve_fit(func, x, y, p0=p0, sigma=yerr)
-    c2red = chi2calc(func(x, bestp), y, yerr, npar=len(p0))
-    return bestp, _np.sqrt(_np.diag(cov)), c2red
-
-
-def splitfilelines(n, file):
-    """ Break the *file* into *n* files. It also erases the expression "qsub ".
-
-    OUTPUT: `file_##.txt` """
-    f0 = open(file)
-    lines = f0.readlines()
-    f0.close()
-    lines.sort()
-    lines = [line.replace('qsub ', '') for line in lines]
-    outname = trimpathname(file)[1].replace('.sh', '')
-    N = len(lines)
-    for i in range(n):
-        f0 = open('{0}_{1:02d}.txt'.format(outname, i), 'w')
-        f0.writelines(lines[i * N / n:(i + 1) * N / n])
-        f0.close()
-    print('# {0} files created!'.format(n))
-    return
-
-
 def cycles(i=0, ctype='cor'):
     """ Cycle between values of the phc.colors, phc.line_styles and 
     phc.filled_markers lists. 
@@ -764,68 +956,76 @@ def cycles(i=0, ctype='cor'):
         return filled_markers[_np.mod(i, len(filled_markers))]
 
 
-def bin_ndarray(ndarray, new_shape, operation='avg'):
+colors = ['Black', 'Blue', 'Green', 'red', 'orange', 'brown', 'purple', 'gray',
+    'dodgerblue', 'lightgreen', 'tomato', 'yellow', 'peru', 'MediumVioletRed',
+    'LightSteelBlue', 'cyan', 'darkred', 'olive']
+
+filled_markers = ['o', 'v', '^', '<', '>', '8', 's', 'p', '*', 'h', 'H', 'D', 
+    'd']
+
+line_styles = ['-', '--', ':', '-.']
+
+
+# Physical functions
+def BBlbd(T, lbd=None):
+    """ Black body radiation as function of lambda. CGS units (erg s-1 sr−1 cm−3).
+
+    INPUT: lambda vector in cm. If None, lbd = _np.arange(1000, 10000, 100) *
+    1e-8 #Angs -> cm"""
+    if lbd is None:
+        lbd = _np.arange(1000, 10000, 100) * 1e-8  # Angs -> cm
+    ft = h.cgs * c.cgs / (lbd * kB.cgs * T)
+    return 2 * h.cgs * c.cgs**2 / (lbd**5 * (_np.exp(ft) - 1))
+
+
+def lawkep(M=None, m=None, P=None, a=None):
+    """ Kepler law calc. But `None` on what you what to calc.
+
+    Units are in *Solar System* one, what is, masses in Msun and `P` in years.
+
+    `a` is the distance between the two bodies, measured in AU. 
+
+    One can also use the Centre-of-Mass equation a1*M1 = a2*M2 to relate the 
+    two masses. 
     """
-    Bins an ndarray in all axes based on the target shape, by summing or
-        averaging.
-    Number of output dimensions must match number of input dimensions.
-    Example
-    -------
-    >>> m = np.arange(0,100,1).reshape((10,10))
-    >>> n = bin_ndarray(m, new_shape=(5,5), operation='sum')
-    >>> print(n)
-    [[ 22  30  38  46  54]
-     [102 110 118 126 134]
-     [182 190 198 206 214]
-     [262 270 278 286 294]
-     [342 350 358 366 374]]
+    if M is None:
+        m *= Msun.cgs
+        P *= yr.cgs
+        a *= au.cgs
+        return 4*_np.pi**2*a**3/P**2/G.cgs-m
+    elif m is None:
+        M *= Msun.cgs
+        P *= yr.cgs
+        a *= au.cgs
+        return 4*_np.pi**2*a**3/P**2/G.cgs-M
+    elif P is None:
+        M *= Msun.cgs
+        m *= Msun.cgs
+        a *= au.cgs
+        return _np.sqrt( 4*_np.pi**2*a**3/(M+m)/G.cgs )
+    elif a is None:
+        M *= Msun.cgs
+        m *= Msun.cgs
+        P *= yr.cgs
+        return ( P**2*G.cgs*(M+m)/4/_np.pi**2 )**(1./3)
+    else:
+        print('# Wrong call of phc.lawkep! Put `None` calc that qtt.')
+        return None
+
+
+class Constant(object):
+
+    """ Class for a physical/astronomical constant
     """
-    if not operation.lower() in ['sum', 'mean', 'average', 'avg']:
-        raise ValueError("Operation {} not supported.".format(operation))
-    if ndarray.ndim != len(new_shape):
-        raise ValueError("Shape mismatch: {} -> {}".format(ndarray.shape,
-                                                           new_shape))
-    compression_pairs = [(d, c//d) for d, c in zip(new_shape,
-                                                   ndarray.shape)]
-    flattened = [l for p in compression_pairs for l in p]
-    print flattened
-    ndarray = ndarray.reshape(flattened)
-    for i in range(len(new_shape)):
-        if operation.lower() == "sum":
-            ndarray = ndarray.sum(-1*(i+1))
-        elif operation.lower() in ["mean", "average", "avg"]:
-            ndarray = ndarray.mean(-1*(i+1))
-    return ndarray
 
+    def __init__(self, cgs, SI, unitscgs='', info='No available description'):
+        self.cgs = cgs
+        self.SI = SI
+        self.unitscgs = unitscgs
+        self.info = info
 
-def deg2rad(deg=1.):
-    """ :math:`1^\circ=\frac{pi}{180}` """
-    return deg*_np.pi/180.
-
-
-def rad2deg(rad=1.):
-    """ :math:`1^\circ=\frac{pi}{180}` """
-    return rad*180./_np.pi
-
-
-def arcmin2rad(arm=1.):
-    """ :math:`1'=\frac{pi}{10800}` """
-    return arm*_np.pi/10800.
-
-
-def rad2arcmin(rad=1.):
-    """ :math:`1^\circ=\frac{pi}{1800}` """
-    return rad*10800./_np.pi
-
-
-def arcsec2rad(ars=1.):
-    """ :math:`1'=\frac{pi}{648000}` """
-    return ars*_np.pi/648000.
-
-
-def rad2arcsec(rad=1.):
-    """ :math:`1^\circ=\frac{pi}{648000}` """
-    return rad*648000./_np.pi
+    def __repr__(self):
+        return str('{0:.7e} in {1} (cgs)'.format(self.cgs, self.unitscgs))
 
 
 # Constants
@@ -857,23 +1057,14 @@ sigT = Constant(
 au = Constant(1.49597870691e13, 1.49597870691e11, 'cm', 'Astronomical unit')
 pc = Constant(3.08567758e18, 3.08567758e16, 'cm', 'Parsec')
 ly = Constant(9.4605284e17, 9.4605284e15, 'cm', 'Light year')
+Mea = Constant(5.9722e27, 5.9722e24, 'g', 'Earth mass')
+Rea = Constant(6371.e5, 6371.e3, 'cm', 'Earth radius')
 Msun = Constant(1.9891e33, 1.9891e30, 'g', 'Solar mass')
 Rsun = Constant(6.961e10, 696100e3, 'cm', 'Solar radius')
 Lsun = Constant(3.846e33, 3.846e26, 'erg s-1', 'Solar luminosity')
 Tsun = Constant(5778., 5778., 'K', 'Solar Temperature')
 
-deg2mas = Constant(
-    206264.806247, 206264.806247, 'arcsec/rad', 'arcsec per radian')
 yr = Constant(3.15569e7, 3.15569e7, 'sec', 'year')
-
-colors = ['Black', 'Blue', 'Green', 'red', 'orange', 'brown', 'purple', 'gray',
-    'dodgerblue', 'lightgreen', 'tomato', 'yellow', 'peru', 'MediumVioletRed',
-    'LightSteelBlue', 'cyan', 'darkred', 'olive']
-
-filled_markers = ['o', 'v', '^', '<', '>', '8', 's', 'p', '*', 'h', 'H', 'D', 
-    'd']
-
-line_styles = ['-', '--', ':', '-.']
 
 bestars = [
     # The numbers below are based on Harmanec 1988
@@ -890,6 +1081,7 @@ bestars = [
     ['B8',   11561, 02.91, 02.44,   109, 2.61],
     ['B9',   10351, 02.52, 02.25,   591, 2.39],
     ['B9.5',  9886, 02.38, 02.17,    46, 2.32]]
+
 
 # MAIN ###
 if __name__ == "__main__":

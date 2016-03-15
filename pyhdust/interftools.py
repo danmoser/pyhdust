@@ -27,13 +27,13 @@ import numpy as _np
 from glob import glob as _glob
 import pyhdust.phc as _phc
 import pyhdust.tabulate as _tab
+import pyhdust.oifits as _oifits
 from pyhdust.spectools import linfit as _linfit
 
 try:
     import matplotlib.pyplot as _plt
     import matplotlib.ticker as _mtick
     import pyfits as _pyfits
-    import pyhdust.oifits as _oifits
 except:
     print('# Warning! matplotlib and/or pyfits module not installed!!!')
 
@@ -418,7 +418,7 @@ def data2fitscube(data, obs, lbdc, xmax, dist, zoom=0, outname='model',
 
 def genSquare(size=64, halfside=16, center=(0, 0)):
     """
-    Generate a square inside a squa_re.
+    Generate a square inside a square.
 
     If size is not even, the unit square will not be centered.
 
@@ -444,7 +444,7 @@ def genGaussian(size=64, sig=64 / 8, center=(0, 0)):
     """
     Generate a square gaussian kernel (non-normalized).
 
-    size is the length of a side of the square (pixels)
+    `size` is the length of a side of the square (pixels)
 
     center is the relative position
     """
@@ -480,13 +480,17 @@ def setspacecoords(nx, ny, rad_per_pixel, xc=0., yc=0.):
 
 def fastnumvis(img, lbd, Bproj, PA, rad_per_pixel, PAdisk=90.):
     """
-    For a given image (in phys.units = rad_per_pixel) and a interf. setup,
+    For a given image (in phys.units = `rad_per_pixel`) and a interf. setup,
         it returns the visibility and phase.
 
-    PA and PAdisk in degrees.
+    `PA` and `PAdisk` in degrees.
+
+    `Bproj` and `lbd` must have the same units (m).
 
     output: complexVis, VisAmp, VisPhase
     """
+    if lbd < 1e-6 or lbd > 4e-6:
+        print('# Warning! *fastnumvis*(lbd) is {.1e} m!'.format(lbd))
     PA = PA - PAdisk + 90.
     idx = _np.where(img > 0)
 
@@ -547,6 +551,43 @@ def mapinterf(modf, im=0, obs=0, iflx=0, dist=10, PA=0., B=100., PAdisk=90.,
     DP = DP - avg
     # DP = _spt.linfit(lbdc, DP)-1.
     # lbdc = _spt.air2vac(lbdc*1e4)*1e-4
+    return lbdc, V2, DP
+
+
+def datinterf(data, lbdc, xmax, im=0, obs=0, iflx=0, dist=10, PA=0., B=100., 
+    PAdisk=90., quiet=False, normV2=False):
+    """ Return Squared Visibilities (V2) and Diferential Phases (DP) for a given
+    `hdust` data file.
+
+    If *.map file format, it takes `iflx` image layer.
+
+    input: data (np.ndarray), `dist` (float, parsecs)
+
+    output: lbdc, V2, DP (float arrays) """
+    pixsize = 2 * xmax[im] / _np.shape(data)[-1]
+    rad_per_pixel = _np.double(pixsize * 6.96E10 / (dist * 3.08567758E18))
+    npts = len(lbdc)
+    V2 = _np.zeros(npts)
+    DP = _np.zeros(npts)
+    for i in range(npts):
+        if len(_np.shape(data)) == 5:
+            img = data[im, obs, i, ::-1, :]
+        else:
+            img = data[im, obs, i, :, :, iflx]
+        tmp, V, DP[i] = fastnumvis(img, lbdc[i] * 1e-6, B, PA, rad_per_pixel,
+            PAdisk=PAdisk)
+        V2[i] = V**2
+    # avg = (DP[0]+DP[-1])/2.
+    ssize = int(.05 * len(DP))
+    if ssize == 0:
+        ssize = 1
+    medx0, medx1 = _np.average(DP[:ssize]), _np.average(DP[-ssize:])
+    avg = (medx0 + medx1) / 2.
+    DP = DP - avg
+    # DP = _spt.linfit(lbdc, DP)-1.
+    # lbdc = _spt.air2vac(lbdc*1e4)*1e-4
+    if normV2:
+        V2 = _linfit(lbdc, V2)
     return lbdc, V2, DP
 
 
@@ -860,7 +901,523 @@ def plot_pionier(oidata, ffile='last_run', fmt=['png'], legend=True,
     return
 
 
-def plot_pionier_res(oidata, model, ffile=None, fmt=['png'], legend=True,
+def plot_uv(ax, oidata, colors, names, PAs=[-180, 180], PAsrev=False, 
+    PArv=[0, 0], xlim=None):
+    """ Plot uv map of a given oidata.vis """
+    for vis2 in oidata.vis2:
+        u = vis2.ucoord
+        v = vis2.vcoord
+        ulbd = u / vis2.wavelength.eff_wave
+        vlbd = v / vis2.wavelength.eff_wave
+        PA = _np.arctan2(u, v) * 180 / _np.pi
+        if (vis2.station[0] and vis2.station[1]):
+            label = vis2.station[0].sta_name + vis2.station[1].sta_name
+        else:
+            label = 'unnamed'
+        # [u,-u] = W > E
+        # [-u,u] = E < W
+        # label=label,
+        if (PA >= PAs[0] and PA <= PAs[1]) or (PAsrev and 
+            (PA >= PArv[0]) and PA <= PArv[1]):
+            ax.plot([ulbd, -ulbd], [vlbd, -vlbd], '.', 
+                color=colors[names.index(label)])
+    ax.set_ylabel(u'B$_{proj}$/$\lambda$')
+    # ax2 = ax.twiny()
+    if xlim is not None:
+        ax.set_xlim(xlim)
+    # ax2.set_xlim(ax.get_xlim())
+    # ax.get_xaxis().set_ticklabels([])
+    ax.xaxis.tick_top()
+    ax.axis('equal')
+    ax.yaxis.set_major_formatter(_mtick.FormatStrFormatter('%.0e'))
+    ax.xaxis.set_major_formatter(_mtick.FormatStrFormatter('%.0e'))
+    # _plt.grid(b=True, linestyle=':')
+    ax.locator_params(nbins=5)
+    return ax
+
+
+def plot_baseline(ax, oidata, colors, names, PAs=[-180, 180], PAsrev=False, 
+    PArv=[0, 0], xlim=None, legend=True):
+    leg = []
+    for vis2 in oidata.vis2:
+        u = vis2.ucoord
+        v = vis2.vcoord
+        PA = _np.arctan2(u, v) * 180 / _np.pi
+        if (vis2.station[0] and vis2.station[1]):
+            label = vis2.station[0].sta_name + vis2.station[1].sta_name
+        else:
+            label = 'unnamed'
+        color = colors[names.index(label)]
+        # [u,-u] = W > E
+        # [-u,u] = E < W
+        if (PA >= PAs[0] and PA <= PAs[1]) or (PAsrev and 
+            (PA >= PArv[0]) and PA <= PArv[1]):
+            if label not in leg:
+                ax.plot([u, -u], [v, -v], '.', label=label, color=color)
+                leg.append(label)
+            else:
+                ax.plot([u, -u], [v, -v], '.', color=color)  # label=label,
+        # names.append(vis2.target.target)
+    # names = list(_np.unique(names))
+    ax.xaxis.tick_top()
+    ax.yaxis.tick_right()
+    ax.yaxis.set_label_position("right")
+    ax.set_ylabel(u'B$_{proj}$ (m)')
+    if xlim is not None:
+        ax.set_xlim(xlim)
+    ax.axis('equal')
+    # _plt.grid(b=True, linestyle=':', alpha=alp)
+    if legend:
+        handles, labels = ax.get_legend_handles_labels()
+        idx = [labels.index(i) for i in list(names)]
+        handles = _np.array(handles)[idx]
+        ax.legend(handles, names, prop={'size': 8}, numpoints=1, loc='best', 
+            framealpha=0.5, fancybox=True, labelspacing=0.1)
+    # ax.yaxis.set_major_formatter(_mtick.FormatStrFormatter('%.0e'))
+    # ax.xaxis.set_major_formatter(_mtick.FormatStrFormatter('%.0e'))
+    # ax.ticklabel_format(useOffset=False)  # style='sci' DO NOT WORK
+    ax.locator_params(nbins=5)
+    return ax
+
+
+def plot_pio_res(oidata, modellist, outname=None, fmt=['png'], legend=True,
+    obsdeg=[60.6], distpc=42.75, quiet=False, xlim=None, bindata=0, 
+    PAs=[-180, 180], PAsrev=True, shv2sum=False):
+    """ Obs-Model comparison for PIONIER
+
+    `legend`: ?
+
+    `obsdeg`: ?
+
+    `bindata`: ?
+
+    `PArev`: Plot the reverse of the observed PAs
+
+    `shv2sum`: ?
+    """
+    # Calculate the reverse PAs
+    if PAsrev:
+        PArv = [0, 0]
+        if PAs[0] < 0:
+            PArv[0] = PAs[0] + 180
+        else:
+            # PArv[0] == 0 must be -180!
+            PArv[0] = PAs[0] - 180
+        if PAs[1] <= 0:
+            # PArv[1] == 0 must be +180!
+            PArv[1] = PAs[1] + 180
+        else:
+            PArv[1] = PAs[1] - 180
+    # Create array names and colors
+    names = []
+    Blist = []
+    for vis2 in oidata.vis2:
+        u = vis2.ucoord
+        v = vis2.vcoord
+        if (vis2.station[0] and vis2.station[1]):
+            label = vis2.station[0].sta_name + vis2.station[1].sta_name
+        else:
+            label = 'unnamed'
+        if label not in names:
+            names += [label]
+            Blist.append([])
+        i = names.index(label)
+        Blist[i].extend([_np.sqrt(u**2+v**2)])
+    for i in range(len(Blist)):
+        Blist[i] = _np.average(Blist[i])
+    names = list(_np.array(names)[_np.argsort(Blist)])
+    Blist.sort()
+    colors = _phc.gradColor(Blist, min=Blist[0]-(Blist[-1]-Blist[0])*0.1, 
+        cmapn='plasma_r')
+    # color = _phc.colors[names.index(label)]
+    # Create Plot
+    # fig, axs = _plt.subplots(3, 2)
+    # New plot creating
+    fig = _plt.figure()
+    axs = [[[], ]*2 for i in range(3)]
+    ls, cs = (9, 2)
+    axs[0][0] = _plt.subplot2grid((ls, cs), (0, 0), rowspan=2)
+    axs[0][1] = _plt.subplot2grid((ls, cs), (0, 1), rowspan=2)
+    axs[1][0] = _plt.subplot2grid((ls, cs), (2, 0), rowspan=4)
+    axs[1][1] = _plt.subplot2grid((ls, cs), (2, 1), rowspan=4)
+    axs[2][0] = _plt.subplot2grid((ls, cs), (6, 0), rowspan=3)
+    axs[2][1] = _plt.subplot2grid((ls, cs), (6, 1), rowspan=3)
+    # Plot of axis 1 = uv (B/lbd) map
+    axs[0][0] = plot_uv(ax=axs[0][0], oidata=oidata, PAs=PAs, PAsrev=PAsrev, 
+        PArv=PArv, colors=colors, names=names)
+    axs[0][1] = plot_baseline(ax=axs[0][1], oidata=oidata, PAs=PAs, 
+        PAsrev=PAsrev, PArv=PArv, colors=colors, names=names, legend=legend)
+    axs[1][0], axs[1][1] = plot_v2_res(axs[1][0], axs[1][1], oidata=oidata, 
+        colors=colors, names=names, modfiles=modellist, obsdeg=obsdeg, 
+        dist=distpc, xlim=xlim, PAs=PAs, PAsrev=PAsrev, PArv=PArv, bindata=0, 
+        quiet=quiet, alp=.75, printsum=False)
+    axs[2][0], axs[2][1] = plot_phi3_res(axs[2][0], axs[2][1], oidata=oidata, 
+        colors=colors, names=names, modfiles=modellist, obsdeg=obsdeg, 
+        dist=distpc, xlim=xlim, PAs=PAs, PAsrev=PAsrev, PArv=PArv, bindata=0, 
+        quiet=quiet, alp=.75, printsum=False)
+    # _plt.tight_layout()
+    axs[1][1].set_xlim(axs[1][0].get_xlim())
+    axs[2][0].set_xlim(axs[1][0].get_xlim())
+    axs[2][1].set_xlim(axs[1][0].get_xlim())
+
+    _plt.subplots_adjust(wspace=0.1)
+    if outname is None:
+        outname = _phc.dtflag()
+    _phc.savefig(fig, figname=outname)
+    return
+
+
+def plot_v2_img(ax, oidata, img, xlim=None, quiet=False, alp=.75):
+    """ IMG from LitPRO
+    
+    TODO: scales
+    """
+    ms = 3
+    ax.plot([0, 1e8], [0, 0], ls='--', zorder=0, color='k', alpha=alp)
+    # Loop in vis2 creating the following vectors
+    x, y, yerr, Blist, PAlist, lbd = ([], [], [], [], [], [])
+    for vis2 in oidata.vis2:
+        u = vis2.ucoord
+        v = vis2.vcoord
+        if (vis2.station[0] and vis2.station[1]):
+            label = vis2.station[0].sta_name + vis2.station[1].sta_name
+        else:
+            label = 'unnamed'
+        color = _phc.cycles(list(oidata.vis2).index(vis2))
+        B = _np.sqrt(u**2 + v**2)
+        PA = _np.arctan2(u, v) * 180 / _np.pi
+        # if (PA >= PAs[0] and PA <= PAs[1]) or (PAsrev and (PA >= PArv[0]) and 
+        #     PA <= PArv[1]):
+            # if bindata <= 0:
+        lbd.extend(vis2.wavelength.eff_wave)
+        x.extend(B/vis2.wavelength.eff_wave)
+        y.extend(vis2.vis2data)
+        yerr.extend(vis2.vis2err)
+        Blist.extend([B]*len(vis2.wavelength.eff_wave))
+        PAlist.extend([PA]*len(vis2.wavelength.eff_wave))
+        ax.errorbar(B / vis2.wavelength.eff_wave, 
+            vis2.vis2data, yerr=vis2.vis2err, fmt='o', markersize=ms, 
+            color=color, alpha=alp)
+    # # 
+    fits = _pyfits.open(img)
+    dx = fits[0].header['CDELT1']
+    dy = fits[0].header['CDELT2']
+    if dx != dy:
+        print('# ERROR! Differential spatial scales for {0}'.format(img))
+        return
+    if fits[0].header['CUNIT1'].lower().find('deg') > -1:
+        rad_per_pixel = dx*_phc.deg2rad()
+    else:
+        rad_per_pixel = dx
+    data = fits[0].data
+    data = data[:, :]
+    V2 = []
+    for i in range(len(x)):
+        tmp, V, ph = fastnumvis(data, lbd[i], Blist[i], PAlist[i], 
+            rad_per_pixel, PAdisk=90.)
+        V2.append(V**2)
+    ax.plot(x, V2, color='k', ls="", markersize=ms*2, marker="d")
+    return ax, V2
+
+
+def plot_t3_img(ax, oidata, img, xlim=None, quiet=False, alp=.75):
+    """ IMG from LitPRO
+    
+    TODO: scales
+    """
+    ms = 3
+    ax.plot([0, 1e8], [0, 0], ls='--', zorder=0, color='k', alpha=alp)
+    # Loop in vis2 creating the following vectors
+    x, y, yerr, Blist, PAlist, Bmax = ([], [], [], [], [], [])
+    for t3 in oidata.t3:
+        u1 = t3.u1coord
+        v1 = t3.v1coord
+        u2 = t3.u2coord
+        v2 = t3.v2coord
+        if _np.sqrt(u1**2 + v1**2) > _np.sqrt(u2**2 + v2**2):
+            u = u1
+            v = v1
+        else:
+            u = u2
+            v = v2
+        B = _np.sqrt(u**2 + v**2)
+        PA = _np.arctan2(u, v) * 180.0 / _np.pi
+        B = _np.tile(B, len(t3.wavelength.eff_wave))
+        PA = _np.tile(PA, len(t3.wavelength.eff_wave))
+        Bmax.extend(B)
+        lbsz = len(t3.wavelength.eff_wave)
+        x.extend(B/t3.wavelength.eff_wave)
+        y.extend(t3.t3phi)
+        yerr.extend(t3.t3phierr)
+        B1, B2 = ( _np.sqrt(u1**2 + v1**2), _np.sqrt(u2**2 + v2**2) )
+        Blist.extend([[B1, B2] for i in range(lbsz)])
+        PA1, PA2 = ( _np.arctan2(u1, v1) * 180.0 / _np.pi, 
+            _np.arctan2(u2, v2) * 180.0 / _np.pi )
+        PAlist.extend([[PA1, PA2] for i in range(lbsz)])
+        ax.errorbar(x, y, yerr=yerr, color='k', fmt='o', markersize=ms, 
+            alpha=alp)
+    # # 
+    fits = _pyfits.open(img)
+    dx = fits[0].header['CDELT1']
+    dy = fits[0].header['CDELT2']
+    if dx != dy:
+        print('# ERROR! Differential spatial scales for {0}'.format(img))
+        return
+    if fits[0].header['CUNIT1'].lower().find('deg') > -1:
+        rad_per_pixel = dx*_phc.deg2rad()
+    else:
+        rad_per_pixel = dx
+    data = fits[0].data
+    lblist = _np.array(Bmax) / _np.array(x) 
+    t3 = []
+    for i in range(len(x)):
+        tmp, V, ph = fastnumvis3(data, lblist[i], Blist[i], PAlist[i], 
+            rad_per_pixel, PAdisk=90.)
+        t3.append(ph)
+    ax.plot(x, t3, color='k', ls="", markersize=ms*2, marker="d")
+    return ax, t3
+
+
+def plot_v2_res(ax, ax2, oidata, colors, names, modfiles, obsdeg=None, 
+    dist=None, xlim=None, PAs=[-180, 180], PAsrev=False, PArv=[0, 0], 
+    bindata=0, quiet=False, alp=.75, printsum=False):
+    """ datas = models! 
+
+    `bindata` refers to vis2.wavelength.eff_wave!! In other words: the binning
+    only works on simultaneous observations with different :math:`\lambda`.
+    """
+    ms = 3
+    ax2.plot([0, 1e8], [0, 0], ls='--', zorder=0, color='k', alpha=alp)
+    # Loop in vis2 creating the following vectors
+    x, y, yerr, Blist, PAlist = ([], [], [], [], [])
+    for vis2 in oidata.vis2:
+        u = vis2.ucoord
+        v = vis2.vcoord
+        if (vis2.station[0] and vis2.station[1]):
+            label = vis2.station[0].sta_name + vis2.station[1].sta_name
+        else:
+            label = 'unnamed'
+        color = colors[names.index(label)]
+        B = _np.sqrt(u**2 + v**2)
+        PA = _np.arctan2(u, v) * 180 / _np.pi
+        if (PA >= PAs[0] and PA <= PAs[1]) or (PAsrev and (PA >= PArv[0]) and 
+            PA <= PArv[1]):
+            if bindata <= 0:
+                x.extend(B/vis2.wavelength.eff_wave)
+                y.extend(vis2.vis2data)
+                yerr.extend(vis2.vis2err)
+                Blist.extend([B]*len(vis2.wavelength.eff_wave))
+                PAlist.extend([PA]*len(vis2.wavelength.eff_wave))
+                ax.errorbar(B / vis2.wavelength.eff_wave, 
+                    vis2.vis2data, yerr=vis2.vis2err, fmt='o', markersize=ms, 
+                    color=color, alpha=alp)
+            # Individual plot to keep each BASELINE color
+            if bindata > 0:
+                binned = _phc.bindata(B / vis2.wavelength.eff_wave, 
+                    vis2.vis2data, bindata, yerr=vis2.vis2err)  # xrange=xlim)
+                ax.errorbar(binned[0], binned[1], yerr=binned[2], 
+                    fmt='o', markersize=ms, color=color)
+    # Plotting models
+    if obsdeg is None:
+        obs = [0]
+    else:
+        obs = obsdeg
+    mcolors = _phc.gradColor(_np.arange(len(modfiles)+2), cmapn='Greens_r')
+    # mcolors = _phc.gradColor(_np.arange(len(modfiles)+2), cmapn='coolwarm')
+    mcolors = _np.array(mcolors)[1:-1]
+    for mod in modfiles:
+        midx = modfiles.index(mod)
+        data, obslist, lbdc, Ra, xmax = readmap(mod, quiet=quiet)
+        data = data[..., ::-1, :, :]
+        # It is just taking the length. Ignore the indexes
+        pixsize = 2 * xmax[0] / len(data[0, 0, 0, :, :, 0])
+        # *60.*60.*1000.*180./_np.pi)
+        rad_per_pixel = _np.double(pixsize * _phc.Rsun.cgs / (dist * 
+            _phc.pc.cgs))
+        lblist = _np.array(Blist) / _np.array(x) 
+        for deg in obs:
+            V2 = []
+            ob = list(obslist[::2]).index(_phc.find_nearest(obslist[::2], deg))
+            if _np.abs(obslist[::2][ob] - deg) > 1:
+                print('# The difference of angles is bigger than 1 deg!!!')
+                print('# Input: {0:.1f}; Nearest model: {1:.1f}'.format(
+                    deg, obslist[::2][ob]))
+            for i in range(len(x)):
+                j = list(lbdc * 1e-6).index(_phc.find_nearest(lbdc * 1e-6, 
+                    lblist[i]))
+                if _np.abs(lbdc[j]*1e-6 - lblist[i]) > 0.1*1e-6:
+                    print('# The difference of lambd is bigger than 0.1 um!!!')
+                    print('# Input: {0:.1f}; Nearest model: {1:.1f}'.format(
+                        lblist[i], lbdc[j]*1e-6))
+                # lbcalc = lbdc[j]*1e-6
+                tmp, V, phvar = fastnumvis(data[0, ob, j, :, :, 0], lblist[i], 
+                    Blist[i], PAlist[i], rad_per_pixel, PAdisk=(216.9 + 90.))
+                V2 += [V**2]
+            fig2 = _plt.figure()
+            imshowl(data[0, ob, j, :, :, 0])
+            _phc.savefig(fig2, figname='{0}_{1}'.format(_os.path.basename(mod), 
+                ob))
+            V2 = _np.array(V2) 
+            if bindata <= 0:
+                ax.plot(x, V2, color=mcolors[midx], alpha=alp*.5, ls='',
+                    zorder=1, markersize=ms,
+                    marker=_phc.cycles(obs.index(deg)+1, 'mk'))
+                ax2.plot(x, (y - V2) / yerr, ls='', color=mcolors[midx],
+                    markersize=ms, marker=_phc.cycles(obs.index(deg)+1, 'mk'), 
+                    zorder=1, alpha=alp)
+                if True:
+                    chi2 = _phc.chi2calc(V2, y, yerr)
+                    ax2.text(0.4, 0.87, r'$\sum={0:.1f}$'.format(chi2), 
+                        transform=ax2.transAxes)
+            if printsum:
+                v2sum = _np.sum((y - V2) / yerr)
+                print v2sum
+                ax2.text(0.4, 0.87, r'$\sum={0:.1f}$'.format(v2sum), 
+                    transform=ax2.transAxes)
+    # Blim = ax3.get_xlim()
+    # ax4.set_xlim(Blim)
+    # ax1.xaxis.get_major_formatter().set_useOffset(False)
+    ax.xaxis.set_major_formatter(_mtick.FormatStrFormatter('%.2e'))
+    # ax3.get_xaxis().set_visible(False)
+    # ax4.get_xaxis().set_visible(False)
+    ax.get_xaxis().set_ticklabels([])
+    ax.set_ylim([0, 1.1])
+    ax.set_ylabel(u'$V$ $^2$')
+    if xlim is not None:
+        ax.set_xlim(xlim)
+    ax.grid(b=True, linestyle=':', alpha=alp)
+    ax2.set_ylim([-6, 6])
+    ax2.get_xaxis().set_ticklabels([])
+    ax2.set_ylabel(u'$V$ $^2$(data-mod)/err')
+    if xlim is not None:
+        ax2.set_xlim(xlim)
+    ax2.yaxis.tick_right()
+    ax2.yaxis.set_label_position("right")
+    ax2.grid(b=True, linestyle=':', alpha=alp)
+    return ax, ax2
+
+
+def plot_phi3_res(ax, ax2, oidata, colors, names, modfiles, obsdeg=None, 
+    dist=None, xlim=None, PAs=[-180, 180], PAsrev=False, PArv=[0, 0], 
+    bindata=0, quiet=False, alp=.75, printsum=False):
+    """ modfiles = models! 
+
+    `bindata` refers to vis2.wavelength.eff_wave!! In other words: the binning
+    only works on simultaneous observations with different :math:`\lambda`.
+    """
+    ms = 3
+    ax.plot([0, 1e8], [0, 0], ls='--', zorder=0, color='k', alpha=alp)
+    ax2.plot([0, 1e8], [0, 0], ls='--', zorder=0, color='k', alpha=alp)
+    color = 'black'
+    x, y, yerr, Blist, PAlist, Bmax = ([], [], [], [], [], [])
+    for t3 in oidata.t3:
+        u1 = t3.u1coord
+        v1 = t3.v1coord
+        u2 = t3.u2coord
+        v2 = t3.v2coord
+        if _np.sqrt(u1**2 + v1**2) > _np.sqrt(u2**2 + v2**2):
+            u = u1
+            v = v1
+        else:
+            u = u2
+            v = v2
+        B = _np.sqrt(u**2 + v**2)
+        PA = _np.arctan2(u, v) * 180.0 / _np.pi
+        B = _np.tile(B, len(t3.wavelength.eff_wave))
+        PA = _np.tile(PA, len(t3.wavelength.eff_wave))
+        if (PA[0] >= PAs[0] and PA[0] <= PAs[1]) or (PAsrev and PA[0] >= 
+            PArv[0] and PA[0] <= PArv[1]):
+                Bmax.extend(B)
+                lbsz = len(t3.wavelength.eff_wave)
+                x.extend(B/t3.wavelength.eff_wave)
+                y.extend(t3.t3phi)
+                yerr.extend(t3.t3phierr)
+                B1, B2 = ( _np.sqrt(u1**2 + v1**2), _np.sqrt(u2**2 + v2**2) )
+                Blist.extend([[B1, B2] for i in range(lbsz)])
+                PA1, PA2 = ( _np.arctan2(u1, v1) * 180.0 / _np.pi, 
+                    _np.arctan2(u2, v2) * 180.0 / _np.pi )
+                PAlist.extend([[PA1, PA2] for i in range(lbsz)])
+    if bindata <= 0:
+        ax.errorbar(x, y, yerr=yerr, color=color, fmt='o', markersize=ms)
+    else:
+        binned = _phc.bindata(B / t3.wavelength.eff_wave, t3.t3phi, 
+            bindata, yerr=t3.t3phierr, xrange=xlim)
+        ax.errorbar(binned[0], binned[1], yerr=binned[2], 
+            color=color, fmt='o', markersize=ms)
+    mcolors = _phc.gradColor(_np.arange(len(modfiles)+2), cmapn='Greens_r')
+    # mcolors = _phc.gradColor(_np.arange(len(modfiles)+2), cmapn='coolwarm')
+    mcolors = _np.array(mcolors)[1:-1]
+    if obsdeg is None:
+        obs = [0]
+    else:
+        obs = obsdeg
+    for mod in modfiles:
+        k = modfiles.index(mod)
+        data, obslist, lbdc, Ra, xmax = readmap(mod, quiet=quiet)
+        # It is just taking the length. Ignore the indexes
+        pixsize = 2 * xmax[0] / len(data[0, 0, 0, :, :, 0])
+        # *60.*60.*1000.*180./_np.pi)
+        rad_per_pixel = _np.double( pixsize * _phc.Rsun.cgs / (dist * 
+            _phc.pc.cgs))
+        lblist = _np.array(Bmax) / _np.array(x) 
+        for deg in obs:
+            t3m = []
+            ob = list(obslist[::2]).index(_phc.find_nearest(obslist[::2], deg))
+            if _np.abs(obslist[::2][ob] - deg) > 1:
+                print('# The difference of angles is bigger than 1 deg!!!')
+                print('# Input: {0:.1f}; Nearest model: {1:.1f}'.format(
+                    deg, obslist[::2][ob]))
+            for i in range(len(x)):
+                j = list(lbdc * 1e-6).index(_phc.find_nearest(lbdc * 1e-6, 
+                    lblist[i]))
+                if _np.abs(lbdc[j]*1e-6 - lblist[i]) > 0.1*1e-6:
+                    print('# The difference of lambd is bigger than 0.1 um!!!')
+                    print('# Input: {0:.1f}; Nearest model: {1:.1f}'.format(
+                        lblist[i], lbdc[j]*1e-6))
+                # lcalc = lbdc[j] * 1e-6
+                tmp, V, phvar = fastnumvis3(data[0, ob, j, :, :, 0], lblist[i], 
+                    Blist[i], PAlist[i], rad_per_pixel, PAdisk=(216.9 + 90.))
+                t3m += [phvar]
+            t3m = _np.array(t3m)
+            if bindata <= 0:
+                ax.plot(x, t3m, color=mcolors[k], markersize=ms, ls='',
+                    marker=_phc.cycles(obs.index(deg)+1, 'mk'), alpha=alp)
+                ax2.plot(x, (y - t3m) / yerr, color=mcolors[k],
+                    markersize=ms, marker=_phc.cycles(obs.index(deg)+1, 'mk'), 
+                    ls='', alpha=alp)  # alpha=.6,
+                if True:
+                    chi2 = _phc.chi2calc(t3m, y, yerr)
+                    ax2.text(0.4, 0.87, r'$\sum={0:.1f}$'.format(chi2), 
+                        transform=ax2.transAxes)
+            else:
+                binned = _phc.bindata(Bmax / lbds, t3m, bindata, xrange=xlim)
+                ax5.plot(binned[0], binned[1], color=mcolors[k], alpha=.9)
+                binned = _phc.bindata(Bmax / lbds, (y - t3m) / yerr, bindata)
+                ax6.plot(binned[0], binned[1],
+                    color=mcolors[k], markersize=ms, marker='o', ls='')  
+                    # alpha=.6,                
+    # ax5.get_xaxis().set_ticklabels([])
+    # labels = ax5.get_yticks().tolist()
+    # labels[-1] = ''
+    # ax5.set_yticklabels(labels)
+    if xlim is not None:
+        ax.set_xlim(xlim)
+        ax.set_xlim(xlim)
+    # ymax = _np.max(_np.abs(ax5.get_ylim()))
+    # ax5.set_ylim([-1.05 * ymax, 1.05 * ymax])
+    ax.set_xlabel(u'B$_{proj}$/$\lambda$')
+    ax.set_ylabel(u'$\phi_{123}$ (deg.)')
+    ax.grid(b=True, linestyle=':', alpha=alp)
+    ax2.yaxis.tick_right()
+    ax2.yaxis.set_label_position("right")
+    ax2.set_ylim([-6, 6])
+    ax2.set_xlabel(u'B$_{proj}$/$\lambda$')
+    ax2.set_ylabel(u'$\phi_{123}$(data-mod)/err')
+    ax2.grid(b=True, linestyle=':', alpha=alp)
+    return ax, ax2
+
+
+def plot_pionier_res(oidata, model, outname=None, fmt=['png'], legend=True,
     obs=None, dist=42.75, quiet=True, xlim=None, bindata=0, 
     PArange=[-180, 180], PArr=True, shv2sum=False):
     """  Obs-Model comparison for PIONIER
@@ -871,8 +1428,8 @@ def plot_pionier_res(oidata, model, ffile=None, fmt=['png'], legend=True,
     """
     # PArange = _np.array(PArange)*2*_np.pi/180
     v2sum = 0.
-    if ffile is None:
-        ffile = _phc.dtflag()
+    if outname is None:
+        outname = _phc.dtflag()
     if PArr:
         PArv = [0, 0]
         if PArange[0] < 0:
@@ -973,6 +1530,7 @@ def plot_pionier_res(oidata, model, ffile=None, fmt=['png'], legend=True,
     plotid = 324
     ax4 = fig.add_subplot(plotid)
     ax4.plot([0, 1e8], [0, 0], ls='--')
+    print('ax4')
     for vis2 in oidata.vis2:
         u = vis2.ucoord
         v = vis2.vcoord
@@ -1001,6 +1559,7 @@ def plot_pionier_res(oidata, model, ffile=None, fmt=['png'], legend=True,
         if obs is None:
             obs = [0]
         for mod in model:
+            print vis2
             k = model.index(mod)
             data, obslist, lbdc, Ra, xmax = readmap(mod, quiet=quiet)
             pixsize = 2 * xmax[0] / len(data[0, 0, 0, :, :, 0])
@@ -1051,7 +1610,7 @@ def plot_pionier_res(oidata, model, ffile=None, fmt=['png'], legend=True,
     if xlim is not None:
         ax3.set_xlim(xlim)
     ax3.grid(b=True, linestyle=':', alpha=alp)
-    ax4.set_ylim([-9, 9])
+    ax4.set_ylim([-6, 6])
     ax4.get_xaxis().set_ticklabels([])
     ax4.set_ylabel(u'$V$ $^2$(data-mod)/err')
     if xlim is not None:
@@ -1072,6 +1631,7 @@ def plot_pionier_res(oidata, model, ffile=None, fmt=['png'], legend=True,
     ax6 = fig.add_subplot(plotid)
     ax5.plot(Blim, [0, 0], ls='--')
     ax6.plot(Blim, [0, 0], ls='--')
+    print('ax6')
     for t3 in oidata.t3:
         u1 = t3.u1coord
         v1 = t3.v1coord
@@ -1170,7 +1730,7 @@ def plot_pionier_res(oidata, model, ffile=None, fmt=['png'], legend=True,
     ax6.set_xlim(Blim)
     ymax = _np.max(_np.abs(ax5.get_ylim()))
     ax5.set_ylim([-1.05 * ymax, 1.05 * ymax])
-    ax6.set_ylim([-9, 9])
+    ax6.set_ylim([-6, 6])
     ax5.set_xlabel(u'B$_{proj}$/$\lambda$')
     ax5.set_ylabel(u'$\phi_{123}$ (deg.)')
     if xlim is not None:
@@ -1182,21 +1742,20 @@ def plot_pionier_res(oidata, model, ffile=None, fmt=['png'], legend=True,
         ax6.set_xlim(xlim)
     ax6.grid(b=True, linestyle=':', alpha=alp)
     # SAVING
-    dir, name = _phc.trimpathname(ffile)
-    name = _phc.rmext(name)
+    # dir, name = _phc.trimpathname(ffile)
+    # name = _phc.rmext(name)
     # _plt.savefig('hdt/{}_{}.png'.format(hdrinfo[0], hdrinfo[2]),
         # transparent=True)
     # _plt.locator_params(axis = 'x', nbins = 7)
     _plt.subplots_adjust(
         left=0.12, right=0.95, top=0.96, bottom=0.09, hspace=.009, wspace=.32)
-    for suf in fmt:
-        _plt.savefig('{0}_res.{1}'.format(name, suf), transparent=True)
-    _plt.close()
+    print('asdhasduhasd')
+    _phc.savefig(fig, figname=outname, fmt=fmt)
     return
 
 
 def plot_oifits(oidata, ffile='last_run', fmt=['png'], xrange=None,
-        legend=True):
+    legend=True):
     """ Standard observational log for AMBER
 
     If the file starts with "PRODUCT_", it searchs for the specs in the "AVG"
@@ -1407,8 +1966,9 @@ def plot_oifits(oidata, ffile='last_run', fmt=['png'], xrange=None,
 def genfinaloifits(oidata, ffile, xrange=None, legend=True):
     """ Standard observational log
     WITH the CORRECTED SPECTRUM
+
+    TODO
     """
-    # TODO
     print('# WAIT... Work in progress')
     return
 
@@ -1470,19 +2030,19 @@ def checkESOdownload(path=None):
 
 
 def printinfo(file, extract=False):
-    """ Print AMBER OIFITS observational log, as appendix of Faes, D. M. (2015)
+    """ Print AMBER OIFITS observational info.
 
-    DATE-OBS    MJD  B   PA  B   PA  B  PA"""
+    If `extract` is False, output is:
+    - DATE-OBS, MJD, Target, B1, PA1, B2, PA2, B3, PA3.
+
+    If True, output is:
+    - [DATE-OBS, MJD, Target, B1, PA1, B2, PA2, B3, PA3], WAVE, DPlist, V2list
+
+    Where, DPlist = [DP1, eDP1, DP2, eDP2, DP3, eDP3] and V2list = [V2_1, 
+    eV2_1, V2_2, eV2_2, V2_3, eV2_3].
+    """
     oidata = _oifits.open(file, quiet='True')
     info = list(oidata.hdrinfo.returninfo())
-    info2 = []
-    for vis in oidata.vis:
-        info2 += ['{0:.1f}'.format(_np.sqrt(vis.ucoord**2 + vis.vcoord**2))]
-        # info2+= ['{0:.1f}'.format(_np.arctan2(vis.ucoord , vis.vcoord) *
-            # 180.0 / _np.pi % 180.0)]
-        info2 += ['{0:.1f}'.format(_np.arctan2(vis.ucoord, vis.vcoord) *
-            180.0 / _np.pi % 180.0)]
-        # print vis.ucoord, vis.vcoord
     if extract:
         wav = []
         info2 = []
@@ -1504,6 +2064,15 @@ def printinfo(file, extract=False):
         return [info[2][:10], '{0:.7f}'.format(info[1]), info[0]] + \
             info2, wav, info3, info4
     else:
+        info2 = []
+        for vis in oidata.vis:
+            info2 += ['{0:.1f}'.format(_np.sqrt(vis.ucoord**2 + 
+                vis.vcoord**2))]
+            # info2+= ['{0:.1f}'.format(_np.arctan2(vis.ucoord , vis.vcoord) *
+                # 180.0 / _np.pi % 180.0)]
+            info2 += ['{0:.1f}'.format(_np.arctan2(vis.ucoord, vis.vcoord) *
+                180.0 / _np.pi % 180.0)]
+            # print vis.ucoord, vis.vcoord        
         return [info[2][:10], '{0:.7f}'.format(info[1]), info[0]] + info2
 
 
@@ -1718,6 +2287,6 @@ def fBBcor(T):
     return 1.015 - 0.301 * (T / 1e4) + 0.064 * (T / 1e4)**2.
 
 
-# MAIN
+# MAIN ###
 if __name__ == "__main__":
     pass

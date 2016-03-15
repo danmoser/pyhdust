@@ -3,6 +3,10 @@
 """
 PyHdust *beatlas* module: BeAtlas specific variables and functions.
 
+Module contains:
+- BAstar class
+- BAmod class
+
 :license: GNU GPL v3.0 https://github.com/danmoser/pyhdust/blob/master/LICENSE
 """
 import os as _os
@@ -21,16 +25,18 @@ class BAstar(object):
 
     """ BeAtlas source star filename structure.
 
-    See BAmod.
+    The filename must follow this structure (the sequence in filename is not 
+    importante):
+    - keys: ['M', 'ob', 'H', 'Z', 'b']
+    - last-key (no identifier): 'Ell'
+
+    See BAmod, phc.keys_values.
     """
 
     def __init__(self, f0):
-        self.M = f0[f0.find('_M') + 2:f0.find('_M') + 7]
-        self.ob = f0[f0.find('_ob') + 3:f0.find('_ob') + 7]
-        self.Z = f0[f0.find('_Z') + 2:f0.find('_Z') + 7]
-        self.H = f0[f0.find('_H') + 2:f0.find('_H') + 6]
-        self.beta = f0[f0.find('_Z') + 8:f0.find('_Z') + 10]
-        self.shape = f0[f0.rfind('_') + 1:f0.rfind('_') + 4]
+        vals = _phc.keys_values(['M', 'ob', 'H', 'Z', 'b'], f0)
+        self.M, self.ob, self.H, self.Z, self.beta = vals
+        self.shape = f0.split('_')[-1].replace('.txt', '')
         self._f0 = f0
 
     def __repr__(self):
@@ -50,15 +56,12 @@ class BAmod(BAstar):
 
     def __init__(self, f0):
         """ Class initialiser """
-        BAstar.__init__(self, f0)
+        BAstar.__init__(self, f0[f0.find('Be_'):])
         self.param = False
         if f0.find('_PL') > -1:
-            self.n = f0[f0.find('_PLn') + 4:f0.find('_PLn') + 7]
             self.param = True
-        self.sig = f0[f0.find('_sig') + 4:f0.find('_sig') + 8]
-        self.h = f0[f0.find('_h') + 2:f0.find('_h') + 5]
-        self.Rd = f0[f0.find('_Rd') + 3:f0.find('_Rd') + 8]
-    #
+            self.n = _phc.keys_values(['PLn'], f0)
+        self.sig, self.h, self.Rd = _phc.keys_values(['sig', 'h', 'Rd'], f0)
 
     def build(self, ctrlarr, listpars):
         """ Set full list of parameters. """
@@ -86,7 +89,6 @@ class BAmod(BAstar):
             else:
                 if i == 7:
                     self.cosi = _phc.find_nearest(listpars[i], ctrlarr[i])
-    #
 
     def getidx(self, minfo):
         """ Find index of current model in minfo array. """
@@ -103,7 +105,7 @@ class BAmod(BAstar):
                 (minfo[:, 6] == self.h) & (minfo[:, -1] == self.cosi)
         return self.idx
 
-
+# Only for H=0.30
 vrots = [
     [259.759, 354.834, 417.792, 464.549, 483.847],
     [252.050, 346.163, 406.388, 449.818, 468.126],
@@ -128,6 +130,7 @@ h = [72]
 Rd = [50.0]
 sig0 = _np.logspace(_np.log10(0.02), _np.log10(4.0), 7)
 
+# Only for H=0.30
 Tp11 = _np.array([28905.8, 26945.8, 25085.2, 23629.3, 22296.1, 20919.7,
 18739.3, 17063.8, 15587.7, 14300.3, 13329.9, 12307.1])
 Ms = _np.array([14.6, 12.5, 10.8, 9.6, 8.6, 7.7, 6.4, 5.5, 4.8, 4.2, 3.8, 3.4],
@@ -447,23 +450,6 @@ def interpolBA(params, ctrlarr, lparams, minfo, models, param=True):
     X0 = parlims[:, 0]
     X1 = parlims[:, 1]
     return _phc.interLinND(params, X0, X1, outmodels)
-
-
-# def correltable(pos):
-    # """ Create the correlation table of Domiciano de Souza+ 2014. """
-    # nwalkers = len(pos)
-    # ndim = len(pos[0])
-    # fig = _plt.figure()
-    # for i in range(ndim**2):
-        # ax = fig.add_subplot(ndim,ndim,i+1)
-        # if i+1 in [ 1+x*(ndim+1) for x in range(ndim) ]:
-            # ax.hist(pos[:,i/ndim], 20)
-        # else:
-            # ax.plot(pos[:,i/ndim], pos[:,i%ndim], 'o', markersize=2)
-    # _plt.savefig('correl.png', Transparent=True)
-    # _plt.close()
-    # ~ print('# Figure "correl.png" saved!')
-    # return
 
 
 # MAIN ###
