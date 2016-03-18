@@ -23,9 +23,14 @@ import shutil as _shutil
 from glob import glob as _glob
 from inspect import getouterframes as _getouterframes
 from inspect import currentframe as _currentframe
-import pyhdust.phc as _phc 
+import pyhdust.phc as _phc
 import pyhdust.jdcal as _jdcal
 from pyhdust import hdtpath as _hdtpath
+from scipy.optimize import curve_fit as _curve_fit
+from scipy.integrate import simps as _simps
+from scipy.interpolate import interp1d as _interp1d
+import matplotlib as _mpl
+
 #from sys import _argv
 #from matplotlib import rc as _rc
 
@@ -40,14 +45,17 @@ __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
 
 
+_mpl.rcParams['pdf.fonttype']=42
 filters = ['u','b','v','r','i']
+fonts = [20, 17, 17, 14, 13]          # Font sizes for titles, axes labels, axes values, key label of graphs, subplot labels
+
 # Setting an "initial value" for ccd
 ccd = '---'
 
 # Dictionary for the tags entered by the user
 dictags = {0: ['bad modulation','bad-mod'],
            1: ['very bad modulation','very-bad-mod'],
-           2: ['some modulations are incompatible','incomp-mods'],
+           2: ['the pol values have values incompatible from each other','incomp-mods'],
            3: ['some observational problem/error','obs-prob'],
            4: ['polarimeter problem suspected','iagpol-prob'],
            5: ['another relevant problem','other-prob'],
@@ -56,10 +64,17 @@ dictags = {0: ['bad modulation','bad-mod'],
 # Dictionary for the tags assigned automatically
 # If you want to add another value, add inside verout routin also.
 dictests = {0: ['std incompatible with the published','obs!=pub', 'W'],
-            1: ['sig >> theorical_sig','s>>theor_s', 'W'],
+            1: ['sig >> theorical_sig','s>>theor_s', 'OK'],
             2: ['no standard in the night','no-std', 'W'],
+            3: ['standard from another day','oth-day-std', 'W'],
+            4: ['delta theta estimated from another filter','oth-dth', 'W'],
            }
 
+# Dictionary for pre-defined vfilters
+vfil = { 'comp' : ['no-std','iagpol-prob','oth-day-std'],
+         'prob' : ['no-std','iagpol-prob','incomp-mods','obs-prob','other-prob','oth-day-std'],
+         'full' : ['no-std','iagpol-prob','incomp-mods','obs-prob','other-prob','oth-day-std','bad-mod','very-bad-mod'],
+       }
 
 
 #################################################
@@ -67,7 +82,7 @@ dictests = {0: ['std incompatible with the published','obs!=pub', 'W'],
 #################################################
 def stdchk(stdname):
     """
-    Check if the standard star name contains an known name, and return
+    Check if the standard star name contains a known name, and return
     its position in `padroes.txt`.
     """
     lstds = list(_np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str,\
@@ -113,6 +128,12 @@ def thtFactor(MJD):
     It's based on engine of IAGPOL polarimeter.
     If MJD < 57082.5, return -1 (including MJD=-1, for no assigned
     value); otherwise, return +1.
+
+    Theta out from polrap is correct for a WP rotating in
+    'counter-clockwise' direction, then:
+    
+    factor = -1 when WP rotating in clockwise
+    factor = +1 when WP rotating in counter-clockwise
 
     """
 
@@ -194,7 +215,7 @@ def readoutMJD(out, nstar=1):
         ver = outn[i:i+1]
 
     coords = _glob('{0}/coord_*_{1}.{2}.ord'.format(path,f,ver))
-    if len(coords) == 0:
+    if len(coords) == 0 and ccd not in ('301','654'):
         coords = _glob('{0}/coord_*_{1}.ord'.format(path,f))
         if len(coords) == 0:
             coords = _glob('{0}/coord_*_{1}_[0-9]*.ord'.format(path,f))
@@ -203,15 +224,18 @@ def readoutMJD(out, nstar=1):
                         '{1}/coord_*_{2}_*.ord. Verify and run again.\n').format(f,path,f))
                 raise SystemExit(1)
 
-    if len(coords) != 0:
-        try:
+    try:
+        if ccd not in ('301','654'):
             coords = _np.loadtxt(coords[0])
             ang = _np.arctan( (coords[1,1]-coords[0,1])/(coords[1,0]-coords[0,0]) )*180/_np.pi
-            while ang < 0:
-                ang += 180.
-        except:
-            print('# ERROR: Can\'t open coords file {0}/coord_*_{1}_*.ord. Verify and run again.\n'.format(path,f))
-            raise SystemExit(1)
+        else:
+            coords = _np.array([[0.,0.],[0.,0.]])
+            ang = 0.
+        while ang < 0:
+            ang += 180.
+    except:
+        print('# ERROR: Can\'t open coords file {0}/coord_*_{1}_*.ord. Verify and run again.\n'.format(path,f))
+        raise SystemExit(1)
 
     if date != -1:
         if datei == datef:
@@ -226,7 +250,7 @@ def readoutMJD(out, nstar=1):
 #################################################
 #################################################
 #################################################
-def chooseout(objdir, obj, f, nstar=1, sigtol=lambda sig: 1.2*sig):
+def chooseout(objdir, obj, f, nstar=1, sigtol=lambda sig: 1.4*sig):
     """
     Olha na noite, qual(is) *.OUT(s) de um filtro que tem o menor erro.
 
@@ -240,7 +264,7 @@ def chooseout(objdir, obj, f, nstar=1, sigtol=lambda sig: 1.2*sig):
     sigtol sobre o sigma do agrupamento de menor erro, entao usa o agrupamento
     com as N posicoes; do contrario usa o de menor erro.
     Exemplo com 16 posicoes: erro do grupo de 16 posicoes == 0.000230;
-        menor erro == 0.000200. Se sigtol(sig) = 1.2*sig, como
+        menor erro == 0.000200. Se sigtol(sig) = 1.4*sig, como
         sigtol(0.000200) == 0.000240 > 0.000230, usa o agrupamento de 16 posicoes.
 
     O numero de posicoes eh baseado no numero de arquivos *.fits daquele
@@ -258,10 +282,10 @@ def chooseout(objdir, obj, f, nstar=1, sigtol=lambda sig: 1.2*sig):
         the five-numbers concerning to the WP positions (like 16001)
         and ? is some char.
 
-        Return err, out. If not found, return 100.,''.
+        Return err, out. If not found, return 1000.,''.
         """
 
-        err = 100.
+        err = 1000.
         out = ''
         ls = [objdir+'/'+fl for fl in _os.listdir('{0}'.format(objdir)) if _re.search(r'_{0}'. \
                     format(f) + r'_.*_?{0}\..\.out'.format(serie), fl)]
@@ -279,6 +303,9 @@ def chooseout(objdir, obj, f, nstar=1, sigtol=lambda sig: 1.2*sig):
 
 
     npos = len(_glob('{0}/*_{1}_*.fits'.format(objdir,f)))
+    if npos == 0:
+        npos = len(_glob('{0}/{1}/p??0'.format(objdir,f)))
+
     louts = _glob('{0}/*_{1}_*.out'.format(objdir,f))
 
     # Check reduction
@@ -303,7 +330,7 @@ def chooseout(objdir, obj, f, nstar=1, sigtol=lambda sig: 1.2*sig):
         nlast = rest
 
 #    print n, rest, nlast
-    err = [100.]*n
+    err = [1000.]*n
     outs = ['']*n
     # n contem o numero de outs que serao obtidos
     # nlast contem o numero de posicoes para o ultimo out
@@ -318,7 +345,7 @@ def chooseout(objdir, obj, f, nstar=1, sigtol=lambda sig: 1.2*sig):
             serie='{0:02d}{1:03d}'.format(nlast,i*16+1)
 
         err[i], outs[i] = minErrBlk16(serie)
-        errtmp = err[i]   # errtmp==100 if no outfiles were found by minErrBlk16
+        errtmp = err[i]   # errtmp==1000 if no outfiles were found by minErrBlk16
 
         # Tests if there is some better group, with smaller error
         for outi in louts:
@@ -360,7 +387,7 @@ def chooseout(objdir, obj, f, nstar=1, sigtol=lambda sig: 1.2*sig):
 #################################################
 #################################################
 #################################################
-def verout(out, obj, f, nstar=1, verbose=True, delta=2.5):
+def verout(out, obj, f, nstar=1, verbose=True, delta=3.5):
     """
     Function to do tests on outfile 'out' concerning to
     star number 'nstar', object name 'obj' in filter 'f'.
@@ -395,7 +422,7 @@ def verout(out, obj, f, nstar=1, verbose=True, delta=2.5):
     # Some tests.
     if ztest > 10.0:     # Case the object is not a standard, ztest==-1 and tests[0] remains False.
         tests[0] = True
-    if sig_ratio > 3.:
+    if sig_ratio > 6.:
         tests[1] = True
     if not stdchk(obj)[0]:  # Only if object is not a standard star, tests if there exists some standard star for it
         tests[2] = not chkStdLog(f, calc, path=path, delta=delta, verbose=False)
@@ -422,7 +449,7 @@ def verout(out, obj, f, nstar=1, verbose=True, delta=2.5):
 #################################################
 #################################################
 #################################################
-def queryout(objdir, obj, f, nstar=1, sigtol=lambda sig: 1.2*sig):
+def queryout(objdir, obj, f, nstar=1, sigtol=lambda sig: 1.4*sig):
     """
     Call chooseout for 'obj' at filter 'f' (in 'objdir'),
     print the graphs and query to the user if he wants
@@ -456,8 +483,8 @@ def queryout(objdir, obj, f, nstar=1, sigtol=lambda sig: 1.2*sig):
                 lixo = grafall(objdir, f, n=i+1 ,nstar=nstar, bestouts=[outs[i]], shortmode=True)
 
             print('\n'+'_'*80)
-            print(' {0:<10s} {1:<5s} {2:<7s} {3:<8s} {4:<10s} {5:<7s} {6:<s}'.format('Obj', 'Filt', \
-                    'P(%)', 'sig(%)', 'sig/ThSig', 'ztest', 'out/num'))
+            print(' {0:<10s} {1:<5s} {2:<6s}  {3:<7s} {4:<10s} {5:<7s} {6:<s}'.format('Obj', 'Filt', \
+                    'Pol (%)', '', 'sig/ThSig', 'ztest', 'out/num'))
             try:
                 [Q,U,sig,P,th,sigT,ap,star,MJD,calc] = readoutMJD(outs[i], nstar=nstar)
                 sig_ratio = float(sig)/float(sigT)
@@ -474,7 +501,7 @@ def queryout(objdir, obj, f, nstar=1, sigtol=lambda sig: 1.2*sig):
                 zstr = '{0:.1f}'.format(z)
 
             # Prints the values
-            print(' {0:<10s} {1:<5s} {2:<7.4f} {3:<8.4f} {4:<10.3f} {5:<7s} {6:<s} {7:<s}'.\
+            print(' {0:<10s} {1:<5s} {2:<6.4f}+-{3:<7.4f} {4:<10.1f} {5:<7s} {6:<s} {7:<s}'.\
                      format(obj.upper(), f.upper(), float(P)*100, float(sig)*100, \
                             sig_ratio, zstr, _phc.trimpathname(outs[i])[1], numout))
             print('_'*80+'\n')
@@ -735,7 +762,7 @@ def grafall(objdir, filt, nstar=1, n=1, bestouts=[], shortmode=False):
     # 08009.1, 08009.2 and an eventual 7th element in 'bestouts' variable.
     # The variable returned is a list with the outfiles displayed, sorted in same order
     # that the showed.
-    # The input variables are exactly the outuput sublogs and groups from combineout subroutine.
+    # The input variables are exactly the outputs "sublogs" and "groups" from combineout subroutine.
     def gengraphshort (sublogs, groups):
 
         # Variables below are to mark the positions in lists
@@ -783,7 +810,7 @@ def grafall(objdir, filt, nstar=1, n=1, bestouts=[], shortmode=False):
             else:
                 tver[tlogs.index(bestouts[0][:-4]+'.log')] = 'best'
 
-        # Set the logfiles once, erasing some void components
+        # Set the logfiles once, erasing the void components
         if (posnver1 == -1 and pos8ver1 == -1) or (posnver2 == -1 and pos8ver2 == -1):
             logs = [tlogs[i] for i in range(len(tlogs)) if tlogs[i] != '']
             ver = [tver[i] for i in range(len(tlogs)) if tlogs[i] != '']
@@ -829,19 +856,23 @@ def grafall(objdir, filt, nstar=1, n=1, bestouts=[], shortmode=False):
             print('# ERROR: align mode {0} is not valid in grafall! Graphs not displayed!'.format(align))
             return            
         if ncol > 4:
-            print('# ERROR: {0} figure was not displayed by grafall'.format(len(logs)-8))
+            print('# ERROR: {0} figure(s) was(were) not displayed by grafall'.format(len(logs)-8))
             return
 
         if   ncol == 1: linit=0.15
         elif ncol == 2: linit=0.08
         else:           linit=0.05
 
+        if   nlin == 1: binit=0.12; tinit=0.88
+        elif nlin == 2: binit=0.19; tinit=0.94
+
         fig = _plt.figure(figsize=(4*ncol,3.4*nlin))
 
         # Estabelece os grids e cria todos os eixos
         grids = [ _plt.GridSpec(2*nlin, ncol, hspace=0, wspace=0.35, \
-                        top=0.94, bottom=0.19, left=linit, right=0.95) ]
-        grids += [ _plt.GridSpec(2*nlin, ncol, hspace=0, wspace=0.35, \
+                        top=tinit, bottom=binit, left=linit, right=0.95) ]
+        if nlin == 2:
+            grids += [ _plt.GridSpec(2*nlin, ncol, hspace=0, wspace=0.35, \
                         top=0.81, bottom=0.06, left=linit, right=0.95) ]
         ax = []
         if align == 'lin':
@@ -1141,10 +1172,10 @@ def grafpol(filename, nstar=1, fig=None, ax1=None, ax2=None, save=False, extens=
             P_pts = th_pts = _np.arange(1)
             str_pts = ['0','0']
 
-        return(Q, U, sigma, P_pts, th_pts, str_pts, nstars)
+        return(Q, U, sigma, P_pts, th_pts, str_pts, nstars, fator)
 
 
-    def plotlog(ax1, ax2, Q,U,sigma,P_pts,th_pts,str_pts,filename):
+    def plotlog(ax1, ax2, Q,U,sigma,P_pts,th_pts,str_pts,filename,fator):
 
         # extract the group number
         WPpos = filename.find('_WP')
@@ -1153,11 +1184,11 @@ def grafpol(filename, nstar=1, fig=None, ax1=None, ax2=None, save=False, extens=
         else:
             suff = filename[filename.rfind('_', 0, WPpos)+1:]
 
-        ax1.set_title('P(%) = {0:.4f}+-{1:.4f}'.format(_np.sqrt(Q**2+U**2)*100,
-                              sigma*100), fontsize=14, verticalalignment='bottom')
+        ax1.set_title(r'Q={0:.3f}, U={1:.3f}, $\sigma$={2:.3f}'.format(Q*100,U*100,sigma*100),
+                       fontsize=14, verticalalignment='bottom')
         ax1.text(0.98, 0.01, '{0}'.format(suff), horizontalalignment='right', \
                  verticalalignment='bottom', transform=ax1.transAxes, fontsize=9)
-        ax1.set_ylabel('P (%)', size=9)
+        ax1.set_ylabel('p (%)', size=9)
         
         ysigma = _np.zeros(len(th_pts))+sigma
         ax1.errorbar(th_pts,P_pts*100,yerr=ysigma*100)
@@ -1167,13 +1198,13 @@ def grafpol(filename, nstar=1, fig=None, ax1=None, ax2=None, save=False, extens=
 
         ax1.plot(th_det, P_det*100)
         ax1.plot([th_det[0],th_det[-1]], [0,0], 'k--')    
-        ax1.set_xlim([th_pts[0]-4,th_pts[-1]*1.02+3])
+        ax1.set_xlim([th_pts[0]+fator*4,th_pts[-1]*1.02-fator*1.5])
 #        ax1.set_xlim([th_pts[0]-4,th_pts[-1]*1.02+3][::-1])
 #        ax1.set_ylim([min(P_pts*100)*1.1, max(P_pts*100)*1.1])
 
         ax2.set_xlabel('WP position', size=9)
         ax2.set_ylabel('Residuals', size=9)
-        ax2.set_xlim([th_pts[0]-4,th_pts[-1]*1.02+3])
+        ax2.set_xlim([th_pts[0]+fator*4,th_pts[-1]*1.02-fator*1.5])
 #        ax2.set_xlim([th_pts[0]-4,th_pts[-1]*1.02+3][::-1])
         ax2.plot([th_det[0],th_det[-1]], [0,0], 'k--')
 
@@ -1210,8 +1241,8 @@ def grafpol(filename, nstar=1, fig=None, ax1=None, ax2=None, save=False, extens=
         ax1 = _plt.subplot(2, 1, 1)
         ax2 = _plt.subplot(2, 1, 2, sharex=ax1)
         _plt.subplots_adjust(hspace = 0)
-        Q, U, sigma, P_pts, th_pts, str_pts, nstars = readlog(filename)
-        plotlog(ax1,ax2, Q,U,sigma,P_pts,th_pts,str_pts,filename)
+        Q, U, sigma, P_pts, th_pts, str_pts, nstars, fator = readlog(filename)
+        plotlog(ax1,ax2, Q,U,sigma,P_pts,th_pts,str_pts,filename,fator)
         if save:
             if nstars == 1:
                 _plt.savefig(filename.replace('.log','.'+extens))
@@ -1220,8 +1251,8 @@ def grafpol(filename, nstar=1, fig=None, ax1=None, ax2=None, save=False, extens=
         else:
             _plt.show()
     else:
-        Q, U, sigma, P_pts, th_pts, str_pts, nstars = readlog(filename)
-        plotlog(ax1,ax2, Q,U,sigma,P_pts,th_pts,str_pts,filename)
+        Q, U, sigma, P_pts, th_pts, str_pts, nstars, fator = readlog(filename)
+        plotlog(ax1,ax2, Q,U,sigma,P_pts,th_pts,str_pts,filename,fator)
             
     return
 
@@ -1270,10 +1301,10 @@ def readTests(tests, tags=None, flag=None):
     the flag value ('OK','E','W')
 
     'tags' and 'flag' are optional and are concerning to
-    another tags already assigned and current flag. The flag
-    returned is the worst flag between that and those found
+    another tags already assigned and the current flag. The flag
+    returned is the worst flag found between them
     (e.g., if input 'flag' is 'W' and tests results on flag
-    'OK', return flag 'W'; if tests results on flag 'E',
+    'OK', return flag 'W'; if tests results in flag 'E',
     return 'E'). Also, if they are given as input, return
     'tags'+tags concerning to 'tests' list.
     """
@@ -1318,7 +1349,7 @@ def readTests(tests, tags=None, flag=None):
 #################################################
 #################################################
 # Bednarski: I added delta variable to (calc-calcst) tolerance
-def chkStdLog(f, calc, path=None, delta=2.5, verbose=True):
+def chkStdLog(f, calc, path=None, delta=3.5, verbose=True):
     """
     Verify if there are standards for filter `f` and
     calcite `calc` inside path/std.dat. Return True if
@@ -1330,7 +1361,7 @@ def chkStdLog(f, calc, path=None, delta=2.5, verbose=True):
     """
 
     loglines = ''
-    if path == None:
+    if path == None or path == '.':
         path = _os.getcwd()
 
     # Read `obj.dat` and `std.dat`. If there are errors, assigns [''] to get inside
@@ -1393,8 +1424,8 @@ def writeLog(path, strin):
 #################################################
 #################################################
 #################################################
-def genLog(path, subdirs, tgts, fileout, sigtol=lambda sigm: 1.2*sigm, \
-                    autochoose=False, delta=2.5):
+def genLog(path, subdirs, tgts, fileout, sigtol=lambda sigm: 1.4*sigm, \
+                    autochoose=False, delta=3.5):
     """
     Generate the .dat file with data of objects 'tgts[:]' inside
     'path'/'subdirs[:]' directories
@@ -1411,7 +1442,7 @@ def genLog(path, subdirs, tgts, fileout, sigtol=lambda sigm: 1.2*sigm, \
             i.e., value from 0. to 1., where 1 is a 100% polarized
             source) and return the maximum sigma for which to ignore
             the best out. Its format must be a 'python's lambda function'!
-            The default values is sigtol=lambda sigm: 1.2*sigm, while
+            The default values is sigtol=lambda sigm: 1.4*sigm, while
             the old value was sigtol=lambda sigm: 1.1*sigm + 0.00005. If
             you want to take just the groups with all WP, and none other,
             you can specify sigtol=lambda sigm: 1000.*sigm, for example.
@@ -1484,15 +1515,17 @@ def genLog(path, subdirs, tgts, fileout, sigtol=lambda sigm: 1.2*sigm, \
             nstars = countStars('{0}/{1}'.format(path,objdir), f)
 
             # Check if there exist fits files for object/filter, but not .out files (target not reduced)
-            if nstars == 0 and len(_glob('{0}/{1}/*_{2}_*.fits'.format(path,objdir,f))) > 0:
+            if nstars == 0 and (len(_glob('{0}/{1}/*_{2}_*.fits'.format(path,objdir,f))) > 0 \
+                            or len(_glob('{0}/{1}/{2}/p??0'.format(path,objdir,f))) > 0):
                 print(('\n# ERROR: {0}_{1}: Fits files found, but the object was not reduced! ' +\
                         'Reduce and run again...\n\n - HINT: if these fits files compose some ' +\
                         'non-valid serie but need be kept in, move them for a subdir {2}/tmp, ' +\
                         'and hence, the path will not be sweept by routine.\n').format(objdir,f,objdir))
                 raise SystemExit(1)
             # Check if there exist some .out file for such object/filter, but not the fits files
-            elif nstars != 0 and len(_glob('{0}/{1}/*_{2}_*.fits'.format(path,objdir,f))) == 0:
-                print(('\n# ERROR: {0}_{1}: Fits files not found, but were found another *_{2}_* files. ' +\
+            elif nstars != 0 and (len(_glob('{0}/{1}/*_{2}_*.fits'.format(path,objdir,f))) == 0 \
+                                    and len(_glob('{0}/{1}/{2}/p??0'.format(path,objdir,f))) == 0):
+                print(('\n# ERROR: {0}_{1}: Fits files not found, but were found *_{2}_* files. ' +\
                         'It can be by three reasons:\n'+\
                         '  1) Fits files missing (in this case, search by them and add in such directory);\n' +\
                         '  2) The found *_{3}_* files can be \'spurious files\' (in this case, delete them);\n' +\
@@ -1578,10 +1611,11 @@ def genLog(path, subdirs, tgts, fileout, sigtol=lambda sigm: 1.2*sigm, \
 
 
 
+
 #################################################
 #################################################
 #################################################
-def genAllLog(path=None, sigtol=lambda sigm: 1.2*sigm, autochoose=False, delta=2.5):
+def genAllLog(path=None, sigtol=lambda sigm: 1.4*sigm, autochoose=False, delta=3.5):
     """
     Generate the std.dat/obj.dat for one reduced night
     
@@ -1595,7 +1629,7 @@ def genAllLog(path=None, sigtol=lambda sigm: 1.2*sigm, autochoose=False, delta=2
             i.e., value from 0. to 1., where 1 is a 100% polarized
             source) and return the maximum sigma for which to ignore
             the best out. Its format must be a 'python's lambda function'!
-            The default values is sigtol=lambda sigm: 1.2*sigm, while
+            The default values is sigtol=lambda sigm: 1.4*sigm, while
             the old value was sigtol=lambda sigm: 1.1*sigm + 0.00005. If
             you want to take just the groups with all WP, and none other,
             you can specify sigtol=lambda sigm: 1000.*sigm, for example.
@@ -1603,7 +1637,7 @@ def genAllLog(path=None, sigtol=lambda sigm: 1.2*sigm, autochoose=False, delta=2
                 interaction?
     """
 
-    if path == None:
+    if path == None or path == '.':
         path = _os.getcwd()
 
     # Verifies if std.dat and obj.dat files exist. Case True, queries to delete
@@ -1634,6 +1668,12 @@ def genAllLog(path=None, sigtol=lambda sigm: 1.2*sigm, autochoose=False, delta=2
                                                     format(_hdtpath()), dtype=str)))
             except:
                 pass
+        if _os.path.exists('{0}/refs/pol_unpol.txt'.format(_hdtpath())):
+            try:
+                ltgts = _np.concatenate((ltgts,_np.loadtxt('{0}/refs/pol_unpol.txt'.\
+                                                    format(_hdtpath()), dtype=str)))
+            except:
+                pass
         lstds = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), \
                                                            dtype=str, usecols=[0])
     except:
@@ -1657,7 +1697,7 @@ def genAllLog(path=None, sigtol=lambda sigm: 1.2*sigm, autochoose=False, delta=2
     # (Works on directories with suffix also (like 'dsco_a0'))
     for obj in [elem.split('_')[0] for elem in subdirs]:
         obj_curr = obj
-        while obj not in _np.hstack((ltgts,lstds,_np.array(['calib']))):
+        while obj not in _np.hstack((ltgts,lstds,_np.array(['calib','flat','dark','bias']))):
             if obj_curr == obj:
                 print('\nObject {0} is not a known target or standard!!'.format(obj_curr))
             else:
@@ -1672,7 +1712,7 @@ def genAllLog(path=None, sigtol=lambda sigm: 1.2*sigm, autochoose=False, delta=2
         elif obj in ltgts:
             tgts.append(obj)
             stds.append('')
-        elif obj == 'calib':
+        elif obj in ('calib','flat','dark','bias'):
             tgts.append('')
             stds.append('')
 
@@ -1695,117 +1735,328 @@ def genAllLog(path=None, sigtol=lambda sigm: 1.2*sigm, autochoose=False, delta=2
 
     return
 
-    
+
+
 
 #################################################
 #################################################
 #################################################
-def corObjStd(night, f, calc, path=None, delta=2.5):
+def corObjStd(night, f, calc, path=None, delta=3.5, verbose=True):
     """
-    Correlate a target observed at filter 'f' and calcite
-    'calc' (expected the angle between ord. and extraord. beams)
-    and return the values for matching standard stars inside
-    'night'/std.dat file, except by those marked with 'E' flag.
+    Find the correction factor delta theta for filter 'f'
+    inside night 'night', for calcite 'calc' (the last variable
+    must be the angle between the ord. and extraord. beams).
+    Returns the values for matching standard stars inside
+    'night'/std.dat file, except when marked with an 'E' flag.
+
+    NEW: In case of missing data in filter 'f', this routine
+         tries to compute delta theta by using the data from
+         another filter, making use of the relations among the
+         values of delta theta for each filter). But only the
+         estimate presenting the smaller error will be taken.
+
+    verbose: auxiliary variable used as False inside
+             polt.genTarget routine. Keep it as True
+             otherwise.
+
+    Formulas:
+        * dth = fact*th^std_measured - th^std_published
+        * fact = -1  for observations before 2015 March 1st
+                 +1  otherwise
 
     delta: tolerance, in degree, of angle of two beams for
-           one same calcite (default: +/-2.5 degree)
+           one same calcite (default: +/-3.5 degree)
 
-    Output, in order: stdname, thstd, angref, flagstd
-      - stdname: list with standard names
-      - thstd: list with theta measured values (the angle
-               returned is the same from .out, NOT 180-theta!)
-      - angref: list with theta published values
-      - flastd: list with flags concerning to the target data.
+    Output, in order: stdnames, mdth, smdth, flag, tags
+      - stdnames: string with standard star names separated
+                  by commas (,)
+      - mdth: mean delta theta (corrected by the output factor
+              +-1 of routine polt.thtFactor())
+      - smdth: the error of the mean delta theta
+      - flag: flag concerning to the standards.
+      - tags: string with the tags concerning to the standards,
+              separated by commas (,), or '---' if none.
     """
-    if path == None:
+
+    ########################
+    def computeDth():
+        """
+        Main routine
+        """
+        
+        try:
+            dthref = _np.loadtxt('{0}/refs/dths.txt'.format(_hdtpath()), dtype=str)
+        except:
+            print('# ERROR: Can\'t read files pyhdust/refs/dths.txt')
+            raise SystemExit(1)
+
+        # Try to use the standard star observation at filter f
+        stdnames, dth, sdth, flag, tags = readFilter(f)
+#        print('STD REPORT: filter {0} runned...\t stdnames={1}\t dth={2}\t sdth={3}\t flag={4}\t tags={5}'.format(f, stdnames, dth, sdth, flag, tags))
+
+        # Case successful on find
+        if stdnames != '---':
+            mdth = sum(dth)/len(dth) # Mean dth
+            devth = _np.std(dth)/_np.sqrt(len(dth))  # Std dev of the mean
+            smdth = _np.sqrt(devth**2 + _np.dot(sdth,sdth)/(len(sdth)**2))  # Combined final error
+#            print('STD REPORT: filter {0} has...\t dth={1}\t mdth=mean(dth)={2}\t smdth={3}'.format(f, dth, mdth, smdth))
+        # Otherwise
+        else:
+ #           print('STD REPORT: filter {0} has not standard... trying compute dth from another filter...'.format(f))
+#            print('{0:<10s} Trying compute delta_theta from another filter...'.format(f))
+            mdth = 0.
+            smdth = 10000.
+ 
+            # To identify the calcite I propose the if below, because is just like the beams
+            # seem to behave within the CCD.
+#            if calc == 0:
+#                calcite = ''
+#                print('{0:<12s} WARNING! Calcite name not identified for an angle of 0 degrees.'.format(night+', '+f+':'))
+#                while calcite not in ('a0','a2'):
+#                    calcite = raw_input('      Type the calcite name (a0/a2): ')
+            if (calc < 12 and calc >= 0) or (calc > 78 and calc < 102) or (calc > 168 and calc < 180):
+                calcite = 'a2'
+            elif calc >= 0 and calc < 180:
+                calcite = 'a0'
+            # Useful because sometimes I set the calc value manually inside std.dat/obj.dat for special
+            # cases, putting a negative value.
+            else:
+                calcite = ''
+                print('{0:<12s} WARNING! Calcite name not identified for an angle of {1} degrees.'.format(night+', '+f+':', calc))
+                while calcite not in ('a0','a2'):
+                    calcite = raw_input('      Type the calcite name (a0/a2): ')
+
+            for filt in filters:
+
+                if filt == f[0]:
+                    continue
+
+                ddth = 0.
+                sddth = 0.
+                stdnamesaux, dth, sdth, flagaux, tagsaux = readFilter(filt)
+#                print('STD REPORT: filter {0} runned to correction of filter {1}...\t stdnames={2}\t dth={3}\t sdth={4}\t flag={5}\t tags={6}'.format(filt, f, stdnamesaux, dth, sdth, flagaux, tagsaux))
+                if stdnamesaux == '---':
+#                    print('STD REPORT: filter {0} (runned to correction of filter {1}) has not standard... trying compute dth from another filter...'.format(filt, f))
+                    continue
+
+                # Try to find the 'delta delta theta'
+                for dthi in dthref:
+
+                    if dthi[0] == '{0}-{1}'.format(f[0],filt) and dthi[1] == calcite:
+
+                        ddth = float(dthi[2])
+                        sddth = float(dthi[3])
+
+                        dth = [di+ddth for di in dth]               # Refresh the new dth list
+                        mdthaux  = sum(dth)/len(dth)                # Mean dth
+                        devthaux = _np.std(dth)/_np.sqrt(len(dth))  # Std dev of the mean
+                        smdthaux = _np.sqrt(devthaux**2 + _np.dot(sdth,sdth)/(len(sdth)**2) + sddth**2)  # Combined final error
+
+#                        print('STD REPORT: filter {0} (runned to correction of filter {1}) has the identified {2}-{3} value for calcite {4} ({5}): ddth={6}\t sddth={7}'.format(filt, f, f, filt, calc, calcite, ddth, sddth))
+
+                        # Case there exists some observation in filter filt, as well as the study
+                        # of delta that inside sths.txt file, compare if it have a best error
+                        if smdthaux < smdth:
+                            stdnames = stdnamesaux
+                            flag = flagaux
+                            tags = tagsaux
+                            mdth = mdthaux
+                            devth = devthaux
+ #                           print('STD REPORT: filter {0} (runned to correction of filter {1}) has a best error in mdth...\t dth={2}\t ddth={3}\t mdth=mean(dth)+ddth={4}\t smdth={5}<{6}. Refreshing...'.format(filt, f, [di-ddth for di in dth], ddth, mdth, smdthaux, smdth))
+                            smdth = smdthaux
+ #                       else:
+#                            print('STD REPORT: filter {0} (runned to correction of filter {1}) has NOT a best error in mdth: smdth={2}>={3}. Skipping this filter...'.format(filt, f, smdthaux, smdth))
+                        break
+
+#                if ddth == 0 and sddth == 0:
+#                    print('STD REPORT: filter {0} (runned to correction of filter {1}) doesn\'t have {2}-{3} ddth value found for calcite {4} ({5}). Skipping this filter...'.format(filt, f, f, filt, calc, calcite))
+
+            if stdnames == '---':
+                if verbose:
+                    print(('{0:<12s} WARNING! None standard found in `std.dat` for filter {1}.').format(night+', '+f+':', f))
+                smdth = 0.
+            else:
+                if flag == 'OK':
+                    flag = 'W'
+                if tags == '---':
+                    tags = 'oth-dth'
+                else:
+                    tags += ',oth-dth'
+                if verbose:
+                    print(('{0:<12s} WARNING! Delta theta for filter {1} was computed using an delta theta from another filter.').format(night+', '+f+':', f))
+                else:
+                    print(('{0:<12s} WARNING! Delta theta for filter {1} was computed using an delta theta from another filter.').format('', f))
+
+ #       print('STD REPORT: filter {0} - final values...\t stdnames={1}\t mdth={2}\t smdth={3}\t flag={4}\t tags={5}\n'.format(f, stdnames, mdth, smdth, flag, tags))
+
+        return stdnames, mdth, smdth, flag, tags
+        ########################
+
+
+    ########################
+    def readFilter(filt):
+        """
+        Receive a filter 'filt' and return two lists with the delta theta values
+        and the errors. Return also a string with the names of standards and
+        the flag and tags string.
+        """
+
+        try:
+            stdref = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str)
+        except:
+            print('# ERROR: Can\'t read files pyhdust/refs/pol_padroes.txt')
+            raise SystemExit(1)
+
+        dth = []
+        sdth = []
+        stdnames = '---'
+        tags = '---'
+        flag = 'OK'
+
+        if _os.path.exists('{0}/{1}/std.dat'.format(path,night)):
+            stds = _np.loadtxt('{0}/{1}/std.dat'.format(path,night), dtype=str)
+
+            if len(stds) > 0 and len(stds[-1]) != 9:
+                stds = stds.reshape(-1,9)
+
+            for stdinf in stds:
+                if stdinf[7] == 'E' and stdchk(stdinf[2])[0] and stdinf[3] == filt and \
+                                                        abs(float(stdinf[4])-calc) <= delta:
+                    if f == filt and verbose:
+                        print(('{0:<12s} WARNING! Standard `{1}` ({2}) wasn\'t used because it ' +\
+                                    'had `E` flag. Skipping this standard data...').format(night+', '+f+':',stdinf[2],f))
+#                        else:
+#                            print(('{0:<12s} WARNING! Standard `{1}` ({2}) wasn\'t used because it ' +\
+#                                    'had `E` flag. Skipping this obs serie...').format('',stdinf[2],f))
+                    continue
+                elif stdinf[7] != 'E' and stdchk(stdinf[2])[0] and stdinf[3] == filt and \
+                                                        abs(float(stdinf[4])-calc) <= delta:
+                    # Bednarski: Show error message now
+                    try:
+                        nstar = int(stdinf[6])
+                        Q, U, sig, P, th, sigT, tmp, tmp2 = readout('{0}/{1}'.\
+                                                format(path+'/'+night,stdinf[5]), nstar=nstar)
+                    except:
+                        if f == filt and verbose:
+                            print(('{0:<12s} WARNING! Standard `{1}` ({2}) wasn\'t used because' +\
+                                                ' can\'t open/read {3}. Skipping this standard data...').\
+                                                format(night+', '+f+':', stdinf[2], filt, stdinf[5]))
+ #                           else:
+ #                               print(('{0:<12s} WARNING! Standard `{1}` ({2}) wasn\'t used because' +\
+ #                                               ' can\'t open/read {3}. Skipping this obs serie...').\
+  #                                              format('', stdinf[2], filt, stdinf[5]))
+                        continue
+                    if stdref[stdchk(stdinf[2])[1],filters.index(filt[0])+1] == '0':
+                        if f == filt and verbose:
+                            print(('{0:<12s} WARNING! Standard `{1}` ({2}) wasn\'t used because' +\
+                                ' there is no published value in such filter. Skipping this standard data...').\
+                                                format(night+', '+f+':', stdinf[2], filt))
+                        continue
+                        
+                    # Refresh string for std names
+                    if stdnames == '---':
+                        stdnames = stdinf[2]
+                    elif stdinf[2] not in stdnames:
+                        stdnames += ','+stdinf[2]
+
+                    # Receive the published theta and its error
+                    # (Let filt[0] because sometimes filter can be 'v2' for example)
+                    i = stdchk(stdinf[2])[1]
+                    angref = float(stdref[i,filters.index(filt[0])+1])
+                    sangref = float(stdref[i,filters.index(filt[0])+6])
+
+                    # Calculate dth and its error
+                    dth += [thtFactor(float(stdinf[0]))*float(th)-angref]
+                    while dth[-1] >= 180:
+                        dth[-1] -= 180
+                    while dth[-1] < 0:
+                        dth[-1] += 180
+                    sdth += [_np.sqrt((28.65*float(sig)/float(P))**2 + sangref**2)]
+
+#                    print('STD:    dth({0}) = factor*th_obs - th_pub = {1} * {2:.2f} - {3:.2f} = {4:.3f}'.format(len(dth),thtFactor(float(stdinf[0])),float(th), angref, dth[-1]))
+ #                   print('STD:    s_th_pub={0:.3f}'.format(sangref))
+                    
+                    # Receive the flag
+                    if flag == 'OK' and stdinf[7] == 'W':
+                        flag = 'W'
+
+                    # Refresh the tag list
+                    for tagi in stdinf[8].split(','):
+                        if tagi not in tags+',---':
+                            if tags == '---':
+                                tags = ''
+                            else:
+                                tags += ','
+                            tags += tagi
+
+            # Fixes the cases where dth is close to 0 (for instance, if dth[0]=0.3,
+            # dth[1] must be -1.0 and not 179.0
+            for i in range(len(dth)):
+                if min(dth) < 10 and dth[i] > 170:
+                    dth[i] -= 180
+
+            if stdnames == '---':
+                flag = 'W'
+                tags = 'no-std'
+                   
+        return stdnames, dth, sdth, flag, tags
+        ########################
+
+
+    if path == None or path == '.':
         path = _os.getcwd()
-    try:
-        stdref = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str)
-#        f0 = open('{0}/refs/pol_padroes.txt'.format(_hdtpath()))
-#        data = f0.readlines()
-#        f0.close()
-#        stdref = []
-#        for datai in data:
-#            stdref += [datai.split()]
-    except:
-        print('# ERROR: Can\'t read files pyhdust/refs/pol_padroes.txt')
-        raise SystemExit(1)
 
     calc = float(calc)
-    angref = []
-    thstd = []
-    stdname = []
-    flagstd = []
-    tagstd = []
 
-    if _os.path.exists('{0}/{1}/std.dat'.format(path,night)):
-        stds = _np.loadtxt('{0}/{1}/std.dat'.format(path,night), dtype=str)
-#        print stds
-        if len(stds) > 0 and len(stds[-1]) != 9:
-            stds = stds.reshape(-1,9)
-#        print stds
-        k = 0
-        sigs = []
-        for stdinf in stds:
-            if stdinf[7] == 'E' and stdchk(stdinf[2])[0] and stdinf[3] == f and \
-                                                    abs(float(stdinf[4])-calc) <= delta:
-                print(('{0:<10s} WARNING! Standard `{1}` ({2}) wasn\'t used because it ' +\
-                                'had `E` flag. Skipping this standard...').format(night+':',stdinf[2],f))
-                continue
-            elif stdinf[7] != 'E' and stdchk(stdinf[2])[0] and stdinf[3] == f and \
-                                                    abs(float(stdinf[4])-calc) <= delta:
-                # Bednarski: Show error message now
-                try:
-                    nstar = int(stdinf[6])
-                    Q, U, sig, P, th, sigT, tmp, tmp2 = readout('{0}/{1}'.\
-                                            format(path+'/'+night,stdinf[5]), nstar=nstar)
-                except:
-                    print(('{0:<10s} WARNING! Standard `{1}` ({2}) wasn\'t used because' +\
-                                            ' can\'t open/read {3}. Skipping this standard...').\
-                                            format(night+':', stdinf(2), f, stdinf[5]))
-                    continue
-                stdname += [ stdinf[2] ]
-                thstd += [ float(th) ]
-                flagstd += [stdinf[7]]
-                tagstd += [stdinf[8]]
-                if thstd == 0.:
-                    thstd = 0.01
-                sigs += [ float(sig)*100 ]
-                sigth = 28.65*sig/P 
-                i = stdchk(stdinf[2])[1]
-                j = filters.index(f)+1 #+1 devido aos nomes na 1a coluna
-                angref += [ float(stdref[i,j]) ]
-
-#                print stdname, thstd, angref, flagstd, tagstd
-                
-        if stdname == []:
-            print(('{0:<10s} WARNING! None standard found in `std.dat` for filter {1}.').format(night+':', f))
-
+    if not _os.path.exists('{0}/{1}/std.dat'.format(path,night)):
+#        print('{0:<12s} WARNING! `std.dat` file not found.'.format(night+', '+f+':'))
+        return '---', 0., 0., 'W', 'no-std'
     else:
-        print('{0:<10s} ERROR! `std.dat` file not found (filter {1}).'.format(night+':', f))
-#    print stdname, thstd, angref
+        return computeDth()
 
-#    print stdname, thstd, angref, flagstd, tagstd
-    return stdname, thstd, angref, flagstd, tagstd
 
 
 
 #################################################
 #################################################
 #################################################
-# Bednarski: I CHANGED MANY THINGS TO BE COMPATIBLE WITH THE REMAINING CHANGES.
-#            I TESTED ONLY A LITTLE BIT. COMPLETE TESTS MUST BE DONE.
-def genTarget(target, path=None, PAref=None, skipdth=False, delta=2.5, epssig=2.0):
+def genTarget(target, path=None, ispol=None, skipdth=False, delta=3.5, epssig=2.0):
     """ Gen. target
 
-    Generate a table with all observations found for 'target', unless
-    those which have `E` flag or haven't standard star (except when
-    some data is unpolarized or if skipdth=True):
+    Generate a table with all observations found for 'target',
+    unless those which have `E` flag.
 
-    epssig: sigP/P max for unpolarized target (sigP/P up to epssig
-            doesn't need standard star)
-    skipdth: print all target values anyway, even when there are no
-             standard star?
+    The error in delta theta (factor from observation of standard
+    star) IS NOT propagated to the theta of Be star.
+
+    skipdth: skip the observations without estimates for delta
+             theta (no standard star in none filter and no
+             standard star in previous and next nights)? Case
+             True, the exception is only when the data is
+             'unpolarized' (defined by 'epssig' variable).
+    epssig: sigP/P max for unpolarized target (sigP/P up to
+            epssig doesn't need standard star when skipdth=True)
+    ispol: the Serkowski parameters [P_max, lambda_max, theta_IS]
+            to correct IS polarization (P_max ein % and lambda_max in
+            Angstrom). If ispol==None, don't make the correction
+            of ISP.
+    
+    Syntax of out tags:   tags1:tags2:tags3, where tags1 is concerning
+                          to the method to calculate delta_theta
+                          correction factor, tags2 is the tag list of
+                          the observation of object and tags3 is the
+                          tags of the standard star that has been used.
+
+
+    If no standard star was found in some night for one filter, this
+    routine tries to use the standard from another filter to compute
+    the delta theta in missing filter. Case there are no standard star
+    in the other filters also, the routine tries to read a file named
+    as std.link, whose lines content must be [calc   night]. It points to
+    a standard from another night `night` in calcite `calc` (an example
+    of sintax: [calc   night] = [136.1   15out22]). Caso this file was
+    not found, the routine queries directly of what night to use the
+    standard stars.
 
     Formulas:
         * th_eq = fact*th_measured - fact*th^std_measured + th^std_published
@@ -1816,37 +2067,37 @@ def genTarget(target, path=None, PAref=None, skipdth=False, delta=2.5, epssig=2.
         * Q_eq = P*cos(2*th_eq*pi/180)
         * U_eq = P*sin(2*th_eq*pi/180)
         * sigth = 28.65*sig/P
+
     """
 
     verbose = ''
+    nlines = 0
     
     if path == None or path == '.':
         path = _os.getcwd()
 
-    # Carregar angulos de referencia para todos os filtros de um conjunto de padroes
-    if PAref is not None:
-        for line in PAref:
-            if len(line) < 21:
-                print('# ERROR: Wrong PAref matrix format.')
-                raise SystemExit(1)
-    else:
-        PAref = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str)
+    print target, path
 
     # Read lists and verify if target is a valid target
-
     try:
         obj = _np.loadtxt('{0}/refs/pol_alvos.txt'.format(_hdtpath()), dtype=str)
         if _os.path.exists('{0}/refs/pol_hip.txt'.format(_hdtpath)):
-            obj = _np.concatenate((obj,v_np.loadtxt('{0}/refs/pol_hip.txt'.format(_hdtpath()), dtype=str)))
+            obj = _np.concatenate((obj,_np.loadtxt('{0}/refs/pol_hip.txt'.format(_hdtpath()), dtype=str)))
+        if _os.path.exists('{0}/refs/pol_unpol.txt'.format(_hdtpath)):
+            obj = _np.concatenate((obj,_np.loadtxt('{0}/refs/pol_unpol.txt'.format(_hdtpath()), dtype=str)))
         std = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str)
     except:
         print('# ERROR: Can\'t read files pyhdust/refs/pol_alvos.txt and/or pyhdust/refs/pol_padroes.txt.')
         raise SystemExit(1)
-        
-    if target not in _np.hstack((std[:,0],obj)):
-        print('# WARNING: Target {0} is not a default target or standard!'.\
+
+    if target in std[:,0]:
+        ftype='std'
+    else:
+        ftype='obj'
+
+    if target not in _np.hstack((std[:,0],obj)) and 'field' not in target:
+        print('\nWARNING: Target {0} is not a default target or standard!'.\
         format(target))
-        tmp = raw_input('Type something to continue...')
 
     print('\n'+'='*30+'\n')
 
@@ -1855,31 +2106,32 @@ def genTarget(target, path=None, PAref=None, skipdth=False, delta=2.5, epssig=2.
 
     for night in nights:
 
-        # Check obj.dat for the night
-        if _os.path.exists('{0}/{1}/obj.dat'.format(path,night)):
+        # Check obj.dat/std.dat for the night
+        if _os.path.exists('{0}/{1}/{2}.dat'.format(path,night,ftype)):
             try:
-                objs = _np.loadtxt('{0}/{1}/obj.dat'.format(path,night), dtype=str)
+                objs = _np.loadtxt('{0}/{1}/{2}.dat'.format(path,night,ftype), dtype=str)
             except:
-                print('{0:<10s} ERROR! Can\'t read obj.dat file. Ignoring this night...'.format(night+':'))
+                print('{0:<12s} ERROR! Can\'t read {1}.dat file. Ignoring this night...\n'.format(night+':',ftype))
                 continue
 
             # Verify if std has more than one line. Case not, do the reshape
             if _np.size(objs) == 9:
                 objs = objs.reshape(-1,9)
             elif _np.size(objs) % 9 != 0:
-                print('{0:<10s} ERROR! Wrong column type in obj.dat file. Ignoring this night...'.format(night+':'))
+                print('{0:<12s} ERROR! Wrong column type in {1}.dat file. Ignoring this night...\n'.format(night+':',ftype))
                 continue
-#                raise SystemExit(1)
 
+            valc = True
+            
             # Loop on found nights
             for objinf in objs:
-                dth = []
-                stdnames = ''
-                if objinf[2] == target:
-                    MJD, ccd, obj, f, calc, out, nstar, flag, tags = objinf
+
+                if objinf[2] == target or ('field' in objinf[2] and target == 'field'):
+                    tags = ['---','---','---']
+                    MJD, ccd, obj, f, calc, out, nstar, flag, tags[1] = objinf
                     if flag == 'E':
-                        print(('{0:<10s} WARNING! Star found ({1}), but with `E` flag ' +\
-                                        'and tags `{2}`. Ignoring this data...').format(night+':',f,tags))
+                        print(('{0:<12s} WARNING! Star found ({1}), but with `E` flag ' +\
+                                        'and tags `{2}`. Ignoring this data...').format(night+', '+f+':',f,tags[1]))
                         continue
                     try:
                         # Fator is a var to indicate when polarization angle must be taken as 180-theta or +theta
@@ -1887,119 +2139,204 @@ def genTarget(target, path=None, PAref=None, skipdth=False, delta=2.5, epssig=2.
                         Q, U, sig, P, th, sigT, tmp, tmp2 = readout('{0}/{1}'.\
                                                     format(path+'/'+night,out), nstar=int(nstar))
                     except:
-                        print('{0:<10s} ERROR! Can\'t open/read out file {1}. Ignoring this data...'.format(night+':',out))
+                        print('{0:<12s} ERROR! Can\'t open/read out file {1}. Ignoring this data...\n'.format(night+', '+f+':',out))
                         continue
 
                     P = float(P)*100
                     th = float(th)
                     sig = float(sig)*100
                     sigth = 28.65*sig/P
-#                    print objinf, objinf[2], target, tags
-                    if 'no-std' not in tags:
-#                        print('entrou1')
-                        stdname, thstd, angref, flagstd, tagstd = corObjStd(night, f, calc, path=path, delta=delta)
-#                        print stdname, thstd, angref, flagstd, tagstd
+#                    print objinf, objinf[2], target, tags[1]
+
+                    # Try to get the night's standard
+                    if ftype == 'obj':
+                        # Print below the warning message and only one time by night
+                        if valc and not _os.path.exists('{0}/{1}/std.dat'.format(path,night)):
+                            print('{0:<12s} WARNING! `std.dat` file not found.'.format(night+':'))
+                            valc = False
+                        stdnames, mdth, smdth, flagstd, tags[2] = corObjStd(night, f, calc, path=path, delta=delta)
                     else:
-#                       FURTHER: APPLY ALTERNATIVE METHOD TO COMPUTE DTHETA HERE AND DELETE LIKE BELLOW.
-#                                CAUTION because the line "if stdname == [] and 'no-std' not in tags:" must be changed also
-#                        print('entrou2')
-                        stdname, thstd, angref, flagstd, tagstd = corObjStd(night, f, calc, path=path, delta=delta)
-#                        print stdname, thstd, angref, flagstd, tagstd
+                        stdnames = '---'
+                        mdth, smdth = 0, 0
+                        flagstd, tags[2] = 'OK', '---'
+
+#                    if flagstd == 'E':
+#                        mdth = 0.
+#                        smdth = 0.
+#                        stdnames = '---'
+#                        flagstd = 'W'
+#                        tags[2] = 'no-std'
+
+                    vald=True
+                    # APPLY ALTERNATIVE METHOD TO COMPUTE DTHETA IN CASES WHERE THERE IS NO NIGHT'S STANDARD
+                    while stdnames == '---' and ftype == 'obj':
+
+                        night_alt=''
+#                        print '{0}/{1}/std.link'.format(path,night)
+#                        print _os.path.exists('{0}/{1}/std.link'.format(path,night))
+                        if vald and _os.path.exists('{0}/{1}/std.link'.format(path,night)):
+#                            print 'entrou'
+                            file0 = _np.loadtxt('{0}/{1}/std.link'.format(path,night), dtype=str)
+                            if type(file0[0]) != _np.ndarray and _np.size(file0) == 2:
+                                file0 = file0.reshape(-1,2)
+                            for line0 in file0:
+                                if abs(float(line0[0])-float(calc)) <= delta:
+                                    night_alt = line0[1]
+                                    break
+                            # if temporary for me.
+                        if night_alt == 's' or _os.path.exists('{0}/{1}/skipstd'.format(path,night)):
+                            print(('{0:<12s} WARNING! No standard correction as specified inside std.link.\n').format(night+', '+f+':', night_alt))
+                            break
+                        if night_alt=='':
+                            night_alt = raw_input('\n{0:<12s} Do you want to select some standard from another day?\n{0:<12s} #Type the date or `s` to skip: '.format('','#'))
+                            print('')
+                            if night_alt in ('s','S'):
+                                break
+
+                        if night_alt!='' and _os.path.exists('{0}/{1}'.format(path,night_alt)):
+                            stdnames, mdth, smdth, flagstd, tags[2] = corObjStd(night_alt, f, calc, path=path, delta=delta, verbose=False)
+                            valc = False
+                            if stdnames != '---':
+                                if flagstd == 'OK':
+                                    flagstd = 'W'
+                                if tags[2] == '---':
+                                    tags[2] = 'oth-day-std'
+                                else:
+                                    tags[2] += ',oth-day-std'
+                                if vald:
+                                    print(('{0:<12s} WARNING! Using standard from another night ({1}) as specified inside std.link.\n').format(night+', '+f+':', night_alt))
+                            elif vald: 
+                                print(('\n{0:<12s} ERROR! Standard not found inside the alternative night {1}!').format(night+', '+f+':', night_alt))
+                                vald = False
+                            else:
+                                print(('\n{0:<12s} ERROR! Standard not found inside the alternative night {1}!').format('', night_alt))
+                        elif vald: 
+                            print(('\n{0:<12s} ERROR! Standard not found inside the alternative night {1}!').format(night+', '+f+':', night_alt))
+                            vald = False
+                        else:
+                            print(('\n{0:<12s} ERROR! Standard not found inside the alternative night {1}!').format('', night_alt))
+#                        print stdname, thstd, angref, flagstd, tags[2]
+
+                    # Set the tags concerning to the standard
+                    if stdnames == '---' and ftype == 'obj':
+                        tags[0] = 'no-std'
+                    elif ftype == 'obj':
+                        if 'oth-day-std' in tags[2]:
+                            tags[0] = 'oth-day-std'
+                        if 'oth-dth' in tags[2] and tags[0] == '---':
+                            tags[0] = 'oth-dth'
+                        elif 'oth-dth' in tags[2]:
+                            tags[0] += ',oth-dth'
 
                     # Refresh tags and flags
-                    if stdname == [] and 'no-std' not in tags:
-                        if tags == '---':
-                            tags = 'no-std'
-                        else:
-                            tags += ',no-std'
-                        if flag == 'OK':
-                            flag = 'W'
-                    elif stdname != [] and 'no-std' in tags:
-                        if tags == 'no-std':
-                            tags = '---'
-                        elif tags[0:6] == 'no-std,':
-                            tags = tags.replace('no-std,','')
-                        else:
-                            tags = tags.replace(',no-std','')
+                    for specialtag in ('no-std','oth-day-std','oth-dth'):
+                        for i in (1,2):
+                            if tags[i] == specialtag:
+                                tags[i] = '---'
+                                if i == 1:
+                                    flag = 'OK'
+                            elif tags[i][0:7] == specialtag+',':
+                                tags[i] = tags[i].replace(specialtag+',','')
+                            else:
+                                tags[i] = tags[i].replace(','+specialtag,'')
 
-                    # Bednarski: working for more than one standard star
-                    # 1) Case there is no standard star, set the variables
-                    if 'no-std' in tags: # or stdname==[]:
-                        mdth = 0.
-                        devth = 0.
-                        stdnames = '---'
-                        thstd=[]
-                        angref=[]
-                        flagstd=[]
-                        tagstd=[]
-                    # 2) Case there is some standard star, correct the angle and set variables
+                    # Set the "global" flag (for object+standard)
+                    if flag == 'E' or flagstd == 'E':
+                        flag = 'E'
+                    elif flag == 'W' or flagstd == 'W':
+                        flag = 'W'
                     else:
-                        for i in range(len(thstd)):
-                            if flag == 'OK' and flagstd[i] == 'W':
-                                flag = 'W'
-                            # Refresh tag list
-                            for tagi in tagstd[i].split(','):
-                                if tagi not in tags+',---':
-                                    if tags == '---':
-                                        tags = ''
-                                    else:
-                                        tags += ','
-                                    tags += tagi
-                            dth += [ fator*thstd[i]-angref[i] ]
-                            while dth[i] >= 180:
-                                dth[i]-= 180
-                            while dth[i] < 0:
-                                dth[i]+= 180
-                            if i != 0:
-                                stdnames += ','
-                            stdnames += stdname[i]
-                        mdth=sum(dth)/len(dth)  # evalute the mean dth
-                        devth=_np.std(dth)
+                        flag = 'OK'
 
+                    # Applying the correction of standard star
                     th = fator*th-mdth
-                    # Bednarski: I changed 'if' for 'while' because it can be necessary more than once
+
+                    # Fixing the angle value and computing QU parameters
                     while th >= 180:
                         th-= 180
                     while th < 0:
                         th+= 180
                     Q = P*_np.cos(2*th*_np.pi/180)
                     U = P*_np.sin(2*th*_np.pi/180)
-                    if thstd != [] or skipdth or P/sig <= epssig:
+
+                    # Correction of IS polarization
+                    if ispol != None:
+                        QIS, UIS = serkowski(ispol[0], ispol[1], str(f), mode=1, pa=ispol[2])
+                        Q = Q - QIS
+                        U = U - UIS
+                        P = _np.sqrt(Q**2 + U**2)
+                        th = _np.arctan(Q/U)*90/_np.pi
+#                        sigth = 28.65*sig/P
+
+                        # Fix the angle to the correct in QU diagram
+                        if Q < 0:
+                            th += 90
+                        elif Q >= 0 and U < 0:
+                            th += 180
+                
+
+                    # Write the line
+                    if stdnames != '---' or (not skipdth) or P/sig <= epssig or ftype == 'std':
                         if out.find('_WP') == -1:
                             outn = out[-11:]
                         else:
                             outn = out[out.find('_WP')-7:]
                         lines += ('{:12s} {:>7s} {:>7s} {:>4s} {:>5s} {:>12s} {:>6.1f} {:>6.1f}'+
-                        ' {:>8.4f} {:>8.4f} {:>8.4f} {:>7.2f} {:>7.4f} '+
-                        '{:>6.2f} {:>13s} {:>4s} {:>5s} {:>s}\n').format(MJD, night, ccd, f, calc, stdnames, \
-                                    mdth, devth, P, Q, U, th, sig, sigth, outn, nstar, flag, tags)
-                        print('{0:<10s} One line added to {1}.log...'.format(night+':', obj))
+                                ' {:>8.4f} {:>8.4f} {:>8.4f} {:>7.2f} {:>7.4f} '+
+                                '{:>6.2f} {:>13s} {:>4s} {:>5s} {:>s}').format(MJD, night, ccd, f, \
+                                calc, stdnames, mdth, smdth, P, Q, U, th, sig, sigth, outn, nstar, \
+                                flag, ';'.join(tags))
+                        if target == 'field':
+                            lines += '   {0}\n'.format(obj)
+                        else:
+                            lines += '\n'
+                            
+                        nlines += 1
                     else:
-                        print(('{0:<10s} WARNING! No valid delta_theta value estimated in filter {1}.' +\
-                                        ' Ignoring this data...').format(night+':', f))
-
-#            print('')
+                        print(('{0:<12s} ERROR! No valid delta_theta value estimated in filter {1}.' +\
+                                        ' Ignoring this data...\n').format(night+', '+f+':', f))
         else:
             if verbose != '':
                 verbose += ', '
             verbose += night
 
-    # Print "no obj.dat found" messages
+    # Print "no obj/std.dat found" message
     if verbose != '':
-        print('{0:<10s} WARNING! No `obj.dat` file found for the following nights: {1}. Ignoring these nights...'.format('-------',verbose))
+        print('{0:<12s} WARNING! No `{1}.dat` file found for the following nights: {2}. Ignoring these nights...'.format('-------',ftype,verbose))
 
     print('\n'+'='*30+'\n')
-    #arquivo de saida
+
+    # Write the output
     if lines != '':
-        print('DONE! Output written in {0}/{1}.log.'.format(path,target))
-        f0 = open('{0}/{1}.log'.format(path,target),'w')
-        lines = ('{:12s} {:>7s} {:>7s} {:>4s} {:>5s} {:>12s} {:>6s} {:>6s}' +\
+        if ispol==None:
+            f0 = open('{0}/{1}.log'.format(path,target),'w')
+        else:
+            f0 = open('{0}/{1}_iscor.log'.format(path,target),'w')
+
+        if target == 'field':
+            lines = ('#{:>11s} {:>7s} {:>7s} {:>4s} {:>5s} {:>12s} {:>6s} {:>6s}' +\
                         ' {:>8s} {:>8s} {:>8s} {:>7s} {:>7s} {:>6s} {:>13s}' +\
-                        ' {:>4s} {:>5s} {:>s}\n').format('#MJD', 'night',\
-                        'ccd', 'filt', 'calc', 'stdstars', 'dth', 'devdth', 'P', 'Q', 'U',\
+                        ' {:>4s} {:>5s} {:>s}   {:s}\n').format('MJD', 'night',\
+                        'ccd', 'filt', 'calc', 'stdstars', 'dth', 'sigdth', 'P', 'Q', 'U',\
+                        'th', 'sigP', 'sigth', 'outfile', 'star', 'flag', 'tags', 'obj_name')+lines
+        else:
+            lines = ('#{:>11s} {:>7s} {:>7s} {:>4s} {:>5s} {:>12s} {:>6s} {:>6s}' +\
+                        ' {:>8s} {:>8s} {:>8s} {:>7s} {:>7s} {:>6s} {:>13s}' +\
+                        ' {:>4s} {:>5s} {:>s}\n').format('MJD', 'night',\
+                        'ccd', 'filt', 'calc', 'stdstars', 'dth', 'sigdth', 'P', 'Q', 'U',\
                         'th', 'sigP', 'sigth', 'outfile', 'star', 'flag', 'tags')+lines
+
+        if ispol==None:
+            ispol = [0,0,0]
+        lines = ('# ISP parameters used:\n#\n# Pmax (%)   lmax (A)     PA\n# {0:>8.4f} {1:>9.2f} {2:>7.2f}\n#\n')\
+                                                .format(ispol[0],ispol[1],ispol[2]) + lines
         f0.writelines(lines)
         f0.close()
+        
+        if ispol==[0,0,0]:
+            print('DONE! {0} lines written in {1}/{2}.log.'.format(nlines,path,target))
+        else:
+            print('DONE! {0} lines written in {1}/{2}_iscor.log.'.format(nlines,path,target))
     else:
         print('NOT DONE! No valid observation was found for target `{0}`.'.format(target))
       
@@ -2007,26 +2344,157 @@ def genTarget(target, path=None, PAref=None, skipdth=False, delta=2.5, epssig=2.
 
 
 
-#################################################
-#################################################
-#################################################
-def pur2red():
-    """
-    Pure to Reduced
-    """
-    return
-
-
 
 #################################################
 #################################################
 #################################################
-def red2pur():
+def serkowski(pmax, lmax, wlen, mode, pa=None, law='w82'):
     """
-    Reduced to Pure
-    """
-    return
 
+    Mode==1
+    Receive ISP parameters 'pmax', 'lmax' e 'pa' and return
+    the Stokes QU parameters concerning to the value
+    of Serkowski's law at wavelenght 'wlen'.
+
+    Mode==2
+    Receive ISP parameters 'pmax', 'lmax' and return
+    the P value computed by the Serkowski's law at
+    wavelenght 'wlen'.
+    
+
+    'wlen' and 'lmax' must be in Angstrom.
+    'wlen' can be 'u'/'b'/'v'/'r'/'i' also.
+
+    'law' defines what value use to K parameter:
+
+    w82  -  Wilking (1982)
+        K = 1.86*lmax - 0.1
+    w80  -  Wilking (1980)
+        K = 1.68*lmax - 0.002
+    serk  -  Serkowski
+        K = 1.15
+
+    Serkowski's Law:
+        P = pmax*np.exp(-K*np.log(lmax/wlen)**2)
+    
+    """
+
+    if law=='w82':
+        K = 1.86*lmax/10000 - 0.1     # Wilking (1982)
+    elif law=='w80':
+        K = 1.68*lmax/10000 - 0.002   # Wilking (1980)
+    elif law=='serk':
+        K = 1.15                # Serkowski
+
+    if mode==1 and wlen in _phc.lbds:
+        P = pmax*_np.exp(-K*_np.log(lmax/_phc.lbds[wlen])**2)
+    else:
+        P = pmax*_np.exp(-K*_np.log(lmax/wlen)**2)
+
+    if mode == 1:
+#    print wlen, P, pa
+        Q = P*_np.cos(2*pa*_np.pi/180)
+        U = P*_np.sin(2*pa*_np.pi/180)
+        return Q, U
+    elif mode == 2:
+        return P
+    else:
+        return
+
+
+
+
+#################################################
+#################################################
+#################################################
+### IMPLEMENTAR CORLOWPOL QUE SERÁ A CORREÇÃO
+### DAS INCERTEZAS PARA POLARIZAÇÕES BAIXAS
+def propQU(p, th, sp, sdth, estim='wk'):
+    """
+    Propagate the delta theta error over the polarization
+    angle, computing the new errors for theta, Q and U.
+
+    Input:
+
+    - p, th: lists holding the P and theta values.
+    - sp, sdth: lists holding the P and delta theta errors.
+
+    Return lists containing the new errors for theta,
+    Q and U.: sth, sq, su.
+
+    Formulas:
+    
+    sth = sqrt( sth0^2 + sdth^2 )
+    sq = sqrt( (cos(2*th)*sp)^2 + (p*sin(2*th)*sth)**2 )
+    su = sqrt( (sin(2*th)*sp)^2 + (p*cos(2*th)*sth)**2 )
+
+
+    Unbias theta error using 'estim' estimator:
+
+        if p/sp <= K,   sth0 = psi
+        otherwise,      sth0 = propagated error
+
+      where K is given by the estimator related to the
+      'estim' variable:
+
+         a) 'ml' : Maximum Likelihood (K=1.41, psi=51.96)
+         b) 'wk' : Wardle & Kronberg (K=1.0, psi=51.96)
+         c) ''   : None (K=0, psi=51.96)
+         d) 'mts': Maier, Tenzer & Santangelo (estimates
+                   from Bayesian analysis, psi=61.14)
+             
+    
+    """
+
+
+    if estim=='wk':
+        k=1.
+    elif estim=='ml':
+        k=1.41
+    elif estim=='':
+        k=0.
+    elif estim!='mts':
+        print('# ERROR: estimation type `{0}` not valid!.'.format(estim))
+        raise SystemExit(1)
+
+    sth,sq,su = [],[],[]
+    sth0=0
+    
+    for i in range(len(p)):
+
+        if p[i] != 0:
+            if estim!='mts':
+                if sp[i]!=0 and p[i]/sp[i] > k:
+                    sth0 = 28.65*sp[i]/p[i]
+                else:
+                    sth0 = 51.96
+            else:
+                if sp[i]!=0 and p[i]/sp[i] > 6:
+                    sth0 = 28.65*sp[i]/p[i]
+                elif sp[i]!=0:
+                    a=32.50
+                    b=1.350
+                    c=0.739
+                    d=0.801
+                    e=1.154
+                    sth0 = a*(b+_np.tanh(c*(d-p[i]/sp[i]))) - e*p[i]/sp[i]
+                else:
+                    sth0 = 61.14
+
+            sth += [_np.sqrt(sth0**2 + sdth[i]**2)]
+        else:
+            if estim!='mts':
+                sth += [51.96]
+            else:
+                sth += [61.14]
+
+        sq += [_np.sqrt( (_np.cos(th[i]*_np.pi/90)*sp[i])**2 + (p[i]*_np.sin(th[i]*_np.pi/90)*sth[i]*_np.pi/90)**2 )]
+        su += [_np.sqrt( (_np.sin(th[i]*_np.pi/90)*sp[i])**2 + (p[i]*_np.cos(th[i]*_np.pi/90)*sth[i]*_np.pi/90)**2 )]
+       
+ 
+    return sth, sq, su
+
+    
 
 
 #################################################
@@ -2035,7 +2503,7 @@ def red2pur():
 def genJD(path=None):
     """Generate de JD file for the fits inside the folder
     """
-    if path == None:
+    if path == None or path == '.':
         path = _os.getcwd()
     for f in filters:
         lfits = _glob('*_{0}_*.fits'.format(f))
@@ -2072,6 +2540,7 @@ def genJD(path=None):
 
 
 
+
 #################################################
 #################################################
 #################################################
@@ -2104,6 +2573,7 @@ def listNights(path, tgt):
 
 
 
+
 #################################################
 #################################################
 #################################################
@@ -2115,7 +2585,7 @@ def plotMagStar(tgt, path=None):
     @param PARAM: DESCRIPTION
     @return RETURN: DESCRIPTION
     """
-    if path == None:
+    if path == None or path == '.':
         path = _os.getcwd()
     lmags = _np.loadtxt('{0}/refs/pol_mags.txt'.format(_hdtpath()), dtype=str)
 
@@ -2181,6 +2651,7 @@ def plotMagStar(tgt, path=None):
 
 
 
+
 #################################################
 #################################################
 #################################################
@@ -2197,6 +2668,7 @@ def sortLog(filename):
 
 
 
+
 #################################################
 #################################################
 #################################################
@@ -2210,6 +2682,7 @@ def filtra_obs(n,obs):
 
 
 
+
 #################################################
 #################################################
 #################################################
@@ -2220,12 +2693,17 @@ def filtraobs(data, r=20):
 
 
 
+
 #################################################
 #################################################
 #################################################
 def setCCD(fitsfile):
     """
-    Set CCD name in global variable 'ccd'
+    Set CCD name in global variable 'ccd'.
+
+    The CCD name can be: 'ikon', 'ixon', '301' or
+    'ikon-14912' (the last one is the Ikon CCD with
+    Deep Depletion).
     """
     global ccd
     ccd = ''
@@ -2236,94 +2714,22 @@ def setCCD(fitsfile):
             instrume = '{0}'.format(fits[0].header['SERNO'])
             if instrume.find('4335') != -1:
                 ccd = 'ixon'
+            elif instrume.find('4269') != -1:
+                ccd = 'ixon'
             elif instrume.lower().find('10127') != -1:
                 ccd = 'ikon'
             elif instrume.lower().find('9867') != -1:
                 ccd = 'ikon'
+            elif instrume.lower().find('14912') != -1:
+                ccd = 'ikon-14912'
             else:
                 ccd = ''
         except:
             pass
 
-    while ccd not in ('ikon', 'ixon', '301'):
-        ccd = raw_input('Type the CCD name (301/ikon/ixon): ')
+    while ccd not in ('ikon', 'ixon', '301', '654', 'ikon-14912'):
+        ccd = raw_input('Type the CCD name (301/654/ikon/ikon-14912/ixon): ')
 
-
-
-#################################################
-#################################################
-#################################################
-def graf_dtheta(fname, save=False):
-    """
-    Plot graph for delta theta study.
-
-    fname  --  is the data file. Its lines must be of type
-           "date standard_name lambda dtheta", separeted by a
-            simple space.
-    Blank lines will be skiped by the algorithm.
-    """
-
-    _plt.close('all')
-    #_rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
-
-    # Read file
-    try:
-        file0 = _np.loadtxt(fname, dtype=str, delimiter=' ')
-    except:
-        print('Error when reading the file or file doesn\'t exist!')
-        return
-    flist = file0.tolist()
-    flist.sort(key=lambda x: [x[1],x[0],x[2]])
-
-    # Delete void lines
-    i=0
-    while i < len(flist):
-        if flist[i][0] == '':
-            del(flist[i])
-        else:
-            i += 1
-    flist += [['','',0,0]]    # To work for last line
-
-    # Count number of plots
-    num_plots = 0
-    for i in range(len(flist)-1):
-        if flist[i][0]!=flist[i-1][0] or flist[i][0]!=flist[i-1][0]:
-            num_plots += 1
-
-    # Generate figure and axes
-    fig = _plt.figure(1)
-    ax = _plt.subplot(1, 1, 1)
-    #ax.set_title('Estudo delta theta', fontsize=16, verticalalignment='bottom')
-    ax.set_xlabel(r'$\lambda \ (\AA)$', size=15)
-    ax.set_ylabel(r'$\Delta\theta\ -\ <\Delta\theta>$ (degree)', size=15)
-    ax.set_xlim([3000, 9000])
-    colormap = _plt.cm.spectral
-    _plt.gca().set_color_cycle([colormap(i) for i in _np.linspace(0, 0.9, num_plots)])
-
-    # Plot the graphs
-    for i in range(len(flist)):
-        if i==0 or flist[i][0]!=flist[i-1][0] or flist[i][0]!=flist[i-1][0]:
-            if i!=0:
-                ax.plot(vals[0], vals[1], label = '{0} ({1})'.format(flist[i-1][1], \
-                                    flist[i-1][0]), linestyle='-', marker='o')
-            vals = [[],[]]
-        vals[0]+=[float(flist[i][2])]
-        vals[1]+=[float(flist[i][3])]
-
-    # Final changes
-    ax.autoscale(False)
-    ax.plot(ax.get_xlim(), [0,0], 'k--')
-    ax.legend(loc='lower left', borderaxespad=0., numpoints=1, prop={'size':11})
-
-    #ax.xaxis.label.set_fontsize(14)
-    #ax.yaxis.label.set_fontsize(14)
-    for item in (ax.get_xticklabels() + ax.get_yticklabels()):
-        item.set_fontsize(15)
-
-    if save:
-        _plt.savefig('dtheta.pdf', bbox_inches='tight')
-    else:
-        _plt.show()
 
 
 
@@ -2418,10 +2824,10 @@ def splitData(night, path_raw='raw', path_red='red'):
 
 
 
+
 #################################################
 #################################################
 #################################################
-## AINDA FALTA TESTAR!!!
 def splitData301(night, path_raw='raw', path_red='red'):
     """
     Split the raw files and reduced files for a night, renaming according
@@ -2450,13 +2856,13 @@ def splitData301(night, path_raw='raw', path_red='red'):
     else:
         path = _phc.trimpathname(night)[0]
         night = _phc.trimpathname(night)[1]
-    
+
     # Verify if the splitted directories exist
     if _os.path.exists('{0}/{1}'.format(path_raw, night)) or  \
                         _os.path.exists('{0}/{1}'.format(path_red, night)):
 
         while True:
-            verif = raw_input('CAUTION: Directory \'{0}/{1}\' and/or \'{2}/{1}\' already exists! '.\
+            verif = raw_input('CAUTION: Directory \'{0}/{1}\' and/or \'{2}/{1}\' already exists!\n'.\
                            format(path_raw, night, path_red) + 'Are you sure to continue, ' + \
                            'overwriting all data inside these directories? (y/n): ')
             print('')
@@ -2484,6 +2890,9 @@ def splitData301(night, path_raw='raw', path_red='red'):
 
     # Loop for splitting
     for (direc, _, files) in _os.walk('{0}/{1}'.format(path, night)):
+
+        jds = [f for f in files if _re.search(r'^jd[0-9]*', f)]
+
         for f in files:
             file_old = _os.path.join(direc, f)
 
@@ -2494,7 +2903,7 @@ def splitData301(night, path_raw='raw', path_red='red'):
             elif file_old.find('/dark/') != -1 or file_old.find('/flat/') != -1 or \
                                             file_old.find('/bias/') != -1:
                 if _re.search(r'.fits$', f):
-                    file_new = path_red + '/' + night + '/' + calib
+                    file_new = path_red + '/' + _os.path.relpath(file_old, path)
                 else:
                     file_new = path_raw + '/' + _os.path.relpath(file_old, path)
             # If filename is type p010001, fb01001, s001001, d001001, b01001
@@ -2507,27 +2916,42 @@ def splitData301(night, path_raw='raw', path_red='red'):
                 elem = filter(None, file_old.split('/{0}/'.format(night))[1].split('/'))
                 if len(elem) > 0:
                     obj = elem[0]
-                elif len(elem) > 1:
+
+                if len(elem) > 1 and elem[1] in ('u','b','v','r','i'):
                     filt = elem[1]
                 else:
-                    filt = 'wf'
+                    filt = ''
 
                 # Case sum*.dat files
                 if _re.search(r'^sum', f):
-                    file_new = path_red + '/' + obj + '/sum_' + obj + '_' + filt + '_' + f[-6:]
+#                    print f
+                    if filt == '':
+                        print(('\nERROR: No filter was identified for file {0}.\nPut this files ' +\
+                        ' inside a subdir named with the filter name and run again!').format(file_old))
+                        return 3
+                    file_new = path_red + '/' + night + '/' + obj + '/sum_' + obj + '_' +\
+                                                                      filt + '_0' + f[-8:]
                 # Case w*.dat, w*.log, w*.out files
-                elif _re.search(r'.[dat|log|out]$', f):
-                    file_new = path_red + '/' + obj + '/w' + obj + '_' + filt + '_' + f[1:]
+                elif _re.search(r'\.dat|\.log|\.out$', f):
+                    if filt == '':
+                        print(('# ERROR: No filter was identified for file {0}.\nPut this files ' +\
+                        ' inside a subdir named with the filter letter and run again!').format(file_old))
+                        return 3
+                    file_new = path_red + '/' + night + '/' + obj + '/w' + obj + '_' +\
+                                                                        filt + '_' + f[1:]
                 # Case coord.*.ord files
                 elif _re.search(r'^coord', f):
-                    file_new = path_red + '/' + obj + '/coord_' + obj + '_' + filt + f[-6:]
-                # Case JD* files
+                    if filt == '':
+                        print(('# ERROR: No filter was identified for file {0}.\nPut this files ' +\
+                        ' inside a subdir named with the filter letter and run again!').format(file_old))
+                        return 3
+                    file_new = path_red + '/' + night + '/' + obj + '/coord_' + obj + '_' +\
+                                                                        filt + f[-6:]
+                # Case JD* files, pass and concatenate only at the end of this loop
                 elif _re.search(r'^jd[0-9]*', f):
-                    # PAREI AQUI. CONCATENAR TODOS AQUIVOS JD EM UM SÓ
-                    pass
+                    continue
                 else:
                     file_new = path_red + '/' + _os.path.relpath(file_old, path)
-
 
             # Create all subdirectories
             if not _os.path.exists(_phc.trimpathname(file_new)[0]):
@@ -2538,11 +2962,1150 @@ def splitData301(night, path_raw='raw', path_red='red'):
                                 ' \'{0}\' and \'{1}\'\n'.format(path_raw, path_red))
                     return 2
 
+            print('OLD:' + file_old)
+            print('NEW:' + file_new + '\n')
             _shutil.copy2(file_old, file_new)
 
+        # Concatenate all JD files now
+        if len(jds) > 0:
+            jds.sort()
+            with open('{0}/{1}/{2}/JD_{3}_{4}'.format(path_red,night,obj,obj,filt), 'a') as f_out:
+                for f in jds:
+                    with open('{0}/{1}'.format(direc,f), 'r') as f_in:
+                        f_out.write(f_in.readline())
 
     print('Done!\n')
     return 0
+
+
+
+
+#################################################
+#################################################
+#################################################
+def graf_t(logfile, vfilter=['no-std'], save=False, extens='pdf', filt='v'):
+    """
+    Plot a P_V x t, theta_V x t and P_B/P_I x t graphs for the
+    Be star in the logfile .log file (the outfile from
+    polt.genTarget). Propagates error of standard star.
+
+    If 'no-std' is in vfilter, no data with 'no-std' tag will be
+    displayed, but the others filtered data will be showed
+    with a 'x' symbol.
+    If 'no-std' is not in vfilter, the data with 'no-std' will
+    be displayed normally and the other filtered will be
+    showed with a 'x' symbol.
+
+    """
+
+    ###########
+    ## FUNC
+    def polColor(dayp, jdp, p, s, dayp_filt, jdp_filt, p_filt, s_filt):
+        """
+        Return pb/pi from input lists
+        """
+       
+        jd, pbpi, spbpi = [],[],[]
+        for i in range(len(dayp[1])):
+            for j in range(len(dayp[4])):
+                # p[4][j] != 0 is to prevent division by 0.
+                if dayp[1][i] == dayp[4][j] and p[4][j] != 0:
+ #                   print dayp[1][i], dayp[4][j]
+                    jd += [(jdp[1][i] + jdp[4][j])/2]
+                    pbpi += [p[1][i]/p[4][j]]
+                    spbpi += [pbpi[-1]*_np.sqrt((s[1][i]/p[1][i])**2 + (s[4][j]/p[4][j])**2)]
+#                    print pbpi[-1], p[1][i], p[4][j]
+#                    print ''
+
+                    # This line below prevent to take the same point more once
+                    p[4][j] = 0.
+                    break
+
+        return jd, pbpi, spbpi
+        ###########
+
+
+    ###########
+    ## FUNC
+    def plot(fig, axs):
+        """
+        Receive figure and an axes list (with three axes objects)and do the plots
+        filt WITHOUT show or save the image.
+        """
+
+        cm = _plt.cm.gist_rainbow     # Setting the color map
+        factor=0.7                   # Factor to fix the font sizes
+            
+        try:
+            lines = _np.loadtxt(logfile, dtype=str)
+        except:
+            print('# ERROR: Can\'t read file {0}.'.format(logfile))
+            raise SystemExit(1)
+
+        if type(lines[0]) != _np.ndarray and _np.size(lines) == 18:
+            lines = lines.reshape(-1,18)
+
+#        ax.set_title('{0} filter'.format(filt.upper()), fontsize=fonts[0]*factor, verticalalignment='bottom')
+#        ax.text(0.98, 0.9, '{0} filter'.format(filt.upper()), horizontalalignment='right', \
+#                 verticalalignment='bottom', transform=ax.transAxes, fontsize=fonts[1]*factor)
+        axs[2].set_xlabel(r'MJD', size=fonts[1]*factor)
+        axs[0].set_ylabel(r'$P_{0}$ (%)'.format(filt.upper()), size=fonts[1]*factor)
+        axs[1].set_ylabel(r'$P_B / P_I$', size=fonts[1]*factor)
+        axs[2].set_ylabel(r'$\theta_{0}$ (degree)'.format(filt.upper()), size=fonts[1]*factor)
+
+
+        dayp, jdp, p, s = [[],[],[],[],[]], [[],[],[],[],[]], [[],[],[],[],[]], [[],[],[],[],[]]
+        daythet, jdthet, thet, sthet = [[],[],[],[],[]], [[],[],[],[],[]], [[],[],[],[],[]], [[],[],[],[],[]]
+        dayp_filt, jdp_filt, p_filt, s_filt = [[],[],[],[],[]], [[],[],[],[],[]], [[],[],[],[],[]], [[],[],[],[],[]]
+        daythet_filt, jdthet_filt, thet_filt, sthet_filt = [[],[],[],[],[]], [[],[],[],[],[]], [[],[],[],[],[]], [[],[],[],[],[]]
+        image = []
+        limJD=[10000000000000.,0]
+
+        # Getting the values to fit and plot
+        for line in lines:
+
+            if line[16] != 'E':
+                idx = filters.index(line[3])
+
+                # Refresh the limits
+                if float(line[0]) < limJD[0]:
+                    limJD[0] = float(line[0])
+                if float(line[0]) > limJD[1]:
+                    limJD[1] = float(line[0])
+
+                # Not filtered data
+                if not any(sub in line[17] for sub in vfilter): # if sub != 'no-std'):
+                    jdp[idx] += [float(line[0])]
+                    dayp[idx] += [line[1]]
+                    p[idx] += [float(line[8])]
+                    s[idx] += [float(line[12])]
+                    if 'no-std' not in line[17]:
+                        jdthet[idx] += [float(line[0])]
+                        daythet[idx] += [line[1]]
+                        thet[idx] += [float(line[11])]
+                        sthet[idx] += [_np.sqrt(float(line[7])**2 + float(line[13])**2)]
+
+                # Filtered data
+                elif 'no-std' not in line[17]:
+                    jdp_filt[idx] += [float(line[0])]
+                    dayp_filt[idx] += [line[1]]
+                    p_filt[idx] += [float(line[8])]
+                    s_filt[idx] += [float(line[12])]
+                    jdthet_filt[idx] += [float(line[0])]
+                    daythet_filt[idx] += [line[1]]
+                    thet_filt[idx] += [float(line[11])]
+                    sthet_filt[idx] += [_np.sqrt(float(line[7])**2 + float(line[13])**2)]
+
+        jdpbpi, pbpi, spbpi = polColor(dayp, jdp, p, s, dayp_filt, jdp_filt, p_filt, s_filt)
+
+#        print jdp, p, s
+#        print jdp_filt, p_filt, s_filt
+
+
+        ##############
+        ### 1ST GRAPH
+        idx = filters.index(filt)
+
+        # Plot data
+        if jdp[idx] != []:
+            if limJD[0] != limJD[1]:
+                col = _plt.cm.gist_rainbow([(jdi-limJD[0])/(limJD[1]-limJD[0]) for jdi in jdp[idx]])
+                image += [axs[0].scatter(jdp[idx], p[idx], marker='o', c=jdp[idx], vmin=limJD[0], \
+                                    vmax=limJD[1], edgecolors='white', s=60, cmap=cm)]
+            else:
+                col = _plt.cm.gist_rainbow([0.5])
+                lixo = [axs[0].scatter(jdp[idx], p[idx], marker='o', c=col, \
+                                    edgecolors='white', s=60, cmap=cm)]
+
+            for i in range(len(jdp[idx])):
+                axs[0].errorbar(jdp[idx][i], p[idx][i], yerr=s[idx][i], linestyle='', \
+                                       elinewidth=0.6, marker='', c=col[i], alpha=0.7)
+
+        # Plot ignored data
+        if jdp_filt[idx] != []:
+            if limJD[0] != limJD[1]:
+                col = _plt.cm.gist_rainbow([(jdi-limJD[0])/(limJD[1]-limJD[0]) for jdi in jdp_filt[idx]])
+                image += [axs[0].scatter(jdp_filt[idx], p_filt[idx], marker='x', c=jdp_filt[idx], vmin=limJD[0], \
+                                    vmax=limJD[1], s=50, linewidths=1.8, cmap=cm)]
+            else:
+                col = _plt.cm.gist_rainbow([0.5])
+                lixo = [axs[0].scatter(jdp_filt[idx], p_filt[idx], marker='x', c=col, \
+                                                    s=50, linewidths=1.8, cmap=cm)]
+
+            for i in range(len(jdp_filt[idx])):
+                axs[0].errorbar(jdp_filt[idx][i], p_filt[idx][i], yerr=s_filt[idx][i], linestyle='', \
+                                    elinewidth=0.6, marker='', color=col[i], alpha=0.7)
+
+        ##############
+        ### 2ND GRAPH
+
+        # Plot data 
+        if jdpbpi != []:
+            if limJD[0] != limJD[1]:
+                col = _plt.cm.gist_rainbow([(jdi-limJD[0])/(limJD[1]-limJD[0]) for jdi in jdpbpi])
+                image += [axs[1].scatter(jdpbpi, pbpi, marker='o', c=jdpbpi, vmin=limJD[0], \
+                                    vmax=limJD[1], edgecolors='white', s=60, cmap=cm)]
+            else:
+                col = _plt.cm.gist_rainbow([0.5])
+                lixo = [axs[1].scatter(jdpbpi, pbpi, marker='o', c=col, \
+                                     edgecolors='white', s=60, cmap=cm)]
+
+            for i in range(len(jdpbpi)):
+                axs[1].errorbar(jdpbpi[i], pbpi[i], yerr=spbpi[i], linestyle='', \
+                                    elinewidth=0.6, marker='', color=col[i], alpha=0.7)
+
+        # Plot ignored data
+#        image += [axs[1].scatter(jdp_filt[idx], p_filt[idx], marker='x', c=jdp_filt[idx], vmin=limJD[0], \
+ #                                   vmax=limJD[1], s=50, linewidths=1.8, cmap=cm)]
+ #       axs[1].errorbar(jdp_filt[idx], p_filt[idx], yerr=s_filt[idx], linestyle='', \
+ #                                   elinewidth=0.6, marker='', color='black', alpha=0.7)
+
+        ##############
+        ### 3RD GRAPH
+        idx = filters.index(filt)
+
+        # Plot data 
+        if jdthet[idx] != []:
+            if limJD[0] != limJD[1]:
+                col = _plt.cm.gist_rainbow([(jdi-limJD[0])/(limJD[1]-limJD[0]) for jdi in jdthet[idx]])
+                image += [axs[2].scatter(jdthet[idx], thet[idx], marker='o', c=jdthet[idx], vmin=limJD[0], \
+                                    vmax=limJD[1], edgecolors='white', s=60, cmap=cm)]
+            else:
+                col = _plt.cm.gist_rainbow([0.5])
+                lixo = [axs[2].scatter(jdthet[idx], thet[idx], marker='o', c=col, \
+                                       edgecolors='white', s=60, cmap=cm)]
+
+
+            for i in range(len(jdthet[idx])):
+                axs[2].errorbar(jdthet[idx][i], thet[idx][i], yerr=sthet[idx][i], linestyle='', \
+                                    elinewidth=0.6, marker='', color=col[i], alpha=0.7)
+
+        # Plot ignored data
+        if jdthet_filt[idx] != []:
+            if limJD[0] != limJD[1]:
+                col = _plt.cm.gist_rainbow([(jdi-limJD[0])/(limJD[1]-limJD[0]) for jdi in jdthet_filt[idx]])
+                image += [axs[2].scatter(jdthet_filt[idx], thet_filt[idx], marker='x', c=jdthet_filt[idx], vmin=limJD[0], \
+                                    vmax=limJD[1], s=50, linewidths=1.8, cmap=cm)]
+            else:
+                col = _plt.cm.gist_rainbow([0.5])
+                lixo = [axs[2].scatter(jdthet_filt[idx], thet_filt[idx], marker='x', c=col, \
+                                       s=50, linewidths=1.8, cmap=cm)]
+                            
+            for i in range(len(jdthet_filt[idx])):
+                axs[2].errorbar(jdthet_filt[idx][i], thet_filt[idx][i], yerr=sthet_filt[idx][i], linestyle='', \
+                                    elinewidth=0.6, marker='', color=col[i], alpha=0.7)
+
+        # Fix limits
+#        ax.autoscale(False)
+#        ax.plot(ax.get_xlim(), [0,0], 'k--')
+#        ax.plot([0,0], ax.get_ylim(), 'k--')
+
+        # Setting sizes
+        axs[2].xaxis.label.set_fontsize(fonts[1]*factor)
+        axs[0].yaxis.label.set_fontsize(fonts[1]*factor)
+        axs[1].yaxis.label.set_fontsize(fonts[1]*factor)
+        axs[2].yaxis.label.set_fontsize(fonts[1]*factor)
+
+        for item in axs[2].get_xticklabels():
+            item.set_fontsize(fonts[2]*factor)
+        for item in axs[0].get_yticklabels():
+            item.set_fontsize(fonts[2]*factor)
+        for item in axs[1].get_yticklabels():
+            item.set_fontsize(fonts[2]*factor)
+        for item in axs[2].get_yticklabels():
+            item.set_fontsize(fonts[2]*factor)
+
+        return image
+        ###########
+
+   
+
+    _plt.close('all')
+    if logfile.split('.')[0] in _phc.bes:
+        be = _phc.bes[logfile.split('.')[0]]
+    else:
+        be = logfile.split('.')[:-1]
+    images = []
+
+    # Verify if vfilter is a special filter
+    if vfilter in vfil.keys():
+        vfilter = vfil[vfilter]
+    elif type(vfilter) != list:
+        vfilter = []
+
+    # Generate the four axes (sorted as BVRI)
+    fig = _plt.figure(1)
+    axs = [_plt.subplot(3, 1, 1)]
+    axs += [_plt.subplot(3, 1, 2, sharex=axs[0])]
+    axs += [_plt.subplot(3, 1, 3, sharex=axs[0])]
+    
+    # Fix the spacing among the subgraphs and set the QU limits
+    _plt.subplots_adjust(hspace=0.06, wspace=0.06)
+
+    # Do the graphs
+    images += [plot(fig, axs)]
+
+    # Unset the ticklabels
+    _plt.setp(axs[0].get_xticklabels(), visible=False)
+    _plt.setp(axs[1].get_xticklabels(), visible=False)
+    axs[0].set_xlabel('')
+    axs[1].set_xlabel('')
+    fig.subplots_adjust(right=0.8)
+
+    # Plot colormap
+    if images != [[]]:
+        cax = fig.add_axes([0.85, 0.3, 0.02, 0.5])
+        cb = _plt.colorbar(images[0][0], cax=cax, orientation='vertical')
+        cb.set_label('MJD')
+#        cb.ColorbarBase(cax, orientation='vertical', cmap=_plt.cm.gist_rainbow)
+#        cb.set_ticklabels(range(int(limJD[0]),int(limJD[1]),50))
+
+    if save:
+        _plt.savefig('{0}_t.{1}'.format(logfile.split('.')[0],extens), bbox_inches='tight')
+    else:
+        _plt.show(block=False)
+
+    return
+
+
+
+
+#################################################
+#################################################
+#################################################
+def graf_qu(logfile, mode=1, odr=True, mcmc=False, nn=[120, 200, 600], \
+                           thet_ran=[0., 180.], b_ran=[-1., 1.], Pb_ran=[0., 1.], \
+                           Yb_ran=[-1., 1.], Vb_ran=[0., 1.], clip=True, sclip=4.5, \
+                           nmax=5, vfilter=['no-std'], save=False, extens='pdf'):
+    """
+    Plot a QU diagram for the Be star in the logfile .log
+    file (the outfile from polt.genTarget) and fit a line
+    if specified. Propagates error of standard star.
+
+         ODR: dot-line
+        MCMC: continuous line
+        
+    mode=1 plot BVRI graphs in the same figure + U in another;
+    mode=2 plot UBVRI graphs in separated figures.
+
+    INPUT
+
+        logfile: Logfile with QU data
+           mode: 1) Plot a figure to filter U and another for
+                 BVRI filters; 2) Plot a figure for filter
+            odr: Run phc.fit_linear to fit a line?
+           mcmc: Run fitMCMCline to fit a line?
+             nn: fitMCMCline: [n_walkers, n_burnin, n_mcmc]
+       thet_ran: fitMCMCline: [thet_min, thet_max]
+          b_ran: fitMCMCline: [b_min, b_max]
+         Pb_ran: fitMCMCline: [Pb_min, Pb_max], with Pb_min >= 0
+         Yb_ran: fitMCMCline: [Yb_min, Yb_max]
+         Vb_ran: fitMCMCline: [Vb_min, Vb_max], with Vb_min >= 0
+           clip: phc.fit_linear: apply sigma clipping?
+          sclip: phc.fit_linear: sigma value to clip
+           nmax: phc.fit_linear: sigma clipping max number of
+                 iterations
+        vfilter: list of flags to filter (will be marked with
+                 a 'x' symbol and won't considered in odr
+                 fitting). The observations with flag 'no-std'
+                 never are shown. mcmc fitting uses the filtered
+                 observations, except those with 'no-std' flag.
+           save: Save the graphs? If False, just shows
+         extens: Extension for the graphs
+
+    OUTPUT
+
+        1) None if odr and mcmc are False
+        2) When mcmc==True:
+           [[[param_u], [sparam_+_u], [sparam_-_u], n_u, obj_u],
+             ...
+            [[param_i], [sparam_+_i], [sparam_-_i], n_i, obj_i]],
+
+           where param, sparam_+ and sparam_- are arrays with
+           the five parameters for MCMC fitting (thet, b, Pb,
+           Yb and Vb) and its errors (at right and left), n is
+           the number of points and obj is one graphical dummy object.
+        3) When odr==True AND mcmc==False:
+           Idem, but param, sparam_+ and sparam_- are arrays with the
+           two parameters for ODR fitting (a, b) and its errors.
+
+
+    CAUTION:
+
+      - The angle returned IS NOT the PA angle obtained from the slop,
+        but the own inclination angle of the fitted line! PA is this
+        angle divided by 2.
+      - PA angle is indefined by a factor of +-90 degrees
+      - This routine NEVER shows the data with 'no-std' tag,
+        independently of vfilter variable!
+
+    """
+
+
+    def plotQU(filt, fig, ax, vfilter, odr_fit, mcmc_fit, limq=None, limu=None, limJD=None):
+        """
+        Receive figure and axes objects and do the plot for filter
+        filt WITHOUT show or save the image.
+
+        limq=[qmin, qmax] and limu=[umin, umax] are lists for the min
+        and max limits for the axes. Case no specified, they are
+        automatically chosen.
+        
+        Return [param, sparam_+, sparam_-, n, image]
+
+        param, sparam_+ and sparam_- are lists when two peaks are selected
+        from chi2 distribution.
+
+        """
+
+        # Setting the color map
+        cm = _plt.cm.gist_rainbow
+        
+        # Factor to fix the font sizes
+        if mode==1:
+            factor=0.7
+        else:
+            factor=1.
+            
+        try:
+            lines = _np.loadtxt(logfile, dtype=str)
+        except:
+            print('# ERROR: Can\'t read file {0}.'.format(logfile))
+            raise SystemExit(1)
+
+#        ax.set_title('{0} filter'.format(filt.upper()), fontsize=fonts[0]*factor, verticalalignment='bottom')
+        ax.text(0.98, 0.9, '{0} filter'.format(filt.upper()), horizontalalignment='right', \
+                 verticalalignment='bottom', transform=ax.transAxes, fontsize=fonts[1]*factor)
+        ax.set_xlabel(r'Q (%)', size=fonts[1]*factor)
+        ax.set_ylabel(r'U (%)', size=fonts[1]*factor)
+
+        if type(lines[0]) != _np.ndarray and _np.size(lines) == 18:
+            lines = lines.reshape(-1,18)
+
+        JD, p, q, u, s, thet, sdth = [],[],[],[],[],[],[]
+        JD_filt, p_filt, q_filt, u_filt, s_filt, thet_filt, sdth_filt = [],[],[],[],[],[],[]
+        sq, su, sq_filt, su_filt = [],[],[],[]
+        image = []
+
+        # Getting the values of the points and filtered points
+        for line in lines:
+            if line[3] == filt and line[16] != 'E' and not any(sub in line[17] for sub in vfilter):
+                JD += [float(line[0])]
+                p += [float(line[8])]
+                q += [float(line[9])]
+                u += [float(line[10])]
+                thet += [float(line[11])]
+                s += [float(line[12])]
+                sdth += [float(line[7])]
+            elif line[3] == filt and line[16] != 'E' and 'no-std' not in line[17]:
+                JD_filt += [float(line[0])]
+                p_filt += [float(line[8])]
+                q_filt += [float(line[9])]
+                u_filt += [float(line[10])]
+                thet_filt += [float(line[11])]
+                s_filt += [float(line[12])]
+                sdth_filt += [float(line[7])]
+
+        # Propagate errors
+        lixo, sq, su = propQU(p, thet, s, sdth)
+        lixo, sq_filt, su_filt = propQU(p_filt, thet_filt, s_filt, sdth_filt)
+#        print 'original:'
+#        print q
+#        print q_filt
+
+        # Case some valid data was found
+        if [q, u] != [[],[]]:
+
+            # Fitting and plotting by least squares (must be found at least 2 points)
+            if odr_fit and len(q) > 1:
+                print '='*60
+                print '='*6 + '  FILTER ' + filt.upper()
+                print '='*60
+                print ''
+                tht, stht, param, sparam1, num = fitodr(q,u,sq,su,JD,q_filt,u_filt,sq_filt,su_filt,JD_filt,filt)
+                sparam2 = sparam1
+                delt = (max(q+q_filt)-min(q+q_filt))/8
+                xadj = _np.linspace(min(q+q_filt)-delt,max(q+q_filt)+delt,3)
+                yadj = param[0]*xadj+param[1]
+                ax.plot(xadj, yadj, ':', color='dimgray', linewidth=1.7*factor, label='odr')
+
+            # Fitting and plotting by MCMC
+            if mcmc_fit:
+                if not odr_fit or len(q) <= 1:
+                    print '='*60
+                    print '='*6 + '  FILTER ' + filt.upper()
+                    print '='*60
+                    print ''
+                param, sparam1, sparam2 = fitmcmc(q+q_filt,u+u_filt,sq+sq_filt,su+su_filt,filt)
+                num=len(q+q_filt)
+                delt = (max(q+q_filt)-min(q+q_filt))/8
+                xadj = _np.linspace(min(q+q_filt)-delt,max(q+q_filt)+delt,3)
+#                print param
+                # Only plot the curve when the number of points is > 1
+                if len(q) > 1:
+                    for i,parami in enumerate(param):
+                        b0 = parami[1]/_np.cos(parami[0]*_np.pi/180)
+                        a0 = _np.tan(parami[0]*_np.pi/180)
+                        yadj = a0*xadj+b0
+                        if i==0:
+                            ax.plot(xadj, yadj, '-', color='dimgray', linewidth=1.7*factor, label='mcmc')
+                        else:
+                            ax.plot(xadj, yadj, '-.', color='dimgray', linewidth=1.7*factor, label='mcmc')
+                # Reshape the lists when there is just one peak selected from mcmc.
+                if len(param) == 1:
+                    param = param[0]
+                    sparam1 = sparam1[0]
+                    sparam2 = sparam2[0]
+            elif not odr or len(q) == 1:
+                param, sparam1, sparam2 = [], [], []
+                num = 0
+
+
+            # Specify the colors according to the JD if limJD is None
+            if limJD == None or limJD == []:
+                limJD = [min(JD+JD_filt), max(JD+JD_filt)]
+
+            # Plot data 
+            if len(q) > 0:
+#                image += [ax.scatter(pts[0], pts[1], marker='o', edgecolors=colors, facecolors=colors, s=50)]
+                if limJD[0] != limJD[1]:
+                    col = _plt.cm.gist_rainbow([(jdi-limJD[0])/(limJD[1]-limJD[0]) for jdi in JD])
+                    image += [ax.scatter(q, u, marker='o', c=JD, vmin=limJD[0], \
+                                            vmax=limJD[1], edgecolors='white', s=72*factor, cmap=cm)]
+                else:
+                    col = _plt.cm.gist_rainbow([0.5])
+                    lixo = ax.scatter(q, u, marker='o', c=col, \
+                                      edgecolors='white', s=72*factor, cmap=cm)
+
+                for i in range(len(q)):
+                    ax.errorbar(q[i], u[i], xerr=sq[i], yerr=su[i], linestyle='', \
+                                                elinewidth=1.05*factor, capsize=4*factor, marker='', c=col[i], alpha=0.7)
+
+            # Plot ignored data
+            if len(q_filt) > 0:
+#                image += [ax.scatter(pts_filt[0], pts_filt[1], marker='x', edgecolors=colors_filt, facecolors=colors_filt, s=60, linewidths=2)]
+#                print "Entrou IF"
+                if limJD[0] != limJD[1]:
+                    col = _plt.cm.gist_rainbow([(jdi-limJD[0])/(limJD[1]-limJD[0]) for jdi in JD_filt])
+                    image += [ax.scatter(q_filt, u_filt, marker='x', c=JD_filt, \
+                                vmin=limJD[0], vmax=limJD[1], s=72*factor, linewidths=1.4, cmap=cm)]
+                else:
+                    col = _plt.cm.gist_rainbow([0.5])
+                    lixo = ax.scatter(q_filt, u_filt, marker='x', c=col, \
+                                      s=72*factor, linewidths=1.4, cmap=cm)
+
+                for i in range(len(q_filt)):
+                    ax.errorbar(q_filt[i], u_filt[i], xerr=sq_filt[i], yerr=su_filt[i], \
+                                        linestyle='', elinewidth=1.05*factor, capsize=4*factor, marker='', c=col[i], alpha=0.7)
+
+            # If mode==2, print the colorbar here
+            if mode == 2:
+                if image != []:
+                    fig.subplots_adjust(right=0.8)
+                    cax = fig.add_axes([0.85, 0.3, 0.02, 0.5])
+                    cb = _plt.colorbar(image[0], cax=cax, orientation='vertical')
+                    cb.set_label('MJD')
+
+        else:
+            param, sparam1, sparam2 = [], [], []
+            num = 0
+            image = []
+
+
+        # Fix limits
+        ax.autoscale(False)
+        if limq != None and limq != []:
+            ax.set_xlim(limq)
+        if limu != None and limu != []:
+            ax.set_ylim(limu)
+        ax.plot(ax.get_xlim(), [0,0], 'k--')
+        ax.plot([0,0], ax.get_ylim(), 'k--')
+
+        # Setting sizes
+        ax.xaxis.label.set_fontsize(fonts[1]*factor)
+        ax.yaxis.label.set_fontsize(fonts[1]*factor)
+        for item in (ax.get_xticklabels() + ax.get_yticklabels()):
+            item.set_fontsize(fonts[2]*factor)
+
+
+        return [param, sparam1, sparam2, num, image]
+
+
+
+    def fitodr(q,u,sq,su,JD,q_filt,u_filt,sq_filt,su_filt,JD_filt,filt):
+        """
+        Fit ODR
+        """
+
+        jd, jd_filt, pts, spts, pts_filt, spts_filt = [],[],[[],[]],[[],[]],[[],[]],[[],[]]
+        jd_filt = JD_filt[:]
+        pts_filt[0] = q_filt[:]
+        pts_filt[1] = u_filt[:]
+        spts_filt[0] = sq_filt[:]
+        spts_filt[1] = su_filt[:]
+
+        # Fit the simple least squares (only considering y errors) to find
+        # initial parameters to the next adjust
+        param0, cov = _curve_fit(lambda x,a,b: a*x + b, q, u, sigma=su)
+        sparam0 = [_np.sqrt(cov[0][0]), _np.sqrt(cov[1][1])]
+        tht0 = _np.arctan(param0[0])*180/_np.pi
+        stht0 = (180*sparam0[0])/(_np.pi*(param0[0]**2+1))
+
+        # Fit by the total least squares method (orthogonal distance regression) with clipping
+        param, sparam, cov, chi2, niter,bolfilt = _phc.fit_linear(q, u, sq, su, param0=param0,
+                                                     clip=clip, sclip=sclip, nmax=nmax)
+        tht = _np.arctan(param[0])*180/_np.pi
+        stht = (180*sparam[0])/(_np.pi*(param[0]**2+1))
+
+        # Splitting the data into the selected data and the filtered by the clipping
+        for i in range(len(q)):
+            if bolfilt[i] == 1:
+                jd += [JD[i]]
+                pts[0] += [q[i]]
+                pts[1] += [u[i]]
+                spts[0] += [sq[i]]
+                spts[1] += [su[i]]
+            else:
+                jd_filt += [JD[i]]
+                pts_filt[0] += [q[i]]
+                pts_filt[1] += [u[i]]
+                spts_filt[0] += [sq[i]]
+                spts_filt[1] += [su[i]]
+
+        # Calculate the reduced chi-squared
+        if len(pts[0]) > 2:
+            rchi2 = chi2[0]/(len(pts[0])-2)
+        else:
+            rchi2 = 0
+
+        # Print informations only if mcmc==False (to prevent to print twice)
+        if not mcmc:
+            print(55*'-')
+            print '  Total least squares fit  (y = a*x+b):'
+            print(55*'-')
+            print '             a = {0:.3f} +- {1:.3f}'.format(param[0], sparam[0])
+            print '             b = {0:.3f} +- {1:.3f}'.format(param[1], sparam[1])
+            print '         theta = {0:.2f} +- {1:.2f} (+- n*90)'.format(tht, stht)
+            print '             N = {0:d}'.format(len(pts[0]))
+            print ''
+            print '             red chi^2 = {0:2f}'.format(rchi2)
+            print(55*'-')
+            print ''
+            
+        return tht, stht, param, sparam, len(pts[0])
+
+
+
+    def fitmcmc(q, u, sq, su, filt):
+        """
+        Fit MCMC
+        The returned variable are "lists"
+        """
+
+        dictvar = ['theta','b', 'P_b', 'Y_b', 'V_b']
+        ranges = [thet_ran, b_ran, Pb_ran, Yb_ran, Vb_ran]
+
+        opt2 = ''
+        while True:
+            thet_mcmc, b_mcmc, Pb_mcmc, Yb_mcmc, Vb_mcmc, fig1, fig2 = fitMCMCline(q, u, sq, su, \
+                                star=star+'_'+filt, plot_adj=True, margin=True, n_burnin=nn[1], \
+                                n_mcmc=nn[2], n_walkers=nn[0], thet_ran=ranges[0],   \
+                                b_ran=ranges[1], Pb_ran=ranges[2], Yb_ran=ranges[3], \
+                                Vb_ran=ranges[4], extens=extens)
+                        
+            if opt2 in ('y','Y'):
+                param = [param[0]] + [[thet_mcmc[0], b_mcmc[0], Pb_mcmc[0], Yb_mcmc[0], Vb_mcmc[0]]]
+                sparam1 = [sparam1[0]] + [[thet_mcmc[1], b_mcmc[1], Pb_mcmc[1], Yb_mcmc[1], Vb_mcmc[1]]]
+                sparam2 = [sparam2[0]] + [[thet_mcmc[2], b_mcmc[2], Pb_mcmc[2], Yb_mcmc[2], Vb_mcmc[2]]]
+            else:
+                param = [[thet_mcmc[0], b_mcmc[0], Pb_mcmc[0], Yb_mcmc[0], Vb_mcmc[0]]]
+                sparam1 = [[thet_mcmc[1], b_mcmc[1], Pb_mcmc[1], Yb_mcmc[1], Vb_mcmc[1]]]
+                sparam2 = [[thet_mcmc[2], b_mcmc[2], Pb_mcmc[2], Yb_mcmc[2], Vb_mcmc[2]]]
+
+            # NEW: Requests if the user want to use another interval
+            opt = ''
+            while opt not in ('y','Y','n','N'):
+                print('Do you want to prune the limits and run again MCMC?')
+                opt = raw_input('(y/n): ')
+
+            if opt in ('y','Y'):
+                while True:
+                    ranges = [[],[],[],[],[]]
+                    print('')
+                    for i, var in enumerate(dictvar):
+                        while True:
+                            try:
+                                etr = raw_input('{0}: specify in format `{0}_min,{0}_max`: '.format(var))
+            #                        p_int = [float(ei)-params_fit[0] for ei in petr.split(',')]
+                                ranges[i] = [float(ei) for ei in etr.split(',')]
+                                if len(ranges[i]) == 2:
+                                    if ranges[i][1] > ranges[i][0]:
+                                        break
+                                    else:
+                                        print('Error: {0}_max must be greather than {0}_min!'.format(var))
+                                else:
+                                    print('Invalid input!')
+                            except:
+                                print('Invalid input!')
+
+                    opt = ''
+                    while opt not in ('y','Y','n','N'):
+                        print('\nIs it correct?')
+                        for i, var in enumerate(dictvar):
+                            print('              {0}_min,{0}_max: {1},{2}'.format(var, ranges[i][0], ranges[i][1]))
+
+                        opt = raw_input('(y/n): ' )
+                    if opt in ('y','Y'):
+                        _plt.close(fig1)
+                        _plt.close(fig2)
+                        break
+            else:
+                # To precent a 'third' peak
+                if opt2 in ('y','Y'):
+                    opt2 = 'N'
+                while opt2 not in ('y','Y','n','N'):
+                    print('Do you want select a second peak?')
+                    opt2 = raw_input('(y/n): ')
+
+                _plt.close(fig1)
+                _plt.close(fig2)
+                if opt2 in ('n','N'):
+                    break
+
+
+        return param, sparam1, sparam2
+
+
+
+    def fixLimits():
+        """
+        Found the min and max Q, U and JD values to set the limits of plot
+        (excluding the observations for U filter).
+        Return 3 lists: [qmin, qmax], [umin, umax], [JDmin, JDmax]
+        Return [],[],[] if there is none observations.
+        """
+
+        try:
+            lines = _np.loadtxt(logfile, dtype=str)
+        except:
+            print('# ERROR: Can\'t read file {0}.'.format(logfile))
+            raise SystemExit(1)
+
+        if type(lines[0]) != _np.ndarray and _np.size(lines) == 18:
+            lines = lines.reshape(-1,18)
+
+        q = [float(line[9]) for line in lines if line[3] != 'u' and line[16] != 'E' and 'no-std' not in line[17]]
+#                                                 not any(sub in line[17] for sub in vfilter)]
+        u = [float(line[10]) for line in lines if line[3] != 'u' and line[16] != 'E' and 'no-std' not in line[17]]
+#                                                 not any(sub in line[17] for sub in vfilter)]
+        JD = [float(line[0]) for line in lines if line[3] != 'u' and line[16] != 'E' and 'no-std' not in line[17]]
+#                                                 not any(sub in line[17] for sub in vfilter)]
+
+        if q==[]:
+            return [],[],[]
+        
+        # A scaled value to shift
+        deltq = (max(q)-min(q))/8
+        deltu = (max(u)-min(u))/8
+
+        return [min(q)-deltq, max(q)+deltq], [min(u)-deltu, max(u)+deltu], [min(JD), max(JD)]
+
+
+
+    _plt.close('all')
+    star = _phc.trimpathname(logfile)[1].split('.')[0]
+    if star in _phc.bes:
+        be = _phc.bes[star]
+    else:
+        be = star
+    arr, images = [],[]
+
+    # Verify if vfilter is a special filter
+    if vfilter in vfil.keys():
+        vfilter = vfil[vfilter]
+    elif type(vfilter) != list:
+        vfilter = []
+
+    ######
+    ## 1) Mode 1 plots QU diagram for BVRI filters in the same image and for U in another
+    if mode==1:
+
+        ### 1.1 Do the graph for U filter
+        fig = _plt.figure()
+        ax = _plt.subplot(1, 1, 1)
+        arr += [plotQU('u', fig, ax, vfilter, odr, mcmc)]
+#        _plt.close(fig_aux)
+        
+        if save:
+            fig.savefig('{0}_qu_u.{1}'.format(star,extens), bbox_inches='tight')
+#            _plt.close(fig)
+        else:
+            fig.show()
+        if odr:
+            print('\n')
+        
+        # Generate the four axes (sorted as BVRI)
+        fig = _plt.figure()
+        axs = [_plt.subplot(2, 2, 1)]
+        axs += [_plt.subplot(2, 2, 2, sharey=axs[0])]
+        axs += [_plt.subplot(2, 2, 3, sharex=axs[0])]
+        axs += [_plt.subplot(2, 2, 4, sharex=axs[1], sharey=axs[2])]
+
+        for ax in axs:
+#            ax.locator_params(axis='x', nbins=6)
+            xloc = _plt.MaxNLocator(6)
+            ax.xaxis.set_major_locator(xloc)
+        
+        # Fix the spacing among the subgraphs and set the QU limits
+        _plt.subplots_adjust(hspace=0.05, wspace=0.05)
+        limq, limu, limJD = fixLimits()
+
+
+        ### 1.2 Do the graphs fo BVRI
+        nax = 0
+        for filt in ('b','v','r','i'):
+            arr += [plotQU(filt, fig, axs[nax], vfilter, odr, mcmc, limq=limq, limu=limu, limJD=limJD)]
+            nax += 1
+
+            if arr[-1][-1] != []:
+                images += [arr[-1][-1]]
+            if odr:
+                print('\n')
+
+        # Unset the ticklabels
+        _plt.setp(axs[0].get_xticklabels(), visible=False)
+        _plt.setp(axs[1].get_xticklabels(), visible=False)
+        _plt.setp(axs[1].get_yticklabels(), visible=False)
+        _plt.setp(axs[3].get_yticklabels(), visible=False)
+        axs[0].set_xlabel('')
+        axs[1].set_xlabel('')
+        axs[1].set_ylabel('')
+        axs[3].set_ylabel('')
+        fig.subplots_adjust(right=0.8)
+
+        # Plot colormap
+        if images != []:
+            cax = fig.add_axes([0.85, 0.3, 0.02, 0.5])
+            cb = _plt.colorbar(images[0][0], cax=cax, orientation='vertical')
+            cb.set_label('MJD')
+#        cb.ColorbarBase(cax, orientation='vertical', cmap=_plt.cm.gist_rainbow)
+#        cb.set_ticklabels(range(int(limJD[0]),int(limJD[1]),50))
+
+        if save:
+            fig.savefig('{0}_qu.{1}'.format(star,extens), bbox_inches='tight')
+#            _plt.close(fig)
+        else:
+            fig.show()
+
+
+    ######
+    ## 2) Mode 2 plots QU diagram for UBVRI filters in different images
+    elif mode==2:
+        for filt in ('u','b','v','r','i'):
+            fig = _plt.figure()
+            ax = _plt.subplot(1, 1, 1)
+            arr += [plotQU(filt, fig, ax, vfilter, odr, mcmc)]
+#            _plt.close(fig_aux)
+
+            if save:
+                fig.savefig('{0}_qu_{1}.{2}'.format(star,filt,extens), bbox_inches='tight')
+#                _plt.close(fig)
+            else:
+                _plt.show()
+
+    if odr or mcmc:
+        return arr
+    else:
+        return
+
+
+
+
+def sintLeff(ccdn='ixon', step=5., save=True, extens='pdf'):
+    """
+    Sintetizes the response curve, considering the
+    CCD Quantum Efficience (QE) and filter transmitance
+    from OPD and the stellar models from Pickles (1998).
+    Interpolations are made by using cubic splines.
+
+    This code DON'T use none curve for sky transmitance!
+
+    Creates two data files:
+
+    leff_stars_[ccdn].dat : table with l_eff calculated
+                            for each star type
+    leff_[ccdn].dat : table with the parameters for the
+                      adjusted cubic function for l_eff(b-v)
+                      (or l_eff(u-b) to the filter U). The
+                      M-type stars were excluded from the
+                      adjusts, because the molecular lines
+                      were affecting these curves.
+
+    'ccdn':  CCD to use in QE curve
+                 ixon: CON, Frame Transfer
+                 ikon: High Sensitive, Frame Transfer
+           ikon-14912: High Sensitive, Frame Transfer
+                  301: not avaible
+
+        New eventual CCD files must sample the QE, at least,
+        inside the range [2800,11000] Angstrom.
+
+    'step': step, in angstrom, used for the integration
+            (Simpson's method) to calculate lambda_eff.
+            Allowed values are 5, 10, 15, ..., 500.
+
+
+    FORMULAS:
+
+    The lbd_eff is computed as **the flux-weighted mean
+    wavelenght in terms of photons**:
+
+    lbd_eff = \int(lbd*phi(lbd) * d_lbd) / \int(phi(lbd) * d_lbd)
+
+
+    where  phi(lbd) = lbd * F_lbd * QE(lbd) * T(lbd)
+           F_lbd: stellar flux in erg cm-2 s-1 A-1
+           QE(lbd): curve for quantum efficience
+           T(lbd):  curve for filter transmitance
+           d_lbd: infinitesimal element of wavelength
+    
+    """
+
+    # List the files for standard stars models
+    stars = _glob('{0}/stars/uk*.dat'.format(_hdtpath()))
+
+    # Open file with informations about the standard stars models
+    dstars = _np.loadtxt('{0}/stars/synphot.dat'.format(_hdtpath()),usecols=[4,6,7], dtype=str)
+    lbds = _np.arange(2800.,11000.001,step)
+
+    # Open file with CCD Quantum Efficience (QE)
+    try:
+        fqe = _np.loadtxt('{0}/refs/QE_{1}.dat'.format(_hdtpath(),ccdn),skiprows=1, dtype=float, unpack=True) # unpack is to get the transposed array
+    except:
+        print('ERROR: CCD name \'{0}\' not identified!'.format(ccdn))
+        return
+
+    if step not in range(5, 505, 5):
+        print('ERROR: step value not valid! Put some value among 5, 10, 15, ..., 500')
+        return        
+
+    # Interpolate QE
+    qe = _interp1d(fqe[0], fqe[1], kind='cubic')
+
+    # Delete the old .dat files
+    if _os.path.exists('leff_stars_{0}.dat'.format(ccdn)):
+        _os.unlink('leff_stars_{0}.dat'.format(ccdn))
+    if _os.path.exists('leff_{0}.dat'.format(ccdn)):
+        _os.unlink('leff_{0}.dat'.format(ccdn))
+
+    with open('leff_stars_{0}.dat'.format(ccdn), 'w') as f0:
+        f0.write('{0:5s} {1:>6s} {2:>7s} {3:>7s} {4:>10s}\n'.format('#filt','stype','u-b','b-v','leff'))
+    with open('leff_{0}.dat'.format(ccdn), 'w') as f0:
+        f0.write('# For U filter:      leff = l0 + k1*(u-b) + k2*(u-b)^2 + k3*(u-b)^3\n')
+        f0.write('# For BVRI filters:  leff = l0 + k1*(b-v) + k2*(b-v)^2 + k3*(b-v)^3\n#\n')
+        f0.write(('{0:5s} {1:>8s} {2:>10s} {3:>8s} {4:>8s} {5:>7s} {6:>7s} {7:>7s}' +\
+                  '{8:>7s} {9:>7s}\n').format('#filt','adj_col','l0','k1','k2','k3',\
+                  'sl0','sk1','sk2','sk3'))
+
+    for filt in filters:
+
+        # Open file with Filter Transmitance
+        ftr = _np.loadtxt('{0}/filters/T{1}_POL.dat'.format(_hdtpath(),filt.upper()),skiprows=1)
+
+        # Interpolate Filter Transmitance
+        if filt=='u':
+            tr = _interp1d(_np.arange(2800., 11000.001, 50.), ftr, kind='cubic')
+        else:
+            tr = _interp1d(_np.arange(2800., 11000.001, 100.), ftr, kind='cubic')
+
+        for star in stars:
+
+            # Open file with flux for star model (genfromtxt allows skip lines in both header and footer)
+            fspec = _np.genfromtxt(star, usecols=[0,1], unpack=True, skip_header=330, skip_footer=2800)
+
+            # Mount the array for star spectrum
+            spec = _np.array([], dtype=float)
+            for i in range(len(fspec[0])):
+                if fspec[0][i] in lbds:
+                    spec = _np.append(spec, [fspec[1][i]])
+
+            # Interpolate the star spectrum
+#            spec = _interp1d(fspec[0], fspec[1], kind='cubic')
+            stype = star.split('/')[-1][2:-4].upper()
+
+            # read the color index
+            for di in dstars:
+                if di[0] == stype:
+                    bv = float(di[2])
+                    ub = float(di[1])-float(di[2])
+                    break
+
+            # Convolute all the curves in the response function
+            resp = _np.array([], dtype=float)
+            for i in range(len(lbds)):
+                resp = _np.append(resp, [lbds[i]*spec[i]*tr(lbds[i])*qe(lbds[i])])
+
+            # Integrate reponse*lambda and response to compute lambda_eff
+            l_on = _simps(lbds*lbds*resp, lbds)
+            l_under = _simps(lbds*resp, lbds)
+            leff = l_on/l_under
+
+            line = '{0:5s} {1:>6s} {2:>7.3f} {3:>7.3f} {4:>10.3f}'.format(filt,stype,ub,bv,leff)
+            print line
+            with open('leff_stars_{0}.dat'.format(ccdn), 'a') as f0:
+                f0.write(line+'\n')
+
+            if False:
+                _plt.figure()
+                ax = _plt.axes()
+                _plt.xlabel(r'$\lambda\ (\AA)$', size=fonts[1])
+                _plt.ylabel(r'Curves', size=fonts[1])
+
+                _plt.plot(lbds,resp/max(resp), '-', c='black', label='Combined')
+                _plt.plot(lbds,spec/max(spec), 'r-.', label='{0} spec'.format(stype))
+                tr2 = [tr(lbd) for lbd in lbds]
+                _plt.plot(lbds,tr2/max(tr2), 'g--', label='Transm')
+                qe2 = [qe(lbd) for lbd in lbds]
+                _plt.plot(lbds,qe2/max(qe2), 'b--', label='QE')
+
+                _plt.autoscale(False)
+                _plt.ylim([-0.1,1.1])
+                _plt.plot([leff,leff], [-0.1,1.1], 'k--', label=r'$\lambda_{eff}$')
+                _plt.legend(loc='best', prop={'size':fonts[3]})
+
+                # Setting sizes
+                ax.xaxis.label.set_fontsize(fonts[1])
+                ax.yaxis.label.set_fontsize(fonts[1])
+                for item in (ax.get_xticklabels() + ax.get_yticklabels()):
+                    item.set_fontsize(fonts[2])
+
+                _plt.savefig('{0}_{1}_{2}.{3}'.format(stype, ccdn, filt, extens), bbox_inches='tight')
+
+
+
+    # Once concluded, we need compute lambda_eff as function of u-b and b-v
+    print '\n\n\n# GENERAL ADJUST\n'
+    leffs = _np.loadtxt('leff_stars_{0}.dat'.format(ccdn), dtype=str, unpack=True)
+    for filt in filters:
+        
+        ub, bv, leff = _np.array([], dtype=float), _np.array([], dtype=float), _np.array([], dtype=float)
+
+        for i in range(len(leffs[0])):
+            # Excluding 'M' type because it is problematic, due to the molecular lines
+            if leffs[0][i] == filt and leffs[1][i][0] != 'M':
+                ub = _np.append(ub, [float(leffs[2][i])])
+                bv = _np.append(bv, [float(leffs[3][i])])
+                leff = _np.append(leff, [float(leffs[4][i])])
+
+        _plt.figure()
+        ax = _plt.axes()
+        _plt.xlabel(r'Color', size=fonts[1])
+        _plt.ylabel(r'$\lambda_{eff}\ (\AA)$', size=fonts[1])
+        _plt.plot(bv, leff, 'o', c='grey', label='B-V')
+        _plt.plot(ub, leff, 's', c='blue', label='U-B')
+
+        if filt == 'u':
+            color = ub
+            colorstr = 'U-B'
+        else:
+            color = bv
+            colorstr = 'B-V'
+
+        # Fit the lambdas/colors
+        param, cov = _curve_fit(lambda x,l0,k1,k2,k3: l0 + k1*x + k2*(x**2) + k3*(x**3), color, leff)
+        sparam = _np.array([_np.sqrt(cov[0][0]), _np.sqrt(cov[1][1]),_np.sqrt(cov[2][2]), _np.sqrt(cov[3][3])])
+        x = _np.linspace(-1,2,100) 
+        y = param[0] + param[1]*x + param[2]*(x**2) + param[3]*(x**3)
+        _plt.plot(x, y, '--', c='black', label='{0} fit'.format(colorstr))
+
+        _plt.legend(loc='best', prop={'size':fonts[3]})
+
+        # Setting sizes
+        ax.xaxis.label.set_fontsize(fonts[1])
+        ax.yaxis.label.set_fontsize(fonts[1])
+        for item in (ax.get_xticklabels() + ax.get_yticklabels()):
+            item.set_fontsize(fonts[2])
+
+        line = ('{0:5s} {1:>8s} {2:>10.2f} {3:>8.2f} {4:>8.2f} {5:>7.2f} {6:>7.2f} {7:>7.2f}' +\
+                '{8:>7.2f} {9:>7.2f}').format(filt,colorstr,param[0],param[1],param[2],param[3],\
+                         sparam[0],sparam[1],sparam[2],sparam[3])
+        print line
+        with open('leff_{0}.dat'.format(ccdn), 'a') as f0:
+            f0.write(line+'\n')
+
+        if save:
+            _plt.savefig('leff_{0}_{1}.{2}'.format(ccdn, filt, extens), bbox_inches='tight')
+        else:
+            _plt.show()
+
+
+    return
+
+
+
+
+def lbds(color, filt, ccdn, airmass=1.3, skiperror=False):
+    """
+    Return the lambda_eff in angstrom for star with
+    color index 'color', in filter 'filt', CCD 'ccdn'
+    and airmass 'airmass'. The default airmass is 1.3
+    for an average value.
+
+    If skiperror==True, tries to use lambda_eff as the value
+    from phc.lbds[] in case of missing information for
+    'filt' or 'ccd'.
+
+    CAUTION:
+    If filt=='u', the color must be U-B
+       Otherwise, the color must be B-V
+
+    FORMULAS:
+      - Atm. reddening:   redn = 2.5*_np.log10(_np.e)*
+                                    *airmass*(taub-tauv)
+      - Redd. color:  color_av = color + redn
+      - lambda_eff:      l_eff = l0 + k1*color_av +
+                                    + k2*(color_av**2) +
+                                    + k3*(color_av**3)
+
+       where tauu, taub, tau are the optical deepth of
+       atmosphere (values used from Kepler de Oliveira
+       et al, Astronomia e Astrofisica).
+    
+    """
+    
+    data = _np.loadtxt('{0}/filters/leff.dat'.format(_hdtpath()), dtype=str)
+
+    # Optical deepth according to Kepler de Oliveira et al (Astronomia
+    # e Astrofisica), for altitude above 2000m
+    tauu=1.36
+    taub=0.52
+    tauv=0.37
+
+    if filt=='u':
+        redn = 2.5*_np.log10(_np.e)*airmass*(tauu-taub)
+    else:
+        redn = 2.5*_np.log10(_np.e)*airmass*(taub-tauv)
+
+    l0=0
+    for line in data:
+        if line[0] == filt and line[2] == ccdn:
+            l0 = float(line[3])
+            k1 = float(line[4])
+            k2 = float(line[5])
+            k3 = float(line[6])
+            break
+
+    if l0==0:
+        if skiperror:
+            leff = _phc.lbds[filt]
+        else:
+            print('# ERROR: parameters to calculate lambda_eff in filter {0} and CCD {1} not found.'.format(filt,ccdn))
+            raise SystemExit(1)
+    else:
+        color = color + redn
+        leff = l0 + k1*color + k2*(color**2) + k3*(color**3)
+
+    return leff
 
 
 
@@ -2552,4 +4115,509 @@ def splitData301(night, path_raw='raw', path_red='red'):
 ### MAIN ###
 if __name__ == "__main__":
     pass
+
+
+
+
+
+def fitMCMCline(x, y, sx, sy, star='', margin=False, plot_adj=True, fig=None, ax=None, \
+                                            n_burnin=300, n_mcmc=600, \
+                                    n_walkers=120, thet_ran=[0., 180.], \
+                                    b_ran=[-1., 1.], Pb_ran=[0., 1.], \
+                                   Yb_ran=[-1., 1.], Vb_ran=[0., 1.], extens='pdf'):
+    """
+        Fit a line using Markov Chain Monte Carlo for data
+        with both x and y errors and with bad points
+        from emcee code.
+        
+        The model is tha sum of two models:
+        a) a line model for the good points, y = ax + b, with
+        data displaced ortogonally by a gaussian diplacentment
+        (covariance is suposed null!);
+        b) a gaussian distribution orthogonal to the line for
+        the bad points with amplitude, mean and variance equal
+        to Pb, Yb and Vb (see Hoog, Bovy and Lang,
+        ``Data analysis recipes: Fitting a model to data'')
+
+        The MCMC does a ``mixture'' among both model for each
+        point. So, it is not needed know about the bad and
+        good points necessairly! The five parameters to be
+        found are theta=arctan(a), b, Pb, Yb and Vb.
+
+
+      INPUT:
+        
+      x/y/sx/sy: array/list with the data
+           star: star name to be printed in the graph and
+                 its filename. If it's a void str '', this
+                 routine give a random number to prevent
+                 overwriting data.
+         margin: marginalize the corner graphs over Pb,
+                 Yb, Vb (generating the graph only for
+                 theta and b)?
+       plot_adj: show a plot of data+fit?
+            fig: Figure to append the plots for data+fit.
+                 If None, a new figure is generated.
+             ax: Axes, as like fig above.
+       n_burnin: number of iterations for burning-in
+         n_mcmc: number of iterations to run emcee
+      n_walkers: number of walkers to map the posterior
+                 probabilities.
+       thet_ran: [thet_min, thet_max]
+          b_ran: [b_min, b_max]
+         Pb_ran: [Pb_min, Pb_max], with Pb_min >= 0
+         Yb_ran: [Yb_min, Yb_max]
+         Vb_ran: [Vb_min, Vb_max], with Vb_min >= 0
+         extens: extension for the graph file
+
+
+      OUTPUT:
+
+         theta_fit: [theta, theta_+, theta_-], the theta value
+                    and its errors (at right and left from it).
+                    theta is the median of distribution
+                    probability and theta_+, theta_- are the
+                    range within which there are 68.3% of the
+                    points in such distribution.
+      b*cos(theta): Idem, for b*cos(theta).
+                Pb: Idem, for Pb.
+                Yb: Idem, for Yb.
+                Vb: Idem, for Vb.
+              fig1: Figure pointer to the corner graph ([]
+                    if show==False).
+              fig2: Figure pointer to the data+fit graph ([]
+                    if plot_adj==False).
+        
+
+      FORMULAS:
+
+        Supposing i as each data point, the log of Likelihood
+        function (L) takes form:
+
+          log(L) = sum(log(p_good_i+p_bad_i))
+
+        with
+
+          p_good_i = (1-Pb)/sqrt(2*pi*var_i)*
+                                exp(-0.5*(disp_i**2/var_i)),
+
+           p_bad_i = Pb/sqrt(2*pi*(Vb+var)*
+                            exp(-0.5*(disp_i-Yb)**2)/(Vb+var_i))
+
+        where disp_i is the total projection of the (x_i,y_i)
+        values over the line and var_i, the projected variance:
+
+          disp_i = v*Z_i -b cos(thet)
+           var_i = v*S_i*v
+
+        with
+        
+            v = (-sin(theta), cos(theta)) (versor orthogonal
+                                                 to the line)
+          Z_i = (x_i, y_i)    (data point)
+          S_i = | sx_i^2  sxy_i^2| = |sx_i^2     0 | = (covariance 
+                |syx_i^2   sy_i^2|   | 0     sy_i^2|       matrix)
+
+
+    """
+
+    import emcee
+    import triangle.nov
+    from matplotlib.ticker import MaxNLocator
+
+
+    def lnprob(params, xx, yy, sxx, syy):
+        """
+        Return the log of posterior probability (p_pos) in
+        bayesian statistics for the parameters 'params' and the
+        data poits xx, yy, sxx and syy.
+
+        p_pos = L*p_prior (unless by a normalization constant),
+        where L is the likelihood function and p_prior is the
+        prior probability function.
+
+
+        a) Likelihood
+        
+        In our case, for gaussian and independent uncertaities,
+        in both x and y axes and with bad points:
+
+        log(L) = sum(log(p_good_i+p_bad_i))
+
+        with
+
+        p_good_i = (1-Pb)/sqrt(2*pi*var_i)*exp(-0.5*(disp_i**2/var_i)),
+        p_bad_i = Pb/sqrt(2*pi*(Vb+var)*exp(-0.5*(disp_i-Yb)**2)/(Vb+var_i))
+
+        where disp_i is the total projection of the (x_i,y_i) values
+        over the line and var_i, the projected variance; Pb, Yb, Vb are
+        the gaussian model for the bad points - the amplitude, mean and
+        variance (see Hoog, Bovy and Lang, ``Data analysis recipes:
+        Fitting a model to data'')
+
+        Taking the model for the line y = ax + b, where a = tan(thet),
+        let
+
+        v = (-sin(thet), cos(thet)) (versor orthogonal to the line)
+        Z_i = (x_i, y_i)
+        S_i = | sx_i^2   sxy_i^2|  (covariance matrix)
+              |syx_i^2    sy_i^2|
+
+        The formulas for disp_i and var_i are:
+        
+        disp_i = v*Z_i -b cos(thet)
+        var_i = v*S_i*v
+
+
+        b) p_prior
+        
+        Now, p_prior = constant for 'params' values inside the
+        range defined by 'intervalos'; otherwise, it is 0.
+        That is the only determination that we can do.
+
+        So, p_pos = log(L) or -inf case 'params' are out from
+        the allowed range.
+        """
+
+        thet, b, Pb, Yb, Vb = params
+        b0 = b/_np.cos(thet*_np.pi/180)
+
+        # Set prior ln prob
+        lnprior = 0
+        for i, interv in enumerate(intervalos):
+            if params[i] < interv[0] or params[i] > interv[1]:
+                lnprior = -_np.inf
+
+        # Return posterior prob
+        if not _np.isfinite(lnprior):
+            return -_np.inf
+        else:
+            sin = _np.sin(thet*_np.pi/180)
+            cos = _np.cos(thet*_np.pi/180)
+#            cov = sin*cos*(b0**2)
+            disp = -x*sin + y*cos - b
+#            var = (1-cov)*(sin*sxx)**2 + (1-1/cov)*(cos*syy)**2
+            # Projected variance WITHOUT covariance terms
+            var = (sin*sxx)**2 + (cos*syy)**2
+
+            prob_good = (1-Pb)/(_np.sqrt(2*_np.pi*var))*_np.exp(-0.5*(disp**2/var))
+            prob_bad = Pb/_np.sqrt(2*_np.pi*(Vb+var))*_np.exp(-0.5*((disp-Yb)**2)/(Vb+var))
+#            print '-'*40
+#            print prob_good, prob_bad, disp, var#, cov
+
+            for i in range(len(prob_good)):
+                if prob_good[i]+prob_bad[i] <= 0:
+                    return -_np.inf
+            
+            return lnprior + sum(_np.log(prob_good + prob_bad))
+
+
+
+    def run_emcee(sampler, p0):
+        """
+        Run emcee.
+
+        p0 is the initial positions for the walkers
+        """
+
+        print "Burning-in ..."
+        pos, prob, state = sampler.run_mcmc(p0, n_burnin)
+        sampler.reset()
+
+        print "Running MCMC ..."
+        pos, prob, state = sampler.run_mcmc(pos, n_mcmc, rstate0=state)
+
+        #~ Print out the mean acceptance fraction. 
+        af = sampler.acceptance_fraction
+        print "Mean acceptance fraction:", _np.mean(af)
+
+        # Compute the results using all interval
+        fig1, thet_mcmc, b_mcmc, Pb_mcmc, Yb_mcmc, Vb_mcmc = gen_results(sampler, intervalos, save=True, show=True)
+
+        # Plot convergence map
+        plot_conv(sampler, [thet_mcmc[0], b_mcmc[0], Pb_mcmc[0], Yb_mcmc[0], Vb_mcmc[0]])
+
+        if plot_adj:
+            ax2.errorbar(x,y,xerr=sx,yerr=sy, linestyle='', marker='o')
+
+            if len(x) > 1:
+                xadj = _np.linspace(min(x),max(x),2)
+                yadj = podr[0]*xadj+podr[1]
+                ax2.plot(xadj, yadj, '-.', color='dimgray', label='odr')
+
+            xadj = _np.linspace(min(x),max(x),2)
+            b0 = b_mcmc[0]/_np.cos(thet_mcmc[0]*_np.pi/180)
+            a0 = _np.tan(thet_mcmc[0]*_np.pi/180)
+            yadj = a0*xadj+b0
+            ax2.plot(xadj, yadj, '-',color='dimgray', label='mcmc')
+            ax2.legend(loc='best')
+            fig2.show()
+
+        # NEW: Requests if the user want to use some specific interval
+        opt = ''
+        while opt not in ('y','Y','n','N'):
+            print('Do you want to select specific ranges to compute the values?')
+            opt = raw_input('(y/n): ')
+        if opt in ('y','Y'):
+
+            while True:
+                ranges = [[],[],[],[],[]]
+                print('')
+                for i, var in enumerate(dictvar[0]):
+                    while True:
+                        try:
+                            etr = raw_input('{0}: specify in format `{0}_min,{0}_max`: '.format(var))
+    #                        p_int = [float(ei)-params_fit[0] for ei in petr.split(',')]
+                            ranges[i] = [float(ei) for ei in etr.split(',')]
+                            if len(ranges[i]) == 2:
+                                if ranges[i][1] > ranges[i][0]:
+                                    break
+                                else:
+                                    print('Error: {0}_max must be greather than {0}_min!'.format(var))
+                            else:
+                                print('Invalid input!')
+                        except:
+                            print('Invalid input!')
+
+                opt = ''
+                while opt not in ('y','Y','n','N'):
+                    print('\nIs it correct?')
+                    for i, var in enumerate(dictvar[0]):
+                        print('              {0}_min,{0}_max: {1},{2}'.format(var, ranges[i][0], ranges[i][1]))
+
+                    opt = raw_input('(y/n): ' )
+                if opt in ('y','Y'):
+                    print ''
+                    break
+
+            _plt.close(fig1)
+            fig1, thet_mcmc, b_mcmc, Pb_mcmc, Yb_mcmc, Vb_mcmc = gen_results(sampler, ranges, save=True, show=True)
+#        else:
+#            _plt.close(fig2)
+
+
+        return fig1, thet_mcmc, b_mcmc, Pb_mcmc, Yb_mcmc, Vb_mcmc, opt
+
+
+
+    def gen_results(sampler, ranges, show=True, save=True):
+
+        # Read the sampler
+        samples = sampler.chain[:, :, :].reshape((-1, ndim))
+        samples_new = _np.empty(shape=[0, ndim])
+
+        # Filtering 'samples' array
+        print('Please wait, computing values from samples...')
+        new=False
+        for i, rang in enumerate(ranges):
+            if intervalos[i][0] != rang[0] or intervalos[i][1] != rang[1]:
+                new = True
+                break
+        if new:
+            for elem in samples:
+                ver = True
+                for i in range(ndim):
+                    if elem[i] > ranges[i][1] or elem[i] < ranges[i][0]:
+                        ver = False
+                        break
+                if ver:
+                    samples_new = _np.vstack([samples_new, elem])
+        else:
+            samples_new = samples
+
+        # Ploting corner graph
+        fig1 = triangle.nov.corner(samples_new, title=star, \
+#                            truths=[p_mcmc[0], l_mcmc[0]], \
+#                            extents=[(p_range[0],l_range[0]),(p_range[1],l_range[1])], \
+                             quantiles=[0.16075, 0.50, 0.83925], \
+                             labels=dictvar[1], \
+                             verbose=False)
+        if save:
+            fig1.savefig('{0}_correl.{1}'.format(star,extens))
+        if show:
+            fig1.show()
+        else:
+            fig1 = []
+        if margin:
+            # Ploting corner graph
+            fig3 = triangle.nov.corner(samples_new[:,0:2], title=star, \
+#                            truths=[p_mcmc[0], l_mcmc[0]], \
+#                            extents=[(p_range[0],l_range[0]),(p_range[1],l_range[1])], \
+                             quantiles=[0.16075, 0.50, 0.83925], \
+                             labels=dictvar[1], \
+                             verbose=False)
+            fig3.savefig('{0}_correl_m.{1}'.format(star,extens))
+        
+        # Computing the medians and errors according to the range from median
+        # inside which there are 68.3% of the data
+        thet_mcmc, b_mcmc, Pb_mcmc, Yb_mcmc, Vb_mcmc = map(lambda v: (v[1], v[2]-v[1], v[1]-v[0]),
+                                                zip(*_np.percentile(samples_new, [16.075, 50, 83.925], axis=0)))
+
+        #~ Print the output
+        """ TBD """
+        print ''
+        print(55*'-')
+        print '  2) MCMC best values  (y = tan(theta)*x + b*cos(theta)):'
+        print(55*'-')
+        print '          theta = {0:9.4f}  +{1:.4f}  -{2:.4f}'.format(thet_mcmc[0],thet_mcmc[1],thet_mcmc[2])
+        print '   b*cos(theta) = {0:9.4f}  +{1:.4f}  -{2:.4f}'.format(b_mcmc[0],b_mcmc[1],b_mcmc[2])
+        print '             Pb = {0:9.4f}  +{1:.4f}  -{2:.4f}'.format(Pb_mcmc[0],Pb_mcmc[1],Pb_mcmc[2])
+        print '             Yb = {0:9.4f}  +{1:.4f}  -{2:.4f}'.format(Yb_mcmc[0],Yb_mcmc[1],Yb_mcmc[2])
+        print '             Vb = {0:9.4f}  +{1:.4f}  -{2:.4f}'.format(Vb_mcmc[0],Vb_mcmc[1],Vb_mcmc[2])
+#        print 'reduced chi2 = {0:.4f}'.format(chi)
+        print(55*'-')
+        print ''
+
+
+        return fig1, thet_mcmc, b_mcmc, Pb_mcmc, Yb_mcmc, Vb_mcmc
+
+    
+
+    def plot_conv(sampler, param):
+        """
+        Plot convergence map. 'param' are the values to be highlighted
+        """
+
+        fig4, axes = _plt.subplots(ndim, 1, sharex=True, figsize=(8, 15))
+
+        for i in range(ndim):
+            axes[i].plot(sampler.chain[:, :, i].T, color="k", alpha=0.4)
+            axes[i].yaxis.set_major_locator(MaxNLocator(5))
+            axes[i].axhline(param[i], color="#888888", lw=2)
+            axes[i].set_ylabel(dictvar[1][i])
+
+        axes[4].set_xlabel("Step number")
+
+        fig4.tight_layout(h_pad=0.0)
+        fig4.savefig('{0}_conv.{1}'.format(star,extens))
+
+        return
+
+
+
+    def fitodr():
+        """
+        Fit by Least Squares
+        """
+
+        # Fit the simple least squares (only considering y errors) to find
+        # initial parameters to the next adjust
+        param0, cov = _curve_fit(lambda t,a,b: a*t + b, x, y, sigma=sy)
+#        sparam0 = [_np.sqrt(cov[0][0]), _np.sqrt(cov[1][1])]
+#        tht0 = _np.arctan(param0[0])*180/_np.pi
+#        stht0 = (180*sparam0[0])/(_np.pi*(param0[0]**2+1))
+
+        # Fit by the total least squares method (orthogonal distance regression) with clipping
+        param, sparam, cov, chi2, niter,bolfilt = _phc.fit_linear(x, y, sx, sy, param0=param0,
+                                                                        clip=False)
+        tht = _np.arctan(param[0])*180/_np.pi
+        if tht < 0:
+            tht += 180.
+        elif tht >= 180:
+            tht -= 180
+        stht = (180*sparam[0])/(_np.pi*(param[0]**2+1))
+        nn = sum(bolfilt)
+
+        # Calculate the reduced chi-squared
+        if nn > 2:
+            rchi2 = chi2[0]/(nn-2)
+        else:
+            rchi2 = 0
+
+        # Print informations
+        print(55*'-')
+        print '  1) Total least squares fit  (y = a*x+b):'
+        print(55*'-')
+        print '             a = {0:.3f} +- {1:.3f}'.format(param[0], sparam[0])
+        print '             b = {0:.3f} +- {1:.3f}'.format(param[1], sparam[1])
+        print '         theta = {0:.2f} +- {1:.2f}'.format(tht, stht)
+        print '             N = {0:d}'.format(nn)
+        print ''
+        print '             red chi^2 = {0:2f}'.format(rchi2)
+        print(55*'-')
+        print ''
+
+        return param, sparam
+
+
+
+
+    # Dictionary for the graph labels
+    dictvar =      [['theta',
+              'b*cos(theta)',
+                       'P_b',
+                       'Y_b',
+                       'V_b'],
+                  [r'$\theta$',
+          r'$b\,\cos \theta $',
+                      r'$P_b$',
+                      r'$Y_b$',
+                      r'$V_b$']]
+
+
+#    try:
+#        _plt.close(fig2)
+#    except:
+#        pass
+#    x = _np.array([201., 244., 47., 287., 203., 58., 210., 202., 198., 158., 165., 201., 157., 131., 166., 160., 186., 125., 218., 146.])
+#    y = _np.array([592., 401., 583., 402., 495., 173., 479., 504., 510., 416., 393., 442., 317., 311., 400., 337., 423., 334., 533., 344.])
+#    sx = _np.array([9.,4.,11.,7.,5.,9.,4.,4.,11.,7.,5.,5.,5.,6.,6.,5.,9.,8.,6.,5.])
+#    sy = _np.array([61.,25.,38.,15.,21.,15.,27.,14.,30.,16.,14.,25.,52.,16.,34.,31.,42.,26.,16.,22.])
+
+    # thet, b, Pb, Yb, Vb
+
+    # Setting parameters and limits
+    intervalos = _np.array([thet_ran, b_ran, Pb_ran, Yb_ran, Vb_ran])
+    ndim = 5
+
+    # Converting lists to np.array
+    if type(x) == list:
+        x = _np.array(x)
+    if type(y) == list:
+        y = _np.array(y)
+    if type(sx) == list:
+        sx = _np.array(sx)
+    if type(sy) == list:
+        sy = _np.array(sy)
+
+    # Fit by Least Squares
+    if len(x) > 1:
+        podr, spodr = fitodr()
+    if plot_adj:
+        if ax==None or fig==None:
+            fig2 = _plt.figure()
+            ax2 = _plt.subplot(1, 1, 1)
+        else:
+            fig2 = fig
+            ax2 = ax
+
+    # If 'star' was not specified, generate a random number to append to the graph name to be saved
+    if star == '':
+        star = 'rand' + str(int(_np.random.rand(1)[0]*10000))
+
+    # Define random values to be used as priori numbers within the interval
+    p0 = _np.array( [_np.random.rand(ndim) for n in xrange(n_walkers)] )
+    for k in range(ndim):
+        p0[:,k] = intervalos[k][0]+p0[:,k]*(intervalos[k][1]-intervalos[k][0])
+
+    # Initialize the sampler and run mcmc
+    sampler = emcee.EnsembleSampler(n_walkers, ndim, lnprob, args=[x, y, sx, sy], a=3)#, threads=2)
+    fig1, thet_mcmc, b_mcmc, Pb_mcmc, Yb_mcmc, Vb_mcmc, opt = run_emcee(sampler, p0)
+
+
+    # Plot only if plot_adj==True or a new computation was done
+    if plot_adj and opt in ('y','Y'):
+
+        xadj = _np.linspace(min(x),max(x),2)
+        b0 = b_mcmc[0]/_np.cos(thet_mcmc[0]*_np.pi/180)
+        a0 = _np.tan(thet_mcmc[0]*_np.pi/180)
+        yadj = a0*xadj+b0
+        ax2.plot(xadj, yadj, '--',color='dimgray', label='mcmc_new')
+        ax2.legend(loc='best')
+        fig2.show()
+    elif not plot_adj:
+        fig2 = []
+
+
+    return thet_mcmc, b_mcmc, Pb_mcmc, Yb_mcmc, Vb_mcmc, fig1, fig2
 

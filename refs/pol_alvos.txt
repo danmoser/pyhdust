@@ -22,15 +22,25 @@ oori
 acol
 h37776
 hr2142
+tcol
+h45871
 hr2356
 hess
+10cma
+hr2501
 kcma
+hr2545
+hr2609
 27cma
 28cma
 h57682
+hr2819
 hr2825
+h58978
 bcmi
 zpup
+h61556
+lpup
 opup
 h64740
 hr3147
@@ -86,4 +96,7 @@ eppsa
 bpsc
 psaqr
 etuc
-v356sag
+v356sgr
+h163296
+h189733
+tpyx         # is it correct?

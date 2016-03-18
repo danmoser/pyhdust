@@ -1,0 +1,269 @@
+******************************************************************************
+HILIB Stellar Flux library contents, procedures and summary. HILIB consists of:
+UVILIB (1150-10620/5A, 131 spectra),
+UVKLIB (1150-25000/5A, 66 with ir spectra, rest with JHK continuum),
+UVMLIB (1150-52000/5A,  16 spectra).
+******************************************************************************
+
+The file UVILIB consists of 131 spectra covering the wavelength 
+range 1150-10620 A, at 5A steps and approximately 10A resolution. Spectra:
+  1- 45 are O5-M6V,   including 5 metal-weak & 5 metal-rich G-K V spectra.
+ 46- 59 are B2-K3IV.
+ 60-105 are O8-M10III, including 7 metal-weak & 7 metal-rich G-K III spectra.
+106-113 are B2-M3II.
+114-131 are B0-M2I.
+
+All spectra were formed by combining data from several publicly available
+digital libraries of observed stellar spectra, obtained from the
+Astronomical Data Centers at Goddard (ADC), or Strasbourg (CDS). Data at
+higher resolution was binned down and/or filtered to approximately 10A
+resolution. All spectra are grouped by spectral type, luminosity class and
+metallicity (see the file tbl3_types.txt). Spectral types were checked
+against the SIMBAD data base, and updated where necessary. A few spectra
+either have incorrect types or are not of the stated star. Unused spectra
+are labelled with a (:) in tbl3_types.txt. All component spectra were
+normalised to unity at 5556A, splined onto a uniform output grid
+(1150-10620/5A), and set to zero outside their valid regions. They were then
+combined using a single pass rejection scheme to reject a few outlying
+pixels. Most bad data was explicitely set zero to avoid contamination, and
+the included wavelength regions of components were adjusted by reference to
+the templates to exclude poorly calibrated data. Some poorly flux calibrated
+libraries have their continuua explicitely normalised to the SED template
+spectra (SVID and GS). Wavelength regions contaminated by atmospheric
+absorption were generally set to zero, but sometimes interpolated through.
+
+Component summary and synthetic UBVRI photometry are listed in the file
+tbl2_comp.txt. Filter profiles (see the file tbl7_uifilt.txt) for the U3
+filter are from Buser 1978, A&A 62, 411; for B3 and V are from Azusienis &
+Straizys 1969, Sov. Astron. 13, 316; for Rc & Ic are from Bessell 1979 (PASP
+91, 589), and the zero points are determined by synthetically measuring the
+full range of Sviderskiene types, and minimising the deviations of the
+measured colors from standard spectral type UBV colors listed in Buser 1978
+(A&A, 62, 411) and BVRI colors listed in Cousins 1981 (SAAO circular #6,
+p4).  Filter profiles for JHKLL'M (see tbl8_jmfilt.txt) are from Bessell &
+Brett 1988, PASP 100, 1134.  Zero points are determined by requiring the
+colors of the A0V spectrum in UVMLIB to be zero, and are close to those in
+Bessell & Brett.
+
+Local Equivalent Widths (LEWs) and Magnitude indeces (Mg2 and D4000) were
+measured using bandpasses derived from Faber, Friel, Burstein & Gaskell
+1985, ApJS 57, 211 amongst others, and are listed in the file tbl5_lew.txt.
+Bandpasses are listed in tbl4_line.txt.
+
+The SM plotting and vector arithmetic package (The SM Reference Manual,
+R.H. Lupton & P. Monger, 1997, http://www.astro.princeton.edu/~rhl/sm/sm.html)
+was used to read, display, filter, spline and combine all data.  The SM
+macros used (uvi_types.sm, uvkm_types.sm, flam.sm) are available on request,
+and can be used within SM to create, edit, display and measure any spectrum.
+
+The flux library is intended to be amenable to improvement and extension 
+in wavelength coverage, spectral type and luminosity class, by incorporation 
+of additional digital spectral data as they become available.
+
+******************************************************************************
+COMPONENT DIGITAL LIBRARIES: UVILIB 1150-10620 A. (1895 pixels at 5A/pixel).
+References, summaries and identifying acronyms.
+******************************************************************************
+
+Z. Sviderskiene 1988, Vilniaus Astron. Obs. Biul. 80; ADC/CDS VI, 50. (SVID)
+98 spectra covering all spectral types and luminosity types, at solar
+metallicity. Data cover the spectral range 1200-10500(12500)A, at 50A
+steps.  These spectra are used as templates (SEDs) for most library
+types, provide the uv coverage for later spectral types not included
+in the iue data, and occasionally to fill gaps in the other library data.
+
+J.E. Gunn & L.L. Stryker, 1983, ApJS, 52, 121; ADC/CDS III, 88. (GS)
+175 spectra covering all spectral types, luminosity classes and some
+metallicity range.  Wavelength range is 3160-10620A, at 10-20A/pixel. 
+Data used in range 3160-3550 A and 8900-10620 A, and occasionally in
+between.  Also used as template SED spectra for other components.
+
+A. Heck, D. Egret, M. Jaschek & C. Jaschek, 1984, ESA SP-1052; III, 83, (IUE)
+229 IUE spectra covering spectral types O-F(G). Wavelength range is 1153-3201A,
+binned x2 to 4A/pixel and filtered to reduce resolution from ~6 to 10A.
+
+G.H. Jacoby, D.A. Hunter & C.A. Christian 1984, ApJS 56, 257; III, 92. (JHC)
+161 spectra covering types O-M, luminosity classes I, III & V and some
+metallicity range.  Wavelength range is 3510-7427A, binned x3 to
+4.2A/pixel and filtered to give approx. 10A resolution.
+Atmospheric B band at 6800A excluded (set zero).
+
+D.R. Silva & M.E. Cornell, 1992, ApJS 81, 865, ADC/CDS III, 166 (SC)
+72 spectral types ranging from O-M and luminosity classes I-V,
+some weak-line and strong-line spectra included. 
+Wavelength range is 3510-8930A, at 5A/pixel and 10A resolution.
+4 Atmospheric bands excluded (set zero).
+
+A.J. Pickles, 1985, ApJS. 59, 33 (SSS)
+48 spectral types ranging from O-M, and luminosity classes III & V,
+with some weak-line and strong-line spectra included.
+Wavelength range is 3600-10000A, at 6A/pixel and 12A resolution.
+Wavelength range used is 3800-10000A, with some variation.
+
+A.J. Pickles & P.C. van der Kruit, 1990, A&AS 84, 421 (N6522)
+16 spectra of metal-weak & metal-rich giants in Baade's Window.
+Wavelength range is 3600-7050A, at 6A/pixel and 12A resolution.
+
+R. Kiehling, 1987, A&AS 69, 465; ADC/CDS III, 124 (KIE)
+Spectrophotometry of 60 bright F-M stars, for all luminosity classes,
+including some that are metal-rich.  Wavelength range is 3200-8600 A,
+at 5A/pixel and ~10A resolution.  Atmospheric A & B bands set zero.
+
+M. Serote Roos, C. Boisson, M. Joly, 1996, AAS Suppl. 117, 93 & ADC/CDS (ROOS)
+Spectra of late-type G-M stars, 7 luminosity class V, 2 IV, 11 III, 1 II,
+and 5 type I stars, about half are metal-rich. Wavelength range is 
+4800-8920A, binned x11 to 4.73A/pixel, and filtered, or
+5000-9783A, binned x2 to 6.6A/pixel.
+
+A.C. Danks & M. Dennefeld, 1994, PASP 106, 382; ADC/CDS III, 179 (DD)
+Spectra of 126 MK standards, wavelength range 5800-10200A at 4A/pixel,
+about 8A resolution. Spectra cover types O-M, luminosity classes, I, III & V.
+Continuum definition is poor: generally renormalised to SVID or GS SED.
+
+******************************************************************************
+UVI FILE LIST and CONTENTS
+******************************************************************************
+
+tbl1_source.txt	parameter summary for all uv-ir digital spectral libraries.
+tbl2.comp.txt	component summary, optical/ir photometry, physical data.
+tbl3_types.txt	library components for each UVILIB spectrum
+tbl4_lines.txt	feature bands
+tbl5_lew.txt	lew summary
+tbl6_irstdphot.txt	standard infrared colors
+tbl7_uifilt.txt optical filter transmission profiles
+tbl8_jmfilt.txt	infrared filter transmission profiles
+uvilib.c	program to convert .dat files to 1895x132 binary files:
+flam.uvilib 	wavelengths in row 0, spectra in rows 1-131.
+rms.uvilib	wavelengths in row 0, rms errors in rows 1-131
+		(These files can be read with macro UVILIB #n in flam.sm
+flam.sm		utility SM macro procedures for UVI/UVK/UVM LIB.
+uvi_types.sm	One SM procedure for each UVILIB component.
+		Run SM, restore flam.sm, restore uvi_types.sm, 
+		then eg. A0V to construct the A0V spectrum.)
+
+							1150-10620 A
+o5v.dat o9v.dat... m6v.dat				fluxes for V class
+b2iv.dat b6iv.dat ... k3iv.dat				fluxes for IV class
+o8iii.dat b12iii.dat ... m10iii.dat			fluxes for III class
+b2ii.dat b5ii.dat ... m3ii.dat				fluxes for II class
+b0i.dat b1i.dat ... m2i.dat				fluxes for I class
+
+Each of the 131 flux.dat files contains 3 header lines with a # in the first
+column, and several columns of data. The first column is wavelength in
+Angstrom, always 1150 - 10620A in steps of 5A. The second column is
+F(lambda) for the relevant spectrum, normalised to unity at 5556A. The third
+column is the rms flux error on the same scale. Columns 4-N (Nmax=10)
+contain the components used, in no particular order. They are identified as
+fsv fi fg fk fj fs fp fn fr fd where the letters correspond to the component
+listing in columns 2 of tbl2_comp.txt, and each is the average of the
+number of components listed there. RMS errors for some of the individual
+component averages are listed in the header. The spectrum in column 2 is the
+average of each non-zero component, with the rms of the combination in the
+third column. Sometimes when there is only one averaged component source
+contributing to the spectrum, the rms flux error is taken from that
+component average. The optical error oRMS listed in the header understates
+the true error, as it is an RMS of averages, not of all components.
+
+******************************************************************************
+Extension to the infrared, UVKLIB 1150-25000/5A (4771 pixels at 5A/pixel),
+and UVMLIB 1150-52000/5A (10171 pixels at 5A/pixel).
+******************************************************************************
+
+The file UVKLIB consists of the library spectra from UVILIB, extended from
+1150A (10620A) to 25000A (at 5A/pixel) using infrared digital spectra
+obtained from ADC/CDS. A smooth standard energy distribution (SED) was
+generated for each spectrum by splining between flux points created to match
+the UBVRI-104-JHKL colors. The point at 10400A is measured from the UVILIB
+spectra, the JHKL colors are generically assigned by type, and listed in
+tbl6_irstdphot.txt. This was used to spline together the UVILIB spectra with
+infrared contributions starting at 14300A (LRV) or redder in 66 mainly
+solar-abundance spectra for which infrared digital data are available. For
+cases where no infrared spectra are available, this SED itself was used to
+extend the library spectrum out to 25000A. This procedure can be extended
+out to 52000A for UVMLIB if desired, but UVMLIB currently consists of only
+16 spectra for which digital data (cohen) exists.
+
+The macros for each component are in uvkm_types.sm; macro seduk in flam.sm
+creates the SED from generic color data in tbl6_irstdphot.txt and the UVILIB
+spectrum itself. FlamV in tbl2_comp.txt is the average F(lambda) for each
+spectrum within the V filter passband, and is used to compensate for the fact
+that the UVI/KLIB spectra are normalised at 5556A, rather than the effective
+wavelength (ElamV) of the V filter, which varies for each spectrum.
+
+M giant spectra in UVKLIB include the synthetic M0-M10 MK type spectra from
+Fluks et. al. (1994), and are a combination of these and the UVILIB spectra
+in the range 1150-10620A. M0-M8 III are the only components where the
+1150-10500A data differ between UVILIB and UVKLIB. M9/10 III spectra are
+exclusively synthetic spectra from Fluks et. al. (1994) in both libraries.
+
+******************************************************************************
+UVK/MLIB References, summaries and identifying acronyms.
+******************************************************************************
+
+A. Lancon & B. Rocca-Volmerange, 1992/96, A&AS 96, 593, CDC (LRV).
+84 FTS spectra of normal abundance stars of all types and luminosity classes.
+Wavelength range is 14300-25000A, at a resolution of R~500 (25-50A).
+Normalised at 14500A to fake SVID point, or at 21500A on Cohen when available.
+
+R. Dallier, C. Boisson & M. Joly, 1996, A&AS 116, 239 (ADC/CDC) (DBJ).
+37 H-band spectra of stars of luminosity classes II, III, V, including
+a few SMR stars. Wavelength range is 15780-16420A at resolution
+R~1500-2000 (~10A). Normalised at 16100A on LRV data.
+
+S.G. Kleinmann & D.N.B. Hall, 1986, ApJS 62, 501 (ADC) (KH).
+High resolution K-band FTS spectra for 26 stars with near-solar
+abundances, ranging in spectral class from F8 to M7. 5 Luminosity
+class I, 15 III, 6 V.  Wavelength range is 4150-4950 /cm
+(20200-24096A) at 1.6 /cm resolution (~8A) and 0.2 /cm per pixel.
+Data is binnedx4, and the continuum normalised at 21000A on LRV data.
+
+M. Cohen, F.C. Witteborn, R.G. Walker, J.D. Bregman & D.H. Wooden, 1995,
+ AJ 110, 275 (ADC) (CWWBW, Cohen).
+ Absolute spectra of 7 flux standards (A0V, A1V, K0III, K1.5III, M0III,
+ M2.5II-III, K3II-III) in range 1.2 to 35 um, at about 100A resolution.
+ Normalised at 10500A on UVILIB, or at 12200A on SVID data. 
+M. Cohen, F.C. Witteborn, J.D. Bregman, D.H. Wooden, A. Salama & L. Metcalf,
+ 1996, AJ 112, 241 (ADC) (CWBWSM, Cohen)
+ 3 more absolutely calibrated spectra from 3-35um
+M. Cohen, F.C. Witteborn, D.F. Carbon, J.K. Davies, D.H. Wooden & 
+ J.D. Bregman, 1996, AJ 112, 2274 (ADC) (CWCDWB, Cohen)
+ 5 more absolutely calibrated spectra (3 from ~1.2um)
+
+M.A. Fluks, B. Plez, P.S. The, D. De Winter, B.E. Westerlund &
+H.C. Steenman, 1994, A&AS 105, 311. (ADC/CDS) (FLUKS/MKSyn) High quality
+M-giant spectra: observed in the range 380-900nm, and synthetic in the range
+99-12500nm, arranged on both Case and MK classifications.  The MK synthetic
+spectra in the range 1150-25000 or 52000A are used here for spectral types
+M0-M10 III, and their temperatures, bolometric magnitudes and corrections
+adopted in tbl2_comp.txt.
+
+******************************************************************************
+UVK (and UVM) FILE LIST and CONTENTS
+******************************************************************************
+
+uvklib.c	program to convert uk*.dat files to 4771x132 binary files:
+flam.uvklib 	with wavelengths in row 0, spectra in rows 1-131.
+rms.uvklib	wavelengths in row 0, rms errors in rows 1-131.
+		(These files can be read with macro UVKLIB #n in flam.sm
+flam.sm		utility SM macro procedures (UVI, UVK & UVM).
+uvkm_types.sm	One SM procedure for each UVKLIB component (and UVMLIB).
+		Run SM, restore flam.sm, restore uvkm_types.sm, 
+		then eg. ukA0V to construct the A0V spectrum (1150-25000A), or
+		umA0V to construct the A0V spectrum (1150-52000A).)
+
+							1150-25000 A
+uko5v.dat uko9v.dat... ukm6v.dat			fluxes for V class
+ukb2iv.dat ukb6iv.dat ... ukk3iv.dat			fluxes for IV class
+uko8iii.dat ukb12iii.dat ... ukm10iii.dat		fluxes for III class
+ukb2ii.dat ukb5ii.dat ... ukm3ii.dat			fluxes for II class
+ukb0i.dat ukb1i.dat ... ukm2i.dat			fluxes for I class
+
+
+
+
+
+
+
+
+
+

@@ -16,6 +16,8 @@ import datetime as _dt
 from glob import glob as _glob
 from itertools import product as _product
 import pyhdust.jdcal as _jdcal
+from scipy.odr import odr as _odr
+from scipy.optimize import curve_fit as _curve_fit
 
 try:
     import matplotlib.pyplot as _plt
@@ -611,6 +613,95 @@ def gradColor(val, cmapn='jet', min=None, max=None, log=False):
     return cmap(val)
 
 
+
+def fit_linear(x, y, sx, sy, param0=None, clip=True, sclip=4, nmax=5):
+    """
+    Fit a linear function (y = a*x + b) using sigma clipping
+    algorithm if needed.
+
+    x, y, sx, sy are lists with the data and their errors.
+
+    param0 = [a, b] is the initial guess for the parameters.
+    If param0==None, a basic least squares adjust is performed
+    at the beginning only to determine them.
+
+    clip/sclip/nmax  - clip==True is used to clipping algorithm.
+                       The code process 'nmax' iterations,
+                       throwing away the points located more
+                       than the number of sigmas given by the
+                       parameter 'sclip' from the adjusted
+                       line at each iteration.
+    
+    Return: [a,b], [sa,sb], cov, chi2, niter, filt
+
+    - cov is the covariance matrix
+    - chi2 = [chi2, chi2x, chi2y] is the chi-squared
+    - niter is the number of iterations until no more data
+    be clipped (or reaches nmax).
+    - filt is a boolean list with the same length of x, y,
+    sx, sy. The elements are 0 or 1 conforming the data was
+    used or left out of the adjust, respectively
+    
+    """
+
+    # If param0==None, then estimates the initial values
+    if param0 == None:
+        param0, cov = _curve_fit(lambda x0,b0,b1: b0*x0 + b1, x, y, sigma=sy)
+        sparam0 = [_np.sqrt(cov[0][0]), _np.sqrt(cov[1][1])]
+
+    # Initialize the variables for the first iteration
+    filt = [1]*len(x)
+    xx = x[:]
+    yy = y[:]
+    sxx = sx[:]
+    syy = sy[:]
+
+    for k in range(nmax):
+
+        # Compute the weights
+        wxx = [1/s**2 for s in sxx]
+        wyy = [1/s**2 for s in syy]
+
+        # Fit linear using the no-clipped data
+        [param0, sparam0, cov, rest] = _odr(lambda B,x: B[0]*x + B[1], param0, x=xx, y=yy, \
+                                                                   wd=wxx, we=wyy, full_output=1)
+        # Apply sigma clipping
+        if clip == True:
+
+            filtrou = False
+            xx, yy, sxx, syy = [],[],[],[]
+            b0 = param0[0]
+            sb0 = sparam0[0]
+            b1 = param0[1]
+            sb1 = sparam0[1]
+
+            # Clip data
+            for i in range(len(x)):
+
+#                if filt[i] == 1 and ((sy[i] > smin and abs((y[i] - (b0*x[i]+b1))/smin) <= sclip) or \
+#                    (sy[i] <= smin and
+                if abs( (y[i] - (b0*x[i]+b1))/sy[i] <= sclip):
+                    xx += [x[i]]
+                    yy += [y[i]]
+                    sxx += [sx[i]]
+                    syy += [sy[i]]
+                elif filt[i] == 1:
+                    filtrou = True
+                    filt[i] = 0
+
+            # Breaks if no data was clipped (since is not first iteration)
+            if not filtrou and k != 0:
+                break
+        else:
+            break
+
+    # chi = [chi2, chi2x, chi2y]
+    chi = [rest['sum_square'], rest['sum_square_delta'], rest['sum_square_eps']]
+
+    return param0, sparam0, cov, chi, k, filt
+
+
+
 #Constants
 c = Constant(2.99792458e10, 299792458., 'cm s-1', 'speed of light in vacuum')
 h = Constant(6.6260755e-27, 6.62606957e-34, 'erg s-1', 'Planck constant')
@@ -642,6 +733,48 @@ Tsun = Constant(5778., 5778., 'K', 'Solar Temperature')
 
 yr =  Constant(3.15569e7, 3.15569e7, 'sec', 'year')
 
+# Dictionary for Be names
+bes = {'aeri'  : 'alpha Eri',      '28tau'   : '28 Tau',         'leri'   : 'lambda Eri',
+       'oori'  : 'omega Ori',      'acol'    : 'alpha Col',      'kcma'   : 'kappa CMa',
+       '27cma' : '27 CMa',         '28cma'   : '28 CMa',         'bcmi'   : 'beta CMi',
+       'opup'  : 'omicron Pup',    'ocar'    : 'omega Car',      'mcen'   : 'mu Cen',
+       'ecen'  : 'eta Cen',        '48lib'   : '48 Lib',         'dsco'   : 'delta Sco',
+       'coph'  : 'chi Oph',        'h148937' : 'HD 148937',      'tsco'   : 'tau Sco',
+       'iara'  : 'iota Ara',       '51oph'   : '51 Oph',         'aara'   : 'alpha Ara',
+       'lpav'  : 'lambda Pav',     'hr7355'  : 'HR 7355',        'oaqr'   : 'omicron Aqr',
+       'paqr'  : 'pi Aqr',         'hr5907'  : 'HR 5907',        '228eri' : '228 Eri',
+       'dori'  : 'delta Ori C',    'ztau'    : 'zeta Tau',       'v725tau': 'V725 Tau',
+       'pcar'  : 'p Car',          'dcen'    : 'delta Cen',      '39cru'  : '39 Cru',
+       'slup'  : 'sigma Lupi',     'klup'    : 'kappa Lupi',     'gara'   : 'gamma Ara',
+       'epscap': 'epsilon Cap',    'ecap'    : 'epsilon Cap',    '31peg'  : '31 Peg',
+       'epspsa': 'epsilon PsA',    'epsa'    : 'epsilon PsA',    'bpsc'   : 'beta Psc',
+       'epstuc': 'epsilon Tuc',    'etuc'    : 'epsilon Tuc',    'psrb12' : 'PSR B1259-63',
+       'tori'  : 'theta1 Ori C',   'sori'    : 'sigma Ori E',    'hess'   : 'HESS J0632+057',
+       'mlup'  : 'mu Lup',         'gx304'   : 'GX 304-1',       'agcar'  : 'AG Car',
+       'ggcar' : 'GG Car',         'h189733' : 'HD 189733',
+       }
+
+# Dictionary for Be names
+stdss = {'osco'    : 'omicron Sco',   'eaql'    : 'eta Aql',      'cori'    : 'chi2 Ori',
+         'nsco'    : 'nu Sco',        'lcar'    : 'l Car',        'zoph'    : 'zeta Oph',
+         'hr3708'  : 'HR 3708',       'hr4876'  : 'HR 4876',      'hr6553'  : 'HR 6553',
+         'h23512'  : 'HD 23512',      'h42087'  : 'HD 42087',     'h43384'  : 'HD 43384',
+         'h110984' : 'HD 110984',     'h111579' : 'HD 111579',    'h126593' : 'HD 126593',
+         'h127769' : 'HD 127769',     'h142863' : 'HD 142863',    'h147889' : 'HD 147889',
+         'h155197' : 'HD 155197',     'h155528' : 'HD 155528',    'h160529' : 'HD 160529',
+         'h161056' : 'HD 161056',     'h183143' : 'HD 183143',    'h245310' : 'HD 245310',
+         'h251204' : 'HD 251204',     'h298383' : 'HD 298383',
+       }
+       
+
+# Dictionary for wavelength in Angstroms
+lbds = { 'u' : 3600.,
+         'b' : 4340.,
+         'v' : 5500.,
+         'r' : 6540.,
+         'i' : 8000.,
+       }
+
 colors = ['Black','Blue','Green','red','orange','brown','purple','gray',
     'dodgerblue','lightgreen','tomato','yellow','peru','MediumVioletRed',
     'LightSteelBlue','cyan','darkred','olive']
@@ -667,3 +800,4 @@ bestars = [
 ### MAIN ###
 if __name__ == "__main__":
     pass
+
