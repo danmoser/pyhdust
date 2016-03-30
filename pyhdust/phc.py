@@ -472,21 +472,21 @@ def find_nearest(array, value, bigger=None, idx=False):
     """
     if bigger is None:
         array = _np.array(array)
-        idx = (_np.abs(array - value)).argmin()
-        found = array[idx]
+        i = (_np.abs(array - value)).argmin()
+        found = array[i]
     elif bigger:
         found = _np.min([x for x in array if x > value])
-        idx = _np.where(array == found)
+        i = _np.where(array == found)
     elif not bigger:
         found = _np.max([x for x in array if x < value])
-        idx = _np.where(array == found)
+        i = _np.where(array == found)
     else:
         print('# ERROR at bigger!!')
     # return
     if not idx:
         return found
     else:
-        return idx[0]
+        return i[0]
 
 
 def nan_helper(y):
@@ -979,7 +979,7 @@ def BBlbd(T, lbd=None):
 
 
 def lawkep(M=None, m=None, P=None, a=None):
-    """ Kepler law calc. But `None` on what you what to calc.
+    """ Kepler law calc. Kepp `None` on what you what to calc.
 
     Units are in *Solar System* one, what is, masses in Msun and `P` in years.
 
@@ -1009,7 +1009,7 @@ def lawkep(M=None, m=None, P=None, a=None):
         P *= yr.cgs
         return ( P**2*G.cgs*(M+m)/4/_np.pi**2 )**(1./3)
     else:
-        print('# Wrong call of phc.lawkep! Put `None` calc that qtt.')
+        print('# Wrong call of phc.lawkep! Keep `None` to calc that qtt.')
         return None
 
 

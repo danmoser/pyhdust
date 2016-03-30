@@ -1053,7 +1053,7 @@ def averagespecs(speclist, n=999, path='', objname='OBJECT'):
                 MJDfrac)
             writeFits( flx, wl, savename=outname, path=path, extrahead=[ 
                 ['OBJECT', objname], ['Comment', 'Averaged from {0} spectra'.
-                format(len(fidx))], ['MJD', newdate] ] )
+                format(len(fidx))], ['MJD-OBS', newdate] ] )
     return
 
 

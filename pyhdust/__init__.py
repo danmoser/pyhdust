@@ -9,6 +9,7 @@ This module contains:
 - Hdust useful routines and plots
 - Be quantities convertions
 - Astro useful and Plots
+- Astro filters tools
 
 :license: GNU GPL v3.0 https://github.com/danmoser/pyhdust/blob/master/LICENSE
 """
@@ -32,7 +33,7 @@ try:
 except:
     print('# Warning! matplotlib, pyfits and/or scipy module not installed!!!')
 
-__version__ = 0.99
+__version__ = 0.991
 __release__ = "Beta"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -1469,18 +1470,26 @@ def plot_gal(ra, dec, addsuf=None, fmt=['png']):
     return
 
 
-def doFilterConv(x0, y0, filter, pol=False):
+# Filters tools
+def doFilterConv(x0, y0, filt, zeropt=False):
     """
     Return the convolved filter total flux for a given flux profile y0,
-    at wavelengths x0 (um).
+    at wavelengths x0.
 
-    INPUT: x0 lambda array (um), y0 flux array, filter (string)
+    .. math::
 
-    OUTPUT: summed flux (y0 units)
+        zeropt = \frac{\int F(\lambda) Sp(\lambda)\,d\lambda}{\int F(\lambda)
+            \,d\lambda} 
+
+    INPUT: x0 lambda array (**Angstroms**), y0 flux array, filter (string, 
+    uppercase for standard filters)
+
+    OUTPUT: summed flux (y0 units; default) or *zero point level* 
+    (**polarimetry**)
     """
-    fdat = _np.loadtxt('{0}/pyhdust/refs/filters/{1}.dat'.format(hdtpath(), 
-        filter.lower()), skiprows=1)
-    # fdat[:, 0] /= 10000.  # from Angs to microns
+    fpath = _os.path.join(hdtpath(), 'pyhdust', 'refs', 'filters', filt+'.dat')
+    fdat = _np.loadtxt(fpath, skiprows=1)
+    # fdat[:, 0] /= 1e4  # from Angs to microns
     idx = _np.where((x0 >= fdat[0, 0]) & (x0 <= fdat[-1, 0]))
     x0 = x0[idx]
     y0 = y0[idx]
@@ -1488,10 +1497,11 @@ def doFilterConv(x0, y0, filter, pol=False):
     interpfunc = _interpolate.InterpolatedUnivariateSpline(
         fdat[:, 0], fdat[:, 1])
 
-    if not pol:
+    if not zeropt:
         return _np.trapz(interpfunc(x0) * y0, x0)
     else:
-        return _phc.wg_avg_and_std(y0, 1 / interpfunc(x0))[0]
+        # return _phc.wg_avg_and_std(y0, 1 / interpfunc(x0))[0]
+        return _np.trapz(interpfunc(x0) * y0, x0)/_np.trapz(interpfunc(x0), x0)
 
 
 def doPlotFilter(obs, filter, fsed2data, pol=False, addsuf=None, fmt=['png']):
@@ -1537,6 +1547,30 @@ def doPlotFilter(obs, filter, fsed2data, pol=False, addsuf=None, fmt=['png']):
     _plt.close()
 
     return
+
+
+def plot_hdt_filters(outname=None):
+    "Plot all filters available in PyHdust"
+    filters = _glob( _os.path.join(hdtpath(), 'pyhdust', 'refs', 'filters', 
+        '*.dat') )
+    fig, axs = _plt.subplots(3, 1)
+    for f in filters:
+        data = _np.loadtxt(f)
+        if data[0, 0] < 9000:
+            i = 0
+        elif data[0, 0] < 50000:
+            i = 1
+        else:
+            i = 2
+        axs[i].plot(data[:, 0], data[:, 1], label=_os.path.split(f)[1].
+            replace('.dat', ''))
+    for i in range(len(axs)):
+        axs[i].legend(fontsize=10)
+    axs[i].set_xlabel(r'Wavelength ($\AA$)')
+    _phc.savefig(fig, figname=outname)
+    # print('# Filtres ploted in file {0}'.format(outname))
+    return 
+
 
 # def chkObsLog(path=None, nights=None, badweath=None):
     # """ Check if there is data for all nights with observations.
