@@ -340,6 +340,7 @@ def loadfits(fitsfile):
     if 'WLSHIFT' in imfits[0].header:
         shift = float(imfits[0].header['WLSHIFT'])
         wl += shift
+    imfits.close()
     return wl, flux, MJD, dateobs, datereduc, fitsfile
 
 
@@ -1328,7 +1329,7 @@ def cutpastrefspec(ivl, iflx, irefvl, ireflx, hwidth, ssize=.05):
     return irefvl, reflx
 
 
-def load_specs_fits(speclist, ref, lbc, lncore=350., hwidth=None, 
+def load_specs_fits(speclist, ref, lbc, lncore=None, hwidth=None, 
     gaussfit=False, plotcut=0):
     """ Load a list of specs and do the *line core cut & paste*
 
@@ -1604,7 +1605,7 @@ def plotSpecData(dtb, limits=None, civcfg=[1, 'm', 2013, 1, 1],
 
 def din_spec(metadata, lbc=6562.86, hwidth=1500., res=50, interv=None,
     fmt=['png'], outname='din_spec', pxsize=8, vmin=None, vmax=None, avg=True,
-    cmapn='plasma', refspec=None):
+    cmapn='plasma', refspec=None, figsize=None):
     """ Plot dynamical specs. from metadata table of the Spec class.
 
     `interv` controls the interval between specs (in days).
@@ -1673,13 +1674,17 @@ def din_spec(metadata, lbc=6562.86, hwidth=1500., res=50, interv=None,
         img[i * pxsize:(i + 1) * pxsize] = _np.tile(fluxes[:, i], pxsize).\
             reshape(pxsize, len(wl0))
     # Save image
-    fig, ax = _plt.subplots(figsize=(len(wl0) / 16, pxsize * len(interv) / 16), 
-        dpi=80)
+    if figsize == None:
+        fig, ax = _plt.subplots(figsize=(len(wl0) / 16, pxsize * 
+            len(interv) / 16), dpi=80)
+    else:
+        fig, ax = _plt.subplots(figsize=figsize)
     # _plt.figure(figsize=(len(wl0) / 16, pxsize * len(interv) / 16), dpi=80)
     # print _np.min(img), _np.max(img)
     cmapn = _plt.get_cmap(cmapn)
     cmapn.set_bad('k', 1.)
     ax.imshow(img, vmin=vmin, vmax=vmax, cmap=cmapn)
+    # fig.tight_layout()
     _phc.savefig(fig, fmt=fmt, figname=outname)
 
 
@@ -1737,6 +1742,8 @@ def spec_time(speclist, lbc=6562.8, fmt=['png', 'eps'], outname=None,
     for sp in speclist:
         wl, flux, MJD, dateobs, datereduc, fitsfile = loadfits(sp)
         vel, flux = lineProf(wl, flux, lbc, hwidth=hwidth)
+        if len(flux) == 0:
+            raise NameError('Wrong lbc in spt.spe')
         if cmapn is not None:
             cor = _phc.gradColor([MJD], min=MJDs[0], max=MJDs[1], 
                 cmapn=cmapn)[0]

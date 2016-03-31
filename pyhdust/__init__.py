@@ -1565,7 +1565,7 @@ def plot_hdt_filters(outname=None):
         axs[i].plot(data[:, 0], data[:, 1], label=_os.path.split(f)[1].
             replace('.dat', ''))
     for i in range(len(axs)):
-        axs[i].legend(fontsize=10)
+        axs[i].legend(fontsize=6l)
     axs[i].set_xlabel(r'Wavelength ($\AA$)')
     _phc.savefig(fig, figname=outname)
     # print('# Filtres ploted in file {0}'.format(outname))

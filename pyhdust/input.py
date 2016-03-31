@@ -719,7 +719,7 @@ def makeSimulLine(basesims, Rs, hwidth, Ms, Obs, lsuffix, path='source/'):
         nmod[100] = nmod[100].replace('100', n)
 
         f0 = open(
-            basesim.replace('.txt', '_{0}.txt'.format(srcid)), 'w')
+            basesim.replace('.txt', '_{0}'.format(srcid)), 'w')
         f0.writelines(nmod)
         f0.close()
     return
