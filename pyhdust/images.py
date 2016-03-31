@@ -92,7 +92,7 @@ def doColorConv(lbd, flx, fdat=None):
     """
     if fdat is None:
         fdat = _np.loadtxt(
-            _hdt.hdtpath() + '/pyhdust/refs/rgb_eff.txt', unpack=True)
+            _hdt.hdtpath() + 'refs/rgb_eff.txt', unpack=True)
     idx = _np.where((lbd >= fdat[0, 0]) & (lbd <= fdat[0, -1]))
     lbd = lbd[idx]
     flx = flx[idx]
@@ -118,7 +118,7 @@ def doColorConvMaps(data, lbdc, fdat=None, di=0, oi=0, ii=0, outflt=False):
     """
     if fdat is None:
         fdat = _np.loadtxt(
-            _hdt.hdtpath() + '/pyhdust/refs/rgb_eff.txt', unpack=True)
+            _hdt.hdtpath() + 'refs/rgb_eff.txt', unpack=True)
     # 
     lbd = lbdc * 1e3
     idx = _np.where((lbd >= fdat[0, 0]) & (lbd <= fdat[0, -1]))

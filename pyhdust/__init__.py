@@ -47,8 +47,8 @@ def hdtpath():
     >>> hdt.hdtpath()
     /home/user/Scripts/pyhdust/
     """
-    fulldir = __file__[:__file__.rfind('/') + 1]
-    return fulldir[:fulldir[:-1].rfind('/') + 1]
+    fulldir = _os.path.split(__file__)[0]
+    return _os.path.split(fulldir)[0] + _os.path.sep
 
 
 # Hdust I/O
@@ -1129,14 +1129,14 @@ def obsCalc():
     # dmax = julian_date(dg[0],dg[1],dg[2]+1,3+6,0,-rt/2) #seg. so' >0!!!
 
     # carrega lista de alvos
-    alvos = _np.loadtxt('{0}pyhdust/refs/obs_alvos.txt'.format(hdtpath()), 
+    alvos = _np.loadtxt('{0}refs/obs_alvos.txt'.format(hdtpath()), 
         dtype=str, delimiter='\t')
     # carrega tempo das declinacoes
     obsdec = _np.loadtxt(
-        '{0}pyhdust/refs/obs_dec.txt'.format(hdtpath()), delimiter='\t')
+        '{0}refs/obs_dec.txt'.format(hdtpath()), delimiter='\t')
     # carrega efemerides
-    if _os.path.exists('{0}pyhdust/refs/obs_ef.txt'.format(hdtpath())):
-        ef_alvos = _np.loadtxt('{0}pyhdust/refs/obs_ef.txt'.format(hdtpath()),
+    if _os.path.exists('{0}refs/obs_ef.txt'.format(hdtpath())):
+        ef_alvos = _np.loadtxt('{0}refs/obs_ef.txt'.format(hdtpath()),
                                delimiter='\t', dtype=str)
         ef_alvos = ef_alvos.T
 
@@ -1192,7 +1192,7 @@ def obsCalc():
             hpoe = _np.NaN
 
         # procura posicao nas efemerides (pef)
-        if _os.path.exists('{0}pyhdust/refs/obs_ef.txt'.format(hdtpath())):
+        if _os.path.exists('{0}refs/obs_ef.txt'.format(hdtpath())):
             pef = [j for j, x in enumerate(
                 ef_alvos[1]) if x.find(alvos[i][1]) > -1]
         else:
@@ -1487,7 +1487,7 @@ def doFilterConv(x0, y0, filt, zeropt=False):
     OUTPUT: summed flux (y0 units; default) or *zero point level* 
     (**polarimetry**)
     """
-    fpath = _os.path.join(hdtpath(), 'pyhdust', 'refs', 'filters', filt+'.dat')
+    fpath = _os.path.join(hdtpath(), 'refs', 'filters', filt+'.dat')
     fdat = _np.loadtxt(fpath, skiprows=1)
     # fdat[:, 0] /= 1e4  # from Angs to microns
     idx = _np.where((x0 >= fdat[0, 0]) & (x0 <= fdat[-1, 0]))
@@ -1551,7 +1551,7 @@ def doPlotFilter(obs, filter, fsed2data, pol=False, addsuf=None, fmt=['png']):
 
 def plot_hdt_filters(outname=None):
     "Plot all filters available in PyHdust"
-    filters = _glob( _os.path.join(hdtpath(), 'pyhdust', 'refs', 'filters', 
+    filters = _glob( _os.path.join(hdtpath(), 'refs', 'filters', 
         '*.dat') )
     fig, axs = _plt.subplots(3, 1)
     for f in filters:

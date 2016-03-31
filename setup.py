@@ -5,17 +5,15 @@ try:
     from setuptools import setup, find_packages
     errimport = False
 except ImportError:
-#~ if True:
+# if True:
     from distutils.core import setup
     import os
     from glob import glob
     errimport = True
-    
+
     def is_package(path):
-        return (
-        os.path.isdir(path) and
-        os.path.isfile(os.path.join(path, '__init__.py'))
-        )
+        return ( os.path.isdir(path) and os.path.isfile(os.path.join(path, 
+            '__init__.py')) )
 
     def find_packages(path=".", base="", exclude=[]):
         """ Find all packages in path """
@@ -46,22 +44,22 @@ if __name__ == "__main__":
     setup(name='pyhdust',
     version='0.991',
     description='BeACoN’s Python tools for Hdust',
-    url='https://dl.dropboxusercontent.com/u/6569986/doc/index.html',
+    url='http://j.mp/pyhdust',
     author='Daniel M. Faes',
     author_email='dmfaes@gmail.com',
-    license='GNU GPLv3.0',
-    #~ packages=['pyhdust','pyhdust_refs'],
+    license='GNU GPLv3.0',      
+    # packages=['pyhdust','pyhdust_refs'],
     packages=find_packages(exclude=['build', 'docs', '*egg*', 'dist']),
     include_package_data=True,
-    #~ include=['pyhdust_refs']),
-    #~ package_data={'pyhdust':['*']},
-    #~ , '../filters/*', '../refs/*', '../stmodels/*']},
-    #~ include_package_data=True,
+    # include=['pyhdust_refs']),
+    # package_data={'pyhdust':['*']},
+    # , '../filters/*', '../refs/*', '../stmodels/*']},
+    # include_package_data=True,
     zip_safe=False,
     install_requires=['numpy'],
-    #install_requires=['numpy >= 1.6.0'],
-    #~ data_files = [('refs/*', 'stmodels/*')],
-    #~ package_dir = {'../'},
+    # install_requires=['numpy >= 1.6.0'],
+    # data_files = [('refs/*', 'stmodels/*')],
+    # package_dir = {'../'},
     long_description=rd('README.md'),
     classifiers=[
         "Development Status :: 4 - Beta",

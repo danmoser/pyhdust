@@ -808,7 +808,7 @@ def kurlog(file=None, output=None):
 
     If output is not specified, it is saved as `file`+.log """
     if file is None:
-        file = '{0}pyhdust/refs/fp00k0.pck'.format(_hdt.hdtpath())
+        file = _os.path.join(_hdt.hdtpath(), 'refs', 'fp00k0.pck')
     teffs = []
     loggs = []
     fp = open(file)
@@ -827,7 +827,7 @@ def kuruczflux(teff, logg, range=None):
     nm).
 
     OUTPUT: wv, flux, info"""
-    kurfile = '{0}pyhdust/refs/fp00k0.pck'.format(_hdt.hdtpath())
+    kurfile = _os.path.join(_hdt.hdtpath(), 'refs', 'fp00k0.pck')
     kurwvlines = (174 - 22)
     kurflxcol = 10
     # wave

@@ -1,0 +1,273 @@
+hip7699
+hip7387
+hip8035
+hip7990
+hip17862
+h23872
+hip17791
+hip17704
+hip17999
+hip18046
+hip23916
+hip23493
+hip23464
+hip23364
+hip26835
+hip26024
+hip25861
+hip25938
+hip26648
+hip26245
+hip26948
+hip26014
+hip27113
+hip27259
+hip32716
+hip32985
+hip32788
+hip34786
+hip34579
+hip35611
+hip34371
+hip35117
+hip35326
+hip34814
+hip35012
+hip36290
+hip35750
+hip35519
+hip35509
+hip38142
+TYC-6561-3124-1
+TYC-6561-3702-1
+2MASS-J07485285-2630454
+2MASS-J07485164-2632223
+hip38125
+hip37733
+hip38440
+hip50231
+hip49440
+hip50734
+hip50741
+2MASS-J10212665-6919167
+2MASS-J10213769-6921002
+2MASS-J10213183-6920384
+h310012
+h310013
+hip67717
+hip67334
+hip67751
+hip67303
+hip67940
+hip71353
+hip71368
+hip71640
+hip71036
+hip71724
+hip77858
+hip77960
+hip78099
+hip77642
+hip77911
+hip78458
+hip77999
+hip78600
+hip78549
+hip78374
+hip78847
+hip78977
+hip80712
+hip80544
+hip80378
+hip80403
+hip81125
+hip81121
+hip81900
+hip82159
+hip81521
+hip81619
+hip81619_c      # Binary companion
+hip80819
+hip81765
+hip84471
+hip85223
+hip85389
+hip84956
+hip85877
+hip85642
+hip85388
+hip85315
+hip85610
+hip86248
+hip86247
+hip86247_b      # Binary companion
+hip85241
+hip86516
+hip84956
+hip91553
+hip93735
+hip94035
+hip95386
+hip95356
+hip95412
+hip95782
+hip95604
+hip94825
+hip95027
+hip108827
+TYC-5227-147-1
+2MASS-J22025363-0229207
+hip109035
+hip109038
+TYC-5224-1007-1
+2MASS-J22051801-0126093
+hip108460
+hip108448
+hip109442
+hip110552
+2MASS-J22234879+0035156
+2MASS-J22234590+0034166
+TYC-560-1266-1
+hip110677
+hip111079
+hip110132
+hip111287
+hip20837
+hip20857
+hip21168
+hip20589
+hip25799
+hip26188
+hip26048
+hip26012
+hip26616
+hip26387
+hip26880
+hip26240
+hip27214
+hip26730
+hip26225
+hip27016
+hip26291
+hip25792
+hip51407
+hip51442
+hip52421
+hip50331
+hip51203
+hip59481
+hip59393
+hip58859
+hip58967
+hip62219
+hip62324
+hip61079
+hip61626
+hip71225
+hip70376
+hip71752
+hip70822
+hip74217
+hip74831
+hip73833
+hip74264
+hip84724
+hip85897
+hip85529
+hip106768
+hip107032
+hip106522
+hip106070
+hip110250
+hip110286
+hip109946
+hip110878
+hip110606
+hip112176
+hip111882
+hip111749
+hip111705
+hip113913
+hip113705
+hip113627
+hip114148
+hip113832
+hip117493
+hip690
+hip117045
+hip299
+TYC-8843-1662-1             # field of hip299
+2MASS-J00035439-6335597     # field of hip299
+2MASS-J00034024-6337044     # field of hip299
+v413car                     # field of ggcar/agcar
+h94828                      # field of ggcar/agcar
+h305773                     # field of ggcar/agcar
+TYC-8958-4264-1             # field of ggcar/agcar
+2MASS-J10561679-6030503     # field of ggcar/agcar
+TYC-8958-4026-1             # field of ggcar/agcar
+2MASS-J13011973-6137275     # field of gx304
+2MASS-J13010223-6136453     # field of gx304
+2MASS-J13010270-6135115     # field of gx304
+2MASS-J13010250-6136486     # field of gx304
+2MASS-J13012363-6135529     # field of gx304
+2MASS-J13012020-6138375     # field of gx304
+2MASS-J13012348-6138410     # field of gx304
+2MASS-J13013231-6134375     # field of gx304
+h135748                     # mlup's binary companion
+TYC-158-2014-1              # field of hess
+TYC-158-3068-1              # field of hess
+2MASS-J06325550+0549298     # field of hess
+2MASS-J06325454+0547550     # field of hess
+2MASS-J06325356+0546227     # field of hess
+2MASS-J06325347+0545379     # field of hess
+2MASS-J06330724+0548058     # field of hess
+2MASS-J06330802+0548124     # field of hess
+2MASS-J06330828+0545478     # field of hess
+TYC-8997-1101-1             # field of psrb12
+TYC-8997-1147-1             # field of psrb12
+TYC-8997-1607-1             # field of psrb12
+TYC-8997-1125-1             # field of psrb12
+TYC-8997-1229-1             # field of psrb12
+TYC-8997-1293-1             # field of psrb12
+TYC-8997-1527-1             # field of psrb12
+TYC-8997-1145-1             # field of psrb12
+hip38551
+hip26810
+hip35310
+tori_a                      # field of tori
+tori_d                      # field of tori
+hip74380                    # klup's binary companion
+sori_ab                     # sori companion
+sori_d                      # sori companion
+hip7091
+hip92196
+bd-081038                   # field of hip23916 (leri)
+hip8623                     # antiga do Alex
+hip96881                    # antiga do Alex
+hip106799                   # antiga do Alex
+hip116363                   # antiga do Alex
+hip7430                     # antiga do Alex
+hip97007                    # antiga do Alex
+hip104300                   # antiga do Alex
+hip104461                   # antiga do Alex
+hip32905
+nsco_c                      # nsco companion (standard star)
+hip62391                    # field of h110984 (standard star)
+TYC-8988-2678-1             # field of h110984 (standard star), seems to have the same polarization than h110984.
+TYC-8988-2877-1             # field of h110984 (standard star)
+TYC-8988-2447-1             # field of h110984 (standard star)
+h311795                     # field of h110984 (standard star)
+h311796                     # field of h110984 (standard star)
+hip77905                    # misterious star from 11jul11
+hip71521                    # misterious star from 11jun29
+h330913                     # field of h148937 observed in 2011
+h148988                     # field of h148937 observed in 2011
+h330912                     # field of h148937 observed in 2011
+TYC-6884-838-1              # field of hr7355 observed in 2011
+cd-2815755                  # field of hr7355 observed in 2011
+hip26235                    # field of tori observed in 2011 (also known as theta2 Ori A)
+h37042                      # field of tori observed in 2011 (also known as theta2 Ori B)
+h37062                      # field of tori observed in 2011 (also known as theta2 Ori C)
+v1073ori                    # field of tori observed in 2011
+v1230ori                    # field of tori observed in 2011
+vmrori                      # field of tori observed in 2011

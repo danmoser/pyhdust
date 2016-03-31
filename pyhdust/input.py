@@ -213,7 +213,7 @@ def makeDiskGrid(modn='01', mhvals=[1.5], hvals=[60.], rdvals=[18.6],
     sources = _glob('source/' + selsources)
 
     # Load disk model
-    f0 = open('{0}pyhdust/refs/REF_disco.txt'.format(_hdt.hdtpath()))
+    f0 = open(_os.path.join(_hdt.hdtpath(), 'refs', 'REF_disco.txt'))
     mod = f0.readlines()
     f0.close()
 
@@ -391,7 +391,7 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'],
 
     def doJobs(mod, sel, nodes, addtouch='\n'):
         # load Ref
-        f0 = open('{0}pyhdust/refs/REF.{1}'.format(_hdt.hdtpath(), sel))
+        f0 = open(_os.path.join(_hdt.hdtpath(), 'refs', 'REF.{0}'.format(sel)))
         wout = f0.readlines()
         f0.close()
 
@@ -478,7 +478,7 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'],
     mods = _glob('mod{0}/mod{0}*.txt'.format(modn))
 
     # load REF_inp
-    f0 = open('{0}pyhdust/refs/REF_inp.txt'.format(_hdt.hdtpath()))
+    f0 = open(_os.path.join(_hdt.hdtpath(), 'refs', 'REF_inp.txt'))
     inp = f0.readlines()
     f0.close()
 
@@ -643,7 +643,7 @@ def makeNoDiskGrid(modn, selsources, path=None):
     sources = _glob('source/' + selsources)
 
     # Load disk model
-    f0 = open('{0}pyhdust/refs/REF_disco.txt'.format(_hdt.hdtpath()))
+    f0 = open(_os.path.join(_hdt.hdtpath(), 'refs', 'REF_disco.txt'))
     mod = f0.readlines()
     f0.close()
 
@@ -742,7 +742,7 @@ def makeSourceGrid(masses, rps, lums, Ws, betas, path=None):
     else:
         path = ''
     # 
-    f0 = open('{0}pyhdust/refs/REF_estrela.txt'.format(_hdt.hdtpath()))
+    f0 = open(_os.path.join(_hdt.hdtpath(), 'refs', 'REF_estrela.txt'))
     mod = f0.readlines()
     f0.close()
     if not _os.path.exists('{0}source'.format(path)):
@@ -801,7 +801,7 @@ def makeStarGrid(oblats, Hfs, path=None):
 
     if runIDL:
         idl = pidly.IDL()
-        propath = _hdt.hdtpath() + 'pyhdust/refs/'
+        propath = _os.path.join( _hdt.hdtpath(), 'refs' )
         idl('cd,"{0}"'.format(propath))
         idl('.r geneve_par')
         for ob in oblats:
@@ -817,7 +817,7 @@ def makeStarGrid(oblats, Hfs, path=None):
                     format(propath, ob, H))
         idl.close()
 
-    f0 = open('{0}pyhdust/refs/REF_estrela.txt'.format(_hdt.hdtpath()))
+    f0 = open(_os.path.join(_hdt.hdtpath(), 'refs', 'REF_estrela.txt'))
     mod = f0.readlines()
     f0.close()
 
