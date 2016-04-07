@@ -5,19 +5,17 @@ In files, look for TBD and TODO flags.
 General:
 ☐ pip install for pyhdust
 ☐ Transparent legend-box on the graphs
-☐ Change scipy interpolate with numpy.interp (hdt.doFilterConv, others...)
+☐ Define a interpolation policy (scipy interpolate vs numpy.interp)
 ☐ Define unique 'Planejamento_LNA' as MySQL 
 (targets [coordinates], P and Ph0 [mags.], nights observed vs. bad weather, etc.)
 ☐ Standardization at CGS/SI units
 ☐ Finish help docs+translations to English
-☐ example module
+☐ doctest (unittest)!!!! 
 ☐ extincao Riffel PyHdust?, 
 ☐ Define `path` policy
-☐ Define `doc` policy
-☐ Replace if os.path.exists+os...mkdir with phc.outfld
-☐ Remove rmext*. Replace with os.* tool (Bebnarski)
+  ☐ Replace if os.path.exists+os...mkdir with phc.outfld
+  ☐ Remove rmext*. Replace with os.* tool (Bebnarski)
   ☐ dirn, filen = os.path.split(f)
-☐ Unittest...
 
 __init__:
 ☐ update obs_calcs (spherical triangles)
@@ -45,21 +43,21 @@ images (phim):
 
 input:
 ☐ Implement Mdot11 option in makeDiskGrid
-☐ Check *makeInpJob* `scrid` variable
+☐ Check makeInpJob `scrid` variable
 
 intt:
 ☐ @high Ra, xmax issue when n-images > 1 (right now, only one value)
-☐ Add orientation o I()
-☐ Add disk truncation (Rt)
-☐ I() over HDUST photosphere:
+✔ Add orientation o I() @done (16-03-31 16:44)
+✔ Add disk truncation (Rt) ??? @done (16-03-31 16:44)
+✔ I() over HDUST photosphere [Rodrigo will lead it] @done (16-03-31 16:44)
     i) Read *.map(s) and set Rmax, i, grid
-   ii) Set a threshold (T) value for photosphere. Apply tenous disk
+    ii) Set a threshold (T) value for photosphere. Apply tenous disk
        Where F < T (& R < Rt), apply formula.
-  iii) Apply thick disk. 
+    iii) Apply thick disk. 
        Where F < T (& R < barR), apply formula.
        Think about the criteria over the stellar surface, como
          if R > Rs & y > 0 & R < bar
-☐ rotation: middle figure
+✔ rotation: middle figure @done (16-03-31 16:45)
 
 jdcal:
 ✔ None @done (16-01-04 23:07)
@@ -71,7 +69,7 @@ singscat:
 ✔ None @done (16-01-04 23:07)
 
 spec:
-☐ Remove *outfold* from spectools
+✔ None @done (16-03-31 16:45)
 
 tabulate:
 ✔ None @done (16-01-04 23:08)

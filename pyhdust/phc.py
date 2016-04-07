@@ -427,6 +427,8 @@ def keys_values(keys, text, delimiter='_'):
     for k in keys:
         afterk = text[text.find(d+k)+len(d+k):]
         vals.append( afterk[:afterk.find(d)] )
+    if len(vals) == 1:
+        vals = vals[0]
     return vals
 
 
@@ -861,7 +863,8 @@ def savefig(fig, figname=None, fmt=['png'], keeppt=False):
         figname = _os.getcwd() + '/' + figname
     for f in fmt:
         print('# Saved {1}.{0}'.format(f, figname))
-        fig.savefig(figname+'.{0}'.format(f), transparent=True)
+        fig.savefig(figname+'.{0}'.format(f), transparent=True, 
+            bbox_inches='tight')
     _plt.close(fig)
     return
 

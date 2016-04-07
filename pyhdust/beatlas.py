@@ -9,6 +9,7 @@ Module contains:
 
 :license: GNU GPL v3.0 https://github.com/danmoser/pyhdust/blob/master/LICENSE
 """
+import re as _re
 import os as _os
 import numpy as _np
 import struct as _struct
@@ -82,6 +83,7 @@ class BAmod(BAstar):
                 self.h = _phc.find_nearest(listpars[i], ctrlarr[i])
             if len(listpars) == 9:
                 if i == 7:
+                    print _phc.find_nearest(listpars[i], ctrlarr[i])
                     self.n = _phc.find_nearest(listpars[i], ctrlarr[i])
                     self.param = True
                 if i == 8:
@@ -278,9 +280,11 @@ def createBAsed(fsedlist, xdrpath, lbdarr, param=True, savetxt=False,
             dist = _np.sqrt(4 * _np.pi)
             if not ignorelum:
                 j = fsedlist[i].find('fullsed_mod')
-                modn = fsedlist[i][j + 11:j + 13]
+                # modn = fsedlist[i][j + 11:j + 13]
+                modn = _re.match(r'.*mod(\d+)_', fsedlist[i]).group(1)
                 log = fsedlist[i].replace('fullsed_mod', '../mod{0}/mod'.
                     format(modn)).replace('.sed2', '.log')
+                print log
                 if not _os.path.exists(log):
                     log = _glob(log.replace('../mod{0}/mod'.format(modn),
                     '../mod{0}/*mod'.format(modn)))
@@ -289,7 +293,7 @@ def createBAsed(fsedlist, xdrpath, lbdarr, param=True, savetxt=False,
                     else:
                         print('# ERROR! No log file found for {0}'.format(
                             fsedlist[i]))
-                        raise SystemExit(0)
+                        raise SystemExit(1)
                 f0 = open(log)
                 lines = f0.readlines()
                 f0.close()

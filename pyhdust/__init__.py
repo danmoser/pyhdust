@@ -33,7 +33,7 @@ try:
 except:
     print('# Warning! matplotlib, pyfits and/or scipy module not installed!!!')
 
-__version__ = 0.991
+__version__ = 0.992
 __release__ = "Beta"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -248,7 +248,7 @@ def readdust(dfile):
         Tdestruction, Tdust, pcrc, pcmuc, pcphic, pcr, pcmu, pcphi, lacentro
 
 
-def mergesed2(models, Vrots, path=None, checklineval=False):
+def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
     """
     Merge all mod#/*.sed2 files into the fullsed file.
 
@@ -260,6 +260,8 @@ def mergesed2(models, Vrots, path=None, checklineval=False):
     The structure is set by the first broadband sed2 found.
 
     NO AVERAGE is coded (yet).
+
+    `onlyfitlters` is a iterable of desired filters (``None`` for all).
 
     IMPORTANT: the line rest wavelength is assumed to be the center of the SEI 
     band!
@@ -288,8 +290,19 @@ def mergesed2(models, Vrots, path=None, checklineval=False):
         sed2data = _np.empty(0)
         sfound = []
         # Get all *.sed2 and choose if it is a broad-band or a line
-        lsed2 = _glob('{0}*{1}.sed2'.format(modfld, modelname[:-4]))
-        lsed2.extend(_glob('{0}*{1}_SEI.sed2'.format(modfld, modelname[:-4])))
+        if onlyfilters is None:
+            lsed2 = _glob('{0}*{1}.sed2'.format(modfld, modelname[:-4]))
+            lsed2.extend(_glob('{0}*{1}_SEI.sed2'.format(modfld, 
+                modelname[:-4])))
+        else:
+            lsed2 = []
+            for f in onlyfilters:
+                pattern = _os.path.join(modfld, '{0}*{1}.sed2'.format(f, 
+                    modelname[:-4]))
+                lsed2.extend(_glob(pattern))
+                pattern = _os.path.join(modfld, '{0}*{1}_SEI.sed2'.format(f, 
+                    modelname[:-4]))
+                lsed2.extend(_glob(pattern))
         # print lsed2, '{0}*{1}*.sed2'.format(modfld, modelname[:-4])
         for file in lsed2:
             suf = _phc.trimpathname(file)[-1].split('_')[0]
@@ -1571,6 +1584,59 @@ def plot_hdt_filters(outname=None):
     # print('# Filtres ploted in file {0}'.format(outname))
     return 
 
+
+def readphotxdr(xdrfile='kur_ap00k0.xdr', quiet=False):
+    """ doc """
+    f = open(xdrfile, 'rb').read()
+    ixdr = 0
+
+    _ = _struct.unpack('>l', f[ixdr:ixdr+ 4])
+    ixdr += 4
+    nlin, nlbd, nmod = _struct.unpack('>3l', f[ixdr:ixdr+ 4*3])
+    ixdr += 4*3
+
+    _ = _struct.unpack('>l', f[ixdr:ixdr+ 4])
+    ixdr += 4
+    istr = '>{0:d}f'.format(nlin)
+    lbdcentr = _struct.unpack(istr, f[ixdr:ixdr+ 4*nlin])
+    ixdr += 4*nlin
+
+    _ = _struct.unpack('>l', f[ixdr:ixdr+ 4])
+    ixdr += 4
+    istr = '>{0:d}f'.format(nmod)
+    ltemp = _struct.unpack(istr, f[ixdr:ixdr+ 4*nmod])
+    ixdr += 4*nmod
+
+    _ = _struct.unpack('>l', f[ixdr:ixdr+ 4])
+    ixdr += 4
+    istr = '>{0:d}f'.format(nmod)
+    llogg = _struct.unpack(istr, f[ixdr:ixdr+ 4*nmod])
+    ixdr += 4*nmod
+
+    lambdas = _np.zeros((nlin, nlbd))
+    for i in range(nlin):
+        _ = _struct.unpack('>l', f[ixdr:ixdr+ 4])
+        ixdr += 4
+        istr = '>{0:d}f'.format(nlbd)
+        lambdas[i] = _struct.unpack(istr, f[ixdr:ixdr+ 4*nlbd])
+        ixdr += 4*nlbd
+
+    profiles = _np.zeros((nmod, nlin, nlbd))
+    for i, j in _itprod(range(nmod), range(nlin)):
+        _ = _struct.unpack('>l', f[ixdr:ixdr+ 4])
+        ixdr += 4
+        istr = '>{0:d}f'.format(nlbd)
+        profiles[i, j] = _struct.unpack(istr, f[ixdr:ixdr+ 4*nlbd])
+        ixdr += 4*nlbd
+
+    if ixdr == len(f):
+        if not quiet:
+            print('# XDR {0} completely read!'.format(xdrfile))
+    else:
+        print('# Warning: XDR {0} not completely read!'.format(xdrfile))
+        print('# length difference is {0}'.format( (len(f) - ixdr) / 4 ) )
+
+    return lbdcentr, ltemp, llogg, lambdas, profiles
 
 # def chkObsLog(path=None, nights=None, badweath=None):
     # """ Check if there is data for all nights with observations.
