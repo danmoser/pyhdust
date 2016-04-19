@@ -235,7 +235,7 @@ def fsedList(fsedlist, param=True):
 
 
 def createBAsed(fsedlist, xdrpath, lbdarr, param=True, savetxt=False,
-    ignorelum=False):
+    ignorelum=False, pol=False, saveextra=None):
     """ Create the BeAtlas SED XDR release.
 
     | The file structure:
@@ -271,20 +271,22 @@ def createBAsed(fsedlist, xdrpath, lbdarr, param=True, savetxt=False,
     models = _np.zeros((nm, nlb))
     minfo = _np.zeros((nm, nq))
     k = 0
+    iflx = 3
+    if pol:
+        iflx = 7
     for i in range(len(fsedlist)):
         mod = BAmod(fsedlist[i])
         # Select only `param` matching cases:
         if mod.param == param:
             sed2data = _hdt.readfullsed2(fsedlist[i])
             iL = 1.
-            dist = _np.sqrt(4 * _np.pi)
-            if not ignorelum:
+            dist = 1/_np.sqrt(4 * _np.pi)
+            if not ignorelum and not pol:
                 j = fsedlist[i].find('fullsed_mod')
                 # modn = fsedlist[i][j + 11:j + 13]
                 modn = _re.match(r'.*mod(\d+)_', fsedlist[i]).group(1)
                 log = fsedlist[i].replace('fullsed_mod', '../mod{0}/mod'.
                     format(modn)).replace('.sed2', '.log')
-                print log
                 if not _os.path.exists(log):
                     log = _glob(log.replace('../mod{0}/mod'.format(modn),
                     '../mod{0}/*mod'.format(modn)))
@@ -298,6 +300,12 @@ def createBAsed(fsedlist, xdrpath, lbdarr, param=True, savetxt=False,
                 lines = f0.readlines()
                 f0.close()
                 iL = _phc.fltTxtOccur('L =', lines, seq=2) * _phc.Lsun.cgs
+                if saveextra is not None:
+                    R_pole = _phc.fltTxtOccur('R_pole =', lines, seq=2)
+                    Vrot = _phc.fltTxtOccur('Vrot', lines)
+                    f0 = open(saveextra, 'a')
+                    f0.writelines('{0}\t{1}\t{2}\n'.format(R_pole, Vrot, iL))
+                    f0.close()
                 dist = 10. * _phc.pc.cgs
             for j in range(header2[-1]):
                 #  M, ob(W), Z, H, sig, Rd, h, *n*, cos(i).
@@ -311,11 +319,15 @@ def createBAsed(fsedlist, xdrpath, lbdarr, param=True, savetxt=False,
                     listpar[-1][j] ]).astype(float)
                 if len(sed2data[j, :, 2]) != nlb:
                     models[k * header2[-1] + j] = _np.interp(lbdarr, 
-                        sed2data[j, :, 2], sed2data[j, :, 3]) * iL / 4 / \
+                        sed2data[j, :, 2], sed2data[j, :, iflx]) * iL / 4 / \
                         _np.pi / dist**2
                 else:
-                    models[k * header2[-1] + j] = sed2data[j, :, 3] * \
+                    models[k * header2[-1] + j] = sed2data[j, :, iflx] * \
                         iL / 4 / _np.pi / dist**2
+                if _np.sum(_np.isnan(models[k * header2[-1] + j])) > 0:
+                    nans, x = _phc.nan_helper(models[k * header2[-1] + j]) 
+                    models[k * header2[-1] + j][nans] = _np.interp(x(nans), 
+                        x(~nans), models[k * header2[-1] + j][~nans])
             k += 1
     #
     f0 = open(xdrpath, 'wb')

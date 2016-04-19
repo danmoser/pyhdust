@@ -41,8 +41,12 @@ __email__ = "dmfaes@gmail.com"
 
 # Package tools
 def hdtpath():
-    """
-    Return the path os the module.
+    """ Return the path of the module.
+
+    *no param*
+    :rtype: str
+
+    :Example:
 
     >>> hdt.hdtpath()
     /home/user/Scripts/pyhdust/

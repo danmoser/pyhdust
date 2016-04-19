@@ -1837,7 +1837,7 @@ def plot_oifits(oidata, ffile='last_run', fmt=['png'], xrange=None,
     if legend:
         ax2.legend(prop={'size': 8}, numpoints=1, bbox_to_anchor=(-0.25, 1.0))
     # ax3 = dif.phases, RIGHT COLUMN
-    plotid = 524
+    plotid = (5,2,3)
     names = []
     colorid = 0
     yrange = [0, 0]
@@ -1846,7 +1846,7 @@ def plot_oifits(oidata, ffile='last_run', fmt=['png'], xrange=None,
         if diff > yrange[1]:
             yrange = [-diff, diff]
     for vis in oidata.vis:
-        ax3 = fig.add_subplot(plotid)
+        ax3 = fig.add_subplot(*plotid)
         if (vis.station[0] and vis.station[1]):
             label = vis.station[0].sta_name + vis.station[1].sta_name
         else:
@@ -1875,25 +1875,26 @@ def plot_oifits(oidata, ffile='last_run', fmt=['png'], xrange=None,
     colorid = 3
     for t3 in oidata.t3:
         ax5 = fig.add_subplot(5, 2, 10)
-        if (vis.station[0] and vis.station[1]):
-            label = vis.station[0].sta_name + vis.station[1].sta_name
+        if (t3.station[0] and t3.station[1] and  t3.station[2]):
+            label = t3.station[0].sta_name + t3.station[1].sta_name + \
+                t3.station[2].sta_name 
         else:
             label = 'unnamed'
         color = colors[colorid]
-        line = ax5.errorbar(1e6 * vis.wavelength.eff_wave, t3.t3phi,
+        line = ax5.errorbar(1e6 * t3.wavelength.eff_wave, t3.t3phi,
         t3.t3phierr, label=label, color=color)
         ax5.set_xlim(xrange)
         # diff = _np.max(_np.abs(t3.t3phi))
         # yrange2 = [-diff, diff]
         ax5.set_ylim(yrange)
-        names.append(vis.target.target)
+        names.append(t3.target.target)
         names = list(_np.unique(names))
     ax5.set_ylabel(u'Closure $\phi$ (deg.)')
     ax5.set_xlabel('Wavelength ($\mu$m)')
     _plt.setp( ax5.xaxis.get_majorticklabels(), rotation=-35 )
     _plt.grid(b=True, linestyle=':', alpha=alp)
     # ax4 = visibilities, LEFT COLUMN
-    plotid = 523
+    plotid = (5,2,4)
     names = []
     colorid = 0
     yrange = [1, 0]
@@ -1905,7 +1906,7 @@ def plot_oifits(oidata, ffile='last_run', fmt=['png'], xrange=None,
     if yrange[0] < 0 or yrange[0] >= 1:
         yrange[0] = 0
     for vis in oidata.vis2:
-        ax4 = fig.add_subplot(plotid)
+        ax4 = fig.add_subplot(*plotid)
         if (vis.station[0] and vis.station[1]):
             label = vis.station[0].sta_name + vis.station[1].sta_name
         else:
@@ -1924,12 +1925,12 @@ def plot_oifits(oidata, ffile='last_run', fmt=['png'], xrange=None,
             # title += ', %s'%(name)
         # ax1.set_title(title)
         # ax1.set_ylabel('Differential phase')
-        plotid += 2
+        # plotid += 2
         ax4.get_xaxis().set_ticklabels([])
         _plt.grid(b=True, linestyle=':', alpha=alp)
     # ax1 = Line profile
     if True:
-        ax1 = fig.add_subplot(529)
+        ax1 = fig.add_subplot(5,2,9)
         colorid = 0
         names = []
         for spec in oidata.amberspec:

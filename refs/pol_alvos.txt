@@ -34,11 +34,6 @@ hr2609
 27cma
 28cma
 h57682
-<<<<<<< HEAD:pyhdust/refs/pol_alvos.txt
-hr2825
-bcmi
-zpup
-=======
 hr2819
 hr2825
 h58978
@@ -46,7 +41,6 @@ bcmi
 zpup
 h61556
 lpup
->>>>>>> ad33cdacd1becf7f17a4c9ae144aba635692957e:refs/pol_alvos.txt
 opup
 h64740
 hr3147
@@ -102,11 +96,7 @@ eppsa
 bpsc
 psaqr
 etuc
-<<<<<<< HEAD:pyhdust/refs/pol_alvos.txt
-v356sag
-=======
 v356sgr
 h163296
 h189733
-tpyx         # is it correct?
->>>>>>> ad33cdacd1becf7f17a4c9ae144aba635692957e:refs/pol_alvos.txt
+tpyx

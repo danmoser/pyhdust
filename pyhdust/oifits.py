@@ -79,6 +79,7 @@ import pyfits as _pyfits
 import datetime as _datetime
 import copy as _copy
 import numpy as _np
+import numbers as _numbers
 
 __author__ = "Daniel Moser; Paul Boley"
 __email__ = "dmfaes@gmail.com; boley@mpia-hd.mpg.de"
@@ -716,12 +717,19 @@ class oifits:
         self.t3 = _np.empty(0)
         self.hdrinfo = {}
 
+    def __radd__(self, other):
+        return self + other
+
     def __add__(self, other):
         """Consistently combine two separate oifits objects.  Note
         that targets can be matched by name only (e.g. if coordinates
         differ) by setting oifits.matchtargetbyname to True.  The same
         goes for stations of the array (controlled by
         oifits.matchstationbyname)"""
+        if isinstance(other, _numbers.Number):
+            print('# Warning! Ignoring number sum with oifits!!!')
+            return self 
+
         # Don't do anything if the two oifits objects are not CONSISTENT!
         if not self.isconsistent() or not other.isconsistent():
             print 'oifits objects are not consistent, bailing.'

@@ -257,51 +257,51 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'],
     not work. This is to satisfies the criteria of a specific disk model for
     each source star.
 
-    | ### Start edit here ###
-    | modn = '02'
-    | 
-    | #clusters config
-    | # job = AlphaCrucis; oar = MesoCentre Licallo; ge = MesoCentre FRIPP
-    | clusters = ['job','oar','ge','bgq']
-    | clusters = ['oar']
-    | nodes    = 48
-    | #if wcheck == True, walltime will be AUTOMATICALLY estimated
-    | walltime = '3:00:00'
-    | wcheck   = True
-    | email    = 'user@gmail.com'
-    | 
-    | #Check if the outputs already exist
-    | chkout = True
-    | #Above the values below, the step1 will be considered done!
-    | st1max = 26
-    | st1refmax = 30
-    | #Gera inp+job so' para o source com '1.45' no nome
-    | #Nao funciona caracteres especiais como * ou ?
-    | srcid       = '1.45'
-    | srcid       = ''
-    | #Se um dos 3 casos nao estiver presente, ele gera input comentado.
-    | docases = [1,2,3]
-    | #1 = step1  <> Gera inp+job so' para mod#/mod#.txt (SEM source, so disco)
-    | #habilita ADDSUFFIX; retira OBSERVERS e IMAGES
-    | sim1 = 'step1'
-    | #2 = step1_refine 
-    | sim2 = 'step1_refine'
-    | #3 = outros <> Gera inp+job so' para mod#/mod#SOURCE.txt (post-proc.)
-    | #retira ADDSUFFIX; adiciona OBSERVERS (e talvez IMAGES)
-    | simulations = ['sed','h','brg','halpha','uv']
-    | simulations = ['sed_sig','brg_M','halpha_M','uv','j','h','k','l','m','n',
-    |  'q1','q2']
-    | simulations = ['SED','Ha']
-    | images      = ['','h','brg','halpha','uv']
-    | images        = simulations[:]
-    | composition = 'pureH'
-    | controls    = 'no_op'
-    | controls    = 'controls'
-    | ctrM        = False
-    | gridcells   = 'grid'
-    | observers   = 'obs'
-    | touch       = True
-    | ###stop edition here
+        ### Start edit here ###
+        modn = '02'
+
+        #clusters config
+        # job = AlphaCrucis; oar = MesoCentre Licallo; ge = MesoCentre FRIPP
+        clusters = ['job','oar','ge','bgq']
+        clusters = ['oar']
+        nodes    = 48
+        #if wcheck == True, walltime will be AUTOMATICALLY estimated
+        walltime = '3:00:00'
+        wcheck   = True
+        email    = 'user@gmail.com'
+
+        #Check if the outputs already exist
+        chkout = True
+        #Above the values below, the step1 will be considered done!
+        st1max = 26
+        st1refmax = 30
+        #Gera inp+job so' para o source com '1.45' no nome
+        #Nao funciona caracteres especiais como * ou ?
+        srcid       = '1.45'
+        srcid       = ''
+        #Se um dos 3 casos nao estiver presente, ele gera input comentado.
+        docases = [1,2,3]
+        #1 = step1  <> Gera inp+job so' para mod#/mod#.txt (SEM source, so disco)
+        #habilita ADDSUFFIX; retira OBSERVERS e IMAGES
+        sim1 = 'step1'
+        #2 = step1_refine 
+        sim2 = 'step1_refine'
+        #3 = outros <> Gera inp+job so' para mod#/mod#SOURCE.txt (post-proc.)
+        #retira ADDSUFFIX; adiciona OBSERVERS (e talvez IMAGES)
+        simulations = ['sed','h','brg','halpha','uv']
+        simulations = ['sed_sig','brg_M','halpha_M','uv','j','h','k','l','m','n',
+         'q1','q2']
+        simulations = ['SED','Ha']
+        images      = ['','h','brg','halpha','uv']
+        images        = simulations[:]
+        composition = 'pureH'
+        controls    = 'no_op'
+        controls    = 'controls'
+        ctrM        = False
+        gridcells   = 'grid'
+        observers   = 'obs'
+        touch       = True
+        ###stop edition here
     """
     def isFloat(x):
         try:
@@ -489,7 +489,9 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'],
 
         suf = mod[mod.find('_'):-4]
         src = mod[mod.find('Be_'):-4]
+        # src = 'aeri_draft'
         if src.find(srcid) == -1:
+            print('# Script skipped by missing "Be" in source...')
             continue
 
         cases = docases[:]

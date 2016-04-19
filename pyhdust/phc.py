@@ -991,26 +991,28 @@ def lawkep(M=None, m=None, P=None, a=None):
     One can also use the Centre-of-Mass equation a1*M1 = a2*M2 to relate the 
     two masses. 
     """
+    Gc = G.cgs
+    pi2_4 = 4*_np.pi**2
     if M is None:
         m *= Msun.cgs
         P *= yr.cgs
         a *= au.cgs
-        return 4*_np.pi**2*a**3/P**2/G.cgs-m
+        return (pi2_4*a**3/P**2/Gc-m)/Msun.cgs
     elif m is None:
         M *= Msun.cgs
         P *= yr.cgs
         a *= au.cgs
-        return 4*_np.pi**2*a**3/P**2/G.cgs-M
+        return (pi2_4*a**3/P**2/Gc-M)/Msun.cgs
     elif P is None:
         M *= Msun.cgs
         m *= Msun.cgs
         a *= au.cgs
-        return _np.sqrt( 4*_np.pi**2*a**3/(M+m)/G.cgs )
+        return _np.sqrt( pi2_4*a**3/(M+m)/Gc )/yr.cgs
     elif a is None:
         M *= Msun.cgs
         m *= Msun.cgs
         P *= yr.cgs
-        return ( P**2*G.cgs*(M+m)/4/_np.pi**2 )**(1./3)
+        return ( P**2*Gc*(M+m)/pi2_4 )**(1./3)/au.cgs
     else:
         print('# Wrong call of phc.lawkep! Keep `None` to calc that qtt.')
         return None
