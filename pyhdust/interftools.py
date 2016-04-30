@@ -976,7 +976,7 @@ def plot_baseline(ax, oidata, colors, names, PAs=[-180, 180], PAsrev=False,
     # ax.yaxis.set_major_formatter(_mtick.FormatStrFormatter('%.0e'))
     # ax.xaxis.set_major_formatter(_mtick.FormatStrFormatter('%.0e'))
     # ax.ticklabel_format(useOffset=False)  # style='sci' DO NOT WORK
-    ax.locator_params(nbins=5)
+    ax.locator_params(nbins=7)
     return ax
 
 
@@ -1022,7 +1022,7 @@ def plot_pio_res(oidata, modellist, outname=None, fmt=['png'], legend=True,
             names += [label]
             Blist.append([])
         i = names.index(label)
-        Blist[i].extend([_np.sqrt(u**2+v**2)])
+        Blist[i].extend([_np.sqrt(u**2 + v**2)])
     for i in range(len(Blist)):
         Blist[i] = _np.average(Blist[i])
     names = list(_np.array(names)[_np.argsort(Blist)])
@@ -1063,7 +1063,7 @@ def plot_pio_res(oidata, modellist, outname=None, fmt=['png'], legend=True,
     _plt.subplots_adjust(wspace=0.1)
     if outname is None:
         outname = _phc.dtflag()
-    _phc.savefig(fig, figname=outname)
+    _phc.savefig(fig, figname=outname, fmt=fmt)
     return
 
 
@@ -1203,28 +1203,29 @@ def plot_v2_res(ax, ax2, oidata, colors, names, modfiles, obsdeg=None,
         if (PA >= PAs[0] and PA <= PAs[1]) or (PAsrev and (PA >= PArv[0]) and 
             PA <= PArv[1]):
             if bindata <= 0:
-                x.extend(B/vis2.wavelength.eff_wave)
+                x.extend(B / vis2.wavelength.eff_wave)
                 y.extend(vis2.vis2data)
                 yerr.extend(vis2.vis2err)
-                Blist.extend([B]*len(vis2.wavelength.eff_wave))
-                PAlist.extend([PA]*len(vis2.wavelength.eff_wave))
+                Blist.extend([B] * len(vis2.wavelength.eff_wave))
+                PAlist.extend([PA] * len(vis2.wavelength.eff_wave))
                 ax.errorbar(B / vis2.wavelength.eff_wave, 
                     vis2.vis2data, yerr=vis2.vis2err, fmt='o', markersize=ms, 
-                    color=color, alpha=alp)
+                    color=color, alpha=alp, zorder=1)
             # Individual plot to keep each BASELINE color
             if bindata > 0:
                 binned = _phc.bindata(B / vis2.wavelength.eff_wave, 
                     vis2.vis2data, bindata, yerr=vis2.vis2err)  # xrange=xlim)
                 ax.errorbar(binned[0], binned[1], yerr=binned[2], 
-                    fmt='o', markersize=ms, color=color)
+                    fmt='o', markersize=ms, color=color, zorder=1)
     # Plotting models
     if obsdeg is None:
         obs = [0]
     else:
         obs = obsdeg
-    mcolors = _phc.gradColor(_np.arange(len(modfiles)+2), cmapn='Greens_r')
-    # mcolors = _phc.gradColor(_np.arange(len(modfiles)+2), cmapn='coolwarm')
+    mcolors = _phc.gradColor(_np.arange(len(modfiles) + 2), cmapn='Greens_r')
     mcolors = _np.array(mcolors)[1:-1]
+    mcolors = ['green', 'red']
+    # mcolors = ['red', 'green']
     for mod in modfiles:
         midx = modfiles.index(mod)
         data, obslist, lbdc, Ra, xmax = readmap(mod, quiet=quiet)
@@ -1260,12 +1261,12 @@ def plot_v2_res(ax, ax2, oidata, colors, names, modfiles, obsdeg=None,
             V2 = _np.array(V2) 
             if bindata <= 0:
                 ax.plot(x, V2, color=mcolors[midx], alpha=alp*.5, ls='',
-                    zorder=1, markersize=ms,
+                    markersize=ms,
                     marker=_phc.cycles(obs.index(deg)+1, 'mk'))
                 ax2.plot(x, (y - V2) / yerr, ls='', color=mcolors[midx],
                     markersize=ms, marker=_phc.cycles(obs.index(deg)+1, 'mk'), 
                     zorder=1, alpha=alp)
-                if True:
+                if printsum:
                     chi2 = _phc.chi2calc(V2, y, yerr)
                     ax2.text(0.4, 0.87, r'$\sum={0:.1f}$'.format(chi2), 
                         transform=ax2.transAxes)
@@ -1338,15 +1339,17 @@ def plot_phi3_res(ax, ax2, oidata, colors, names, modfiles, obsdeg=None,
                     _np.arctan2(u2, v2) * 180.0 / _np.pi )
                 PAlist.extend([[PA1, PA2] for i in range(lbsz)])
     if bindata <= 0:
-        ax.errorbar(x, y, yerr=yerr, color=color, fmt='o', markersize=ms)
+        ax.errorbar(x, y, yerr=yerr, color=color, fmt='o', markersize=ms,
+            zorder=1, alpha=alp)
     else:
         binned = _phc.bindata(B / t3.wavelength.eff_wave, t3.t3phi, 
             bindata, yerr=t3.t3phierr, xrange=xlim)
         ax.errorbar(binned[0], binned[1], yerr=binned[2], 
-            color=color, fmt='o', markersize=ms)
+            color=color, fmt='o', markersize=ms, zorder=1, alpha=alp)
     mcolors = _phc.gradColor(_np.arange(len(modfiles)+2), cmapn='Greens_r')
-    # mcolors = _phc.gradColor(_np.arange(len(modfiles)+2), cmapn='coolwarm')
     mcolors = _np.array(mcolors)[1:-1]
+    mcolors = ['green', 'red']
+    # mcolors = ['red', 'green']
     if obsdeg is None:
         obs = [0]
     else:
@@ -1385,7 +1388,7 @@ def plot_phi3_res(ax, ax2, oidata, colors, names, modfiles, obsdeg=None,
                 ax2.plot(x, (y - t3m) / yerr, color=mcolors[k],
                     markersize=ms, marker=_phc.cycles(obs.index(deg)+1, 'mk'), 
                     ls='', alpha=alp)  # alpha=.6,
-                if True:
+                if printsum:
                     chi2 = _phc.chi2calc(t3m, y, yerr)
                     ax2.text(0.4, 0.87, r'$\sum={0:.1f}$'.format(chi2), 
                         transform=ax2.transAxes)

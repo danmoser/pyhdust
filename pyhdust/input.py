@@ -488,7 +488,10 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'],
         f0.writelines('PROJECT = {0}\nMODEL = {1}\n\n'.format(proj, modn))
 
         suf = mod[mod.find('_'):-4]
-        src = mod[mod.find('Be_'):-4]
+        if mod.find('Be_') > -1:
+            src = mod[mod.find('Be_'):-4]
+        else:
+            src = srcid
         # src = 'aeri_draft'
         if src.find(srcid) == -1:
             print('# Script skipped by missing "Be" in source...')
@@ -768,7 +771,7 @@ def makeSourceGrid(masses, rps, lums, Ws, betas, path=None):
     #
     if path is not "":
         _os.chdir(path0)    
-    return
+    return 
 
 
 def makeStarGrid(oblats, Hfs, path=None):
@@ -910,6 +913,98 @@ def makeSimulDens(dbase, basesim):
     # a = raw_input('asdads')
     return 
 
+
+def makeCSGrid_bistabWind1Dust(modn='01', renv=[18.6], rcs=[5.], 
+    dm_dOmega=[1.5e-5], v_0=[10.], v_inf=[1200.], beta_v=[2], A1=[49], 
+    A2=[-0.7], A3=[0.], m_dth=[92.], grain_dust_ratio=[200.], grain_dens=[1.], 
+    selsources='*', path=None):
+    """ Great a CS Grid for HDUST for wind+dust shell (1) both in bi-stability
+
+    Based on Carciofi+2010 and used in the B[e] grid between IAG/ON (Brazil).
+
+    :param arg1: the first value
+    :param arg2: the first value
+    :type arg1: int, float,...
+    :type arg2: int, float,...
+    :returns: arg1/arg2 +arg3
+    :rtype: int, float
+
+    :Example:
+
+    >>> import template
+    >>> a = template.MainClass1()
+    >>> a.function1(1,1,1)
+    2
+
+    .. note:: can be useful to emphasize important feature
+    .. seealso:: :class:`MainClass2`
+    .. warning:: arg2 must be non-zero.
+    .. todo:: check that arg2 is non zero.
+    """
+    def dobistabWind1Dust(lpars):
+        '''
+        Given a proper list of parameters, do the thing...
+        '''
+        dm_d0, v0, vinf, beta, a1, a2, a3, mdth, gdratio, gdens, re, rd, src =\
+            lpars
+
+        srcname = _os.path.splitext(_os.path.basename(src))[0]
+        # TODO
+        suffix = ('_rd{0:02.0f}_a1+{1:02.0f}_m{2:03.0f}_md{3:.0e}_grh{4:04.1f}'
+            '_gdr{5:03.0f}_v0+{6:02.0f}_vinf{7:04.0f}_a2+{8:04.1f}_b{9:03.1f}'
+            '_a3+{10:03.1f}').format(rd, a1, mdth, dm_d0, gdens, gdratio, v0, 
+            vinf, a2, beta, a3, srcname)
+
+        wmod = mod[:]
+        wmod = _phc.repl_fline_val(wmod, 13, '18.6', re)
+        wmod = _phc.repl_fline_val(wmod, 14, '3.', rd)
+        wmod = _phc.repl_fline_val(wmod, 19, '9.', a1)
+        wmod = _phc.repl_fline_val(wmod, 20, '182.', mdth)
+        wmod = _phc.repl_fline_val(wmod, 26, '39.', a1)
+        wmod = _phc.repl_fline_val(wmod, 27, '182.', mdth)
+        wmod = _phc.repl_fline_val(wmod, 35, '2.E-9', dm_d0)
+        wmod = _phc.repl_fline_val(wmod, 30, '1.E-7', dm_d0)
+        wmod = _phc.repl_fline_val(wmod, 31, '1.', gdens)
+        wmod = _phc.repl_fline_val(wmod, 32, '200.', gdratio)
+        wmod = _phc.repl_fline_val(wmod, 47, '10.', v0)
+        wmod = _phc.repl_fline_val(wmod, 48, '400.', vinf)
+        wmod = _phc.repl_fline_val(wmod, 49, '-0.7', a2)
+        wmod = _phc.repl_fline_val(wmod, 50, '0.8', beta)
+        wmod = _phc.repl_fline_val(wmod, 51, '2.75', a3)
+
+        fmod = _os.path.join('mod'+modn, 'mod'+modn+suffix+'.txt')
+        f0 = open(fmod, 'w')
+        f0.writelines(wmod)
+        f0.close()
+        return
+
+    # PROGRAM BEGINS
+    path0 = _os.getcwd()
+    if path is not None:
+        _os.chdir(path)
+    else:
+        path = ''
+    # Check modN folder
+    if not _os.path.exists('mod{0}'.format(modn)):
+        _os.system('mkdir mod{0}'.format(modn))
+
+    # Select sources
+    print _os.path.join('source', selsources)
+    sources = _glob(_os.path.join('source', selsources))
+
+    # Load disk model
+    f0 = open(_os.path.join(_hdt.hdtpath(), 'refs', 'REF_bistabWind1Dust.txt'))
+    mod = f0.readlines()
+    f0.close()
+
+    for lpars in _product(dm_dOmega, v_0, v_inf, beta_v, A1, A2, A3, m_dth, 
+        grain_dust_ratio, grain_dens, renv, rcs, sources):
+        dobistabWind1Dust(lpars)
+
+    if path is not "":
+        _os.chdir(path0)
+    # END PROGRAM
+    return
 
 # MAIN ###
 if __name__ == "__main__":

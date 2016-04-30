@@ -447,6 +447,8 @@ def errorcalc(pst, pob, dobs, pdk, phiobs):
 
 def QUang(Q, U, filter=True):
     """ ### Q,U angles ### """
+    Q = _np.array(Q)
+    U = _np.array(U)
     ind = _np.where(Q == 0)
     Q[ind] = 1e-34
     ang = _np.arctan(U / Q)

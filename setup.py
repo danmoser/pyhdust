@@ -42,7 +42,7 @@ def rd(filename):
 
 if __name__ == "__main__":
     setup(name='pyhdust',
-    version='0.992',
+    version='0.993',
     description='BeACoN’s Python tools for Hdust',
     url='http://j.mp/pyhdust',
     author='Daniel M. Faes',

@@ -834,6 +834,15 @@ def renlist(root, newr):
     return
 
 
+def repl_fline_val(f, iline, oldval, newval):
+    """ Replace `oldval` by `newval` in `f[iline]`
+
+    return `f` replaced.
+    """
+    f[iline] = f[iline].replace(str(oldval), str(newval))
+    return f
+
+
 # Plot-related
 def civil_ticks(ax, civcfg=[1, 'm'], civdt=None, tklab=True):
     """ Add the civil ticks in the axis.  """
@@ -1033,47 +1042,59 @@ class Constant(object):
         return str('{0:.7e} in {1} (cgs)'.format(self.cgs, self.unitscgs))
 
 
-# Constants
-c = Constant(2.99792458e10, 299792458., 'cm s-1', 'speed of light in vacuum')
-h = Constant(6.6260755e-27, 6.62606957e-34, 'erg s-1', 'Planck constant')
-hbar = Constant(
-    1.05457266e-27, 1.05457172534e-34, 'erg s', 'Planck constant/(2*pi)')
-G = Constant(
-    6.674253e-8, 6.674253e-11, 'cm3 g-1 s-2', 'Gravitational constant')
-e = Constant(4.8032068e-10, 1.60217657e-19, 'esu', 'Elementary charge')
-ep0 = Constant(1., 8.8542e-12, '', 'Permittivity of Free Space')
-me = Constant(9.1093897e-28, 9.10938291e-31, 'g', 'Mass of electron')
-mp = Constant(1.6726231e-24, 1.67262178e-27, 'g', 'Mass of proton')
-mn = Constant(1.6749286e-24, 1.674927351e-27, 'g', 'Mass of neutron')
-mH = Constant(1.6733e-24, 1.6737236e-27, 'g', 'Mass of hydrogen')
-amu = Constant(1.6605402e-24, 1.66053892e-27, 'g', 'Atomic mass unit')
-nA = Constant(6.0221367e23, 6.0221413e23, '', "Avagadro's number")
-kB = Constant(1.3806504e-16, 1.3806488e-23, 'erg K-1', 'Boltzmann constant')
-eV = Constant(1.6021764871e-12, 1.602176565e-19, 'erg', 'Electron volt')
-a = Constant(
-    7.5646e-15, 7.5646e-16, 'erg cm-3 K-4', 'Radiation density constant')
-sigma = Constant(
-    5.67051e-5, 5.670373e-8, 'erg cm-2 K-4 s-1', 'Stefan-Boltzmann constant')
-alpha = Constant(7.29735308e-3, 7.2973525698e-3, '', 'Fine structure constant')
-Rinf = Constant(109737.316, 10973731.6, 'cm', 'Rydberg constant')
-sigT = Constant(
-    6.65245854533e-25, 6.65245854533e-29, 'cm2', 'Thomson cross section')
-
-au = Constant(1.49597870691e13, 1.49597870691e11, 'cm', 'Astronomical unit')
-pc = Constant(3.08567758e18, 3.08567758e16, 'cm', 'Parsec')
-ly = Constant(9.4605284e17, 9.4605284e15, 'cm', 'Light year')
-Mea = Constant(5.9722e27, 5.9722e24, 'g', 'Earth mass')
+# From CODATA/NIST in May/2016 (related to Mohr+2015)
+#  http://arxiv.org/abs/1507.07956
+nA = Constant(6.022140857e23, 6.022140857e23, '', "Avogadro's constant")
+amu = Constant(1.66053904e-24, 1.66053904e-27, 'g', 'Unified atomic mass unit')
+me = Constant(9.10938356e-28, 9.10938356e-31, 'g', 'Mass of electron')
+mp = Constant(1.672621898e-24, 1.672621898e-27, 'g', 'Mass of proton')
+mn = Constant(1.00137841898*mp.cgs, 1.00137841898*mp.SI, 'g', 
+    'Mass of neutron')
+h = Constant(6.62607004e-27, 6.62607004e-34, 'erg s-1', 'Planck constant')
+eV = Constant(1.6021766208e-12, 1.6021766208e-19, 'erg', 'Electron volt')
+kB = Constant(1.38064852e-16, 1.38064852e-23, 'erg K-1', 'Boltzmann constant')
+alpha = Constant(7.2973525664e-3, 7.2973525664e-3, '', 
+    'Fine structure constant')
+Rinf = Constant(109737.31568, 10973731.568, 'cm-1', 'Rydberg constant')
+sigT = Constant(6.6524587158e-25, 6.6524587158e-29, 'cm2', 
+    'Thomson cross section')
+# From Luzum et al., 2011
+au = Constant(1.49597870700e13, 1.49597870700e11, 'cm', 'Astronomical unit')
+# From Prsa & Harmanec, 2012
+G = Constant(6.67384e-8, 6.67384e-11, 'cm3 g-1 s-2', 
+    'Gravitational constant')
+Mea = Constant(398600.4418e15/G.cgs, 398600.4418e9/G.SI, 'g', 'Earth mass')
 Rea = Constant(6371.e5, 6371.e3, 'cm', 'Earth radius')
-Msun = Constant(1.9891e33, 1.9891e30, 'g', 'Solar mass')
-Rsun = Constant(6.961e10, 696100e3, 'cm', 'Solar radius')
+Mju = Constant(126686535e15/G.cgs, 126686535e9/G.SI, 'g', 'Jupiter mass')
+Rju = Constant(71492.e5, 71492.e3, 'cm', 'Jupiter radius')
+c = Constant(2.99792458e10, 299792458., 'cm s-1', 'speed of light in vacuum')
+sigma = Constant(5.670400e-5, 5.670400e-8, 'erg cm-2 K-4 s-1', 
+    'Stefan-Boltzmann constant')
+Msun = Constant(1.988547e33, 1.988547e30, 'g', 'Solar mass')
+Rsun = Constant(6.95508e10, 695508e3, 'cm', 'Solar radius')
 Lsun = Constant(3.846e33, 3.846e26, 'erg s-1', 'Solar luminosity')
-Tsun = Constant(5778., 5778., 'K', 'Solar Temperature')
-
-yr = Constant(3.15569e7, 3.15569e7, 'sec', 'year')
+Tsun = Constant(5779.57, 5779.57, 'K', 'Solar Temperature')
+# Derived
+# In astronomy, the Julian year is defined as 365.25 days of exactly 86400 SI 
+#  seconds each, totalling exactly 31557600 (IAU style manual, 1989, Wilkins)
+# For the Gregorian calendar the average length of the calendar year (the mean 
+#  year) across the complete leap cycle of 400 years is 365.2425 days!
+yr = Constant(60*60*24*365.25, 60*60*24*365.25, 'sec', 'year')
+ly = Constant(yr.cgs*c.cgs, yr.SI*c.SI, 'cm', 'Light year')
+pc = Constant(au.cgs*60*60*180/_np.pi, au.SI*60*60*180/_np.pi, 'cm', 'Parsec')
+e = Constant(10*c.cgs*1.6021766208e-19, 1.6021766208e-19, 'esu', 
+    'Elementary charge')
+a = Constant(4*sigma.cgs/c.cgs, 4*sigma.SI/c.SI, 'erg cm-3 K-4', 
+    'Radiation density constant')
+hbar = Constant(h.cgs/2/_np.pi, h.SI/2/_np.pi, 'erg s', 
+    'Planck constant/(2*pi)')
+# From Wikipedia
+ep0 = Constant(1., 8.854187187e-12, '', 'Permittivity of Free Space')
+mH = Constant(1.00794*amu.cgs, 1.00794*amu.SI, 'g', 'Mass of hydrogen')
 
 bestars = [
     # The numbers below are based on Harmanec 1988
-    # SpType     Tpole    Mass    Rp      Lum     Rp2
+    # SpType Tpole   Mass     Rp    Lum   Rp2
     ['B0',   29854, 14.57, 05.80, 27290, 6.19],
     ['B0.5', 28510, 13.19, 05.46, 19953, 5.80],
     ['B1',   26182, 11.03, 04.91, 11588, 5.24],

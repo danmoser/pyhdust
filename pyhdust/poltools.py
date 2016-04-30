@@ -4618,6 +4618,17 @@ def fitMCMCline(x, y, sx, sy, star='', margin=False, plot_adj=True, fig=None, ax
     elif not plot_adj:
         fig2 = []
 
-
     return thet_mcmc, b_mcmc, Pb_mcmc, Yb_mcmc, Vb_mcmc, fig1, fig2
 
+
+def loadpol(txt):
+    """ Load polarization txt file. """
+    dtb = _np.loadtxt(txt, dtype=str)
+    dtb = _np.core.records.fromarrays(dtb.transpose(), names='MJD,night,filt,\
+    calc,stdstars,dth,devdth,P,Q,U,th,sigP,sigth', formats='f8,{0},{0},f8,{0},\
+    f8,f8,f8,f8,f8,f8,f8,f8'.format(dtb.dtype))
+    return dtb
+
+
+if __name__ == '__main__':
+    pass
