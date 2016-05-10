@@ -1,16 +1,21 @@
-#!/usr/bin/env python
 # -*- coding:utf-8 -*-
 
 """
-TO compara SUMMARY:
+SUMMARY example:
 
-for i in range(8):
-    a = _np.random.randn(10**i)+2
-    print(_np.average(a), _np.std(a), summary(a))
+.. code::
+
+    import pyhdust.stats as stt
+
+    for i in range(8):
+        a = _np.random.randn(10**i)+2
+        print(np.average(a), np.std(a), stt.summary(a))
 
 """
 
 import numpy as _np
+import pyhdust.phc as _phc
+import matplotlib.pyplot as _plt
 
 
 def mad(data, axis=None):
@@ -27,3 +32,32 @@ def summary(x, verbose=False):
         print('# median and [15.9, 84.1] percentiles: ')
         print('# {0} {1} {2}'.format(*data))
     return data
+
+
+def cdf(x, xlim=None, savefig=False):
+    """ Display the CDF (Cumulative Density Distribution) of a sample `x`.
+
+    A comparison with a gaussian and a linear one are made.
+    """
+    n = len(x)
+    # probability
+    p = _np.arange(n)/(n-1.)
+    sortedx = _np.sort(x)
+    if xlim is None:
+        xlim = [sortedx[0], sortedx[-1]]
+    linx = _np.linspace(xlim[0], xlim[1], n)
+    madx = mad(x)
+    gausx = _np.random.randn(n)*madx/2. + (xlim[0] + xlim[1])/2.
+    gausx = _np.sort(gausx)
+
+    fig, ax = _plt.subplots()
+    ax.plot(sortedx, p, label='Data')
+    ax.plot(linx, p, ls=':', label='linearized', color='gray')
+    ax.plot(gausx, p, ls="--", label='Gauss equiv.', color='gray')
+    ax.set_xlim(xlim)
+    ax.legend(loc='best', fancybox=True, framealpha=0.5, fontsize=8, 
+            labelspacing=0.05)
+    ax.set_ylabel('c.d.f.')
+    if savefig:
+        _phc.savefig(fig)  # figname='outname')
+    return

@@ -294,35 +294,32 @@ def convnorm(x, arr, pattern):
 
 
 # 3D Coordinates manipulation (rotation)
-def cart2sph(x, y, z):
+def cart2sph(x, y, z=None):
     """ Cartesian to spherical coordinates.
 
     INPUT: arrays of same length
 
     OUTPUT: arrays """
-    r = _np.sqrt(x**2 + y**2 + z**2)
-    idx = _np.where(r == 0)
-    r[idx] = 1e-9
-    th = _np.arccos(z / r)
-    phi = _np.arctan2(y, x)
-    # ind = (y<0) & (x<0)
-    # phi[ind] = phi+_np.pi
-    return r, th, phi
+    if z is None:
+        z = _np.zeros(len(x))
+    hxy = _np.hypot(x, y)
+    r = _np.hypot(hxy, z)
+    el = _np.arctan2(z, hxy)
+    az = _np.arctan2(y, x)
+    return r, az, el
 
 
-def sph2cart(r, th, phi):
-    """  Spherical to Cartesian coordinates.
-
-    INPUT: arrays of same length
-
-    OUTPUT: arrays """
-    x = r * _np.sin(th) * _np.cos(phi)
-    y = r * _np.sin(th) * _np.sin(phi)
-    z = r * _np.cos(th)
+def sph2cart(r, az, el=None):
+    if el is None:
+        el = _np.zeros(len(r))
+    rcos_theta = r * _np.cos(el)
+    x = rcos_theta * _np.cos(az)
+    y = rcos_theta * _np.sin(az)
+    z = r * _np.sin(el)
     return x, y, z
 
 
-def cart_rot(x, y, z, ang_xy, ang_yz, ang_zx):
+def cart_rot(x, y, z, ang_xy=0., ang_yz=0., ang_zx=0.):
     """ Apply rotation in Cartesian coordinates.
 
     INPUT: 3 arrays of same length, 3 angles (float, in radians).
@@ -502,7 +499,8 @@ def nan_helper(y):
           to convert logical indices of NaNs to 'equivalent' indices
     Example:
         >>> # linear interpolation of NaNs
-        >>> nans, x= nan_helper(y)
+        >>> nans, x = nan_helper(y)
+        >>> # x is a lambda "sequence" function to interpolation purposes
         >>> y[nans]= np.interp(x(nans), x(~nans), y[~nans])
     """
     return _np.isnan(y), lambda z: z.nonzero()[0]
@@ -794,7 +792,7 @@ def splitfilelines(n, file):
     return
 
 
-def recsearch(root='./', fstr=[''], allfstr=True):
+def recsearch(root='./', fstr=[''], allfstr=True, fullpath=False):
     """
     Do a recursive search in `root` looking for files containg `fstr`.
 
@@ -812,11 +810,14 @@ def recsearch(root='./', fstr=[''], allfstr=True):
         fstr[i] = fstr[i].replace('*', '')
     for root, subfolders, files in _os.walk(root):
         for f in files:
+            fcomp = f
+            if fullpath:
+                fcomp = _os.path.join(root, f)
             if allfstr:
-                if all(x in f for x in fstr):
+                if all(x in fcomp for x in fstr):
                     outflist.append(root+'/'+f)
             else:
-                if any(x in f for x in fstr):
+                if any(x in fcomp for x in fstr):
                     outflist.append(root+'/'+f)
     return outflist
 
@@ -1091,22 +1092,6 @@ hbar = Constant(h.cgs/2/_np.pi, h.SI/2/_np.pi, 'erg s',
 # From Wikipedia
 ep0 = Constant(1., 8.854187187e-12, '', 'Permittivity of Free Space')
 mH = Constant(1.00794*amu.cgs, 1.00794*amu.SI, 'g', 'Mass of hydrogen')
-
-bestars = [
-    # The numbers below are based on Harmanec 1988
-    # SpType Tpole   Mass     Rp    Lum   Rp2
-    ['B0',   29854, 14.57, 05.80, 27290, 6.19],
-    ['B0.5', 28510, 13.19, 05.46, 19953, 5.80],
-    ['B1',   26182, 11.03, 04.91, 11588, 5.24],
-    ['B2',   23121, 08.62, 04.28,  5297, 4.55],
-    ['B3',   19055, 06.07, 03.56,  1690, 3.78],
-    ['B4',   17179, 05.12, 03.26,   946, 3.48],
-    ['B5',   15488, 04.36, 03.01,   530, 3.21],
-    ['B6',   14093, 03.80, 02.81,   316, 2.99],
-    ['B7',   12942, 03.38, 02.65,   200, 2.82],
-    ['B8',   11561, 02.91, 02.44,   109, 2.61],
-    ['B9',   10351, 02.52, 02.25,   591, 2.39],
-    ['B9.5',  9886, 02.38, 02.17,    46, 2.32]]
 
 
 # MAIN ###

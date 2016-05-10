@@ -1349,7 +1349,7 @@ def plot_obs(observ_dates=[], legend=[], civcfg=[1, 'm'], civdt=None,
                     marker=mk[i], s=12, alpha=alpha)
     for g in graymjds:
         rect = _mpatches.Rectangle([g[0], 0], g[1]-g[0], 1., ec="gray", 
-            fc='gray')
+            fc='gray', alpha=0.5, zorder=1)
         ax.add_patch(rect)
     # 
     flatdataes = [item for sublist in observ_dates for item in sublist]
@@ -1681,6 +1681,95 @@ def readphotxdr(xdrfile='kur_ap00k0.xdr', quiet=False):
             # print('# Probably it is a spec night.')
     # return
 
+
+def tefflum_dJN(s, b):
+    """ Calculate the Teff and Lum from *s* and *b* variables from de Jager & 
+    Niewuwenhuijzen (1987).
+
+    return log10_T, log10_L (in Solar and Kelvin units)
+
+    ====== ======== ==============
+    Spec   s-value  s-step/0.1-Sp
+    ====== ======== ==============
+    01-09  0.1-0.9  0.1
+    09-B2  0.9-1.8  0.3
+    B2-A0  1.8-3.0  0.15
+    A0-F0  3.0-4.0  0.1
+    F0-G0  4.0-5.0  0.1
+    G0-K0  5.0-5.5  0.05
+    K0-M0  5.5-6.5  0.1
+    M0-M10 6.5-8.5  0.2
+    ====== ======== ==============
+
+    ========== ========
+    L class    b-value
+    ========== ========
+    V          5.0
+    IV         4.0
+    III        3.0
+    II         2.0
+    Ib         1.4
+    Iab (or I) 1.0
+    Ia         0.6
+    Ia+        0.0
+    ========== ========
+
+    The calcs are made based on Chebyshev polynomials. 
+    """
+    cij = [
+        [+3.82573, -2.13868, -0.46357, +0.02076, -0.11937],
+        [-1.55607, -1.89216, -0.96916, -0.08869, -0.20423],
+        [+1.05165, +0.42330, -0.94379, -0.07438],
+        [-0.01663, -0.20024, -0.18552],
+        [-0.07576, -0.10934],
+        [+0.11008]]
+
+    dij = [
+        [+3.96105, +0.03165, -0.02963, +0.01307, -0.01172],
+        [-0.62945, +0.02596, -0.06009, +0.01881, -0.01121],
+        [+0.14370, -0.00977, -0.03265, +0.01649],
+        [+0.00791, +0.00076, -0.03006],
+        [+0.00723, -0.02621],
+        [+0.02755]]
+
+    def Tk(k, x):
+        if not isinstance( k, ( int, long ) ):
+            print('# Wrong Tk call! Invalid k')
+            return
+        if k == 0:
+            return 1
+        if k == 1:
+            return x
+        return 2*x*Tk(k-1, x) - Tk(k-2, x)
+
+    logL = 0
+    for n in range(5):
+        for i in range(n+1):
+            j = n-i
+            logL += cij[i][j]*Tk(i, (s-4.25)/4.25)*Tk(j, (b-2.5)/2.5)
+    logT = 0
+    for n in range(5):
+        for i in range(n+1):
+            j = n-i
+            logT += dij[i][j]*Tk(i, (s-4.25)/4.25)*Tk(j, (b-2.5)/2.5)
+    return logT, logL
+
+
+def masslum_OB(logL, classL='V'):
+    """ Mass determination based on luminosity and class (Claret 2004). 
+
+    Warning! Valid only for late O to late B range (ie., Be stars).
+
+    return log10_M (solar units)
+    """
+    cs = [0.1997, 0.0844, 0.0312]
+    if classL.upper() == 'IV':
+        cs = [0.2055, 0.0746, 0.0322]
+    elif classL.upper() == 'III':
+        cs = [0.2084, 0.0643, 0.0325]
+    elif classL.upper() != 'V':
+        print('# Warning! Invalid "classL". Assuming "V" for masslum_OB...')
+    return cs[0] + cs[1]*logL + cs[2]*logL**2
 
 # MAIN ###
 if __name__ == "__main__":

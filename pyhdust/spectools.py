@@ -34,6 +34,8 @@ try:
     import matplotlib as _mpl
     import matplotlib.pyplot as _plt
     import matplotlib.patches as _mpatches
+    from matplotlib.ticker import MaxNLocator as _MaxNLocator
+    import matplotlib.gridspec as _gridspec
     import scipy.interpolate as _interpolate 
     from scipy.optimize import curve_fit as _curve_fit
     # from scipy.signal import savgol_filter as _savgol
@@ -1386,7 +1388,7 @@ def load_specs_fits(speclist, ref, lbc, lncore=None, hwidth=None,
     return dtb_obs
 
 
-def plot_spec_info(speclist, dtb_obs, mAEW=False):
+def plot_spec_info(speclist, dtb_obs, mAEW=False, mgray=None):
     """ Standard plot of the Spec class (EW, E/C, V/R, peak-sep., FWHM, F0) 
 
     OUTPUT: figure (fig pyplot)
@@ -1396,23 +1398,44 @@ def plot_spec_info(speclist, dtb_obs, mAEW=False):
     # Legend, Markers and colors idx...
     instm = list(_np.unique(speclist[:, 1]))
     # coridx = [ phc.cycles(instm.index(i)) for i in speclist[:, 1]]
-    cores = _phc.gradColor(range(len(instm)), cmapn='gnuplot')
+    cores = _phc.gradColor(range(len(instm)), cmapn='inferno')
     coridx = [ cores[instm.index(i)] for i in speclist[:, 1] ]
+    coridx = _np.array(coridx)
     mkidx = [ _phc.cycles(instm.index(i), 'mk') for i in speclist[:, 1]]
+    mkidx = _np.array(mkidx)
     # Plots
-    qt = 6
-    fig, axs = _plt.subplots(qt, 1, sharex=True)
-    for i in range(qt):
-        for j in range(_np.shape(speclist)[0]):
-            # binned
-            x, y = _phc.bindata(dtb_obs.data[:, 0], dtb_obs.data[:, i+1])
-            # yi = _savgol(y, 3, 1)
-            axs[i].plot(x, y, color='gray', zorder=0)
-            # points
-            axs[i].plot(dtb_obs.data[:, 0][j], dtb_obs.data[:, i+1][j], 
-                color=coridx[j], marker=mkidx[j])
+    fig = _plt.figure()
+    lins, cols = (7, 1)
+    gssteps = [slice(0, 2), 2, 3, 4, 5, 6]
+    gs = _gridspec.GridSpec(lins, cols)
+    axs = [_plt.subplot(gs[g, :]) for g in gssteps]
     # EW
     axs[0].invert_yaxis()
+    axs[-1].set_xlabel('Julian date - 2400000.5')
+
+    ylabels = [ur'EW (m\u00c5)', r'E/C', r'V/R', (r'pk. sep.'+'\n'+
+        '(km/s)'), r'FWHM'+'\n'+r'(km/s)', r'F${\lambda 0}$']
+    for i, ax in enumerate(axs):
+        # binned
+        x, y = _phc.bindata(dtb_obs.data[:, 0], dtb_obs.data[:, i+1])
+        # yi = _savgol(y, 3, 1)
+        ax.plot(x, y, color='gray', zorder=0)
+        # points
+        for uniquem in set(mkidx):
+            idx = _np.where(mkidx == uniquem)
+            ax.plot(dtb_obs.data[:, 0][idx], dtb_obs.data[:, i+1][idx], 
+                color=coridx[idx][0], marker=uniquem, ls='')
+        ax.set_ylabel(ylabels[i])
+    #
+    xlim = axs[0].get_xlim()
+    axs[2].plot(xlim, [1, 1], ls=":", color='k', zorder=1)
+    for i in range(1, len(axs)):
+        # ax.locator_params(axis='y', nbins=4)
+        axs[i].yaxis.set_major_locator(_MaxNLocator(nbins=4, prune='upper')) 
+        if i in [1, 2, 3]:
+            axs[i].get_yticklabels()[-1].set_visible(False)
+    for ax in axs[:-1]:
+        ax.set_xticklabels([])
     # Legend
     for i in range(len(instm)):
         # axs[0].plot([np.NaN], [np.NaN], label=instm[i], color=phc.cycles(i), 
@@ -1420,9 +1443,19 @@ def plot_spec_info(speclist, dtb_obs, mAEW=False):
         axs[0].plot([_np.NaN], [_np.NaN], label=instm[i], color=cores[i], 
             marker=_phc.cycles(i, 'mk'), ls='')
     axs[0].legend(loc='best', fancybox=True, framealpha=0.5, fontsize=8, 
-        labelspacing=0.05)
+        labelspacing=0.05, ncol=2)
         # bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.
-    # ?
+    fig.subplots_adjust(hspace=0.01)
+    # Gray
+    for ax in axs:
+        ax.set_xlim(xlim)
+        if mgray is not None:
+            ylim = ax.get_ylim()
+            print ylim
+            rect = _mpatches.Rectangle([mgray[0], ylim[0]], 
+                mgray[1]-mgray[0], ylim[1]-ylim[0], ec="gray", fc='gray', 
+                alpha=0.5, zorder=1)
+            ax.add_patch(rect)
     return fig
 
 

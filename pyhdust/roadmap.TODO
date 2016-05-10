@@ -4,7 +4,7 @@ In files, look for TBD and TODO flags.
 
 General:
 ☐ pip install for pyhdust
-☐ Transparent legend-box on the graphs
+✔ Transparent legend-box on the graphs @done (16-04-30 14:46)
 ☐ Define a interpolation policy (scipy interpolate vs numpy.interp)
 ☐ Define unique 'Planejamento_LNA' as MySQL 
 (targets [coordinates], P and Ph0 [mags.], nights observed vs. bad weather, etc.)
@@ -31,15 +31,12 @@ bcd:
 beatlas:
  ✔ Develop rotine correlations emcee (e.g., triangle.py) @done (16-01-04 22:51)
 
-fieldstars:
-☐ Comply with PyHdust standards (+ tests)
-
 hdrpil:
 ✔ None @done (16-01-04 23:06)
 
 images (phim):
 ✔ Do the background with a random position and a random orientation. @done (16-01-09 15:20)
-☐ Add a photospheric mask to cut/background
+✘ Add a photospheric mask to cut/background = XUXU @cancelled (16-04-30 14:49)
 
 input:
 ☐ Implement Mdot11 option in makeDiskGrid

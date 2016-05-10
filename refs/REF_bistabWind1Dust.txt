@@ -51,5 +51,7 @@ I) ENVELOPE DESCRIPTION
 				Beta_p = 0.8				!velocity law exponent at the pole
 				A_3 = 2.75					!B_e/B_p - 1
 
+		c) DUST VELOCITY
+
 		d) TURBULENT VELOCITY 
 			V_turb = 0. km/s !turbulent velocity; sets line profile width

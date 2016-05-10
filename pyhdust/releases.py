@@ -6,8 +6,10 @@ PyHdust auxiliary module: PyHdust releases control.
 History
 ============
 ..
-    v0.958 @ 2015-0
-    ----------------------
+
+v0.993 @ 2016-04-30
+----------------------
+- New inp.makeCSGrid_bistabWind1Dust()
 
 v.0970 @ 2016-01-xx
 -----------------------

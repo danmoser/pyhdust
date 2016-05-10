@@ -491,11 +491,11 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'],
         if mod.find('Be_') > -1:
             src = mod[mod.find('Be_'):-4]
         else:
-            src = srcid
+            src = _os.path.splitext(_os.path.basename(srcid))[0]
         # src = 'aeri_draft'
-        if src.find(srcid) == -1:
-            print('# Script skipped by missing "Be" in source...')
-            continue
+        # if src.find(srcid) == -1:
+        #     print('# Script skipped by missing "Be" in source...')
+        #     continue
 
         cases = docases[:]
         # Do the touch thing
@@ -989,7 +989,7 @@ def makeCSGrid_bistabWind1Dust(modn='01', renv=[18.6], rcs=[5.],
         _os.system('mkdir mod{0}'.format(modn))
 
     # Select sources
-    print _os.path.join('source', selsources)
+    # print _os.path.join('source', selsources)
     sources = _glob(_os.path.join('source', selsources))
 
     # Load disk model
