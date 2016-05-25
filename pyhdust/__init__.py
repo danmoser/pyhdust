@@ -3,12 +3,13 @@
 """PyHdust main module: Hdust tools.
 
 This module contains:
+
 - PyHdust package routines
 - Hdust I/O functions
 - Hdust useful routines and plots
-- Be quantities convertions
-- Astro useful and Plots
-- Astro filters tools
+- Be stars quantities conversions
+- Astronomic useful and plotting functions
+- Astronomic filters tools
 
 :license: GNU GPL v3.0 https://github.com/danmoser/pyhdust/blob/master/LICENSE
 """
@@ -27,8 +28,6 @@ from pyhdust.tabulate import tabulate as _tab
 try:
     import matplotlib.pyplot as _plt
     import matplotlib.patches as _mpatches
-    # from matplotlib.ticker import MultipleLocator as _ML
-    # import matplotlib.dates as mdates
     from scipy import interpolate as _interpolate
     import pyfits as _pf
 except:
@@ -42,10 +41,9 @@ __email__ = "dmfaes@gmail.com"
 
 # Package tools
 def hdtpath():
-    """ Return the path of the module.
-
-    *no param*
+    """ 
     :rtype: str
+    :returns: The module path.
 
     :Example:
 
@@ -57,15 +55,16 @@ def hdtpath():
 
 
 # Hdust I/O
-def sed2info(file):
-    """
-    Read info from SED2 file.
+def sed2info(sfile):
+    """ Read info from a HDUST SED2 file.
 
-    INPUT: file (path string)
+    :type  sfile: str
+    :param sfile: HDUST SED2 file path.
 
-    OUTPUT: nlbd, nobs, Rstar, Rwind (as floats)
+    :rtype: tuple of floats
+    :returns:``nlbd, nobs, Rstar, Rwind`` (HDUST parameters)
     """
-    f0 = open(file, 'r')
+    f0 = open(sfile, 'r')
     fcont = f0.readlines()
     f0.close()
     info = ''
@@ -77,38 +76,40 @@ def sed2info(file):
     return info
 
 
-def readsed2(file):
-    """
-    Read data from SED2 file.
+def readsed2(sfile):
+    """ Read data from HDUST SED2 file.
 
-    INPUT: file (path string)
+    Note: this format is different of **readfullsed2**.
 
-    OUTPUT: array[nobs*nlbd,-1]
-        number of columns from SED2file replaces "-1".
-        NOTE: this format is different of `readfullsed2`.
+    :type sfile: str
+    :param sfile: HDUST SED2 file path.
+
+    :rtype: np.array
+    :returns: array(nobs*nlbd, -1), where number of columns from SED2 file 
+    replaces "-1".)
     """
-    nlbd, nobs, Rstar, Rwind = sed2info(file)
-    sed2data = _np.loadtxt(file, skiprows=1)
+    sed2data = _np.loadtxt(sfile, skiprows=1)
     return sed2data
 
 
-def readfullsed2(file):
-    """
-    Read data from FULLSED2 file.
+def readfullsed2(sfile):
+    """ Read data from HDUST fullSED2 file.
 
-    INPUT: file (path string)
+    :type sfile: str
+    :param sfile: HDUST fullSED2 file path.
 
-    OUTPUT: array[nobs,nlbd,-1]
-        number of columns from SED2file replaces "-1"
+    :rtype: np.array[nobs, nlbd, -1] (number of columns from fullSED2 file 
+        replaces "-1".)
+    :returns: HDUST fullSED2 file content.
     """
-    nlbd, nobs, Rstar, Rwind = sed2info(file)
-    sed2data = _np.loadtxt(file, skiprows=5)
+    sed2data = _np.loadtxt(sfile, skiprows=5)
+    nlbd, nobs, Rstar, Rwind = sed2info(sfile)
     sed2data = sed2data.reshape((nobs, nlbd, -1))
     return sed2data
 
 
 def readtemp(tfile, quiet=False):
-    """ Read *.temp file
+    """ Read HDUST temp file
 
     - ncr = número de células da simulação na coordenada radial
     - ncmu = número de células da simulação na coordenada latitudinal
@@ -127,7 +128,17 @@ def readtemp(tfile, quiet=False):
 
     `data` format is: `data[nLTE+6, ncr, ncmu, ncphi]`
 
-    Temperature are in `data[3, ...]`. More info see *plottemp* function.
+    .. seealso::
+
+        Temperature are in `data[3, ...]`. More info. see :py:func:`plottemp` 
+        function.
+
+    :type sfile: str
+    :param sfile: HDUST fullSED2 file path.
+
+    :rtype: np.array[nobs, nlbd, -1] (number of columns from fullSED2 file 
+        replaces "-1".)
+    :returns: HDUST fullSED2 file content.
 
     OUTPUT = ncr,ncmu,ncphi,nLTE,nNLTE,Rstar,Ra,beta,data,pcr,pcmu,pcphi
     """
@@ -509,15 +520,14 @@ def readSingleBe(sBfile):
 def plotdust(tfile):
     """ TBD!!
 
-    For more info, see `readdust` help. 
+    .. seealso:: py:func:`readdust`.
 
     """
     return
 
 
 def gentemplist(tfile, tfrange=None, avg=True):
-    """
-    Generate a list of *.temp files.
+    """ Generate a list of *.temp files.
 
     `tfile` = file name or file prefix to be plotted. If `tfrange` (e.g.,
     tfrange=[20,24] is present, it you automatically plot the interval.
@@ -544,7 +554,7 @@ def gentemplist(tfile, tfrange=None, avg=True):
 
 
 def genlog(mods=None, path=None, extrainfo=None):
-    """Gen. log of the calculated models of the project.
+    """ Gen. log of the calculated models of the project.
 
     ppath = Project's path. If it is not given, it assumes the local pwd.
 
@@ -632,8 +642,7 @@ def genlog(mods=None, path=None, extrainfo=None):
 
 
 def printN0(modn):
-    """
-    Print the n0 of the model inside modn folder. It does a grep of `n_0` of
+    """ Print the n0 of the model inside modn folder. It does a grep of `n_0` of
     all *.txt files of the folder.
 
     INPUT: string
@@ -747,12 +756,12 @@ def fs2rm_nan(fsed2, cols=[3], refcol=None):
 def plottemp(tfiles, philist=[0], interpol=False, xax=0, fmt=['png'],
     outpref=None, tlabels=None, title=None):
     """
-    .. code::
+    :Example:
 
-        >>> import pyhdust as hdt
-        >>> tfiles, tlabels = hdt.gentemplist('bestar2.02/mod01/mod01b33.temp', 
-            tfrange=[30,33])
-        >>> hdt.plottemp(tfiles, tlabels=tlabels)
+    >>> import pyhdust as hdt
+    >>> tfiles, tlabels = hdt.gentemplist('bestar2.02/mod01/mod01b33.temp', 
+        tfrange=[30,33])
+    >>> hdt.plottemp(tfiles, tlabels=tlabels)
 
     .. image:: _static/hdt_plottemp.png
         :width: 512px
@@ -808,23 +817,19 @@ def plottemp(tfiles, philist=[0], interpol=False, xax=0, fmt=['png'],
                 xtitle = r'$1-R_*/r$'
             y = data[3 + lev, :, ncmu / 2 + np + rplus, icphi]
             y = y / 1000.
-            fmt = 'o:'
+            mk = 'o:'
             if rtfile.find('avg') > 0:
-                fmt = 'o-'
+                mk = 'o-'
             if tlabels is not None:
-                axs.plot(x, y, fmt, label=tlabels[i])
+                axs.plot(x, y, mk, label=tlabels[i])
             else:
-                axs.plot(x, y, fmt)
+                axs.plot(x, y, mk)
     #
     axs.legend(loc='best', fancybox=True, framealpha=0.5)
     axs.set_title(title)
     axs.set_xlabel(xtitle)
     axs.set_ylabel(r'Temperature (10$^3$ K)')
-    if outpref is None:
-        outpref = _phc.dtflag()
-    for f in fmt:
-        _plt.savefig('{0}.{1}'.format(outpref, f), transparent=True)
-    _plt.close()
+    _phc.savefig(fig, figname=outpref, fmt=fmt)
     return
 
 
@@ -1501,14 +1506,13 @@ def plot_gal(ra, dec, addsuf=None, fmt=['png']):
 
 # Filters tools
 def doFilterConv(x0, y0, filt, zeropt=False):
-    """
-    Return the convolved filter total flux for a given flux profile y0,
+    r""" Return the convolved filter total flux for a given flux profile y0,
     at wavelengths x0.
 
     .. math::
 
-        zeropt = \frac{\int F(\lambda) Sp(\lambda)\,d\lambda}{\int F(\lambda)
-            \,d\lambda} 
+        \text{zero}_{\rm pt} = \frac{\int F(\lambda) Sp(\lambda)\,d\lambda}
+        {\int F(\lambda)\,d\lambda} 
 
     INPUT: x0 lambda array (**Angstroms**), y0 flux array, filter (string, 
     uppercase for standard filters)
