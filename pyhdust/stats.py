@@ -1,21 +1,16 @@
 # -*- coding:utf-8 -*-
 
-"""
-SUMMARY example:
+"""PyHdust *stats* module: statistical tools
 
-.. code::
-
-    import pyhdust.stats as stt
-
-    for i in range(8):
-        a = _np.random.randn(10**i)+2
-        print(np.average(a), np.std(a), stt.summary(a))
-
+:license: GNU GPL v3.0 https://github.com/danmoser/pyhdust/blob/master/LICENSE
 """
 
 import numpy as _np
 import pyhdust.phc as _phc
 import matplotlib.pyplot as _plt
+
+__author__ = "Daniel Moser"
+__email__ = "dmfaes@gmail.com"
 
 
 def mad(data, axis=None):
@@ -26,6 +21,16 @@ def mad(data, axis=None):
 def summary(x, verbose=False):
     """ Returns the summary of the variable: "median", "minus sigma" and 
     "plus sigma" ROBUST values (i.e., median and [15.9, 84.1] percentiles). 
+
+    Example:
+
+    .. code::
+
+        import pyhdust.stats as stt
+
+        for i in range(8):
+            a = _np.random.randn(10**i)+2
+            print(np.average(a), np.std(a), stt.summary(a))
     """
     data = _np.hstack((_np.median(x), _np.percentile(x, (15.87, 84.13))))
     if verbose:

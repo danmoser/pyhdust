@@ -1,7 +1,6 @@
 # -*- coding:utf-8 -*-
 
-"""
-PyHdust auxiliary module: PyHdust releases control.
+"""PyHdust auxiliary module: PyHdust releases control.
 
 History
 ============

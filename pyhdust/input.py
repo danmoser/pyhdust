@@ -1,7 +1,6 @@
 # -*- coding:utf-8 -*-
 
-"""
-PyHdust *input* module: Hdust input tools.
+"""PyHdust *input* module: Hdust input tools.
 
 :co-author: Rodrigo Vieira
 :license: GNU GPL v3.0 https://github.com/danmoser/pyhdust/blob/master/LICENSE
@@ -849,13 +848,13 @@ def makeStarGrid(oblats, Hfs, path=None):
             L = list(L)
             Z = [0.014]  # METALLICITY(=Zsolar) (other options: 0.006, 0.002)
 
-            print 'Omega = ', Omega
-            print 'W     = ', W
-            print 'beta  = ', Beta
-            print 'M     = ', M
-            print 'Rp    = ', Rp
-            print 'L     = ', L
-            print "%.0f arquivos gerados\n" % (len(M) * len(Hfs))
+            print('Omega = ', Omega)
+            print('W     = ', W)
+            print('beta  = ', Beta)
+            print('M     = ', M)
+            print('Rp    = ', Rp)
+            print('L     = ', L)
+            print("%.0f arquivos gerados\n" % (len(M) * len(Hfs)))
 
             # DEFINE ALL INDEX
             for prodI in _product(M, Rp, L, Z):

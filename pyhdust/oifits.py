@@ -1,7 +1,8 @@
 # -*- coding:utf-8 -*-
 
-"""
-PyHdust *oifits* module: third-part module for reading/writing OIFITS files.
+"""PyHdust auxiliary module: third-part module for reading/writing OIFITS 
+files.
+
 I made some modifications, but I keep the original README below.
 
 This module is NOT related to the OIFITS Python module provided at
@@ -62,8 +63,6 @@ The same goes for correlated fluxes, differential/closure phases,
 triple products, etc.  See the notes on the individual classes for a
 list of all the "hidden" attributes.
 
-For further information, contact Paul Boley (boley@mpia-hd.mpg.de).
-
 Example of OIfits merge (same target):
 
 .. code:: python
@@ -74,6 +73,9 @@ Example of OIfits merge (same target):
     oifits.matchtargetbyname = True
     merge = oidata1 + oidata2
     oimerge.save('merged.fits')
+
+:co-author: Daniel Moser
+:license: Copyright 2014 Paul Boley
 """
 import pyfits as _pyfits
 import datetime as _datetime
@@ -81,8 +83,8 @@ import copy as _copy
 import numpy as _np
 import numbers as _numbers
 
-__author__ = "Daniel Moser; Paul Boley"
-__email__ = "dmfaes@gmail.com; boley@mpia-hd.mpg.de"
+__author__ = "Paul Boley"
+__email__ = "boley@mpia-hd.mpg.de"
 
 _mjdzero = _datetime.datetime(1858, 11, 17)
 
@@ -247,7 +249,7 @@ class OI_TARGET:
             self.decep0.asdms(), self.equinox)
 
     def info(self):
-        print str(self)
+        print(str(self))
 
 
 class OI_WAVELENGTH:
@@ -276,7 +278,7 @@ class OI_WAVELENGTH:
             _np.max(self.eff_wave))
 
     def info(self):
-        print str(self)
+        print(str(self))
 
 
 class AMBER_SPECTRUM:
@@ -316,7 +318,7 @@ class AMBER_SPECTRUM:
         if attrname in ('spectrum', 'spectrumerr'):
             return self.__dict__['_' + attrname]
         else:
-            raise AttributeError, attrname
+            raise AttributeError(attrname)
 
     def __setattr__(self, attrname, value):
         if attrname in ('spectrum', 'spectrumerr'):
@@ -333,7 +335,7 @@ class AMBER_SPECTRUM:
             _np.max(self.eff_wave))
 
     def info(self):
-        print str(self)
+        print(str(self))
 
 
 class OI_VIS:
@@ -407,7 +409,7 @@ class OI_VIS:
             else:
                 return None
         else:
-            raise AttributeError, attrname
+            raise AttributeError(attrname)
 
     def __setattr__(self, attrname, value):
         if attrname in ('visamp', 'visamperr', 'visphi', 'visphierr', 'cflux', 
@@ -428,11 +430,11 @@ class OI_VIS:
                 strftime('%F %T'), baselinename, len(self.visamp), 
                 _plurals(len(self.visamp)), _np.sum(self.flag), 
                 _np.sqrt(self.ucoord**2 + self.vcoord**2), 
-                _np.arctan(self.ucoord / self.vcoord) * 180.0 / _np.pi % 180.0, 
+                _np.arctan2(self.ucoord, self.vcoord) * 180.0 / _np.pi % 180.0, 
                 meanvis)
 
     def info(self):
-        print str(self)
+        print(str(self))
 
 
 class OI_VIS2:
@@ -486,7 +488,7 @@ class OI_VIS2:
             return _np.ma.masked_array(self.__dict__['_' + attrname], 
                 mask=self.flag)
         else:
-            raise AttributeError, attrname
+            raise AttributeError(attrname)
 
     def __setattr__(self, attrname, value):
         if attrname in ('vis2data', 'vis2err'):
@@ -506,11 +508,11 @@ class OI_VIS2:
                 self.timeobs.strftime('%F %T'), baselinename, 
                 len(self.vis2data), _plurals(len(self.vis2data)),
                 _np.sum(self.flag), _np.sqrt(self.ucoord**2 + self.vcoord**2), 
-                _np.arctan(self.ucoord / self.vcoord) * 180.0 / _np.pi % 180.0,
+                _np.arctan2(self.ucoord, self.vcoord) * 180.0 / _np.pi % 180.0,
                 meanvis)
 
     def info(self):
-        print str(self)
+        print(str(self))
 
 
 class OI_T3:
@@ -573,7 +575,7 @@ class OI_T3:
             return _np.ma.masked_array(self.__dict__['_' + attrname], 
                 mask=self.flag)
         else:
-            raise AttributeError, attrname
+            raise AttributeError(attrname)
 
     def __setattr__(self, attrname, value):
         if attrname in ('vis2data', 'vis2err'):
@@ -596,7 +598,7 @@ class OI_T3:
                     self.v2coord**2), meant3)
 
     def info(self):
-        print str(self)
+        print(str(self))
 
 
 class OI_STATION:
@@ -680,7 +682,7 @@ class OI_ARRAY:
             radius = _np.sqrt((self.arrxyz**2).sum())
             return radius - 6378100.0  
         else:
-            raise AttributeError, attrname
+            raise AttributeError(attrname)
 
     def __repr__(self):
         return '%s %s %g m, %d station%s' % (self.latitude.asdms(), 
@@ -690,10 +692,10 @@ class OI_ARRAY:
     def info(self, verbose=0):
         """Print the array's center coordinates.  If verbosity >= 1,
         print information about each station."""
-        print str(self)
+        print(str(self))
         if verbose >= 1:
             for station in self.station:
-                print "   %s" % str(station)
+                print("   %s" % str(station))
 
     def get_station_by_name(self, name):
 
@@ -732,7 +734,7 @@ class oifits:
 
         # Don't do anything if the two oifits objects are not CONSISTENT!
         if not self.isconsistent() or not other.isconsistent():
-            print 'oifits objects are not consistent, bailing.'
+            print('oifits objects are not consistent, bailing.')
             return
 
         new = _copy.deepcopy(self)
@@ -757,10 +759,10 @@ class oifits:
                         targetmap[id(otarget)] = ntarget
                         break
                     elif ntarget.target == otarget.target:
-                        print('Found a target with a matching name, but ' + 
-                            'some differences in the target specification. ' + 
-                            'Creating a new target. Set oifits.' +
-                            'matchtargetbyname to True to override this ' +
+                        print('Found a target with a matching name, but ' 
+                            'some differences in the target specification. '
+                            'Creating a new target. Set oifits.'
+                            'matchtargetbyname to True to override this '
                             'behavior.')
                 # If 'id(otarget)' is not in targetmap, then this is a new
                 # target and should be added to the array of targets
@@ -922,15 +924,15 @@ class oifits:
                     nwave))
 
         if warnings:
-            print "*** %d warning%s:" % (len(warnings), 
-                _plurals(len(warnings)))
+            print("*** %d warning%s:" % (len(warnings), 
+                _plurals(len(warnings))))
             for warning in warnings:
-                print '  ' + warning
+                print('  ' + warning)
         if errors:
-            print "*** %d ERROR%s:" % (len(errors), 
-                _plurals(len(errors)).upper())
+            print("*** %d ERROR%s:" % (len(errors), 
+                _plurals(len(errors)).upper()))
             for error in errors:
-                print '  ' + error
+                print('  ' + error)
 
         return not (len(warnings) or len(errors))
 
@@ -944,54 +946,65 @@ class oifits:
 
         for vis in self.vis:
             if vis.array and (vis.array not in self.array.values()):
-                print 'A visibility measurement (0x%x) refers to an array ' + \
-                    'which is not inside the main oifits object.' % id(vis)
+                print('A visibility measurement (0x%x) refers to an array '
+                    'which is not inside the main oifits object.' % id(vis))
                 return False
             if ((vis.station[0] and (vis.station[0] not in 
                 vis.array.station)) or (vis.station[1] and (vis.station[1] 
                     not in vis.array.station))):
-                print 'A visibility measurement (0x%x) refers to a station' + \
-                    ' which is not inside the main oifits object.' % id(vis)
+                print('A visibility measurement (0x%x) refers to a station'
+                    ' which is not inside the main oifits object.' % id(vis))
                 return False
             if vis.wavelength not in self.wavelength.values():
-                print 'A visibility measurement (0x%x) refers to a ' + \
-                    'wavelength table which is not inside the main oifits ' + \
-                    'object.' % id(vis)
+                print('A visibility measurement (0x%x) refers to a '
+                    'wavelength table which is not inside the main oifits '
+                    'object.' % id(vis))
                 return False
             if vis.target not in self.target:
-                print 'A visibility measurement (0x%x) refers to a target ' + \
-                    'which is not inside the main oifits object.' % id(vis)
+                print('A visibility measurement (0x%x) refers to a target '
+                    'which is not inside the main oifits object.' % id(vis))
                 return False
 
         for vis2 in self.vis2:
             if vis2.array and (vis2.array not in self.array.values()):
-                print 'A visibility^2 measurement (0x%x) refers to an array which is not inside the main oifits object.' % id(vis2)
+                print('A visibility^2 measurement (0x%x) refers to an array '
+                    'which is not inside the main oifits object.' % id(vis2))
                 return False
-            if ((vis2.station[0] and (vis2.station[0] not in vis2.array.station)) or
-                (vis2.station[1] and (vis2.station[1] not in vis2.array.station))):
-                print 'A visibility^2 measurement (0x%x) refers to a station which is not inside the main oifits object.' % id(vis)
+            if ((vis2.station[0] and (vis2.station[0] not in 
+                vis2.array.station)) or (vis2.station[1] and (vis2.station[1] 
+                not in vis2.array.station))):
+                print('A visibility^2 measurement (0x%x) refers to a station '
+                    'which is not inside the main oifits object.' % id(vis))
                 return False
             if vis2.wavelength not in self.wavelength.values():
-                print 'A visibility^2 measurement (0x%x) refers to a wavelength table which is not inside the main oifits object.' % id(vis2)
+                print('A visibility^2 measurement (0x%x) refers to a '
+                    'wavelength table which is not inside the main oifits '
+                    'object.' % id(vis2))
                 return False
             if vis2.target not in self.target:
-                print 'A visibility^2 measurement (0x%x) refers to a target which is not inside the main oifits object.' % id(vis2)
+                print('A visibility^2 measurement (0x%x) refers to a target '
+                    'which is not inside the main oifits object.' % id(vis2))
                 return False
 
         for t3 in self.t3:
             if t3.array and (t3.array not in self.array.values()):
-                print 'A closure phase measurement (0x%x) refers to an array which is not inside the main oifits object.' % id(t3)
+                print('A closure phase measurement (0x%x) refers to an array '
+                    'which is not inside the main oifits object.' % id(t3))
                 return False
             if ((t3.station[0] and (t3.station[0] not in t3.array.station)) or
                 (t3.station[1] and (t3.station[1] not in t3.array.station)) or
                 (t3.station[2] and (t3.station[2] not in t3.array.station))):
-                print 'A closure phase measurement (0x%x) refers to a station which is not inside the main oifits object.' % id(t3)
+                print('A closure phase measurement (0x%x) refers to a station '
+                    'which is not inside the main oifits object.' % id(t3))
                 return False
             if t3.wavelength not in self.wavelength.values():
-                print 'A closure phase measurement (0x%x) refers to a wavelength table which is not inside the main oifits object.' % id(t3)
+                print('A closure phase measurement (0x%x) refers to a '
+                    'wavelength table which is not inside the main oifits '
+                    'object.' % id(t3))
                 return False
             if t3.target not in self.target:
-                print 'A closure phase measurement (0x%x) refers to a target which is not inside the main oifits object.' % id(t3)
+                print('A closure phase measurement (0x%x) refers to a target '
+                    'which is not inside the main oifits object.' % id(t3))
                 return False
 
         return True
@@ -1005,73 +1018,80 @@ class oifits:
         if self.wavelength:
             wavelengths = 0
             if recursive:
-                print "======================================================="
-                print "SUMMARY OF WAVELENGTH TABLES"
-                print "======================================================="
+                print("======================================================")
+                print("SUMMARY OF WAVELENGTH TABLES")
+                print("======================================================")
             for key in self.wavelength.keys():
                 wavelengths += len(self.wavelength[key].eff_wave)
                 if recursive:
-                    print "'%s': %s" % (key, str(self.wavelength[key]))
-            print "%d wavelength table%s with %d wavelength%s in total" % (len(self.wavelength), _plurals(len(self.wavelength)), wavelengths, _plurals(wavelengths))
+                    print("'%s': %s" % (key, str(self.wavelength[key])))
+            print("%d wavelength table%s with %d wavelength%s in total" % 
+                (len(self.wavelength), _plurals(len(self.wavelength)), 
+                    wavelengths, _plurals(wavelengths)))
         if self.target.size:
             if recursive:
-                print "======================================================="
-                print "SUMMARY OF TARGET TABLES"
-                print "======================================================="
+                print("======================================================")
+                print("SUMMARY OF TARGET TABLES")
+                print("======================================================")
                 for target in self.target:
                     target.info()
-            print "%d target%s" % (len(self.target), _plurals(len(self.target)))
+            print("%d target%s" % (len(self.target), 
+                _plurals(len(self.target))))
         if self.array:
             stations = 0
             if recursive:
-                print "======================================================="
-                print "SUMMARY OF ARRAY TABLES"
-                print "======================================================="
+                print("======================================================")
+                print("SUMMARY OF ARRAY TABLES")
+                print("======================================================")
             for key in self.array.keys():
                 if recursive:
-                    print key + ':'
+                    print(key + ':')
                     self.array[key].info(verbose=verbose)
                 stations += len(self.array[key].station)
-            print "%d array%s with %d station%s" % (len(self.array), _plurals(len(self.array)), stations, _plurals(stations))
+            print("%d array%s with %d station%s" % (len(self.array), 
+                _plurals(len(self.array)), stations, _plurals(stations)))
         if self.vis.size:
             if recursive:
-                print "======================================================="
-                print "SUMMARY OF VISIBILITY MEASUREMENTS"
-                print "======================================================="
+                print("======================================================")
+                print("SUMMARY OF VISIBILITY MEASUREMENTS")
+                print("======================================================")
                 for vis in self.vis:
                     vis.info()
-            print "%d visibility measurement%s" % (len(self.vis), _plurals(len(self.vis)))
+            print("%d visibility measurement%s" % (len(self.vis), 
+                _plurals(len(self.vis))))
         if self.vis2.size:
             if recursive:
-                print "======================================================="
-                print "SUMMARY OF VISIBILITY^2 MEASUREMENTS"
-                print "======================================================="
+                print("======================================================")
+                print("SUMMARY OF VISIBILITY^2 MEASUREMENTS")
+                print("======================================================")
                 for vis2 in self.vis2:
                     vis2.info()
-            print "%d visibility^2 measurement%s" % (len(self.vis2), _plurals(len(self.vis2)))
+            print("%d visibility^2 measurement%s" % (len(self.vis2), 
+                _plurals(len(self.vis2))))
         if self.t3.size:
             if recursive:
-                print "======================================================="
-                print "SUMMARY OF T3 MEASUREMENTS"
-                print "======================================================="
+                print("======================================================")
+                print("SUMMARY OF T3 MEASUREMENTS")
+                print("======================================================")
                 for t3 in self.t3:
                     t3.info()
-            print "%d closure phase measurement%s" % (len(self.t3), _plurals(len(self.t3)))
+            print("%d closure phase measurement%s" % (len(self.t3), 
+                _plurals(len(self.t3))))
 
     def save(self, filename):
         """Write the contents of the oifits object to a file in OIFITS
         format."""
 
         if not self.isconsistent():
-            print 'oifits object is not consistent, refusing to go further'
+            print('oifits object is not consistent, refusing to go further')
             return
 
         hdulist = _pyfits.HDUList()
         hdu = _pyfits.PrimaryHDU()
         hdu.header.update('DATE', _datetime.datetime.now().strftime(
             format='%F'), comment='Creation date')
-        hdu.header.add_comment(
-            'Written by a modified OIFITS Python module')  # version %s' % __version__)
+        hdu.header.add_comment('Written by a modified OIFITS Python module')  
+            # version %s' % __version__)
         hdu.header.add_comment('http://j.mp/pyhdust')
 
         wavelengthmap = {}
@@ -1293,32 +1313,32 @@ class oifits:
                 nwave = self.wavelength[key[1]].eff_wave.size
 
                 hdu = _pyfits.new_table(_pyfits.ColDefs([
-                    _pyfits.Column(
-                        name='TARGET_ID', format='1I', array=data['target_id']),
-                    _pyfits.Column(
-                        name='TIME', format='1D', unit='SECONDS', array=data['time']),
-                    _pyfits.Column(
-                        name='MJD', unit='DAY', format='1D', array=data['mjd']),
-                    _pyfits.Column(
-                        name='INT_TIME', format='1D', unit='SECONDS', array=data['int_time']),
-                    _pyfits.Column(name='VISAMP', format='%dD' %
-                                   nwave, array=data['visamp']),
-                    _pyfits.Column(
-                        name='VISAMPERR', format='%dD' % nwave, array=data['visamperr']),
-                    _pyfits.Column(
-                        name='VISPHI', unit='DEGREES', format='%dD' % nwave, array=data['visphi']),
-                    _pyfits.Column(
-                        name='VISPHIERR', unit='DEGREES', format='%dD' % nwave, array=data['visphierr']),
-                    _pyfits.Column(name='CFLUX', format='%dD' %
-                                   nwave, array=data['cflux']),
+                    _pyfits.Column(name='TARGET_ID', format='1I', 
+                        array=data['target_id']),
+                    _pyfits.Column(name='TIME', format='1D', unit='SECONDS', 
+                        array=data['time']),
+                    _pyfits.Column(name='MJD', unit='DAY', format='1D', 
+                        array=data['mjd']),
+                    _pyfits.Column(name='INT_TIME', format='1D', 
+                        unit='SECONDS', array=data['int_time']),
+                    _pyfits.Column(name='VISAMP', format='%dD' % nwave, 
+                        array=data['visamp']),
+                    _pyfits.Column(name='VISAMPERR', format='%dD' % nwave, 
+                        array=data['visamperr']),
+                    _pyfits.Column(name='VISPHI', unit='DEGREES', 
+                        format='%dD' % nwave, array=data['visphi']),
+                    _pyfits.Column(name='VISPHIERR', unit='DEGREES', 
+                        format='%dD' % nwave, array=data['visphierr']),
+                    _pyfits.Column(name='CFLUX', format='%dD' % 
+                        nwave, array=data['cflux']),
                     _pyfits.Column(name='CFLUXERR', format='%dD' %
-                                   nwave, array=data['cfluxerr']),
-                    _pyfits.Column(
-                        name='UCOORD', format='1D', unit='METERS', array=data['ucoord']),
-                    _pyfits.Column(
-                        name='VCOORD', format='1D', unit='METERS', array=data['vcoord']),
-                    _pyfits.Column(
-                        name='STA_INDEX', format='2I', array=data['sta_index'], null=-1),
+                        nwave, array=data['cfluxerr']),
+                    _pyfits.Column(name='UCOORD', format='1D', unit='METERS', 
+                        array=data['ucoord']),
+                    _pyfits.Column(name='VCOORD', format='1D', unit='METERS', 
+                        array=data['vcoord']),
+                    _pyfits.Column(name='STA_INDEX', format='2I', 
+                        array=data['sta_index'], null=-1),
                     _pyfits.Column(name='FLAG', format='%dL' % nwave)
                 ]))
 
@@ -1330,13 +1350,13 @@ class oifits:
                 hdu.header.update('EXTNAME', 'OI_VIS')
                 hdu.header.update(
                     'OI_REVN', 1, 'Revision number of the table definition')
-                hdu.header.update(
-                    'DATE-OBS', refdate.strftime('%F'), comment='Zero-point for table (UTC)')
+                hdu.header.update('DATE-OBS', refdate.strftime('%F'), 
+                    comment='Zero-point for table (UTC)')
                 if key[0]:
                     hdu.header.update(
                         'ARRNAME', key[0], 'Identifies corresponding OI_ARRAY')
-                hdu.header.update(
-                    'INSNAME', key[1], 'Identifies corresponding OI_WAVELENGTH table')
+                hdu.header.update('INSNAME', key[1], 
+                    'Identifies corresponding OI_WAVELENGTH table')
                 hdulist.append(hdu)
 
         if self.vis2.size:
@@ -1387,26 +1407,26 @@ class oifits:
                 nwave = self.wavelength[key[1]].eff_wave.size
 
                 hdu = _pyfits.new_table(_pyfits.ColDefs([
-                    _pyfits.Column(
-                        name='TARGET_ID', format='1I', array=data['target_id']),
-                    _pyfits.Column(
-                        name='TIME', format='1D', unit='SECONDS', array=data['time']),
-                    _pyfits.Column(
-                        name='MJD', format='1D', unit='DAY', array=data['mjd']),
-                    _pyfits.Column(
-                        name='INT_TIME', format='1D', unit='SECONDS', array=data['int_time']),
+                    _pyfits.Column(name='TARGET_ID', format='1I', 
+                        array=data['target_id']),
+                    _pyfits.Column(name='TIME', format='1D', unit='SECONDS', 
+                        array=data['time']),
+                    _pyfits.Column(name='MJD', format='1D', unit='DAY', 
+                        array=data['mjd']),
+                    _pyfits.Column(name='INT_TIME', format='1D', 
+                        unit='SECONDS', array=data['int_time']),
                     _pyfits.Column(name='VIS2DATA', format='%dD' %
-                                   nwave, array=data['vis2data']),
+                        nwave, array=data['vis2data']),
                     _pyfits.Column(name='VIS2ERR', format='%dD' %
-                                   nwave, array=data['vis2err']),
-                    _pyfits.Column(
-                        name='UCOORD', format='1D', unit='METERS', array=data['ucoord']),
-                    _pyfits.Column(
-                        name='VCOORD', format='1D', unit='METERS', array=data['vcoord']),
-                    _pyfits.Column(
-                        name='STA_INDEX', format='2I', array=data['sta_index'], null=-1),
-                    _pyfits.Column(name='FLAG', format='%dL' %
-                                   nwave, array=data['flag'])
+                        nwave, array=data['vis2err']),
+                    _pyfits.Column(name='UCOORD', format='1D', unit='METERS', 
+                        array=data['ucoord']),
+                    _pyfits.Column(name='VCOORD', format='1D', unit='METERS', 
+                        array=data['vcoord']),
+                    _pyfits.Column(name='STA_INDEX', format='2I', 
+                        array=data['sta_index'], null=-1),
+                    _pyfits.Column(name='FLAG', format='%dL' % nwave, 
+                        array=data['flag'])
                 ]))
                 # Setting the data of logical field via the
                 # _pyfits.Column call above with length > 1 (eg
@@ -1414,15 +1434,15 @@ class oifits:
                 # of PyFITS 2.2.2
                 hdu.data.field('FLAG').setfield(data['flag'], bool)
                 hdu.header.update('EXTNAME', 'OI_VIS2')
-                hdu.header.update(
-                    'OI_REVN', 1, 'Revision number of the table definition')
-                hdu.header.update(
-                    'DATE-OBS', refdate.strftime('%F'), comment='Zero-point for table (UTC)')
+                hdu.header.update('OI_REVN', 1, 
+                    'Revision number of the table definition')
+                hdu.header.update('DATE-OBS', refdate.strftime('%F'), 
+                    comment='Zero-point for table (UTC)')
                 if key[0]:
-                    hdu.header.update(
-                        'ARRNAME', key[0], 'Identifies corresponding OI_ARRAY')
-                hdu.header.update(
-                    'INSNAME', key[1], 'Identifies corresponding OI_WAVELENGTH table')
+                    hdu.header.update('ARRNAME', key[0], 
+                        'Identifies corresponding OI_ARRAY')
+                hdu.header.update('INSNAME', key[1], 
+                    'Identifies corresponding OI_WAVELENGTH table')
                 hdulist.append(hdu)
 
         if self.t3.size:
@@ -1538,7 +1558,7 @@ def open(filename, quiet=False):
     sta_indices = {}
 
     if not quiet:
-        print "Opening %s" % filename
+        print("Opening %s" % filename)
     hdulist = _pyfits.open(filename)
     # First get all the OI_TARGET, OI_WAVELENGTH and OI_ARRAY tables
     for hdu in hdulist:

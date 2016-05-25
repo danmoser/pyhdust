@@ -1,7 +1,6 @@
 # -*- coding:utf-8 -*-
 
-"""
-PyHdust main module: Hdust tools.
+"""PyHdust main module: Hdust tools.
 
 This module contains:
 - PyHdust package routines
@@ -28,12 +27,14 @@ from pyhdust.tabulate import tabulate as _tab
 try:
     import matplotlib.pyplot as _plt
     import matplotlib.patches as _mpatches
+    # from matplotlib.ticker import MultipleLocator as _ML
+    # import matplotlib.dates as mdates
     from scipy import interpolate as _interpolate
     import pyfits as _pf
 except:
     print('# Warning! matplotlib, pyfits and/or scipy module not installed!!!')
 
-__version__ = 0.993
+__version__ = 0.994
 __release__ = "Beta"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -867,7 +868,7 @@ def diskcalcs(M, R, Tpole, T, alpha, R0, mu, rho0, Rd):
     rho0p = sigp / (2 * _np.pi) ** .5 / a * (_phc.G.cgs * M / R) ** .5 / R
     Mdot = rho2Mdot(R, alpha, a, M, rho0, R0)
     sig = Mdot2sig(R, Mdot, alpha, a, M, R0)
-    sigl = Mdot * (_phc.G.cgs * M) ** .5 / 3 / _np.pi
+    # sigl = Mdot * (_phc.G.cgs * M) ** .5 / 3 / _np.pi
     Mdisk0 = (2 * _np.pi) ** 1.5 * rho0 * R ** 2. * \
         (Rd - R) * a / (_phc.G.cgs * M / R) ** .5
     Mdisk = 2 * _np.pi * Mdot * \
@@ -1029,13 +1030,13 @@ def obsCalc():
         modf = _math.modf
         # Julian calendar on or before 1582 October 4 and Gregorian calendar
         # afterwards.
-        if ((10000L * year + 100L * month + day) <= 15821004L):
+        if ((long(10000) * year + long(100) * month + day) <= long(15821004)):
             b = -2 + int(modf((year + 4716) / 4)[1]) - 1179
         else:
             b = int(modf(year / 400)[1]) - int(modf(year / 100)[1]) + \
                 int(modf(year / 4)[1])
 
-        mjdmidnight = 365L * year - 679004L + \
+        mjdmidnight = long(365) * year - long(679004) + \
             b + int(30.6001 * (month + 1)) + day
 
         fracofday = base60_to_decimal(
@@ -1054,29 +1055,29 @@ def obsCalc():
         if hmin > hnas + cor and hpoe > hmin:
             hnas = hmin
             if debug:
-                print 'ok0'
+                print('ok0')
         elif hmin > hnas + cor and hmax > hpoe and (hpoe - hmin) < -12:
             hnas = hmin
             if debug:
-                print 'ok0a'
+                print('ok0')
         elif hmin > hnas + cor and hmax < hpoe and hnas < hmax:
             hnas = hmin
             if debug:
-                print 'ok1'
+                print('ok1')
         elif hmin < hnas + cor and hmax < hpoe and hnas < hmax:
             hpoe = hmax
             if debug:
-                print 'ok2'
+                print('ok2')
         elif hmin < hnas + cor and hmax < hpoe and (hnas - hmax) > 12:
             hpoe = hmax
             if debug:
-                print 'ok2a'
+                print('ok2a')
         elif hmin < hnas + cor and hmax > hpoe and (hpoe - hmin) < -12:
             if debug:
-                print 'ok3'
+                print('ok3')
         elif hmin < hnas + cor and hmax > hpoe and hpoe > hmin:
             if debug:
-                print 'ok4'
+                print('ok4')
         else:
             if debug:
                 print(hmin, hnas, hmax, hpoe)
@@ -1210,7 +1211,7 @@ def obsCalc():
 
         # procura posicao nas efemerides (pef)
         if _os.path.exists('{0}refs/obs_ef.txt'.format(hdtpath())):
-            pef = [j for j, x in enumerate(
+            pef = [k for k, x in enumerate(
                 ef_alvos[1]) if x.find(alvos[i][1]) > -1]
         else:
             pef = []
@@ -1358,12 +1359,14 @@ def plot_obs(observ_dates=[], legend=[], civcfg=[1, 'm'], civdt=None,
     extratick = civcfg[0]*civvals[civcfg[1][0].upper()]
     ax.set_ylim([0, 1])
     # ax.set_title('Title')
-    ax.legend(fontsize=10, loc='lower left', fancybox=True, framealpha=0.5)
+    ax.legend(fontsize=10, loc='lower left', fancybox=True, scatterpoints=1)
     ax.set_xlabel('Julian date - 2400000.5')
     dtticks = _phc.gentkdates(mjd0, mjd1+extratick, civcfg[0], civcfg[1], 
         dtstart=civdt)
     mjdticks = [_jdcal.gcal2jd(date.year, date.month, date.day)[1] for date in 
         dtticks]
+    for pair in zip(dtticks, mjdticks):
+        print(pair)
     # ax.plot([mjdticks[-1], mjdticks[-1]], [0, 1], alpha=0)
     # xlim = [mjdticks[0], ax.get_xlim()[-1]]
     if mjdlims is None:
@@ -1374,6 +1377,7 @@ def plot_obs(observ_dates=[], legend=[], civcfg=[1, 'm'], civdt=None,
     ax.minorticks_on()
     # ax.set_xlim(limits)
     ax2 = ax.twiny()
+    ax2.spines['top'].set_position(('axes', 1.1))
     ax2.minorticks_on()
     ax2.set_xlabel('Civil date')
     dtminticks = _phc.gentkdates(xlim[0], xlim[1], mincivcfg[0], mincivcfg[1])
@@ -1385,24 +1389,32 @@ def plot_obs(observ_dates=[], legend=[], civcfg=[1, 'm'], civdt=None,
     minjdticks = [_jdcal.gcal2jd(date.year, date.month, date.day)[1] for date 
         in dtminticks]
     ax2.set_xticks(mjdticks)
+    xlabs = [date.strftime('%Y-%m-%d') for date in dtticks]
+    xlabs[1::2] = ['']*len(xlabs[1::2])
+    ax2.set_xticklabels(xlabs)  
+        # , fontsize=10)
     ax2.set_xticks(minjdticks, minor=True)
-    ax2.set_xticklabels([date.strftime("%d %b %y") for date in dtticks])
     # ax2.set_xticklabels([date.strftime("%Y/%M/%d") for date in dtticks])
     ax.set_yticks([])
     ax.set_xlim(xlim)
     ax2.set_xlim(xlim)
-    ax.xaxis.set_tick_params(length=8)
+    # ax.xaxis.set_minor_locator(_ML(50))
+    ax.xaxis.set_ticks_position('both')
+    ax.xaxis.set_tick_params(length=8, width=1.5)
     ax.xaxis.set_tick_params(length=6, which='minor')
     ax2.xaxis.set_tick_params(length=4, which='minor')
-    ax2.xaxis.set_tick_params(length=8)
-    _plt.setp( ax2.xaxis.get_majorticklabels(), rotation=45 )
+    ax2.xaxis.set_tick_params(length=8, width=1.5)
+    _plt.setp( ax2.xaxis.get_majorticklabels(), rotation=0 )
+    # ax2.fmt_xdata = mdates.DateFormatter('%Y-%m-%d')
+    # fig.autofmt_xdate()
     _plt.subplots_adjust(left=0.02, right=0.98, top=0.67, bottom=0.16, 
         hspace=.15)
     if addsuf is None:
         addsuf = _phc.dtflag()
-    for f in fmt:
-        print('# Saved plot_obs{0}.{1}'.format(addsuf, f))
-        _plt.savefig('plot_obs{0}.{1}'.format(addsuf, f), transparent=True)
+    # for f in fmt:
+    #     print('# Saved plot_obs{0}.{1}'.format(addsuf, f))
+    #     _plt.savefig('plot_obs{0}.{1}'.format(addsuf, f), transparent=True)
+    _phc.savefig(fig, fmt=fmt)
     _plt.close()
     return
 
@@ -1543,7 +1555,7 @@ def doPlotFilter(obs, filter, fsed2data, pol=False, addsuf=None, fmt=['png']):
     idx = _np.where((x0 >= fdat[0, 0]) & (x0 <= fdat[-1, 0]))
     x0 = x0[idx]
     y0 = y0[idx]
-    y = interpfunc(x0) * y0  # /_np.sum( interpfunc(x0) )
+    # y = interpfunc(x0) * y0  # /_np.sum( interpfunc(x0) )
 
     fig, ax = _plt.subplots()
     ax.plot(x0, y0, label='SED')
@@ -1582,7 +1594,7 @@ def plot_hdt_filters(outname=None):
         axs[i].plot(data[:, 0], data[:, 1], label=_os.path.split(f)[1].
             replace('.dat', ''))
     for i in range(len(axs)):
-        axs[i].legend(fontsize=6l)
+        axs[i].legend(fontsize=6)
     axs[i].set_xlabel(r'Wavelength ($\AA$)')
     _phc.savefig(fig, figname=outname)
     # print('# Filtres ploted in file {0}'.format(outname))

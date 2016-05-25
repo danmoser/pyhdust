@@ -1,7 +1,6 @@
 # -*- coding:utf-8 -*-
 
-"""
-PyHdust *poltools* module: polarimetry tools
+"""PyHdust *poltools* module: polarimetry tools
 
 History:
 -grafpol working for *_WP1110....log files!
@@ -2076,7 +2075,7 @@ def genTarget(target, path=None, ispol=None, skipdth=False, delta=3.5, epssig=2.
     if path == None or path == '.':
         path = _os.getcwd()
 
-    print target, path
+    print(target, path)
 
     # Read lists and verify if target is a valid target
     try:
@@ -3418,10 +3417,10 @@ def graf_qu(logfile, mode=1, odr=True, mcmc=False, nn=[120, 200, 600], \
 
             # Fitting and plotting by least squares (must be found at least 2 points)
             if odr_fit and len(q) > 1:
-                print '='*60
-                print '='*6 + '  FILTER ' + filt.upper()
-                print '='*60
-                print ''
+                print('='*60)
+                print('='*6 + '  FILTER ' + filt.upper())
+                print('='*60)
+                print('')
                 tht, stht, param, sparam1, num = fitodr(q,u,sq,su,JD,q_filt,u_filt,sq_filt,su_filt,JD_filt,filt)
                 sparam2 = sparam1
                 delt = (max(q+q_filt)-min(q+q_filt))/8
@@ -3432,10 +3431,10 @@ def graf_qu(logfile, mode=1, odr=True, mcmc=False, nn=[120, 200, 600], \
             # Fitting and plotting by MCMC
             if mcmc_fit:
                 if not odr_fit or len(q) <= 1:
-                    print '='*60
-                    print '='*6 + '  FILTER ' + filt.upper()
-                    print '='*60
-                    print ''
+                    print('='*60)
+                    print('='*6 + '  FILTER ' + filt.upper())
+                    print('='*60)
+                    print('')
                 param, sparam1, sparam2 = fitmcmc(q+q_filt,u+u_filt,sq+sq_filt,su+su_filt,filt)
                 num=len(q+q_filt)
                 delt = (max(q+q_filt)-min(q+q_filt))/8
@@ -3581,19 +3580,18 @@ def graf_qu(logfile, mode=1, odr=True, mcmc=False, nn=[120, 200, 600], \
         # Print informations only if mcmc==False (to prevent to print twice)
         if not mcmc:
             print(55*'-')
-            print '  Total least squares fit  (y = a*x+b):'
+            print('  Total least squares fit  (y = a*x+b):')
             print(55*'-')
-            print '             a = {0:.3f} +- {1:.3f}'.format(param[0], sparam[0])
-            print '             b = {0:.3f} +- {1:.3f}'.format(param[1], sparam[1])
-            print '         theta = {0:.2f} +- {1:.2f} (+- n*90)'.format(tht, stht)
-            print '             N = {0:d}'.format(len(pts[0]))
-            print ''
-            print '             red chi^2 = {0:2f}'.format(rchi2)
+            print('             a = {0:.3f} +- {1:.3f}'.format(param[0], sparam[0]))
+            print('             b = {0:.3f} +- {1:.3f}'.format(param[1], sparam[1]))
+            print('         theta = {0:.2f} +- {1:.2f} (+- n*90)'.format(tht, stht))
+            print('             N = {0:d}'.format(len(pts[0])))
+            print('')
+            print('             red chi^2 = {0:2f}'.format(rchi2))
             print(55*'-')
-            print ''
+            print('')
             
         return tht, stht, param, sparam, len(pts[0])
-
 
 
     def fitmcmc(q, u, sq, su, filt):
@@ -3951,7 +3949,7 @@ def sintLeff(ccdn='ixon', step=5., save=True, extens='pdf'):
             leff = l_on/l_under
 
             line = '{0:5s} {1:>6s} {2:>7.3f} {3:>7.3f} {4:>10.3f}'.format(filt,stype,ub,bv,leff)
-            print line
+            print(line)
             with open('leff_stars_{0}.dat'.format(ccdn), 'a') as f0:
                 f0.write(line+'\n')
 
@@ -3984,7 +3982,7 @@ def sintLeff(ccdn='ixon', step=5., save=True, extens='pdf'):
 
 
     # Once concluded, we need compute lambda_eff as function of u-b and b-v
-    print '\n\n\n# GENERAL ADJUST\n'
+    print('\n\n\n# GENERAL ADJUST\n')
     leffs = _np.loadtxt('leff_stars_{0}.dat'.format(ccdn), dtype=str, unpack=True)
     for filt in filters:
         
@@ -4029,7 +4027,7 @@ def sintLeff(ccdn='ixon', step=5., save=True, extens='pdf'):
         line = ('{0:5s} {1:>8s} {2:>10.2f} {3:>8.2f} {4:>8.2f} {5:>7.2f} {6:>7.2f} {7:>7.2f}' +\
                 '{8:>7.2f} {9:>7.2f}').format(filt,colorstr,param[0],param[1],param[2],param[3],\
                          sparam[0],sparam[1],sparam[2],sparam[3])
-        print line
+        print(line)
         with open('leff_{0}.dat'.format(ccdn), 'a') as f0:
             f0.write(line+'\n')
 
@@ -4037,8 +4035,6 @@ def sintLeff(ccdn='ixon', step=5., save=True, extens='pdf'):
             _plt.savefig('leff_{0}_{1}.{2}'.format(ccdn, filt, extens), bbox_inches='tight')
         else:
             _plt.show()
-
-
     return
 
 
@@ -4320,16 +4316,16 @@ def fitMCMCline(x, y, sx, sy, star='', margin=False, plot_adj=True, fig=None, ax
         p0 is the initial positions for the walkers
         """
 
-        print "Burning-in ..."
+        print("Burning-in ...")
         pos, prob, state = sampler.run_mcmc(p0, n_burnin)
         sampler.reset()
 
-        print "Running MCMC ..."
+        print("Running MCMC ...")
         pos, prob, state = sampler.run_mcmc(pos, n_mcmc, rstate0=state)
 
         #~ Print out the mean acceptance fraction. 
         af = sampler.acceptance_fraction
-        print "Mean acceptance fraction:", _np.mean(af)
+        print("Mean acceptance fraction:", _np.mean(af))
 
         # Compute the results using all interval
         fig1, thet_mcmc, b_mcmc, Pb_mcmc, Yb_mcmc, Vb_mcmc = gen_results(sampler, intervalos, save=True, show=True)
@@ -4387,7 +4383,7 @@ def fitMCMCline(x, y, sx, sy, star='', margin=False, plot_adj=True, fig=None, ax
 
                     opt = raw_input('(y/n): ' )
                 if opt in ('y','Y'):
-                    print ''
+                    print('')
                     break
 
             _plt.close(fig1)
@@ -4455,18 +4451,18 @@ def fitMCMCline(x, y, sx, sy, star='', margin=False, plot_adj=True, fig=None, ax
 
         #~ Print the output
         """ TBD """
-        print ''
+        print('')
         print(55*'-')
-        print '  2) MCMC best values  (y = tan(theta)*x + b*cos(theta)):'
+        print('  2) MCMC best values  (y = tan(theta)*x + b*cos(theta)):')
         print(55*'-')
-        print '          theta = {0:9.4f}  +{1:.4f}  -{2:.4f}'.format(thet_mcmc[0],thet_mcmc[1],thet_mcmc[2])
-        print '   b*cos(theta) = {0:9.4f}  +{1:.4f}  -{2:.4f}'.format(b_mcmc[0],b_mcmc[1],b_mcmc[2])
-        print '             Pb = {0:9.4f}  +{1:.4f}  -{2:.4f}'.format(Pb_mcmc[0],Pb_mcmc[1],Pb_mcmc[2])
-        print '             Yb = {0:9.4f}  +{1:.4f}  -{2:.4f}'.format(Yb_mcmc[0],Yb_mcmc[1],Yb_mcmc[2])
-        print '             Vb = {0:9.4f}  +{1:.4f}  -{2:.4f}'.format(Vb_mcmc[0],Vb_mcmc[1],Vb_mcmc[2])
+        print('          theta = {0:9.4f}  +{1:.4f}  -{2:.4f}'.format(thet_mcmc[0],thet_mcmc[1],thet_mcmc[2]))
+        print('   b*cos(theta) = {0:9.4f}  +{1:.4f}  -{2:.4f}'.format(b_mcmc[0],b_mcmc[1],b_mcmc[2]))
+        print('             Pb = {0:9.4f}  +{1:.4f}  -{2:.4f}'.format(Pb_mcmc[0],Pb_mcmc[1],Pb_mcmc[2]))
+        print('             Yb = {0:9.4f}  +{1:.4f}  -{2:.4f}'.format(Yb_mcmc[0],Yb_mcmc[1],Yb_mcmc[2]))
+        print('             Vb = {0:9.4f}  +{1:.4f}  -{2:.4f}'.format(Vb_mcmc[0],Vb_mcmc[1],Vb_mcmc[2]))
 #        print 'reduced chi2 = {0:.4f}'.format(chi)
         print(55*'-')
-        print ''
+        print('')
 
 
         return fig1, thet_mcmc, b_mcmc, Pb_mcmc, Yb_mcmc, Vb_mcmc
@@ -4526,16 +4522,16 @@ def fitMCMCline(x, y, sx, sy, star='', margin=False, plot_adj=True, fig=None, ax
 
         # Print informations
         print(55*'-')
-        print '  1) Total least squares fit  (y = a*x+b):'
+        print('  1) Total least squares fit  (y = a*x+b):')
         print(55*'-')
-        print '             a = {0:.3f} +- {1:.3f}'.format(param[0], sparam[0])
-        print '             b = {0:.3f} +- {1:.3f}'.format(param[1], sparam[1])
-        print '         theta = {0:.2f} +- {1:.2f}'.format(tht, stht)
-        print '             N = {0:d}'.format(nn)
-        print ''
-        print '             red chi^2 = {0:2f}'.format(rchi2)
+        print('             a = {0:.3f} +- {1:.3f}'.format(param[0], sparam[0]))
+        print('             b = {0:.3f} +- {1:.3f}'.format(param[1], sparam[1]))
+        print('         theta = {0:.2f} +- {1:.2f}'.format(tht, stht))
+        print('             N = {0:d}'.format(nn))
+        print('')
+        print('             red chi^2 = {0:2f}'.format(rchi2))
         print(55*'-')
-        print ''
+        print('')
 
         return param, sparam
 

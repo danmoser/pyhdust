@@ -1,7 +1,6 @@
 # -*- coding:utf-8 -*-
 
-"""
-PyHdust *spectools* module: spectroscopy tools
+"""PyHdust *spectools* module: spectroscopy tools
 
 Algumas definicoes: para todas as rotinas funcionarem, todos os espectros devem
 estar agrupados num mesmo caminho (`path`), em estrutura de
@@ -38,9 +37,12 @@ try:
     import matplotlib.gridspec as _gridspec
     import scipy.interpolate as _interpolate 
     from scipy.optimize import curve_fit as _curve_fit
+    import pyqt_fit.nonparam_regression as smooth
+    from pyqt_fit import npr_methods
     # from scipy.signal import savgol_filter as _savgol
 except:
-    print('# Warning! matplotlib, scipy and/or pyfits module not installed!!!')
+    print('# Warning! matplotlib, scipy, pyqt_fit and/or pyfits module not' 
+        ' installed!!!')
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -199,7 +201,6 @@ class Spec(object):
         """
         if file.find('.fit') == -1:
             print("# ERROR! `loadspec` unrecognized format!")
-            print file
             return 
         (self.wl, self.flux, self.MJD, self.dateobs, self.datereduc,
             self.file) = loadfits(file)
@@ -1413,8 +1414,8 @@ def plot_spec_info(speclist, dtb_obs, mAEW=False, mgray=None):
     axs[0].invert_yaxis()
     axs[-1].set_xlabel('Julian date - 2400000.5')
 
-    ylabels = [ur'EW (m\u00c5)', r'E/C', r'V/R', (r'pk. sep.'+'\n'+
-        '(km/s)'), r'FWHM'+'\n'+r'(km/s)', r'F${\lambda 0}$']
+    ylabels = [u'EW (m\u00c5)', 'E/C', 'V/R', ('pk. sep.'+'\n'+'(km/s)'), 
+        'FWHM'+'\n'+'(km/s)', r'F${\lambda 0}$']
     for i, ax in enumerate(axs):
         # binned
         x, y = _phc.bindata(dtb_obs.data[:, 0], dtb_obs.data[:, i+1])
@@ -1451,11 +1452,17 @@ def plot_spec_info(speclist, dtb_obs, mAEW=False, mgray=None):
         ax.set_xlim(xlim)
         if mgray is not None:
             ylim = ax.get_ylim()
-            print ylim
             rect = _mpatches.Rectangle([mgray[0], ylim[0]], 
                 mgray[1]-mgray[0], ylim[1]-ylim[0], ec="gray", fc='gray', 
                 alpha=0.5, zorder=1)
             ax.add_patch(rect)
+        if len(mgray) == 4:
+            if mgray is not None:
+                ylim = ax.get_ylim()
+                rect = _mpatches.Rectangle([mgray[2], ylim[0]], 
+                    mgray[3]-mgray[2], ylim[1]-ylim[0], ec="gray", fc='gray', 
+                    alpha=0.5, zorder=1, hatch='//')
+                ax.add_patch(rect)
     return fig
 
 
@@ -1468,6 +1475,41 @@ def normalize_range(lb, spec, a, b):
     a2 = (spec[b] - spec[a]) / (lb[b] - lb[a])
     a1 = spec[a] - a2 * lb[a]
     return spec / (a1 + a2 * lb)
+
+
+def normalize_spec(lb, flx, q=2):
+    """ Normalize a spectrum using the non-parametric regression algorithm of
+    Local Polynomial Kernel (order=``q``). 
+
+    For details, see http://pythonhosted.org/PyQt-Fit/NonParam_tut.html .
+
+    INPUT: lb, flx
+
+    OUTPUT: norm_flx
+    """
+    k1 = smooth.NonParamRegression(lb, flx, 
+        method=npr_methods.LocalPolynomialKernel(q=1))
+    k1.fit()
+
+    idxi = _np.where(_np.abs(k1(lb)/flx-1) < 0.03)
+    xsi = lb[idxi]
+    ysi = flx[idxi]
+    k2 = smooth.NonParamRegression(xsi, ysi, 
+        method=npr_methods.LocalPolynomialKernel(q=q))
+    k2.fit()
+    return flx/k2.fit(lb)
+
+
+def renorm(vl, y):
+    """ Renormalize ``y`` so that the equivalent width is preserved when the 
+    continuum is shifted to 1. 
+    """
+    ext = _np.mean([y[0], y[-1]])
+    a0 = _np.trapz(y, vl)
+    A = ((a0-_np.trapz(_np.tile(1, len(vl)), vl))/
+        (a0-_np.trapz(_np.tile(ext, len(vl)), vl)))
+    B = 1-A*ext
+    return A*y+B
 
 
 def checksubdirs(path, star, lbc, hwidth=1000, showleg=True, plots=False):
@@ -1599,7 +1641,6 @@ def plotSpecData(dtb, limits=None, civcfg=[1, 'm', 2013, 1, 1],
         for id in idref:
             idx = _np.where(id == idref)[0]
             icolor = _phc.colors[idx]
-            print icolor, id
             ax[0].plot([], [], 'o', color=icolor, label=id)
         ax[0].legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0., 
             prop={'size': 6})
@@ -1638,7 +1679,7 @@ def plotSpecData(dtb, limits=None, civcfg=[1, 'm', 2013, 1, 1],
 
 def din_spec(metadata, lbc=6562.86, hwidth=1500., res=50, interv=None,
     fmt=['png'], outname='din_spec', pxsize=8, vmin=None, vmax=None, avg=True,
-    cmapn='plasma', refspec=None, figsize=None):
+    cmapn='inferno', refspec=None, figsize=None):
     """ Plot dynamical specs. from metadata table of the Spec class.
 
     `interv` controls the interval between specs (in days).
@@ -1707,7 +1748,7 @@ def din_spec(metadata, lbc=6562.86, hwidth=1500., res=50, interv=None,
         img[i * pxsize:(i + 1) * pxsize] = _np.tile(fluxes[:, i], pxsize).\
             reshape(pxsize, len(wl0))
     # Save image
-    if figsize == None:
+    if figsize is None:
         fig, ax = _plt.subplots(figsize=(len(wl0) / 16, pxsize * 
             len(interv) / 16), dpi=80)
     else:
@@ -1716,9 +1757,21 @@ def din_spec(metadata, lbc=6562.86, hwidth=1500., res=50, interv=None,
     # print _np.min(img), _np.max(img)
     cmapn = _plt.get_cmap(cmapn)
     cmapn.set_bad('k', 1.)
-    ax.imshow(img, vmin=vmin, vmax=vmax, cmap=cmapn)
+    ax.imshow(img, vmin=vmin, vmax=vmax, cmap=cmapn, origin='lower')
+    ax.set_xlabel(r'Velocity (km s$^{-1}$)')
+    ax.set_ylabel(r'Julian Day - 2400000.5')
+    # ax.set_xlim([-hwidth, hwidth])
+    ax.set_yticks(_np.linspace(pxsize*len(interv)*.1, pxsize*len(interv)*.9, 
+        8))
+    ax.set_yticklabels([int(round((tf-t0)*t/(pxsize*len(interv))+t0)) 
+        for t in ax.get_yticks()], rotation='vertical')
+    ax.set_xticklabels([int(round(t*2.*hwidth/(len(wl0)-1)-hwidth)) for 
+        t in ax.get_xticks()])  # , rotation='vertical')
     # fig.tight_layout()
+    ax.xaxis.set_tick_params(color='gray', width=1.1)
+    ax.yaxis.set_tick_params(color='gray', width=1.1)
     _phc.savefig(fig, fmt=fmt, figname=outname)
+    return
 
 
 def plot_line_str(fig, ax, lbc='', ylabel='', fs=14, xlim=None, dlim=None, 
@@ -1757,8 +1810,8 @@ def plot_line_str(fig, ax, lbc='', ylabel='', fs=14, xlim=None, dlim=None,
     return fig, ax
 
 
-def spec_time(speclist, lbc=6562.8, fmt=['png', 'eps'], outname=None, 
-    cmapn='plasma', hwidth=1000., outpath='', figsize=(5, 15), ysh=0.01):
+def spec_time(speclist, lbc=6562.8, fmt=['png', 'pdf'], outname=None, 
+    cmapn='inferno', hwidth=1000., outpath='', figsize=(5, 15), ysh=0.01):
     """ Plot specs over time as suggested by Rivi """
     if outname is None or outname is "":
         outname = _phc.dtflag()
@@ -1769,6 +1822,9 @@ def spec_time(speclist, lbc=6562.8, fmt=['png', 'eps'], outname=None,
             MJDs[0] = MJD
         if MJD > MJDs[1]:
             MJDs[1] = MJD
+    MJDref = 56245
+    if MJDs[0] > MJDref:
+        MJDs[0] = MJDref
     # Plot
     extrem = [_np.inf, 0]
     fig, ax = _plt.subplots()
@@ -1778,24 +1834,76 @@ def spec_time(speclist, lbc=6562.8, fmt=['png', 'eps'], outname=None,
         if len(flux) == 0:
             raise NameError('Wrong lbc in spt.spe')
         if cmapn is not None:
-            cor = _phc.gradColor([MJD], min=MJDs[0], max=MJDs[1], 
-                cmapn=cmapn)[0]
+            cor = _phc.gradColor([MJD], min=MJDs[0], max=(MJDs[1]+
+                0.1*(MJDs[1]-MJDs[0])), cmapn=cmapn)[0]
         else:
             cor = 'k'
-        print MJD, MJDs, extrem, ysh, (MJD-MJDs[0])*ysh, flux, sp
+        print(MJD, MJDs, extrem, ysh, (MJD-MJDs[0])*ysh, flux, sp)
         ax.plot(vel, flux+(MJD-MJDs[0])*ysh, color=cor)
-        if _np.min(flux+(MJD-MJDs[0])*ysh) < extrem[0]:
-            extrem[0] = _np.min(flux+(MJD-MJDs[0])*ysh)
         if _np.max(flux+(MJD-MJDs[0])*ysh) > extrem[1]:
             extrem[1] = _np.max(flux+(MJD-MJDs[0])*ysh)
+        if _np.min(flux+(MJD-MJDs[0])*ysh) < extrem[0]:
+            extrem[0] = _np.min(flux+(MJD-MJDs[0])*ysh)
+    wl, flux, MJD, dateobs, datereduc, fitsfile = loadfits('/data/Dropbox/work'
+        '/sci_16-15aeri/alpEri_FEROS_2000AVE.mt')
+    vel, flux = lineProf(wl, flux, 6561.8, hwidth=hwidth)
+    ax.text(650., 0.8, 'photospheric ref.', horizontalalignment='center', 
+        verticalalignment='center')  # , transform=ax.transAxes)
+    ax.plot(vel, flux+(MJDref-MJDs[0])*ysh, color='k', ls=':')
+    if _np.min(flux+(MJDref-MJDs[0])*ysh) < extrem[0]:
+        extrem[0] = _np.min(flux+(MJDref-MJDs[0])*ysh)
+    print extrem
+    s2d = _hdt.readfullsed2('/data/Dropbox/work/sci_16-15aeri/'
+        'fullsed_mod03_VDDn0_1p4e12_Be_aeri2014.sed2')
+    vel, flux = lineProf(s2d[4, :, 2], s2d[4, :, 3], .656461, hwidth=hwidth)
+    ax.plot(vel, flux+(56910-MJDs[0])*ysh, color='k', ls='--')
+    ax.text(800, 1.06+(56910-MJDs[0])*ysh, 'model', 
+        horizontalalignment='center', verticalalignment='center') 
     ax.set_xlabel(r'Velocity (km s$^{-1}$)')
     ax.set_ylabel(r'Julian Day - 2400000.5')
     ax.set_ylim(extrem)
     ax.set_xlim([-hwidth, hwidth])
-    ax.set_yticklabels([int(round((t-1.)/ysh+MJDs[0])) for t in 
-        ax.get_yticks()], rotation='vertical')
+    # ax.set_yticks(_np.arange(56300, 57000+100, 100))
+    yref = [1., 1+_np.diff(MJDs)*ysh]
+    yMJDs = _np.arange(56300, 57100, 100)
+    ax.set_yticks(list(_phc.renormvals(yMJDs, MJDs, yref)))
+    ax.set_yticklabels(yMJDs, rotation='vertical')
     fig.set_size_inches(figsize)
     fig.subplots_adjust(left=0.1, right=0.94, top=0.99, bottom=0.04)
+    ax.minorticks_on()
+    ax3 = ax.twinx()
+    ax3.set_yticks(list(_phc.renormvals(yMJDs, MJDs, yref)))
+    ax3.set_yticklabels([])
+    ax3.minorticks_on()
+    ax2 = ax.twinx()
+    ax2.spines['right'].set_position(('axes', 1.05))
+    ax2.set_ylabel('Civil date')
+    dtminticks = _phc.gentkdates(56201., 57023., 1, 'm')
+    i = 1
+    dtticks = _phc.gentkdates(56201., 57023., 3, 'm')
+    mjdticks = [_jdcal.gcal2jd(date.year, date.month, date.day)[1] for date in 
+        dtticks]
+    while dtticks[0] not in dtminticks:
+        dtminticks = _phc.gentkdates(yMJDs[0]+i, yMJDs[-1], 1, 'm')
+        i += 1
+    minjdticks = [_jdcal.gcal2jd(date.year, date.month, date.day)[1] for date 
+        in dtminticks]
+    ax2.set_yticks(list(_phc.renormvals(mjdticks, MJDs, yref)))
+    ax2.set_yticks(list(_phc.renormvals(minjdticks, MJDs, yref)), minor=True)
+    xlabs = [date.strftime('%Y-%m-%d') for date in dtticks]
+    # xlabs[1::2] = ['']*len(xlabs[1::2])
+    ax2.set_yticklabels(xlabs, rotation='vertical')
+    ax2.set_ylim(extrem)
+    ax3.set_ylim(extrem)
+    ax.xaxis.set_tick_params(length=8, width=1.5)
+    ax.xaxis.set_tick_params(length=6, which='minor')
+    ax.yaxis.set_tick_params(length=4, which='minor')
+    ax.yaxis.set_tick_params(length=8, width=1.5)
+    ax2.yaxis.set_tick_params(length=4, which='minor')
+    ax2.yaxis.set_tick_params(length=8, width=1.5)
+    ax3.yaxis.set_tick_params(length=4, which='minor')
+    ax3.yaxis.set_tick_params(length=8, width=1.5)
+        # , fontsize=10)
     _phc.savefig(fig, figname=outpath+outname, fmt=fmt)
     return
 
@@ -2335,9 +2443,9 @@ def overplotsubdirs2(path, star, limits=(6540, 6600)):
                                 leg = '2013-11-12'
                                 check = True
                             else:
-                                print leg       
+                                print(leg)
                             if check:
-                                print cal
+                                print(cal)
                                 _plt.plot(lbda, spec, label=leg, alpha=0.7, 
                                     color=prtcolor)
                             i += 1
@@ -2753,6 +2861,13 @@ def sum_ec(fwl, fflx):
         sflx[idx] += _np.interp(swl[idx], fwl[i], fflx[i])
     return swl, sflx
 
+
+def lbdc2range(lbdc):
+    """ Function doc
+
+    """
+    dl = lbdc[1] - lbdc[0]
+    return _np.linspace(lbdc[0] - dl / 2, lbdc[-1] + dl / 2, len(lbdc) + 1)
 
 # MAIN ###
 if __name__ == "__main__":

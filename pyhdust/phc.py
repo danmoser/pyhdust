@@ -1,7 +1,6 @@
 # -*- coding:utf-8 -*-
 
-"""
-PyHdust *phc* module: physical constants and general use functions
+"""PyHdust *phc* module: physical constants and general use functions
 
 Includes functions for:
 - Data manipulation (average, bin, fitting)
@@ -220,6 +219,7 @@ def bin_ndarray(ndarray, new_shape, operation='avg'):
     Bins an ndarray in all axes based on the target shape, by summing or
         averaging.
     Number of output dimensions must match number of input dimensions.
+
     Example
     -------
     >>> m = np.arange(0,100,1).reshape((10,10))
@@ -239,7 +239,7 @@ def bin_ndarray(ndarray, new_shape, operation='avg'):
     compression_pairs = [(d, c//d) for d, c in zip(new_shape,
                                                    ndarray.shape)]
     flattened = [l for p in compression_pairs for l in p]
-    print flattened
+    # print flattened
     ndarray = ndarray.reshape(flattened)
     for i in range(len(new_shape)):
         if operation.lower() == "sum":
@@ -259,7 +259,7 @@ def normgauss(sig, x=None, xc=0.):
     """
     if x is None:
         x = _np.linspace(-5 * sig, 5 * sig, 101)
-    return 1. / (2 * _np.pi)**.5 / sig * _np.exp(-(x - xc)**2. / (2 * sig**2.))
+    return 1. / (2*_np.pi*sig**2)**.5 * _np.exp(-(x - xc)**2. / (2 * sig**2.))
 
 
 def normbox(hwidth, x=None, xc=0.):
@@ -338,67 +338,17 @@ def cart_rot(x, y, z, ang_xy=0., ang_yz=0., ang_zx=0.):
     return _np.dot(rotmtx, vec)
 
 
-def rotate_coords(x, y, theta, ox, oy):
-    """Rotate arrays of coordinates x and y by theta radians about the
-    point (ox, oy).
-
-    This routine was inspired on a http://codereview.stackexchange.com post.
-    """
-    s, c = _np.sin(theta), _np.cos(theta)
-    x, y = _np.asarray(x) - ox, _np.asarray(y) - oy
-    return x * c - y * s + ox, x * s + y * c + oy
-
-
-def rotate_image(src, theta, ox=None, oy=None, fill=0):
-    """Rotate the image src by theta radians about (ox, oy).
-    Pixels in the result that don't correspond to pixels in src are
-    replaced by the value fill.
-
-    This routine was inspired on a http://codereview.stackexchange.com post.
-    """
-    # Images have origin at the top left, so negate the angle.
-    theta = -theta
-
-    # Dimensions of source image. Note that scipy.misc.imread loads
-    # images in row-major order, so src.shape gives (height, width).
-    sh, sw = src.shape
-    if ox is None:
-        ox = sw/2
-    if oy is None:
-        oy = sh/2
-
-    # Rotated positions of the corners of the source image.
-    cx, cy = rotate_coords([0, sw, sw, 0], [0, 0, sh, sh], theta, ox, oy)
-
-    # Determine dimensions of destination image.
-    dw, dh = (int(_np.ceil(c.max() - c.min())) for c in (cx, cy))
-
-    # Coordinates of pixels in destination image.
-    dx, dy = _np.meshgrid(_np.arange(dw), _np.arange(dh))
-
-    # Corresponding coordinates in source image. Since we are
-    # transforming dest-to-src here, the rotation is negated.
-    sx, sy = rotate_coords(dx + cx.min(), dy + cy.min(), -theta, ox, oy)
-
-    # Select nearest neighbour.
-    sx, sy = sx.round().astype(int), sy.round().astype(int)
-
-    # Mask for valid coordinates.
-    mask = (0 <= sx) & (sx < sw) & (0 <= sy) & (sy < sh)
-
-    # Create destination image.
-    dest = _np.empty(shape=(dh, dw), dtype=src.dtype)
-
-    # Copy valid coordinates from source image.
-    dest[dy[mask], dx[mask]] = src[sy[mask], sx[mask]]
-
-    # Fill invalid coordinates.
-    dest[dy[~mask], dx[~mask]] = fill
-
-    return dest
-
-
 # Lists and strings manipulation
+def renormvals(xlist, xref, yref):
+    """ Renormalize ``xlist`` according to ``_ref`` values.
+
+    len(xref)=len(yref)=2
+    """
+    a = _np.diff(yref)/_np.diff(xref)
+    b = yref[0] - a*xref[0]
+    return a*_np.array(xlist)+b
+
+
 def keys_values(keys, text, delimiter='_'):
     """ Return the values in a string coded as *KeyValueDelimiter*. The keys 
     do not need to be in order in the text. 
@@ -485,7 +435,7 @@ def find_nearest(array, value, bigger=None, idx=False):
     if not idx:
         return found
     else:
-        return i[0]
+        return i
 
 
 def nan_helper(y):
@@ -991,6 +941,65 @@ def BBlbd(T, lbd=None):
     return 2 * h.cgs * c.cgs**2 / (lbd**5 * (_np.exp(ft) - 1))
 
 
+def fBBcor(T):
+    """ Correction as appendix B Vieira+2015. Stellar atmospheric models
+    systematically have a LOWER flux than a BB of a given Teff temperature in 
+    IR.
+
+    fBBcor(T)*BBlbd(Teff) == Kurucz(Teff) 
+
+    INPUT: Teff (Kurucz). log g = 4.0
+
+    OUTPUT: fBBcor(T) < 1.0 """
+    return 1.015 - 0.301 * (T / 1e4) + 0.064 * (T / 1e4)**2.
+
+
+def gbf(T, lbd):
+    """ Gaunt factors from Vieira+2015. 
+
+    INPUT: T (K) and lbd (:math:`\mu`m, array)
+
+    log(T /K) G0 G1 G2 B0 B1 B2
+    """
+    vals = _np.array([
+        3.70, 0.0952, 0.0215, 0.0145, 2.2125, -1.5290, 0.0563,
+        3.82, 0.1001, 0.0421, 0.0130, 1.6304, -1.3884, 0.0413,
+        3.94, 0.1097, 0.0639, 0.0111, 1.1316, -1.2866, 0.0305,
+        4.06, 0.1250, 0.0858, 0.0090, 0.6927, -1.2128, 0.0226,
+        4.18, 0.1470, 0.1071, 0.0068, 0.2964, -1.1585, 0.0169,
+        4.30, 0.1761, 0.1269, 0.0046, -0.0690, -1.1185, 0.0126,
+    ]).reshape((6, -1))
+    if T < 5000 or T > 22500:
+        print('# ERROR! Invalid temperature for Gaunt factors calculation!')
+        return _np.zeros(len(lbd)), _np.zeros(len(lbd))
+    elif T >= 5000 and T < 10**vals[0, 0]:
+        print('# Warning! Extrapolated Gaunt factors!!')
+        g0, g1, g2, b0, b1, b2 = vals[0, 1:]
+    elif T <= 22500 and T > 10**vals[-1, 0]:
+        print('# Warning! Extrapolated Gaunt factors!!')
+        g0, g1, g2, b0, b1, b2 = vals[-1, 1:]
+    else:
+        i = _np.where(vals[:, 0] == find_nearest(
+            vals[:, 0], _np.log10(T), bigger=False))[0]
+        # print i, vals[i,0]
+        g0 = interLinND(
+            [_np.log10(T)], [vals[i, 0]], [vals[i + 1, 0]], vals[i:i + 2, 1])
+        g1 = interLinND(
+            [_np.log10(T)], [vals[i, 0]], [vals[i + 1, 0]], vals[i:i + 2, 2])
+        g2 = interLinND(
+            [_np.log10(T)], [vals[i, 0]], [vals[i + 1, 0]], vals[i:i + 2, 3])
+        b0 = interLinND(
+            [_np.log10(T)], [vals[i, 0]], [vals[i + 1, 0]], vals[i:i + 2, 4], 
+            disablelog=True)
+        b1 = interLinND(
+            [_np.log10(T)], [vals[i, 0]], [vals[i + 1, 0]], vals[i:i + 2, 5], 
+            disablelog=True) 
+        b2 = interLinND(
+            [_np.log10(T)], [vals[i, 0]], [vals[i + 1, 0]], vals[i:i + 2, 6]) 
+    return _np.exp(g0 + g1 * _np.log(lbd) + g2 * _np.log(lbd)**2), _np.exp(b0 + 
+        b1 * _np.log(lbd) + b2 * _np.log(lbd)**2)
+
+
 def lawkep(M=None, m=None, P=None, a=None):
     """ Kepler law calc. Kepp `None` on what you what to calc.
 
@@ -1075,9 +1084,10 @@ Msun = Constant(1.988547e33, 1.988547e30, 'g', 'Solar mass')
 Rsun = Constant(6.95508e10, 695508e3, 'cm', 'Solar radius')
 Lsun = Constant(3.846e33, 3.846e26, 'erg s-1', 'Solar luminosity')
 Tsun = Constant(5779.57, 5779.57, 'K', 'Solar Temperature')
-# Derived
+# Derived quantities
 # In astronomy, the Julian year is defined as 365.25 days of exactly 86400 SI 
-#  seconds each, totalling exactly 31557600 (IAU style manual, 1989, Wilkins)
+#  seconds each, totalling exactly 31557600 SI (IAU style manual, 1989, 
+#  Wilkins)
 # For the Gregorian calendar the average length of the calendar year (the mean 
 #  year) across the complete leap cycle of 400 years is 365.2425 days!
 yr = Constant(60*60*24*365.25, 60*60*24*365.25, 'sec', 'year')

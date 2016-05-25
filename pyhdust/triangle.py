@@ -1,7 +1,6 @@
 # -*- coding:utf-8 -*-
 
-"""
-PyHdust auxiliary module: third-part MCMC plotting tools.
+"""PyHdust auxiliary module: third-part MCMC plotting tools.
 
 :co-author: Daniel Moser
 :license: Copyright 2013 Daniel Foreman-Mackey

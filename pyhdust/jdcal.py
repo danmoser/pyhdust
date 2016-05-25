@@ -1,9 +1,9 @@
 # -*- coding:utf-8 -*-
 
-"""
-PyHdust *oifits* module: third-part functions for converting between Julian
-dates and calendar dates. I did not mak any modification. The original README
-is below.
+"""PyHdust *jdcal* module: third-part functions for converting between Julian
+dates and calendar dates. 
+
+I did not make any modification. The original README is below.
 
 A function for converting Gregorian calendar dates to Julian dates, and
 another function for converting Julian calendar dates to Julian dates

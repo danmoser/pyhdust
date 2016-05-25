@@ -2,8 +2,7 @@
 
 """PyHdust auxiliary module: third-part pretty-print tabular data.
 
-:author: ?
-:license: ?
+:license: MIT License
 """
 
 from __future__ import print_function
@@ -11,7 +10,6 @@ from __future__ import unicode_literals
 from collections import namedtuple
 from platform import python_version_tuple
 import re
-
 
 if python_version_tuple()[0] < "3":
     from itertools import izip_longest
@@ -42,6 +40,7 @@ else:
         return isinstance(f, io.IOBase)
 
 
+__author__ = "Sergey Astanin"
 __all__ = ["tabulate", "tabulate_formats", "simple_separated_format"]
 __version__ = "0.7.5"
 

@@ -1,7 +1,6 @@
 # -*- coding:utf-8 -*-
 
-"""
-PyHdust *beatlas* module: BeAtlas specific variables and functions.
+"""PyHdust *beatlas* module: BeAtlas specific variables and functions.
 
 Module contains:
 - BAstar class
@@ -83,7 +82,7 @@ class BAmod(BAstar):
                 self.h = _phc.find_nearest(listpars[i], ctrlarr[i])
             if len(listpars) == 9:
                 if i == 7:
-                    print _phc.find_nearest(listpars[i], ctrlarr[i])
+                    print(_phc.find_nearest(listpars[i], ctrlarr[i]))
                     self.n = _phc.find_nearest(listpars[i], ctrlarr[i])
                     self.param = True
                 if i == 8:

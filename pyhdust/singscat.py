@@ -1,8 +1,8 @@
 # -*- coding:utf-8 -*-
 
-"""
-PyHdust *singscat* module: Single Scatering Dumbbell+disk model. This release
-contains a simplified version of the one applied to Sigma Ori E in 
+"""PyHdust *singscat* module: Single Scatering Dumbbell+disk model. 
+
+This release contains a simplified version of the one applied to Sigma Ori E in 
 Carciofi+2013.
 
 | VARIABLES:
@@ -329,7 +329,6 @@ def errorcalc(pst, pob, dobs, pdk, phiobs):
     #
     steps = [-1, 1]
     for step in steps:
-        print step
         Qis0 = Qis
         Uis0 = Uis
         ne0 = ne
@@ -1298,8 +1297,6 @@ def plotClean(a, angopt1=False):
     if angopt1:
         idx = _np.where(ang > _np.pi / 2)
         ang[idx] -= _np.pi
-        print ang
-        print idx
     ax3.plot([-.2, 1.2], [0, 0], ls=':', color='k')
     ax3.errorbar(*extdata(a.phiobs, ang * 180 / _np.pi), yerr=extdata(a.phiobs,
         a.sigth * 45 / _np.pi)[1], label='PA', color='g', marker='^', ls='', 
@@ -1350,13 +1347,13 @@ def mcmc(tgt, p_info, birun=50, emrun=500, nd_walk=10, a=2, threads=4,
     sampler = _emcee.EnsembleSampler(
         nwalkers, ndim, chi2f, args=[p_info, tgt], a=a, threads=threads)
     # Run a burn-in.
-    print "Burning-in ..."
+    print("Burning-in ...")
     pos, prob, state = sampler.run_mcmc(p0, birun)
     # Reset the chain to remove the burn-in samples.
     sampler.reset()
     # Starting from the final position in the burn-in chain, sample for 1500
     # steps. (rstate0 is the state of the internal random number generator)
-    print "Running MCMC ..."
+    print("Running MCMC ...")
     localtime = _time.localtime(_time.time())
     if savesteps:
         filename2 = 'r_mcmc%d%02d%02d_%02d%02d.txt' % (localtime[0:5])
@@ -1378,7 +1375,7 @@ def mcmc(tgt, p_info, birun=50, emrun=500, nd_walk=10, a=2, threads=4,
     # 
     # Print out the mean acceptance fraction. 
     af = sampler.acceptance_fraction
-    print "Mean acceptance fraction:", _np.mean(af)
+    print("Mean acceptance fraction:", _np.mean(af))
     # Get the index with the highest probability
     maxprob_index = _np.argmax(prob)
     # Get the best parameters and their respective errors
@@ -1395,7 +1392,7 @@ def mcmc(tgt, p_info, birun=50, emrun=500, nd_walk=10, a=2, threads=4,
     outmtx = _np.hstack(( (_np.array(p_info[:, 1]) * fact).reshape(-1, 1),
     (_np.array(err) * fact).reshape(-1, 1) ))
     for i in range(len(outmtx)):
-        print outmtx[i]
+        print(outmtx[i])
 
     bestfit = BlobDiskMod(tgt=tgt.tgt, rs=tgt.rs / _phc.Rsun.cgs, 
         diamb=tgt.diamb / tgt.rs, distb=tgt.distb / tgt.rs, n0=tgt.n0, 

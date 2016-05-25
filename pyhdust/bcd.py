@@ -1,7 +1,6 @@
 # -*- coding:utf-8 -*-
 
-"""
-PyHdust auxiliary module: PyHdust BCD module.
+"""PyHdust *bcd* auxiliary module: PyHdust BCD module.
 
 .. code: python
 
@@ -11,8 +10,8 @@ PyHdust auxiliary module: PyHdust BCD module.
         print k, result[k]
         # _np.savetxt('result',(k))
 
-:co-author: Bruno Mota
-:license: ?
+:co-author: Bruno Mota; Daniel Moser; Ahmed Elshaer 
+:license: Copyright 2015 Antoine Merand
 """
 import os as os
 import numpy as _np
@@ -22,8 +21,8 @@ try:
 except:
     print('# Warning! Matplotlib module not installed!!!')
 
-__author__ = "Daniel Moser; Ahmed Elshaer; Antoine Merand"
-__email__ = "dmfaes@gmail.com; ahmedsh_11@yahoo.com"
+__author__ = "Antoine Merand"
+__email__ = "amerand@eso.org"
 
 
 def balmer_jump(filename):
@@ -116,10 +115,10 @@ def analyze_all(fmt=['png']):
     filenames = os.listdir('./')
     filenames = filter(
         lambda x: x.startswith('HD') and not x.endswith('.pdf'), filenames)
-    print filenames
+    # print(filenames)
     res = {}
     for f in filenames:
-        print '*' * 5, f, '*' * 5
+        print('*' * 5, f, '*' * 5)
         res[f] = balmer_jump(f)
         _plt.figure(0)
         # _plt.savefig(f+'.png')

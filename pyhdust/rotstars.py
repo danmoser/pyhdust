@@ -1,7 +1,6 @@
 # -*- coding:utf-8 -*-
 
-"""
-PyHdust module: Rotating stars tools.
+"""PyHdust *rotstars* module: Rotating stars tools.
 
 :license: GNU GPL v3.0 https://github.com/danmoser/pyhdust/blob/master/LICENSE
 """
@@ -231,7 +230,7 @@ def rotStar(Tp=20000., M=10.3065, rp=5.38462, star='B', beta=0.25, wfrac=0.8,
     if star in Bstars:
         i = _np.where(Bstars[:, 0] == star)
         i = i[0][0]
-        print Bstars[i][0]
+        print(Bstars[i][0])
         Tp = float(Bstars[i][1])
         M = float(Bstars[i][2]) * Msun
         rp = float(Bstars[i][3]) * Rsun
