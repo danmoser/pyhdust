@@ -798,8 +798,11 @@ def analline(lbd, flux, lbdc, hwidth=1000, verb=True, gaussfit=False,
     else:
         vel0, vel1 = PScalc(vels, flux, gaussfit=gaussfit)
         peaksep = vel1 - vel0
+    if peaksep is _np.NaN:
+        EC = peaksep
+        VR = peaksep
     EC2, F0 = DCcalc(vels, flux, vmax=velEC)
-    depthcent = EC2 - F0
+    # depthcent = EC2 - F0
     if EC2 < 1:
         EC2 = 1.
     fwhm = FWHM(vels, flux, (EC2 + F0) / 2., vmax=_np.abs(velEC))

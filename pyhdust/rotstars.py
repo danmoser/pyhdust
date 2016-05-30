@@ -226,16 +226,17 @@ def rotStar(Tp=20000., M=10.3065, rp=5.38462, star='B', beta=0.25, wfrac=0.8,
                 abs(g(wfrac, M, rp, ths[i])) ** (4 * beta)
         return l * ths[-2] * rp ** 2
 
-    Bstars = _np.array(_phc.bestars, dtype=str)
-    if star in Bstars:
-        i = _np.where(Bstars[:, 0] == star)
-        i = i[0][0]
-        print(Bstars[i][0])
-        Tp = float(Bstars[i][1])
-        M = float(Bstars[i][2]) * Msun
-        rp = float(Bstars[i][3]) * Rsun
-        # comentar linha abaixo se 1a. rodada:
-        # Tp = 27438.63 #K
+    if star.startswith('B'):
+        Bstars = _np.array(bestarsHarm1988, dtype=str)
+        if star in Bstars:
+            i = _np.where(Bstars[:, 0] == star)
+            i = i[0][0]
+            print(Bstars[i][0])
+            Tp = float(Bstars[i][1])
+            M = float(Bstars[i][2]) * Msun
+            rp = float(Bstars[i][3]) * Rsun
+            # comentar linha abaixo se 1a. rodada:
+            # Tp = 27438.63 #K
 
     wcrit = _np.sqrt(8 * G * M / (27 * rp ** 3))
     C = Tp ** (1. / beta) / abs(G * M / rp ** 2)

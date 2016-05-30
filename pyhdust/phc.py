@@ -24,7 +24,9 @@ import numpy as _np
 import datetime as _dt
 from glob import glob as _glob
 from itertools import product as _product
+from collections import Iterable as _It
 import pyhdust.jdcal as _jdcal
+from pyhdust.tabulate import tabulate as _tab
 
 try:
     import matplotlib.pyplot as _plt
@@ -37,9 +39,23 @@ __email__ = "dmfaes@gmail.com"
 
 
 # Data manipulation (includes fitting)
-def wg_avg_and_std(values, sigma):
+def flatten(list_, outlist=None):
+    """ Return a flatten list. 
+
+    If ``outlist`` is provided, the output is extended to it.
     """
-    Return the weighted average and standard deviation.
+    if outlist is None:
+        outlist = []
+    for item in list_:
+        if isinstance(item, _It) and not isinstance(item, basestring):
+            flatten(item, outlist)
+        else:
+            outlist.append(item)
+    return outlist
+
+
+def wg_avg_and_std(values, sigma):
+    """ Return the weighted average and standard deviation.
 
     This IS NOT the problem of Wikipedia > Weighted_arithmetic_mean >
         Weighted_sample_variance.
@@ -57,7 +73,7 @@ def wg_avg_and_std(values, sigma):
     return (avg, _np.sqrt(_np.sum(sigma**2)) / len(values) )
 
 
-def bindata(x, y, nbins=20, yerr=None, xrange=None):
+def bindata(x, y, nbins=20, yerr=None, xlim=None):
     """
     Return the weighted binned data.
 
@@ -65,7 +81,7 @@ def bindata(x, y, nbins=20, yerr=None, xrange=None):
         yerr = _np.ones(shape=_np.shape(x))
 
     INPUT: x, y, err - arrays with the same shape (they don't need to be
-    sorted); nbins=int, xrange=[xmin, xmax]
+    sorted); nbins=int, xlim=[xmin, xmax]
 
     OUTPUT: xvals, yvals, new_yerr (arrays)
     """
@@ -79,11 +95,11 @@ def bindata(x, y, nbins=20, yerr=None, xrange=None):
     x = x[~nans]
     y = y[~nans]
     yerr = yerr[~nans]
-    if xrange is None:
+    if xlim is None:
         xmax = _np.max(x)
         xmin = _np.min(x)
     else:
-        xmin, xmax = xrange
+        xmin, xmax = xlim
     shift = (xmax - xmin) / (nbins - 1)
     tmpx = _np.arange(nbins) * shift + xmin
     tmpy = _np.zeros(nbins)
@@ -339,6 +355,30 @@ def cart_rot(x, y, z, ang_xy=0., ang_yz=0., ang_zx=0.):
 
 
 # Lists and strings manipulation
+def reshapeltx(ltxtb, ncols=2, latexfmt=True):
+    """ Reshape a latex table. 
+
+    :param ltxtb: latex table (only contents)
+    :type ltxtb: string, or list of strings
+    :rtype: string, or np.array (str)
+    :returns: latex formatted table, or matrix
+    """
+    t = ltxtb
+    if not isinstance(t, basestring):
+        t = ''.join(flatten(t))
+    t = t.replace(' ', '').replace(r'\\', '&').replace('\n', '')
+    t = t.split('&')
+    t = _np.array(t)
+    t = _np.delete(t, _np.where(t == ''))
+    nadd = ncols - len(t) % ncols
+    if nadd > 0:
+        t = _np.append(t, _np.tile('', nadd))
+    if latexfmt:
+        return _tab(t.reshape((-1, ncols)), tablefmt='latex')
+    else:
+        return t.reshape((-1, ncols))
+
+
 def renormvals(xlist, xref, yref):
     """ Renormalize ``xlist`` according to ``_ref`` values.
 
@@ -813,7 +853,7 @@ def civil_ticks(ax, civcfg=[1, 'm'], civdt=None, tklab=True):
     return ax
 
 
-def savefig(fig, figname=None, fmt=['png'], keeppt=False):
+def savefig(fig, figname=None, fmt=['png'], keeppt=False, dpi=80):
     """ Standard way of saving a figure in PyHdust. """
     if figname is None or figname == "":
         figname = dtflag()
@@ -824,7 +864,7 @@ def savefig(fig, figname=None, fmt=['png'], keeppt=False):
     for f in fmt:
         print('# Saved {1}.{0}'.format(f, figname))
         fig.savefig(figname+'.{0}'.format(f), transparent=True, 
-            bbox_inches='tight')
+            bbox_inches='tight', dpi=dpi)
     _plt.close(fig)
     return
 

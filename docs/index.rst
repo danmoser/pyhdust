@@ -6,7 +6,7 @@
 Welcome to BeACoN's Python Tools (*PyHdust*) documentation!
 =============================================================
 
-Pyhdust is currently at **version 0.994**.
+Pyhdust is currently at **version 0.995**.
 
 About `hdust` code: 
 
@@ -39,7 +39,7 @@ Package contents:
     tabulate
     triangle
 
-It should be independent of plataform (Linux, Mac, Windows) and compatible with any version of Python (superior to 2.7).
+pyHdust should be independent of plataform (Linux, Mac, Windows) and compatible with any version of Python (superior to 2.7).
 
 
 How to install/uninstall

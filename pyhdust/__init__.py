@@ -33,7 +33,7 @@ try:
 except:
     print('# Warning! matplotlib, pyfits and/or scipy module not installed!!!')
 
-__version__ = 0.994
+__version__ = 0.995
 __release__ = "Beta"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -51,7 +51,11 @@ def hdtpath():
     /home/user/Scripts/pyhdust/
     """
     fulldir = _os.path.split(__file__)[0]
-    return _os.path.split(fulldir)[0] + _os.path.sep
+    fulldir = _os.path.split(fulldir)[0] + _os.path.sep
+    end = 'pyhdust' + _os.path.sep
+    if not fulldir.endswith(end):
+        fulldir += end
+    return fulldir
 
 
 # Hdust I/O
@@ -347,7 +351,7 @@ def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
                 nlbdSEI, tmp, tmp, tmp = sed2info(file)
                 # Rest wavelength
                 # print nlbd, nlbdSEI, newdata[:nlbdSEI, 2]
-                lbrest = (newdata[nlbdSEI - 1, 2] - newdata[0, 2]) / 2. +\
+                lbrest = (newdata[int(nlbdSEI)-1, 2] - newdata[0, 2]) / 2. +\
                     newdata[0, 2]
                 if checklineval:
                     print('# I found {0} as wavelength for {1}'.format(lbrest,

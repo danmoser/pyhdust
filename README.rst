@@ -1,8 +1,7 @@
 pyhdust: Python tools for `hdust`
 =============================================================
 
-Full documentation at:
-https://dl.dropboxusercontent.com/u/6569986/doc/index.html
+Full documentation at: http://pyhdust.readthedocs.io
 
 About `hdust` code: 
 

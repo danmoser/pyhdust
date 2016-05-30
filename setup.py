@@ -46,7 +46,7 @@ if sys.argv[-1] == "publish":
     sys.exit()
 
 setup(name='pyhdust',
-version='0.994',
+version='0.995',
 description='BeACoN’s Python tools for Hdust',
 url='http://j.mp/pyhdust',
 author='Daniel M. Faes',
