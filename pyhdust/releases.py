@@ -4,7 +4,17 @@
 
 History
 ============
-..
+v0.996 @ 2016-06-02
+----------------------
+- TDB
+
+v0.995 @ 2016-04-30
+----------------------
+- Corrections on intt
+
+v0.994 @ 2016-04-2x
+----------------------
+- New intt functions!
 
 v0.993 @ 2016-04-30
 ----------------------
@@ -100,43 +110,6 @@ __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
 
 
-def listFunctions():
-    """ List all *PyHdust* functions. """ 
-    import pyhdust as hdt
-    print("# pyhdust")
-    print("\n".join([x for x in dir(hdt) if x[0] != "_"]))
-
-    import pyhdust.beatlas as bat
-    print("# pyhdust.beatlas")
-    print("\n".join([x for x in dir(bat) if x[0] != "_"]))
-
-    import pyhdust.input as inp
-    print("# pyhdust.input")
-    print("\n".join([x for x in dir(inp) if x[0] != "_"]))
-
-    import pyhdust.interftools as intt
-    print("# pyhdust.interftools")
-    print("\n".join([x for x in dir(intt) if x[0] != "_"]))
-
-    import pyhdust.poltools as polt
-    print("# pyhdust.poltools")
-    print("\n".join([x for x in dir(polt) if x[0] != "_"]))
-
-    import pyhdust.phc as phc
-    print("# pyhdust.phc")
-    print("\n".join([x for x in dir(phc) if x[0] != "_"]))
-
-    import pyhdust.singscat as sst
-    print("# pyhdust.singscat")
-    print("\n".join([x for x in dir(sst) if x[0] != "_"]))
-
-    import pyhdust.spectools as spt
-    print("# pyhdust.spectools")
-    print("\n".join([x for x in dir(spt) if x[0] != "_"]))
-
-    return
-
-
 def setRelease():
     """ Read the version values from __init__.py and write it to the setup.py
     and doc files. """
@@ -172,12 +145,12 @@ def setRelease():
     os.chdir('{0}docs'.format(hdtpath()))
     os.system('make html')
     # os.system('rsync -rP _build/html/ astroweb:/www/moser/www/doc')
-    os.system('rsync -rP _build/html/ /data/Dropbox/Public/doc')
-    print('# From version {0} to {1}'.format(oldver, __version__))
-    os.system(
-        'firefox https://dl.dropboxusercontent.com/u/6569986/doc/index.html &')
-    os.chdir('../..')
-    os.system('git push')
+    # os.system('rsync -rP _build/html/ /data/Dropbox/Public/doc')
+    # print('# From version {0} to {1}'.format(oldver, __version__))
+    # os.system(
+    # 'firefox https://dl.dropboxusercontent.com/u/6569986/doc/index.html &')
+    # os.chdir('../..')
+    # os.system('git push')
     #  os.system('disown')
     return
 

@@ -64,7 +64,7 @@ install_requires=['numpy'],
 # install_requires=['numpy >= 1.6.0'],
 # data_files = [('refs/*', 'stmodels/*')],
 # package_dir = {'../'},
-long_description=rd('README.md'),
+long_description=rd('README.rst'),
 classifiers=[
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
