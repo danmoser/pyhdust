@@ -18,6 +18,7 @@ import glob as _glob
 import numpy as _np
 import datetime as _dt
 import shutil as _shutil
+# import csv as _csv
 # from itertools import product as _product
 # from glob import glob as _glob
 from inspect import getouterframes as _getouterframes
@@ -136,7 +137,9 @@ def thtFactor(MJD):
 
     """
 
-    if float(MJD) < 57082.5: # before 2015, March 1st
+    if float(MJD) < 54101.5:  # Eu desconfio que antes de 2007. Confirmar a data exata
+        factor=1.
+    elif float(MJD) < 57082.5: # before 2015, March 1st
         factor=-1.
     else:
         factor=1.
@@ -1268,7 +1271,7 @@ def verStdPol(std, filt, p, sig):
     Return z = abs(ppub-p)/sqrt(sigpub^2+sig^2) or -1 if there is
     no such object or filter.
     """
-    lstds = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str)
+    lstds = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str, usecols=range(0,22))
 
     # Get P_pub value
     i = stdchk(std)[1]
@@ -1901,7 +1904,7 @@ def corObjStd(night, f, calc, path=None, delta=3.5, verbose=True):
         """
 
         try:
-            stdref = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str)
+            stdref = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str, usecols=range(0,22))
         except:
             print('# ERROR: Can\'t read files pyhdust/refs/pol_padroes.txt')
             raise SystemExit(1)
@@ -2019,7 +2022,7 @@ def corObjStd(night, f, calc, path=None, delta=3.5, verbose=True):
 #################################################
 #################################################
 #################################################
-def genTarget(target, path=None, ispol=None, skipdth=False, delta=3.5, epssig=2.0):
+def genTarget(target, path=None, path2=None, ispol=None, skipdth=False, delta=3.5, epssig=2.0):
     """ Gen. target
 
     Generate a table with all observations found for 'target',
@@ -2074,6 +2077,8 @@ def genTarget(target, path=None, ispol=None, skipdth=False, delta=3.5, epssig=2.
     
     if path == None or path == '.':
         path = _os.getcwd()
+    if path2 == None or path2 == '.':
+        path2 = _os.getcwd()
 
     print(target, path)
 
@@ -2084,7 +2089,7 @@ def genTarget(target, path=None, ispol=None, skipdth=False, delta=3.5, epssig=2.
             obj = _np.concatenate((obj,_np.loadtxt('{0}/refs/pol_hip.txt'.format(_hdtpath()), dtype=str)))
         if _os.path.exists('{0}/refs/pol_unpol.txt'.format(_hdtpath)):
             obj = _np.concatenate((obj,_np.loadtxt('{0}/refs/pol_unpol.txt'.format(_hdtpath()), dtype=str)))
-        std = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str)
+        std = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str, usecols=range(0,22))
     except:
         print('# ERROR: Can\'t read files pyhdust/refs/pol_alvos.txt and/or pyhdust/refs/pol_padroes.txt.')
         raise SystemExit(1)
@@ -2308,9 +2313,9 @@ def genTarget(target, path=None, ispol=None, skipdth=False, delta=3.5, epssig=2.
     # Write the output
     if lines != '':
         if ispol==None:
-            f0 = open('{0}/{1}.log'.format(path,target),'w')
+            f0 = open('{0}/{1}.log'.format(path2,target),'w')
         else:
-            f0 = open('{0}/{1}_iscor.log'.format(path,target),'w')
+            f0 = open('{0}/{1}_iscor.log'.format(path2,target),'w')
 
         if target == 'field':
             lines = ('#{:>11s} {:>7s} {:>7s} {:>4s} {:>5s} {:>12s} {:>6s} {:>6s}' +\
@@ -2333,12 +2338,110 @@ def genTarget(target, path=None, ispol=None, skipdth=False, delta=3.5, epssig=2.
         f0.close()
         
         if ispol==[0,0,0]:
-            print('DONE! {0} lines written in {1}/{2}.log.'.format(nlines,path,target))
+            print('DONE! {0} lines written in {1}/{2}.log.'.format(nlines,path2,target))
         else:
-            print('DONE! {0} lines written in {1}/{2}_iscor.log.'.format(nlines,path,target))
+            print('DONE! {0} lines written in {1}/{2}_iscor.log.'.format(nlines,path2,target))
     else:
         print('NOT DONE! No valid observation was found for target `{0}`.'.format(target))
       
+    return
+
+
+
+
+#################################################
+#################################################
+#################################################
+def fixISP(logfile, ispol, path2=None):
+    """
+    Correct the interstellar polarization in file logfile
+
+    logfile: outfile from genTarget.
+    ispol: the Serkowski parameters [P_max, lambda_max, theta_IS]
+            to correct IS polarization (P_max ein % and lambda_max in
+            Angstrom). If ispol==None, don't make the correction
+            of ISP.
+    path2:   path where to save the data file. If None, it is
+             supposed the same of logfile.
+
+
+    """
+
+    star = _phc.trimpathname(logfile)[1].split('.')[0].split('_')[0]
+    if star in _phc.bes:
+        be = _phc.bes[star]
+    else:
+        be = star
+
+    if path2 == None or path2 == '.':
+        path2 = _os.getcwd()
+
+#    if path2 == None or path2 == '.':
+#        path2 = _phc.trimpathname(logfile)[0]
+#        if path2=='':
+#            path2 = _os.getcwd()
+
+
+    try:
+        lines = _np.loadtxt(logfile, dtype=str)
+    except:
+        print('# ERROR: Can\'t read file {0}.'.format(logfile))
+        raise SystemExit(1)
+
+    if type(lines[0]) != _np.ndarray and _np.size(lines) == 18:
+        lines = lines.reshape(-1,18)
+
+    linesout=''
+
+    for i,line in enumerate(lines):
+
+        # read filter
+        f = line[3]
+
+        # Correction of IS polarization
+        QIS, UIS = serkowski(ispol[0], ispol[1], str(f), mode=1, pa=ispol[2])
+        Q = float(line[9]) - QIS
+        U = float(line[10]) - UIS
+        P = _np.sqrt(Q**2 + U**2)
+        th = _np.arctan(Q/U)*90/_np.pi
+#                        sigth = 28.65*sig/P
+
+        # Fix the angle to the correct in QU diagram
+        if Q < 0:
+            th += 90
+        elif Q >= 0 and U < 0:
+            th += 180
+
+        linesout += ('{:12s} {:>7s} {:>7s} {:>4s} {:>5s} {:>12s} {:>6.1f} {:>6.1f}'+
+                                ' {:>8.4f} {:>8.4f} {:>8.4f} {:>7.2f} {:>7.4f} '+
+                                '{:>6.2f} {:>13s} {:>4s} {:>5s} {:>s}\n').format(line[0], line[1], \
+                                line[2], line[3], line[4], line[5], float(line[6]), float(line[7]), \
+                                P, Q, U, th, float(line[12]), float(line[13]), line[14], line[15], \
+                                line[16], line[17])
+
+#        lines[i][8] = P
+#        lines[i][9] = Q
+#        lines[i][10] = U
+#        lines[i][11] = th
+
+    if linesout != '':
+        f0 = open('{0}/{1}_iscor.log'.format(path2,star),'w')
+        linesout = ('# ISP parameters used:\n#\n# Pmax (%)   lmax (A)     PA\n# {0:>8.4f}'+\
+                    ' {1:>9.2f} {2:>7.2f}\n#\n').format(ispol[0],ispol[1],ispol[2]) + \
+                   ('#{:>11s} {:>7s} {:>7s} {:>4s} {:>5s} {:>12s} {:>6s} {:>6s}' +\
+                        ' {:>8s} {:>8s} {:>8s} {:>7s} {:>7s} {:>6s} {:>13s}' +\
+                        ' {:>4s} {:>5s} {:>s}\n').format('MJD', 'night',\
+                        'ccd', 'filt', 'calc', 'stdstars', 'dth', 'sigdth', 'P', 'Q', 'U',\
+                        'th', 'sigP', 'sigth', 'outfile', 'star', 'flag', 'tags')+linesout
+
+        f0.writelines(linesout)
+        f0.close()
+
+        print('DONE! File written in {0}/{1}_iscor.log.'.format(path2,star))
+    else:
+        print('NOT DONE! No observation for target `{0}`.'.format(star))
+
+
     return
 
 
@@ -2385,7 +2488,9 @@ def serkowski(pmax, lmax, wlen, mode, pa=None, law='w82'):
     elif law=='serk':
         K = 1.15                # Serkowski
 
-    if mode==1 and wlen in _phc.lbds:
+    if pmax==0 and lmax==0:
+        P = 0.
+    elif mode==1 and wlen in _phc.lbds:
         P = pmax*_np.exp(-K*_np.log(lmax/_phc.lbds[wlen])**2)
     else:
         P = pmax*_np.exp(-K*_np.log(lmax/wlen)**2)
@@ -2982,7 +3087,7 @@ def splitData301(night, path_raw='raw', path_red='red'):
 #################################################
 #################################################
 #################################################
-def graf_t(logfile, vfilter=['no-std'], save=False, extens='pdf', filt='v'):
+def graf_t(logfile, path2=None, vfilter=['no-std'], save=False, extens='pdf', filt='v'):
     """
     Plot a P_V x t, theta_V x t and P_B/P_I x t graphs for the
     Be star in the logfile .log file (the outfile from
@@ -3220,11 +3325,15 @@ def graf_t(logfile, vfilter=['no-std'], save=False, extens='pdf', filt='v'):
    
 
     _plt.close('all')
-    if logfile.split('.')[0] in _phc.bes:
-        be = _phc.bes[logfile.split('.')[0]]
+    star = _phc.trimpathname(logfile)[1].split('.')[0].split('_')[0]
+    if star in _phc.bes:
+        be = _phc.bes[star]
     else:
-        be = logfile.split('.')[:-1]
+        be = star
     images = []
+
+    if path2 == None or path2 == '.':
+        path2 = _os.getcwd()
 
     # Verify if vfilter is a special filter
     if vfilter in vfil.keys():
@@ -3260,7 +3369,7 @@ def graf_t(logfile, vfilter=['no-std'], save=False, extens='pdf', filt='v'):
 #        cb.set_ticklabels(range(int(limJD[0]),int(limJD[1]),50))
 
     if save:
-        _plt.savefig('{0}_t.{1}'.format(logfile.split('.')[0],extens), bbox_inches='tight')
+        _plt.savefig('{0}/{1}_t.{2}'.format(path2,star,extens), bbox_inches='tight')
     else:
         _plt.show(block=False)
 
@@ -3272,10 +3381,10 @@ def graf_t(logfile, vfilter=['no-std'], save=False, extens='pdf', filt='v'):
 #################################################
 #################################################
 #################################################
-def graf_qu(logfile, mode=1, odr=True, mcmc=False, nn=[120, 200, 600], \
-                           thet_ran=[0., 180.], b_ran=[-1., 1.], Pb_ran=[0., 1.], \
-                           Yb_ran=[-1., 1.], Vb_ran=[0., 1.], clip=True, sclip=4.5, \
-                           nmax=5, vfilter=['no-std'], save=False, extens='pdf'):
+def graf_qu(logfile, path2=None, mode=1, thetfile=None, isp=[], odr=True, mcmc=False, \
+             nn=[120, 200, 600], thet_ran=[0., 180.], b_ran=[-1., 1.], Pb_ran=[0., 1.], \
+             Yb_ran=[-1., 1.], Vb_ran=[0., 1.], clip=True, sclip=4.5, nmax=5, \
+             vfilter=['no-std'], save=False, extens='pdf', limQ=None, limU=None, limJD=None):
     """
     Plot a QU diagram for the Be star in the logfile .log
     file (the outfile from polt.genTarget) and fit a line
@@ -3290,8 +3399,15 @@ def graf_qu(logfile, mode=1, odr=True, mcmc=False, nn=[120, 200, 600], \
     INPUT
 
         logfile: Logfile with QU data
+          path2: Path to save the output graphs
            mode: 1) Plot a figure to filter U and another for
                  BVRI filters; 2) Plot a figure for filter
+        thetfile: thet_int.csv file (out from fs.genInt) to
+                 to plot the lines using the values inside.
+                 In this case, mcmc variable don`t matters in
+                 the running.
+            isp: interstellar polarization to plot direction
+                 in QU diagram
             odr: Run phc.fit_linear to fit a line?
            mcmc: Run fitMCMCline to fit a line?
              nn: fitMCMCline: [n_walkers, n_burnin, n_mcmc]
@@ -3340,8 +3456,7 @@ def graf_qu(logfile, mode=1, odr=True, mcmc=False, nn=[120, 200, 600], \
 
     """
 
-
-    def plotQU(filt, fig, ax, vfilter, odr_fit, mcmc_fit, limq=None, limu=None, limJD=None):
+    def plotQU(filt, fig, ax, vfilter, odr_fit, mcmc_fit, limq=None, limu=None, limjd=None):
         """
         Receive figure and axes objects and do the plot for filter
         filt WITHOUT show or save the image.
@@ -3429,23 +3544,58 @@ def graf_qu(logfile, mode=1, odr=True, mcmc=False, nn=[120, 200, 600], \
                 ax.plot(xadj, yadj, ':', color='dimgray', linewidth=1.7*factor, label='odr')
 
             # Fitting and plotting by MCMC
-            if mcmc_fit:
-                if not odr_fit or len(q) <= 1:
-                    print('='*60)
-                    print('='*6 + '  FILTER ' + filt.upper())
-                    print('='*60)
-                    print('')
-                param, sparam1, sparam2 = fitmcmc(q+q_filt,u+u_filt,sq+sq_filt,su+su_filt,filt)
+            if mcmc_fit or thetfile != None:
+                if thetfile != None:
+                    param, sparam1, sparam2, n = [],[],[], 0
+                    if _os.path.exists(thetfile):
+                        fr = open(thetfile, 'r')
+                        csvread = csv.reader(fr, delimiter=';')#, quoting=csv.QUOTE_NONE, quotechar='')
+                        for i, line in enumerate(csvread):
+                            if line[0] == star:
+                                # These variables below contain informations about the column numbers where the
+                                # filter 'filt' begins inside thetfile file
+                                posfilt = 2 + filters.index(filt)*4
+                                posfilt2 = 26 + filters.index(filt)*3
+
+                                param = [[float(line[posfilt])*2,float(line[posfilt2]),0,0,0]]
+                                sparam1 = [[float(line[posfilt+1])*2,float(line[posfilt2+1]),0,0,0]]
+                                sparam2 = [[float(line[posfilt+2])*2,float(line[posfilt2+2]),0,0,0]]
+
+                                # Case there exists a second solution
+#                                print line[41:]
+                                if filt in line[41:]:
+                                    posfilt = 41 + line[41:].index(filt)
+                                    param = [param[0]] + [[float(line[posfilt+1])*2,float(line[posfilt+4]),0,0,0]]
+                                    sparam1 = [sparam1[0]] + [[float(line[posfilt+2])*2,float(line[posfilt+5]),0,0,0]]
+                                    sparam2 = [sparam2[0]] + [[float(line[posfilt+3])*2,float(line[posfilt+6]),0,0,0]]
+                        if param == []:
+                            print('# WARNING: No star named {0} found inside thetfile file.  The lines won`t be plotted.'.format(be))
+                    else:
+                        print('# WARNING: No thetfile file found. The lines won`t be plotted.')
+                    
+                else:
+                    if not odr_fit or len(q) <= 1:
+                        print '='*60
+                        print '='*6 + '  FILTER ' + filt.upper()
+                        print '='*60
+                        print ''
+                    param, sparam1, sparam2 = fitmcmc(q+q_filt,u+u_filt,sq+sq_filt,su+su_filt,filt)
+
                 num=len(q+q_filt)
-                delt = (max(q+q_filt)-min(q+q_filt))/8
-                xadj = _np.linspace(min(q+q_filt)-delt,max(q+q_filt)+delt,3)
+#                print q, q_filt
+#                print q+q_filt
 #                print param
                 # Only plot the curve when the number of points is > 1
-                if len(q) > 1:
+                if len(q+q_filt) > 1:
+#                    print 'new', param
+                    delt = (max(q+q_filt)-min(q+q_filt))/8
+                    xadj = _np.linspace(min(q+q_filt)-delt,max(q+q_filt)+delt,3)
                     for i,parami in enumerate(param):
+#                        print parami
                         b0 = parami[1]/_np.cos(parami[0]*_np.pi/180)
                         a0 = _np.tan(parami[0]*_np.pi/180)
                         yadj = a0*xadj+b0
+#                        print xadj, yadj
                         if i==0:
                             ax.plot(xadj, yadj, '-', color='dimgray', linewidth=1.7*factor, label='mcmc')
                         else:
@@ -3460,17 +3610,17 @@ def graf_qu(logfile, mode=1, odr=True, mcmc=False, nn=[120, 200, 600], \
                 num = 0
 
 
-            # Specify the colors according to the JD if limJD is None
-            if limJD == None or limJD == []:
-                limJD = [min(JD+JD_filt), max(JD+JD_filt)]
+            # Specify the colors according to the JD if limjd is None
+            if limjd == None or limjd == []:
+                limjd = [min(JD+JD_filt), max(JD+JD_filt)]
 
             # Plot data 
             if len(q) > 0:
 #                image += [ax.scatter(pts[0], pts[1], marker='o', edgecolors=colors, facecolors=colors, s=50)]
-                if limJD[0] != limJD[1]:
-                    col = _plt.cm.gist_rainbow([(jdi-limJD[0])/(limJD[1]-limJD[0]) for jdi in JD])
-                    image += [ax.scatter(q, u, marker='o', c=JD, vmin=limJD[0], \
-                                            vmax=limJD[1], edgecolors='white', s=72*factor, cmap=cm)]
+                if limjd[0] != limjd[1]:
+                    col = _plt.cm.gist_rainbow([(jdi-limjd[0])/(limjd[1]-limjd[0]) for jdi in JD])
+                    image += [ax.scatter(q, u, marker='o', c=JD, vmin=limjd[0], \
+                                            vmax=limjd[1], edgecolors='white', s=72*factor, cmap=cm)]
                 else:
                     col = _plt.cm.gist_rainbow([0.5])
                     lixo = ax.scatter(q, u, marker='o', c=col, \
@@ -3484,10 +3634,10 @@ def graf_qu(logfile, mode=1, odr=True, mcmc=False, nn=[120, 200, 600], \
             if len(q_filt) > 0:
 #                image += [ax.scatter(pts_filt[0], pts_filt[1], marker='x', edgecolors=colors_filt, facecolors=colors_filt, s=60, linewidths=2)]
 #                print "Entrou IF"
-                if limJD[0] != limJD[1]:
-                    col = _plt.cm.gist_rainbow([(jdi-limJD[0])/(limJD[1]-limJD[0]) for jdi in JD_filt])
+                if limjd[0] != limjd[1]:
+                    col = _plt.cm.gist_rainbow([(jdi-limjd[0])/(limjd[1]-limjd[0]) for jdi in JD_filt])
                     image += [ax.scatter(q_filt, u_filt, marker='x', c=JD_filt, \
-                                vmin=limJD[0], vmax=limJD[1], s=72*factor, linewidths=1.4, cmap=cm)]
+                                vmin=limjd[0], vmax=limjd[1], s=72*factor, linewidths=1.4, cmap=cm)]
                 else:
                     col = _plt.cm.gist_rainbow([0.5])
                     lixo = ax.scatter(q_filt, u_filt, marker='x', c=col, \
@@ -3519,6 +3669,28 @@ def graf_qu(logfile, mode=1, odr=True, mcmc=False, nn=[120, 200, 600], \
             ax.set_ylim(limu)
         ax.plot(ax.get_xlim(), [0,0], 'k--')
         ax.plot([0,0], ax.get_ylim(), 'k--')
+
+        # plot the diretions of ISP
+        for ispi in isp:
+#            delt = (max(q+q_filt)-min(q+q_filt))/8
+            if ((2*ispi > 270 and 2*ispi <= 360) or (2*ispi< 90 and 2*ispi>= 0)):
+                if ax.get_xlim()[1]>0:
+                    xisp = _np.array([0,ax.get_xlim()[1]])
+                else:
+                    print('# WARNING: Angle {0} degree don`t displayed inside the graph area.'.format(ispi))
+                    continue
+            elif (2*ispi > 90 and 2*ispi < 270):
+                if ax.get_xlim()[0]<0:
+                    xisp = _np.array([ax.get_xlim()[0],0])
+                else:
+                    print('# WARNING: Angle {0} degree don`t displayed inside the graph area.'.format(ispi))
+                    continue
+            else:
+                print('# WARNING: This routine can`t plot the ISP on an angle of {0} degree.'.format(ispi))
+                continue
+            yisp = _np.tan(2*ispi*_np.pi/180)*xisp
+            ax.plot(xisp, yisp, ':', color='red', linewidth=1.7*factor)
+
 
         # Setting sizes
         ax.xaxis.label.set_fontsize(fonts[1]*factor)
@@ -3711,12 +3883,16 @@ def graf_qu(logfile, mode=1, odr=True, mcmc=False, nn=[120, 200, 600], \
 
 
     _plt.close('all')
-    star = _phc.trimpathname(logfile)[1].split('.')[0]
+    star = _phc.trimpathname(logfile)[1].split('.')[0].split('_')[0]
     if star in _phc.bes:
         be = _phc.bes[star]
     else:
         be = star
     arr, images = [],[]
+
+    if path2 == None or path2 == '.':
+        path2 = _os.getcwd()
+
 
     # Verify if vfilter is a special filter
     if vfilter in vfil.keys():
@@ -3735,7 +3911,7 @@ def graf_qu(logfile, mode=1, odr=True, mcmc=False, nn=[120, 200, 600], \
 #        _plt.close(fig_aux)
         
         if save:
-            fig.savefig('{0}_qu_u.{1}'.format(star,extens), bbox_inches='tight')
+            fig.savefig('{0}/{1}_qu_u.{2}'.format(path2,star,extens), bbox_inches='tight')
 #            _plt.close(fig)
         else:
             fig.show()
@@ -3756,13 +3932,16 @@ def graf_qu(logfile, mode=1, odr=True, mcmc=False, nn=[120, 200, 600], \
         
         # Fix the spacing among the subgraphs and set the QU limits
         _plt.subplots_adjust(hspace=0.05, wspace=0.05)
-        limq, limu, limJD = fixLimits()
+        limq, limu, limjd = fixLimits()
+        if limQ != None: limq=limQ
+        if limU != None: limu=limU
+        if limJD != None: limjd=limJD
 
 
         ### 1.2 Do the graphs fo BVRI
         nax = 0
         for filt in ('b','v','r','i'):
-            arr += [plotQU(filt, fig, axs[nax], vfilter, odr, mcmc, limq=limq, limu=limu, limJD=limJD)]
+            arr += [plotQU(filt, fig, axs[nax], vfilter, odr, mcmc, limq=limq, limu=limu, limjd=limjd)]
             nax += 1
 
             if arr[-1][-1] != []:
@@ -3787,10 +3966,10 @@ def graf_qu(logfile, mode=1, odr=True, mcmc=False, nn=[120, 200, 600], \
             cb = _plt.colorbar(images[0][0], cax=cax, orientation='vertical')
             cb.set_label('MJD')
 #        cb.ColorbarBase(cax, orientation='vertical', cmap=_plt.cm.gist_rainbow)
-#        cb.set_ticklabels(range(int(limJD[0]),int(limJD[1]),50))
+#        cb.set_ticklabels(range(int(limjd[0]),int(limjd[1]),50))
 
         if save:
-            fig.savefig('{0}_qu.{1}'.format(star,extens), bbox_inches='tight')
+            fig.savefig('{0}/{1}_qu.{2}'.format(path2,star,extens), bbox_inches='tight')
 #            _plt.close(fig)
         else:
             fig.show()
@@ -3802,16 +3981,16 @@ def graf_qu(logfile, mode=1, odr=True, mcmc=False, nn=[120, 200, 600], \
         for filt in ('u','b','v','r','i'):
             fig = _plt.figure()
             ax = _plt.subplot(1, 1, 1)
-            arr += [plotQU(filt, fig, ax, vfilter, odr, mcmc)]
+            arr += [plotQU(filt, fig, ax, vfilter, odr, mcmc, limq=limQ, limu=limU, limjd=limJD)]
 #            _plt.close(fig_aux)
 
             if save:
-                fig.savefig('{0}_qu_{1}.{2}'.format(star,filt,extens), bbox_inches='tight')
+                fig.savefig('{0}/{1}_qu_{2}.{3}'.format(path2,star,filt,extens), bbox_inches='tight')
 #                _plt.close(fig)
             else:
                 _plt.show()
 
-    if odr or mcmc:
+    if odr or mcmc or thetfile != None:
         return arr
     else:
         return
@@ -3878,7 +4057,7 @@ def sintLeff(ccdn='ixon', step=5., save=True, extens='pdf'):
 
     # Open file with CCD Quantum Efficience (QE)
     try:
-        fqe = _np.loadtxt('{0}/refs/opd/QE_{1}.dat'.format(_hdtpath(),ccdn),skiprows=1, dtype=float, unpack=True) # unpack is to get the transposed array
+        fqe = _np.loadtxt('{0}/refs/QE_{1}.dat'.format(_hdtpath(),ccdn),skiprows=1, dtype=float, unpack=True) # unpack is to get the transposed array
     except:
         print('ERROR: CCD name \'{0}\' not identified!'.format(ccdn))
         return
@@ -4117,7 +4296,7 @@ if __name__ == "__main__":
 
 
 def fitMCMCline(x, y, sx, sy, star='', margin=False, plot_adj=True, fig=None, ax=None, \
-                                            n_burnin=300, n_mcmc=600, \
+                                            n_burnin=350, n_mcmc=600, \
                                     n_walkers=120, thet_ran=[0., 180.], \
                                     b_ran=[-1., 1.], Pb_ran=[0., 1.], \
                                    Yb_ran=[-1., 1.], Vb_ran=[0., 1.], extens='pdf'):
@@ -4467,7 +4646,6 @@ def fitMCMCline(x, y, sx, sy, star='', margin=False, plot_adj=True, fig=None, ax
 
         return fig1, thet_mcmc, b_mcmc, Pb_mcmc, Yb_mcmc, Vb_mcmc
 
-    
 
     def plot_conv(sampler, param):
         """
@@ -4602,13 +4780,13 @@ def fitMCMCline(x, y, sx, sy, star='', margin=False, plot_adj=True, fig=None, ax
 
 
     # Plot only if plot_adj==True or a new computation was done
-    if plot_adj and opt in ('y','Y'):
+    if plot_adj and opt in ('y', 'Y'):
 
-        xadj = _np.linspace(min(x),max(x),2)
+        xadj = _np.linspace(min(x), max(x), 2)
         b0 = b_mcmc[0]/_np.cos(thet_mcmc[0]*_np.pi/180)
         a0 = _np.tan(thet_mcmc[0]*_np.pi/180)
         yadj = a0*xadj+b0
-        ax2.plot(xadj, yadj, '--',color='dimgray', label='mcmc_new')
+        ax2.plot(xadj, yadj, '--', color='dimgray', label='mcmc_new')
         ax2.legend(loc='best')
         fig2.show()
     elif not plot_adj:

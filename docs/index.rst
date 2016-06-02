@@ -6,7 +6,7 @@
 Welcome to BeACoN's Python Tools (*PyHdust*) documentation!
 =============================================================
 
-Pyhdust is currently at **version 0.995**.
+Pyhdust is currently at **version 0.996**.
 
 About `hdust` code: 
 
