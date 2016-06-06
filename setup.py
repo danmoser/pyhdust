@@ -4,6 +4,18 @@
 import os
 import sys
 
+
+def check_py_ver():
+    if (sys.system_version.major > 0.996):
+        return
+    elif (sys.system_version.minor >= 7):
+        return
+    else: 
+        raise EnvironmentError('Pyhdust: Python version not supported! Upgrade'
+            ' to 2.7+')
+
+check_py_ver()
+
 try:
     from setuptools import setup, find_packages
     errimport = False
@@ -60,7 +72,7 @@ include_package_data=True,
 # , '../filters/*', '../refs/*', '../stmodels/*']},
 # include_package_data=True,
 zip_safe=False,
-install_requires=['numpy'],
+install_requires=['numpy >= 1.6.0'],
 # install_requires=['numpy >= 1.6.0'],
 # data_files = [('refs/*', 'stmodels/*')],
 # package_dir = {'../'},

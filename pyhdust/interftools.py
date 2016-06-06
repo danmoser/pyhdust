@@ -982,7 +982,6 @@ def uv_plot_ax(ax, oic, PAs=[-180, 180], legend=True, lbd=False, legbbox=None,
     #
     u = B*_np.sin(PA*_np.pi/180.)/lbds
     v = B*_np.cos(PA*_np.pi/180.)/lbds
-    print idx, _np.shape(u)
     ax.scatter(u[idx], v[idx], color=colors[idx], alpha=.7, zorder=10)
     ax.scatter(-u[idx], -v[idx], color=colors[idx], alpha=.7, zorder=10)
     if legend:

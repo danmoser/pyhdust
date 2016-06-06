@@ -14,7 +14,7 @@ import os as _os
 import re as _re
 import pwd as _pwd
 import time as _time
-import glob as _glob
+from glob import glob as _glob
 import numpy as _np
 import datetime as _dt
 import shutil as _shutil
@@ -26,11 +26,6 @@ from inspect import currentframe as _currentframe
 import pyhdust.phc as _phc
 import pyhdust.jdcal as _jdcal
 from pyhdust import hdtpath as _hdtpath
-from scipy.optimize import curve_fit as _curve_fit
-from scipy.integrate import simps as _simps
-from scipy.interpolate import interp1d as _interp1d
-import matplotlib as _mpl
-
 # from sys import _argv
 # from matplotlib import rc as _rc
 
@@ -38,6 +33,10 @@ try:
     import matplotlib.pyplot as _plt
     from matplotlib.transforms import offset_copy as _offset_copy
     import pyfits as _pyfits
+    from scipy.optimize import curve_fit as _curve_fit
+    from scipy.integrate import simps as _simps
+    from scipy.interpolate import interp1d as _interp1d
+    import matplotlib as _mpl
 except:
     print('# Warning! matplotlib and/or pyfits module not installed!!!')
 

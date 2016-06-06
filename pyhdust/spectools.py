@@ -433,9 +433,13 @@ def lineProf(x, flx, lbc, flxerr=_np.empty(0), hwidth=1000., ssize=0.05):
     idx = _np.where(_np.abs(x) <= 1.001 * hwidth)
     if len(flxerr) == 0:
         flux = linfit(x[idx], flx[idx], ssize=ssize)  # yerr=flxerr,
+        if len(x[idx]) == 0:
+            print('# Warning! Wrong `lbc` in the lineProf function')
         return x[idx], flux
     else:
         flux, flxerr = linfit(x[idx], flx[idx], yerr=flxerr[idx], ssize=ssize)
+        if len(x[idx]) == 0:
+            print('# Warning! Wrong `lbc` in the lineProf function')
         return x[idx], flux, flxerr
 
 
@@ -543,7 +547,7 @@ def EWcalc(vels, flux, vw=1000):
 
 def ECcalc(vels, flux, ssize=.05, gaussfit=False, doublegf=True):
     """
-    Supoe que o fluxo jah estah normalizado, e vetores ordenad_os.
+    Supoe que o fluxo jah estah normalizado, e vetores ordenados.
 
     Calcula o topo da emissao da linha, e retorna em que velocidade ela
     ocorre.
@@ -1515,6 +1519,19 @@ def renorm(vl, y):
     return A*y+B
 
 
+def normEW(vl, y, area=None):
+    """ Normalize ``y`` curve to have a specific area. If ``area is None``, 
+    then the normalized equivalent width is preserved.
+    """
+    if area is None:
+        area = _np.trapz(linfit(vl, y), vl)
+    y0 = linfit(vl, y)-1
+    a1 = _np.trapz(y0, vl)
+    a0 = _np.trapz(_np.tile([1], len(vl)), vl)
+    f = (area-a0)/a1
+    return f*y0+1
+
+
 def checksubdirs(path, star, lbc, hwidth=1000, showleg=True, plots=False):
     """
     Faz o que tem que fazer.
@@ -1855,7 +1872,6 @@ def spec_time(speclist, lbc=6562.8, fmt=['png', 'pdf'], outname=None,
     ax.plot(vel, flux+(MJDref-MJDs[0])*ysh, color='k', ls=':')
     if _np.min(flux+(MJDref-MJDs[0])*ysh) < extrem[0]:
         extrem[0] = _np.min(flux+(MJDref-MJDs[0])*ysh)
-    print extrem
     s2d = _hdt.readfullsed2('/data/Dropbox/work/sci_16-15aeri/'
         'fullsed_mod03_VDDn0_1p4e12_Be_aeri2014.sed2')
     vel, flux = lineProf(s2d[4, :, 2], s2d[4, :, 3], .656461, hwidth=hwidth)

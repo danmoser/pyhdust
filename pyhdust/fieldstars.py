@@ -13,17 +13,21 @@ import re
 import csv
 import copy
 import numpy as np
-import matplotlib as mpl
-import matplotlib.pyplot as plt
 #import matplotlib.cm as mplcm
-from matplotlib.colors import Normalize, hsv_to_rgb
-from matplotlib.patches import Polygon
-from matplotlib.collections import PatchCollection
 from itertools import product
 from glob import glob
 from pyhdust import hdtpath
 import pyhdust.poltools as polt
 import pyhdust.phc as phc
+
+try:
+    import matplotlib as mpl
+    import matplotlib.pyplot as plt
+    from matplotlib.colors import Normalize, hsv_to_rgb
+    from matplotlib.patches import Polygon
+    from matplotlib.collections import PatchCollection
+except:
+    print('# Warning! matplotlib module not installed!!!')
 
 
 #from glob import glob

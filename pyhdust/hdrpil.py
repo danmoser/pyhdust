@@ -12,14 +12,14 @@ import os
 import os.path
 import sys
 from copy import copy
+
 try:
     from PIL import Image
     import pylab
     pylab_loaded = 1
 except:
     pylab_loaded = 0
-    print(
-        '# Warning! matplotlib with pylab and/or PIL/Pillow not installed!!!')
+    print('# Warning! matplotlib+pylab and/or PIL/Pillow not installed!!!')
 
 __author__ = "bpowah"
 __email__ = "bpowah@gmail.com"

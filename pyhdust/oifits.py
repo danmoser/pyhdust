@@ -77,11 +77,15 @@ Example of OIfits merge (same target):
 :co-author: Daniel Moser
 :license: Copyright 2014 Paul Boley
 """
-import pyfits as _pyfits
 import datetime as _datetime
 import copy as _copy
 import numpy as _np
 import numbers as _numbers
+
+try:
+    import pyfits as _pyfits
+except:
+    print('# Warning! pyfits module not installed!!!')
 
 __author__ = "Paul Boley"
 __email__ = "boley@mpia-hd.mpg.de"
