@@ -78,7 +78,7 @@ def imshowl(img, cmap='gist_heat', origin='lower'):
 
 
 def readmap(file, quiet=False):
-    """
+    r"""
     Read *Hdust* MAP or MAPS files.
 
     `mapimg`: extract this component from the *.map* file.
@@ -182,7 +182,7 @@ def readmap(file, quiet=False):
 
 def img2fits(img, lbd, xmax, dist, outname='model', rot=0., lum=0.,
     orient=0., coordsinf=None, deg=False, ulbd=''):
-    """ Export an image (e.g., data[0,0,0,:,:]) to the fits format.
+    r""" Export an image (e.g., data[0,0,0,:,:]) to the fits format.
 
     `lbd` is the wavelength value and the dimension is kept as it is. It must
     be in meters for JMMC softwares (ASPRO2/LITPRO).
@@ -296,7 +296,7 @@ def img2fits(img, lbd, xmax, dist, outname='model', rot=0., lum=0.,
 
 def data2fitscube(data, obs, lbdc, xmax, dist, zoom=0, outname='model',
     orient=0., rot=0., lum=0., coordsinf=None, map=False, deg=False):
-    """ Export a set of images (e.g., data[zoom,obs,:,:,:]) to the fits cube
+    r""" Export a set of images (e.g., data[zoom,obs,:,:,:]) to the fits cube
     format.
 
     `map` = if `data` is a *.map file, set it to True. Leave false to *.maps.
@@ -1299,7 +1299,7 @@ def plot_t3_img(ax, oidata, img, xlim=None, quiet=False, alp=.75):
 def plot_v2_res(ax, ax2, oidata, colors, names, modfiles, obsdeg=None, 
     dist=None, xlim=None, PAs=[-180, 180], PAsrev=False, PArv=[0, 0], 
     bindata=0, quiet=False, alp=.75, printsum=False):
-    """ datas = models! 
+    r""" datas = models! 
 
     `bindata` refers to vis2.wavelength.eff_wave!! In other words: the binning
     only works on simultaneous observations with different :math:`\lambda`.
@@ -1421,7 +1421,7 @@ def plot_v2_res(ax, ax2, oidata, colors, names, modfiles, obsdeg=None,
 def plot_phi3_res(ax, ax2, oidata, colors, names, modfiles, obsdeg=None, 
     dist=None, xlim=None, PAs=[-180, 180], PAsrev=False, PArv=[0, 0], 
     bindata=0, quiet=False, alp=.75, printsum=False):
-    """ modfiles = models! 
+    r""" modfiles = models! 
 
     `bindata` refers to vis2.wavelength.eff_wave!! In other words: the binning
     only works on simultaneous observations with different :math:`\lambda`.
@@ -1547,7 +1547,7 @@ def plot_phi3_res(ax, ax2, oidata, colors, names, modfiles, obsdeg=None,
 
 
 class Disk(object):
-    """ To compute Vieira's models.
+    r""" To compute Vieira's models.
 
     `lbd` in cm (np.array. If None, default value from _phc.BBlbd), `barz2` is 
     the mean value of the square atomic number, `Td` isothermal disk 
@@ -1582,7 +1582,7 @@ class Disk(object):
 
 def I(Disk, Ms=7.7, Teff=20200., Rs=4.94, iang=0., bm2n=-5.5, fmin=5e-3, 
     Rmax=None, px=128, bartau=None):
-    """ I is the specific intensity of the star plus an isothermal disk. The 
+    r""" I is the specific intensity of the star plus an isothermal disk. The 
     effects of limb-darkening, stellar rotation and circumstellar extinction 
     are neglected. Image constructed from LOWER origin.
 

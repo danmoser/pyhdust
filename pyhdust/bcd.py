@@ -26,9 +26,9 @@ __email__ = "amerand@eso.org"
 
 
 def balmer_jump(filename):
-    """ Calculate the Balmer_jump of a given spectral. 
+    r""" Calculate the Balmer_jump of a given spectral. 
 
-    INPUT: `filename` is a file with 4 columns, as [wav (math:`\AA`), 
+    INPUT: `filename` is a file with 4 columns, as [wav (:math:`\AA`), 
     log10(wav), norm_flux, log(flux)] 
 
     OUTPUT: offset, intersect """
@@ -129,9 +129,9 @@ def analyze_all(fmt=['png']):
 
 def bcd(obj, wav, nflx, logflx, elogflx=None, label='Spec', folder=None, 
     doplot=False):
-    """ Calculate the Balmer_jump of a given spectral.
+    r""" Calculate the Balmer_jump of a given spectral.
 
-    INPUT: wav (math:`\AA`), nflux (Normalized flux), log10(flux) and
+    INPUT: wav (:math:`\AA`), nflux (Normalized flux), log10(flux) and
     log10(err_flux).
 
     Note that the continuum of nflux after the Balmer Jump is ~1.0 and before

@@ -19,8 +19,7 @@ __email__ = "dmfaes@gmail.com"
 
 
 def readscr(scrfile):
-    '''
-    Read source generated with `ref_estrela.txt`.
+    ''' Read source generated with *ref_estrela.txt*.
 
     OUTPUT: M, Req and TP (2*solar units and K).
     '''
@@ -46,7 +45,7 @@ def readscr(scrfile):
 
 
 def vrot_scr(scrfile):
-    """ Returns the `vrot` value of a given source star.
+    """ Returns the ``vrot`` value of a given source star.
 
     OUTPUT: vrot in km/s. """
     M, Req, Tp = readscr(scrfile)
@@ -59,11 +58,11 @@ def vrot_scr(scrfile):
 
 
 def wrot(par, is_ob=False):
-    """ Converts math:`w_{\rm frac} = \Omega/\Omega_c` into 
-    math:`W = vrot/vorb`.
+    r""" Converts :math:`w_{\rm frac} = \Omega/\Omega_c` into 
+    :math:`W = vrot/vorb`.
 
-    If `is_ob == True`, it consider the param as ob (instead of 
-    math:`w_{\rm frac}`). """
+    If ``is_ob == True``, it considers the param as the oblateness (instead of 
+    :math:`w_{\rm frac}`). """
     if is_ob:
         wfrac = (1.5 ** 1.5) * _np.sqrt(2. * (par - 1.) / par ** 3)
     else: 
@@ -84,11 +83,11 @@ def wfrac_rot(W):
 
 
 def beta(par, is_ob=False):
-    """ Calculate the math:`\beta` value from Espinosa-Lara for a given 
-    rotation rate math:`w_{\rm frac} = \Omega/\Omega_c`
+    r""" Calculate the math:`\beta` value from Espinosa-Lara for a given 
+    rotation rate :math:`w_{\rm frac} = \Omega/\Omega_c`
 
-    If `is_ob == True`, it consider the param as ob (instead of
-    math:`w_{\rm frac}`). """
+    If ``is_ob == True``, it consider the param as ob (instead of
+    :math:`w_{\rm frac}`). """
 
     # Ekstrom et al. 2008, Eq. 9
     if is_ob:
@@ -166,7 +165,7 @@ def rotStar(Tp=20000., M=10.3065, rp=5.38462, star='B', beta=0.25, wfrac=0.8,
             th_res=5001, quiet=False, LnotTp=False):
     """ Return the photospheric parameters of a rotating star.
 
-    `LnotTp`: the value of "Tp" is the Luminosity (in solar units).
+    ``LnotTp``: the value of "Tp" is the Luminosity (in solar units).
 
     Calculation of Von Zeipel's Beta parameter as function of W: see math...
 

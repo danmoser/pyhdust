@@ -4,6 +4,10 @@
 
 History
 ============
+v0.997 @ 2016-06-06
+----------------------
+- Corrections on the documentation
+
 v0.996 @ 2016-06-06
 ----------------------
 - Setup.py and minor corrections

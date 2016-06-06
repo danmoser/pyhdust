@@ -645,52 +645,52 @@ def gentkdates(mjd0, mjd1, fact, step, dtstart=None):
 
 
 def deg2rad(deg=1.):
-    """ :math:`1^\circ=\frac{pi}{180}` """
+    r""" :math:`1^\circ=\frac{pi}{180}` """
     return deg*_np.pi/180.
 
 
 def rad2deg(rad=1.):
-    """ :math:`1^\circ=\frac{pi}{180}` """
+    r""" :math:`1^\circ=\frac{pi}{180}` """
     return rad*180./_np.pi
 
 
 def arcmin2rad(arm=1.):
-    """ :math:`1'=\frac{pi}{10800}` """
+    r""" :math:`1'=\frac{pi}{10800}` """
     return arm*_np.pi/10800.
 
 
 def rad2arcmin(rad=1.):
-    """ :math:`1^\circ=\frac{pi}{10800}` """
+    r""" :math:`1^\circ=\frac{pi}{10800}` """
     return rad*10800./_np.pi
 
 
 def arcsec2rad(ars=1.):
-    """ :math:`1'=\frac{pi}{648000}` """
+    r""" :math:`1'=\frac{pi}{648000}` """
     return ars*_np.pi/648000.
 
 
 def rad2arcsec(rad=1.):
-    """ :math:`1^\circ=\frac{pi}{648000}` """
+    r""" :math:`1^\circ=\frac{pi}{648000}` """
     return rad*648000./_np.pi
 
 
 def mas2rad(mas=1.):
-    """ :math:`1^\circ=\frac{pi}{648000000}` """
+    r""" :math:`1^\circ=\frac{pi}{648000000}` """
     return mas*_np.pi/648000000.
 
 
 def rad2mas(rad=1.):
-    """ :math:`1^\circ=\frac{pi}{648000000}` """
+    r""" :math:`1^\circ=\frac{pi}{648000000}` """
     return rad*648000000./_np.pi
 
 
 def deg2mas(deg=1.):
-    """ :math:`1^\circ = 3600000` """
+    r""" :math:`1^\circ = 3600000` """
     return deg*3600000.
 
 
 def mas2deg(mas=1.):
-    """ :math:`1^\circ = 3600000` """
+    r""" :math:`1^\circ = 3600000` """
     return mas/3600000.
 
 
@@ -995,7 +995,7 @@ def fBBcor(T):
 
 
 def gbf(T, lbd):
-    """ Gaunt factors from Vieira+2015. 
+    r""" Gaunt factors from Vieira+2015. 
 
     INPUT: T (K) and lbd (:math:`\mu`m, array)
 
