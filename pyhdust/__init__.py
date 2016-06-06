@@ -33,7 +33,7 @@ try:
 except:
     print('# Warning! matplotlib, pyfits and/or scipy module not installed!!!')
 
-__version__ = 0.996
+__version__ = 0.9961
 __release__ = "Beta"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"

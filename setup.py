@@ -6,7 +6,7 @@ import sys
 
 
 def check_py_ver():
-    if (sys.version_info.major > 0.996):
+    if (sys.version_info.major > 0.9961):
         return
     elif (sys.version_info.minor >= 7):
         return
