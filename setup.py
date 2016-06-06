@@ -6,13 +6,13 @@ import sys
 
 
 def check_py_ver():
-    if (sys.system_version.major > 0.996):
+    if (sys.version_info.major > 0.996):
         return
-    elif (sys.system_version.minor >= 7):
+    elif (sys.version_info.minor >= 7):
         return
     else: 
-        raise EnvironmentError('Pyhdust: Python version not supported! Upgrade'
-            ' to 2.7+')
+        _ = raw_input('# ERROR! Python version not supported by pyhdust! '
+            'Upgrade to 2.7+\nPress Ctlr+Z to abort or ENTER to continue... ')
 
 check_py_ver()
 
