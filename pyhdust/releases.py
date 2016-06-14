@@ -4,6 +4,10 @@
 
 History
 ============
+v0.998 @ 2016-06-06
+----------------------
+- Corrections on setup.py
+
 v0.997 @ 2016-06-06
 ----------------------
 - Corrections on the documentation
@@ -124,7 +128,7 @@ def setRelease():
     f0 = open('{0}setup.py'.format(hdtpath()))
     lines = f0.readlines()
     f0.close()
-    i = [lines.index(x) for x in lines if x.find('version') > -1]
+    i = [lines.index(x) for x in lines if x.find('version=') > -1]
     i = i[0]
     oldver = phc.fltTxtOccur('version', [lines[i]], asstr=True)
     lines[i] = lines[i].replace(oldver, str(__version__))

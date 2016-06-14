@@ -83,7 +83,7 @@ def wfrac_rot(W):
 
 
 def beta(par, is_ob=False):
-    r""" Calculate the math:`\beta` value from Espinosa-Lara for a given 
+    r""" Calculate the :math:`\beta` value from Espinosa-Lara for a given 
     rotation rate :math:`w_{\rm frac} = \Omega/\Omega_c`
 
     If ``is_ob == True``, it consider the param as ob (instead of

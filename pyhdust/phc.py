@@ -27,6 +27,7 @@ from itertools import product as _product
 from collections import Iterable as _It
 import pyhdust.jdcal as _jdcal
 from pyhdust.tabulate import tabulate as _tab
+from six import string_types as _strtypes
 
 try:
     import matplotlib.pyplot as _plt
@@ -47,7 +48,7 @@ def flatten(list_, outlist=None):
     if outlist is None:
         outlist = []
     for item in list_:
-        if isinstance(item, _It) and not isinstance(item, basestring):
+        if isinstance(item, _It) and not isinstance(item, _strtypes):
             flatten(item, outlist)
         else:
             outlist.append(item)
@@ -301,9 +302,16 @@ def convnorm(x, arr, pattern):
 
     OUTPUT: array
     """
-    if (len(x) % 2 == 0) or (len(x) != len(pattern)):
+    if (len(x) != len(pattern)):
         print('# Wrong format of x and/or pattern arrays!')
         return None
+    if (len(x) % 2 == 0):
+        print('# Warning! Even length of arrays. Interpolating n-1 dimension!')
+        idx = _np.argsort(x)
+        x0 = x[idx]
+        pattern0 = pattern[idx]
+        x = _np.linspace(x0[0], x0[-1], len(x0)-1)
+        pattern = _np.interp(x, x0, pattern0)
     dx = (x[-1] - x[0]) / (len(x) - 1.)
     cut = len(x) / 2
     return _np.convolve(pattern, arr)[cut:-cut] * dx
@@ -364,7 +372,7 @@ def reshapeltx(ltxtb, ncols=2, latexfmt=True):
     :returns: latex formatted table, or matrix
     """
     t = ltxtb
-    if not isinstance(t, basestring):
+    if not isinstance(t, _strtypes):
         t = ''.join(flatten(t))
     t = t.replace(' ', '').replace(r'\\', '&').replace('\n', '')
     t = t.split('&')
@@ -407,7 +415,6 @@ def keys_values(keys, text, delimiter='_'):
         text = 'Be_M04.20_ob1.30_H0.30_Z0.014_bE_Ell.txt'
 
         print( phc.keys_values(keys, text) )
-        # 
     """
     d = delimiter
     vals = []
@@ -419,13 +426,15 @@ def keys_values(keys, text, delimiter='_'):
     return vals
 
 
-def fltTxtOccur(s, lines, n=1, seq=1, after=False, asstr=False):
+def fltTxtOccur(s, lines, n=1, seq=1, after=True, asstr=False):
     """ Return the seq-th float of the line after the n-th
     occurrence of `s` in the array `lines`.
 
     INPUT: s=string, lines=array of strings, n/seq=int (starting at 1)
 
     OUTPUT: float"""
+    if isinstance(lines, _strtypes):
+        lines = [lines]
     fltregex = r'[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?'
     if after:
         occur = [x[x.find(s) + len(s):] for x in lines if x.find(s) > -1]
@@ -645,52 +654,52 @@ def gentkdates(mjd0, mjd1, fact, step, dtstart=None):
 
 
 def deg2rad(deg=1.):
-    r""" :math:`1^\circ=\frac{pi}{180}` """
+    r""" :math:`1^\circ=\frac{\pi}{180}` rad."""
     return deg*_np.pi/180.
 
 
 def rad2deg(rad=1.):
-    r""" :math:`1^\circ=\frac{pi}{180}` """
+    r""" :math:`1^\circ=\frac{\pi}{180}` rad."""
     return rad*180./_np.pi
 
 
 def arcmin2rad(arm=1.):
-    r""" :math:`1'=\frac{pi}{10800}` """
+    r""" :math:`1'=\frac{\pi}{10800}` rad."""
     return arm*_np.pi/10800.
 
 
 def rad2arcmin(rad=1.):
-    r""" :math:`1^\circ=\frac{pi}{10800}` """
+    r""" :math:`1'=\frac{\pi}{10800}` rad."""
     return rad*10800./_np.pi
 
 
 def arcsec2rad(ars=1.):
-    r""" :math:`1'=\frac{pi}{648000}` """
+    r""" :math:`1"=\frac{\pi}{648000}` rad."""
     return ars*_np.pi/648000.
 
 
 def rad2arcsec(rad=1.):
-    r""" :math:`1^\circ=\frac{pi}{648000}` """
+    r""" :math:`1"=\frac{\pi}{648000}` rad. """
     return rad*648000./_np.pi
 
 
 def mas2rad(mas=1.):
-    r""" :math:`1^\circ=\frac{pi}{648000000}` """
+    r""" 1 mas :math:`=\frac{\pi}{648000000}` rad."""
     return mas*_np.pi/648000000.
 
 
 def rad2mas(rad=1.):
-    r""" :math:`1^\circ=\frac{pi}{648000000}` """
+    r""" 1 mas :math:`=\frac{\pi}{648000000}` rad."""
     return rad*648000000./_np.pi
 
 
 def deg2mas(deg=1.):
-    r""" :math:`1^\circ = 3600000` """
+    r""" :math:`1^\circ = 3600000` mas."""
     return deg*3600000.
 
 
 def mas2deg(mas=1.):
-    r""" :math:`1^\circ = 3600000` """
+    r""" :math:`1^\circ = 3600000` mas."""
     return mas/3600000.
 
 

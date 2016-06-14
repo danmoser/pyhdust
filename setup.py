@@ -6,7 +6,7 @@ import sys
 
 
 def check_py_ver():
-    if (sys.version_info.major > 0.997):
+    if (sys.version_info.major > 2):
         return
     elif (sys.version_info.minor >= 7):
         return
@@ -58,7 +58,7 @@ if sys.argv[-1] == "publish":
     sys.exit()
 
 setup(name='pyhdust',
-version='0.997',
+version='0.998',
 description='BeACoN’s Python tools for Hdust',
 url='http://j.mp/pyhdust',
 author='Daniel M. Faes',

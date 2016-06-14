@@ -12,7 +12,7 @@ sufixo `.cal`, algumas informacoes no header sao necessarias:
     * 'MJD-OBS' ou 'MJD' ou 'JD' ou 'DATE-OBS'
     * 'CRVAL1' + 'CDELT1'
 
-IMPORTANT NOTE: after the version 0.9.81, the "analline" function returns 
+IMPORTANT NOTE: after the version 0.981, the "analline" function returns 
 FWHM instead of `depthcent`.
 
 :license: GNU GPL v3.0 https://github.com/danmoser/pyhdust/blob/master/LICENSE
@@ -27,6 +27,7 @@ from itertools import product as _iproduct
 import pyhdust.phc as _phc
 import pyhdust.jdcal as _jdcal
 import pyhdust as _hdt
+from six import string_types as _strtypes
 
 try:
     import pyfits as _pyfits
@@ -492,33 +493,6 @@ def linfit(x, y, ssize=0.05, yerr=_np.empty(0)):
     new_y = medy0 + (medy1 - medy0) * (x - medx0) / (medx1 - medx0)
     idx = _np.where(new_y != 0)
     y[idx] = y[idx] / new_y[idx]
-    # 
-    # a = (medy1 - medy0)/(medx1 - medx0)
-    # b = -a*medx0+medy0
-    # 
-    # if ssize == 1:
-        # ssize = 2
-    # x0s = x[:ssize]
-    # y0s = y[:ssize]
-    # dif = [y0s[i]-(a*x0s[i]+b) for i in range(len(x0s))]
-    # idx = _np.argsort(_np.abs(dif))[:ssize/2]
-    # medx0 = _np.average(x0s[idx])
-    # if ssize/2 > 9:
-        # medy0 = _np.median(y0s[idx])
-    # else:
-        # medy0 = _np.average(y0s[idx])   
-    # x1s = x[-ssize:]
-    # y1s = y[-ssize:]
-    # dif = [y1s[i]-(a*x1s[i]+b) for i in range(len(x1s))]
-    # idx = _np.argsort(_np.abs(dif))[:ssize/2]
-    # medx1 = _np.average(x1s[idx])
-    # if ssize/2 > 9:
-        # medy1 = _np.median(y1s[idx])
-    # else:
-        # medy1 = _np.average(y1s[idx])    
-    # new_y = medy0 + (medy1 - medy0) * (x - medx0) / (medx1 - medx0)
-    # idx = _np.where(new_y != 0)
-    # y[idx] = y[idx]/new_y[idx]
     if len(yerr) == 0.:
         return y
     else:
@@ -1632,7 +1606,7 @@ def plotSpecData(dtb, limits=None, civcfg=[1, 'm', 2013, 1, 1],
     If `lims` is defined, `setylim` can be set to True.
 
     OUTPUT: Written image."""
-    if isinstance(dtb, basestring):
+    if isinstance(dtb, _strtypes):
         print('# Loading dtb {0}'.format(dtb))
         dtb = _np.loadtxt(dtb)
     if ident is not None:

@@ -24,6 +24,7 @@ from itertools import product as _itprod
 import pyhdust.phc as _phc
 import pyhdust.jdcal as _jdcal
 from pyhdust.tabulate import tabulate as _tab
+from six import string_types as _strtypes
 
 try:
     import matplotlib.pyplot as _plt
@@ -33,7 +34,7 @@ try:
 except:
     print('# Warning! matplotlib, pyfits and/or scipy module not installed!!!')
 
-__version__ = 0.997
+__version__ = 0.998
 __release__ = "Beta"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -63,10 +64,10 @@ def sed2info(sfile):
     """ Read info from a HDUST SED2 file.
 
     :type  sfile: str
-    :param sfile: HDUST SED2 file path.
+    :param sfile: HDUST SED2 file path
 
     :rtype: tuple of floats
-    :returns:``nlbd, nobs, Rstar, Rwind`` (HDUST parameters)
+    :returns: ``nlbd, nobs, Rstar, Rwind``, the HDUST parameters
     """
     f0 = open(sfile, 'r')
     fcont = f0.readlines()
@@ -86,11 +87,11 @@ def readsed2(sfile):
     Note: this format is different of **readfullsed2**.
 
     :type sfile: str
-    :param sfile: HDUST SED2 file path.
+    :param sfile: HDUST SED2 file path
 
-    :rtype: np.array
-    :returns: array(nobs*nlbd, -1), where number of columns from SED2 file 
-    replaces "-1".)
+    :rtype: ``np.array(nobs*nlbd, -1)``, where number of columns from SED2 file 
+    replaces "-1"
+    :returns: SED2 header info
     """
     sed2data = _np.loadtxt(sfile, skiprows=1)
     return sed2data
@@ -100,11 +101,11 @@ def readfullsed2(sfile):
     """ Read data from HDUST fullSED2 file.
 
     :type sfile: str
-    :param sfile: HDUST fullSED2 file path.
+    :param sfile: HDUST fullSED2 file path
 
-    :rtype: np.array[nobs, nlbd, -1] (number of columns from fullSED2 file 
-        replaces "-1".)
-    :returns: HDUST fullSED2 file content.
+    :rtype: ``np.array(nobs, nlbd, -1)``, where the number of columns from 
+        fullSED2 file replaces "-1"
+    :returns: HDUST fullSED2 file content
     """
     sed2data = _np.loadtxt(sfile, skiprows=5)
     nlbd, nobs, Rstar, Rwind = sed2info(sfile)
@@ -140,7 +141,7 @@ def readtemp(tfile, quiet=False):
     :type sfile: str
     :param sfile: HDUST fullSED2 file path.
 
-    :rtype: np.array[nobs, nlbd, -1] (number of columns from fullSED2 file 
+    :rtype: ``np.array(nobs, nlbd, -1)``, number of columns from fullSED2 file 
         replaces "-1".)
     :returns: HDUST fullSED2 file content.
 
@@ -788,7 +789,7 @@ def plottemp(tfiles, philist=[0], interpol=False, xax=0, fmt=['png'],
 
     OUTPUT = ...
     """
-    if isinstance(tfiles, basestring):
+    if isinstance(tfiles, _strtypes):
         tfiles = [tfiles]
     if title is None:
         title = tfiles[-1]

@@ -34,6 +34,7 @@ import pyhdust.oifits as _oifits
 import pyhdust.images as _img
 from pyhdust.spectools import linfit as _linfit
 import copy as _copy
+from six import string_types as _strtypes
 
 try:
     import matplotlib as _mpl
@@ -710,7 +711,7 @@ def readoifits(oifile, oitype='PIO', quiet=True):
 
     Possible oitypes=["PIO", "AMB"]
     """
-    if isinstance(oifile, basestring):
+    if isinstance(oifile, _strtypes):
         oidata = _oifits.open(oifile, quiet=quiet)
     else:
         oidata = _copy(oifile)
