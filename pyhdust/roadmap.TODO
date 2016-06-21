@@ -3,9 +3,9 @@ To Be Done (TODOs)
 In files, look for TBD and TODO flags.
 
 General:
-☐ pip install for pyhdust
+✔ pip install for pyhdust @done (16-06-17 13:26)
 ✔ Transparent legend-box on the graphs @done (16-04-30 14:46)
-☐ Define a interpolation policy (scipy interpolate vs numpy.interp)
+✔ Define a interpolation policy (scipy interpolate vs numpy.interp) @done (16-06-17 13:26)
 ☐ Define unique 'Planejamento_LNA' as MySQL 
 (targets [coordinates], P and Ph0 [mags.], nights observed vs. bad weather, etc.)
 ☐ Standardization at CGS/SI units

@@ -9,7 +9,7 @@ History:
 :co-author: Daniel Bednarski
 :license: GNU GPL v3.0 https://github.com/danmoser/pyhdust/blob/master/LICENSE 
 """
-
+from __future__ import print_function
 import os as _os
 import re as _re
 import pwd as _pwd
@@ -28,6 +28,12 @@ import pyhdust.jdcal as _jdcal
 from pyhdust import hdtpath as _hdtpath
 # from sys import _argv
 # from matplotlib import rc as _rc
+import sys as _sys
+
+
+def eprint(*args, **kwargs):
+    print(*args, file=_sys.stderr, **kwargs)
+    return
 
 try:
     import matplotlib.pyplot as _plt
@@ -37,14 +43,14 @@ try:
     from scipy.integrate import simps as _simps
     from scipy.interpolate import interp1d as _interp1d
     import matplotlib as _mpl
-except:
-    print('# Warning! matplotlib and/or pyfits module not installed!!!')
+    _mpl.rcParams['pdf.fonttype']=42
+except ImportError:
+    eprint('# Warning! matplotlib and/or pyfits module not installed!!!')
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
 
 
-_mpl.rcParams['pdf.fonttype']=42
 filters = ['u','b','v','r','i']
 fonts = [20, 17, 17, 14, 13]  # Font sizes for titles, axes labels, axes values, key label of graphs, subplot labels
 
@@ -3574,10 +3580,10 @@ def graf_qu(logfile, path2=None, mode=1, thetfile=None, isp=[], odr=True, mcmc=F
                     
                 else:
                     if not odr_fit or len(q) <= 1:
-                        print '='*60
-                        print '='*6 + '  FILTER ' + filt.upper()
-                        print '='*60
-                        print ''
+                        print('='*60)
+                        print('='*6 + '  FILTER ' + filt.upper())
+                        print('='*60)
+                        print('')
                     param, sparam1, sparam2 = fitmcmc(q+q_filt,u+u_filt,sq+sq_filt,su+su_filt,filt)
 
                 num=len(q+q_filt)

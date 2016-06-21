@@ -2,9 +2,21 @@
 
 """PyHdust *input* module: Hdust input tools.
 
+Definitions on Classes:
+- fname: is the original file for reference (kept as stated in the input). 
+The following variables are defined based on the fname.
+- proj: directory to the project (mandatory)
+- modn: 'modn' structure
+- suf: only the suffix.
+- one use Class.set_fname(fname) to update everything.
+- convention is to use "_" as separador. So, use "-" for a given **name**, as 
+for the projects.
+
 :co-author: Rodrigo Vieira
 :license: GNU GPL v3.0 https://github.com/danmoser/pyhdust/blob/master/LICENSE
 """
+from __future__ import print_function
+import sys as _sys
 import os as _os
 import numpy as _np
 from glob import glob as _glob
@@ -12,9 +24,405 @@ from itertools import product as _product
 import pyhdust.phc as _phc
 import pyhdust.rotstars as _rot
 import pyhdust as _hdt
+from collections import OrderedDict as _OrderedDict
+from collections import Mapping as _mapdict
+from six import string_types as _string_types
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
+
+
+def eprint(*args, **kwargs):
+    print(*args, file=_sys.stderr, **kwargs)
+    return
+
+
+class Input(object):
+    """ Input class; no fname (ie., specific suf/model defined) 
+
+    - Criado no novo `make_inpjob`. 
+    - Terminando verificação de existência prévia de *.inp e *.sed2
+    - Incluído verificação do *_SEI.sed2
+    """
+    f0 = open(_os.path.join(_hdt.hdtpath(), 'refs', 'REF_disco.txt'))
+    mod = f0.readlines()
+    f0.close()
+
+    attl_to_chk = ['case1', 'case2', 'composition', 'controls', 'gridcells', 
+        'observers', 'perturbations', 'source']
+
+    def __init__(self, proj=None, modn='mod01'):
+        self.proj = proj
+        if proj is None:
+            self.proj = _os.path.split(_os.getcwd())[1]
+        self.set_modn(modn)
+        return
+
+    def set_modn(self, modn):
+        self.modn = modn
+        if isinstance(modn, _string_types):
+            if modn.isdigit():
+                modn = int(modn)
+            elif not modn.startswith('mod'):
+                raise ValueError('# ERROR! modn must startswith "mod"')
+        if isinstance(modn, ( int, long )):
+            if modn > 0 and modn < 1000:
+                self.modn = 'mod{0:02d}'.format(int(modn))
+            else:
+                raise ValueError('# ERROR! modn must be <1000')
+
+    def set_input(self, docasesl=None, case1='step1', case2='step1_refine', 
+        case3l=None, imagesl=None, composition='pureH', controls='controls', 
+        gridcells='grid', observers='observers', perturbations='', source='', 
+        chkout=True, c1max=20, c2max=24, c3prefl=None, clustl=None, ncore=48, 
+        walltime='72:00:00', email='$USER@localhost', touch=False, **kwargs):
+
+        if isinstance(case3l, _string_types):
+            self.case3l = [case3l]
+        elif case3l is None:
+            self.case3l = []
+        else:
+            self.case3l = case3l
+        if isinstance(imagesl, _string_types):
+            self.imagesl = [imagesl]
+        elif imagesl is None:
+            self.imagesl = []
+        else:
+            self.imagesl = imagesl
+
+        # docases == list of numbers    
+        if docasesl is None:
+            self.docasesl = [1, 2, 3]
+        else:
+            self.docasesl = docasesl
+
+        self.case1 = case1
+        self.case2 = case2
+        self.composition = composition
+        self.controls = controls
+        self.gridcells = gridcells
+        self.observers = observers 
+        self.perturbations = perturbations
+        self.source = source
+
+        self.chkout = chkout
+        self.c1max = str(c1max)
+        self.c2max = str(c2max)
+        if isinstance(c3prefl, _string_types):
+            self.c3prefl = [c3prefl]
+        elif c3prefl is None:
+            self.c3prefl = []
+        else:
+            self.c3prefl = c3prefl
+        if isinstance(clustl, _string_types):
+            self.clustl = [clustl]
+        elif clustl is None:
+            self.clustl = []
+        else:
+            self.clustl = clustl
+        self.ncore = ncore
+        self.walltime = walltime
+        self.email = email
+        self.touch = touch
+
+        for it in kwargs.items():
+            setattr(self, *it)
+        return
+
+    def write_inp(self):
+        bdir = self.proj
+        if bdir == _os.path.split(_os.getcwd())[1]:
+            bdir = ""
+
+        head = "PROJECT = {0}\nMODEL = {1}".format(_os.path.split(
+            self.proj)[1], self.modn[3:])
+
+        c1 = "\n\n"
+        if (_os.path.exists(_os.path.join(bdir, self.modn, self.modn + 
+            self.suf + self.c1max + '.temp')) and self.chkout) or (1 not in 
+            self.docasesl):
+                c1 += '! '
+        c1 += ("SUFFIX='{suf}'  SIMULATION='{case1}' SOURCE='{source}' "
+            "COMPOSITION='{composition}' GRIDCELLS='{gridcells}' "
+            "CONTROLS='{controls}' ".format(suf=self.suf, case1=self.case1,
+                source=self.source, composition=self.composition, 
+                gridcells=self.gridcells, controls=self.controls))
+        if len(self.perturbations) > 0:
+            c1 += "PERTURBATIONS='{0}' ".format(self.perturbations)
+
+        c2 = '\n\n'
+        if (_os.path.exists(_os.path.join(bdir, self.modn, self.modn + 
+            self.suf + self.c2max + '.temp')) and self.chkout) or (2 not in 
+            self.docasesl):
+                c2 += '! '
+        c2 += ("SUFFIX='{suf}'  SIMULATION='{case2}' SOURCE='{source}' "
+            "COMPOSITION='{composition}' GRIDCELLS='{gridcells}' "
+            "CONTROLS='{controls}' ".format(suf=self.suf, case2=self.case2,
+                source=self.source, composition=self.composition, 
+                gridcells=self.gridcells, controls=self.controls))
+        if len(self.perturbations) > 0:
+            c2 += "PERTURBATIONS='{0}' ".format(self.perturbations)
+
+        c3 = '\n\n'
+        gen = (sim for sim in self.case3l if 3 in self.docasesl)
+        for sim in gen:
+            if self.chkout:
+                pref = self.c3prefl[self.case3l.index(sim)]
+                if not pref.endswith('_'):
+                    pref = pref+'_'
+                s2name = _os.path.join(bdir, self.modn, pref + self.modn + 
+                    self.suf)
+                if (_os.path.exists(s2name + '.sed2')) or (
+                    _os.path.exists(s2name + '_SEI.sed2')):
+                    c3 += '! '
+            c3 += ("SUFFIX='{suf}'  SIMULATION='{sim}' SOURCE='{source}' "
+                "COMPOSITION='{composition}' GRIDCELLS='{gridcells}' "
+                "CONTROLS='{controls}' OBSERVERS='{obs}' ".format(suf=self.suf, 
+                    sim=sim, source=self.source, 
+                    composition=self.composition, gridcells=self.gridcells, 
+                    controls=self.controls, obs=self.observers))
+            if len(self.perturbations) > 0:
+                c3 += "PERTURBATIONS='{0}' ".format(self.perturbations)
+            img = self.imagesl[self.case3l.index(sim)]
+            if len(img) > 0:
+                c3 += "IMAGES='{0}' ".format(img)
+            c3 += '\n'
+
+        outname = _os.path.join(bdir, self.modn, self.modn + self.suf + '.inp')
+        f0 = open(outname, 'w')
+        f0.writelines(head+c1+c2+c3)
+        f0.close()
+        print('# {0} written!'.format(outname))
+        return 
+
+    def _hassiminp(self, inpname):
+        inp = open(inpname).read().split('\n')
+        sims = [1 for line in inp if (line.upper().find('SUFFIX')>= 0 and 
+            not line.startswith('!'))]
+        return bool(sims)
+
+    def write_job(self):
+        if self.touch is True:
+            raise NotImplementedError('# touch option not available')
+
+        bdir = self.proj
+        if bdir == _os.path.split(_os.getcwd())[1]:
+            bdir = ""
+        outname = _os.path.join(bdir, self.modn, self.modn + self.suf + '.inp')
+
+        if not self._hassiminp(outname):
+            print('# Message: No simulations inside {0}'.format(outname))
+            return
+
+        for cl in self.clustl:
+            if cl.lower().startswith('job'):
+                cl = 'job'
+                reffile = 'REF.job'
+                reps = ( (3, 'hdust', 'hd_'+'_'.join((self.proj, self.modn))), 
+                    (4, '128', self.ncore), (4, '36:00:00', self.walltime), 
+                    (8, 'alexcarciofi@gmail.com', self.email), 
+                    (11, 'hdust_bestar2.02.inp', outname),
+                    (23, 'cd ${PBS_O_WORKDIR}', ('cd ${{PBS_O_WORKDIR}}\n'
+                        'printf "{0}\\n\\n" >> output_${{PBS_JOBID}}\n'.format(
+                            outname))),
+                )
+            elif cl.lower().startswith('oar'):
+                raise NotImplementedError('# oar is missing for write_job')
+                cl = 'oar'
+                reffile = ''
+                reps = ('',)
+            else:
+                eprint('# Warning! Option {0} for clusters ignored'.format(cl))
+                continue
+
+            if not _os.path.exists(_os.path.join(bdir, cl)):
+                _os.makedirs(_os.path.join(bdir, cl))
+            clname = (_os.path.join(bdir, cl, self.modn + self.suf)+"."+cl)
+
+            f0 = open(_os.path.join(_hdt.hdtpath(), 'refs', reffile))
+            modi = f0.readlines()
+            f0.close()
+            for r in reps:
+                _phc.repl_fline_val(modi, *r)
+
+            f0 = open(clname, 'w')
+            print('# {0} written!'.format(clname))
+            f0.writelines(modi)
+            f0.close()
+        return
+
+
+class Disk(Input):
+    """ Disk class """
+    f0 = open(_os.path.join(_hdt.hdtpath(), 'refs', 'REF_disco.txt'))
+    mod = f0.readlines()
+    f0.close()
+
+    def __init__(self, proj=None, modn='mod01'):
+        super(Disk, self).__init__(proj=proj, modn=modn)
+        return
+
+    def set_disk(self, renv=18.6, mh=1.5, ht=60., mr=2., dval=1e12, hseq=False, 
+        alpha=.5, mu=.5, R0r=100, denstype=None, **kwargs):
+        """ denstype = ['n0', 'sig0', 'mdot'] 
+
+        ``sig0`` means g/cm2 instead of ``n0``"""
+        self.renv = renv
+        self.mh = mh
+        self.ht = ht
+        self.mr = mr
+        self.dval = dval
+        self.hseq = hseq
+        self.alpha = alpha
+        self.mu = mu
+        self.R0r = R0r
+        if isinstance(denstype, _string_types):
+            if denstype.lower() in ['n0', 'sig0', 'mdot']:
+                self.denstype = denstype
+            denstype = None
+        if denstype is None:
+            eprint('# Warning! Guessing the denstype...')
+            self.denstype = 'n0'
+            if dval < 1e-2:
+                self.denstype = 'mdot'
+            elif dval < 1e2:
+                self.denstype = 'sig0'
+
+        for it in kwargs.items():
+            setattr(self, *it)
+        return
+
+    def set_suf(self, vfmt=''):
+        """    vfmt = dict(zip(['renv', 'dval', 'ht', 'M', "n"], 
+        ['{:04.1f}', '{:.1e}', '{:02.0f}', '{:04.1f}', '{:.1f}'])) """
+        if isinstance(vfmt, _mapdict):
+            self.vfmt = vfmt
+        if hasattr(self, 'vfmt'):
+            if isinstance(self.vfmt, _mapdict):    
+                self.suf = '_' + '_'.join(it[0]+it[1].format(getattr(self, 
+                    it[0])) for it in self.vfmt.items())
+            else:
+                delattr(self, vfmt)
+                self.suf = vfmt
+        else:
+            self.suf = vfmt
+
+    def __str__(self):
+        return self.suf
+
+    def makedisk(self):
+        if not self.modn.startswith('mod'):
+            raise ValueError('# ERROR! Invalid Disk.modn')
+        modi = Disk.mod[:]
+
+        if self.hseq is True and self.denstype is not 'mdot':
+            print('# Warning! Your choice of HSEQ don\'t appears to be '
+                'consistent')
+
+        _ = _phc.repl_fline_val(modi, 13, '18.6', self.renv)
+        if self.denstype != 'mdot':
+            _ = _phc.repl_fline_val(modi, 20, '2.0', self.mr)
+        else:
+            _ = _phc.repl_fline_val(modi, 23, '1.', self.alpha)
+            _ = _phc.repl_fline_val(modi, 24, '0.', self.R0r)
+        if self.hseq:
+            _ = _phc.repl_fline_val(modi, 25, '= 0', '= 1')
+            _ = _phc.repl_fline_val(modi, 31, '0', '1')
+            _ = _phc.repl_fline_val(modi, 36, '1.5', self.mh)
+        else:
+            _ = _phc.repl_fline_val(modi, 33, '1.5', self.mh)
+        if float(self.ht) > 1000:
+            _ = _phc.repl_fline_val(modi, 40, '18000.', self.ht)
+        else:
+            _ = _phc.repl_fline_val(modi, 38, '1', '2')
+            if self.ht < 1:
+                self.ht *= 100
+            _ = _phc.repl_fline_val(modi, 43, '72.', self.ht)
+
+        if self.denstype == 'sig0':
+            raise ValueError('# ERROR! `sig0` is not a valid option yet')
+        elif self.denstype == 'n0':
+            _ = _phc.repl_fline_val(modi, 52, '2.35E13', self.dval)
+        else:
+            _ = _phc.repl_fline_val(modi, 49, '2', '3')
+            _ = _phc.repl_fline_val(modi, 55, '1.E-9', self.dval)
+
+        bdir = self.proj
+        if bdir == _os.path.split(_os.getcwd())[1]:
+            bdir = ""
+        if not _os.path.exists(_os.path.join(bdir, self.modn)):
+            _os.makedirs(_os.path.join(bdir, self.modn))
+        self.fname = (_os.path.join(bdir, self.modn, self.modn + self.suf) + 
+            ".txt")
+        f0 = open(self.fname, 'w')
+        print('# {0} written!'.format(self.fname))
+        f0.writelines(modi)
+        f0.close()
+
+        return
+
+
+class HdustMod(object):
+    """ HdustMod doc 
+    """
+    def __init__(self, fname=None):
+        self.fname = fname
+        if fname is not None:
+            self.set_fname(fname)
+        return
+
+    def set_fname(self, fname):
+        self.fname = fname
+        self.modn, self.suf = _os.path.split(fname)
+        self.suf = _os.path.splitext(self.suf)[0]
+        if not self.modn.startswith('mod'):
+            self.path, self.modn = _os.path.split(self.modn)
+        else:
+            self.path = ''
+        if len(self.modn) == 0:
+            self.modn = 'mod' + self.suf.split('mod')[-1].split('_')[0]
+        self.suf = '_'+'_'.join(self.suf.split('mod')[-1].split('_')[1:])
+        ext = _os.path.splitext(fname)[1]
+        if ext == '.log':
+            self._fill()
+        else:
+            self._fillfname()
+
+    def _fill(self):
+        f0 = open(self.fname).read().split('\n')
+        for it in self.vdict.items():
+            setattr(self, it[0], _phc.fltTxtOccur(it[1], f0))
+        return
+
+    def _fillfname(self):
+        for it in self.vdict.keys():
+            setattr(self, it, _phc.fltTxtOccur(it, self.suf))
+        return
+
+    def readfs2ob(self, obidx):
+        s2d = _hdt.readfullsed2(self.fname)
+        self.arr_lbd = s2d[obidx, :, 2]
+        self.arr_flx = s2d[obidx, :, 3]
+        self.arr_pol = s2d[obidx, :, 7]
+        self.ob = _np.round(_np.arccos(s2d[obidx, 0, 0])*180./_np.pi, 1)
+        return
+
+    def __str__(self):
+        if self.fname is None:
+            return 'None'
+        return '_'+'_'.join(it[0]+it[1].format(getattr(self, it[0])) for it in 
+            self.vfmt.items())
+
+
+class AeriMod(HdustMod):    
+    """docstring for AeriMod"""
+    vdict = dict(zip(['dval', 'ht', "nr", 'renv', 'M'],
+            ['n_0', 'Fraction', ' n ', 'R_env', ' M '])) 
+    vfmt = _OrderedDict(zip(['dval', 'ht', "nr", 'renv', 'M'], 
+        ['{:.1e}', '{:02.0f}', '{:.1f}', '{:04.1f}', '{:04.1f}']))
+
+    def __init__(self, fname):
+        super(AeriMod, self).__init__(fname)
 
 
 def makeDiskGrid(modn='01', mhvals=[1.5], hvals=[60.], rdvals=[18.6], 
@@ -327,7 +735,7 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'],
             case1.append("PERTURBATIONS = '{0}'\n".format(perturbations))
         if 1 not in cases:
             for i in range(len(case1)):
-                case1[i] = '!~ ' + case1[i]
+                case1[i] = '! ' + case1[i]
         return case1
 
     def doCase2(inp, cases):
@@ -347,7 +755,7 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'],
             case1.append("PERTURBATIONS = '{0}'\n".format(perturbations))
         if 2 not in cases:
             for i in range(len(case1)):
-                case1[i] = '!~ ' + case1[i]
+                case1[i] = '! ' + case1[i]
         return case1
 
     def doCase3(inp, simchk):
@@ -384,7 +792,7 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'],
             case1.append('\n')
             if not simchk[i]:
                 for i in range(len(case1)):
-                    case1[i] = '!~ ' + case1[i]
+                    case1[i] = '! ' + case1[i]
             case3 += case1
         return case3
 

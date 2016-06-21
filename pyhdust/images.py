@@ -25,16 +25,23 @@ img.save('CMYK2rgb.jpg')
 
 :license: GNU GPL v3.0 https://github.com/danmoser/pyhdust/blob/master/LICENSE
 """
+from __future__ import print_function
 import os as _os
 import numpy as _np
 import time as _time
 import pyhdust as _hdt
 from pyhdust.hdrpil import hdr as _hdr
 import pyhdust.phc as _phc
+import sys as _sys
+
+
+def eprint(*args, **kwargs):
+    print(*args, file=_sys.stderr, **kwargs)
+    return
 
 try:
     import PIL as _PIL
-except:
+except ImportError:
     print('# Warning! PIL (Pillow) module not installed!!!')
 
 __author__ = "Daniel Moser"

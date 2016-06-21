@@ -1,6 +1,6 @@
 pyhdust
 ========
-**Astronomy and Astrophysics python tools.**
+**Analysis tools for multi-technique astronomical data and** *hdust* **models**.
 
 Full documentation at `pyhdust.readthedocs.io <http://pyhdust.readthedocs.io>`_.
 
@@ -19,7 +19,20 @@ I strongly suggest users to use the ``pip`` plataform:
 
 If your are not the root of the system, add the flag ``--user`` to the command above. Dependencies (as filters efficiency and stellar evolution models) are included in the subdirectories.
 
-PyHdust requires the numpy module. Optionally, it makes use of: 
+.. warning::
+
+    Never combine ``sudo`` with ``--user``! Otherwise you will face critical permission problems for your packages!
+
+.. note:: 
+
+    To use the **pyhdust** scripts, the binaries path of your pip installation directory must be in system ``PATH``. If you don't find them, adapt the following command to your ``$HOME/.bashrc``:
+
+    .. code:: bash
+
+        PATH=$PATH:~/.local/bin/
+
+
+**pyhdust** requires the numpy module. Optionally, it makes use of: 
 
     - matplotlib
     - pyfits
@@ -36,12 +49,6 @@ To only **update** the package:
 
 ``-U`` forces the upgrade and ``--no-deps`` do not reinstall the dependent packages. 
 
-To uninstall it:
-
-.. code:: bash
-
-    pip uninstall pyhdust
- 
 For other options, consult the `full documentation <http://pyhdust.readthedocs.io>`_.
 
 

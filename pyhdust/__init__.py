@@ -11,8 +11,9 @@ This module contains:
 - Astronomic useful and plotting functions
 - Astronomic filters tools
 
-:license: GNU GPL v3.0 https://github.com/danmoser/pyhdust/blob/master/LICENSE
+:license: GNU GPL v3.0 https://github.com/danmoserp/yhdust/blob/master/LICENSE
 """
+from __future__ import print_function
 import os as _os
 import time as _time
 import datetime as _dt
@@ -25,17 +26,24 @@ import pyhdust.phc as _phc
 import pyhdust.jdcal as _jdcal
 from pyhdust.tabulate import tabulate as _tab
 from six import string_types as _strtypes
+import sys as _sys
+
+
+def eprint(*args, **kwargs):
+    print(*args, file=_sys.stderr, **kwargs)
+    return
 
 try:
     import matplotlib.pyplot as _plt
     import matplotlib.patches as _mpatches
     from scipy import interpolate as _interpolate
     import pyfits as _pf
-except:
-    print('# Warning! matplotlib, pyfits and/or scipy module not installed!!!')
+except ImportError:
+    eprint('# Warning! matplotlib, pyfits, six and/or scipy module not '
+        'installed!!!')
 
-__version__ = 0.999
-__release__ = "Beta"
+__version__ = '1.0.0'
+__release__ = "Stable"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
 
@@ -164,8 +172,8 @@ def readtemp(tfile, quiet=False):
         if not quiet:
             print('# XDR {0} completely read!'.format(tfile))
     else:
-        print('# Warning: XDR {0} not completely read!'.format(tfile))
-        print('# length difference is {0}'.format( (len(f) - ixdr) / 4 ) )
+        eprint('# Warning: XDR {0} not completely read!'.format(tfile))
+        eprint('# length difference is {0}'.format( (len(f) - ixdr) / 4 ) )
     #
     pcrc = data[0, :, 0, 0]
     pcr = _np.zeros(ncr + 1)
@@ -340,8 +348,8 @@ def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
                         == 0:
                         key = ''
                         while key.upper() != 'Y':
-                            print('# WARNING: {0} has different HDUST output!'.
-                                  format(modelname))
+                            eprint('# Warning: {0} has different HDUST '
+                                'output!'.format(modelname))
                             key = raw_input(
                                 'Do you want do proceed? (y/other): ')
                     nlbd += sed2info(file)[0]
@@ -385,8 +393,8 @@ def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
                         == 0:
                         key = ''
                         while key.upper() != 'Y':
-                            print('# WARNING: {0} has different HDUST input!!'.
-                                  format(modelname))
+                            eprint('# Warning: {0} has different HDUST '
+                                'input!!'.format(modelname))
                             key = raw_input(
                                 'Do you want do proceed? (y/other): ')
                     idx = _np.where(
@@ -447,7 +455,7 @@ def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
             f0.writelines(outfile)
             f0.close()
         else:
-            print('# WARNING: No SED2 found for {0}'.format(model))
+            eprint('# Warning: No SED2 found for {0}'.format(model))
     return
 
 
@@ -558,92 +566,53 @@ def gentemplist(tfile, tfrange=None, avg=True):
     return ltfile, ltlabel
 
 
-def genlog(mods=None, path=None, extrainfo=None):
-    """ Gen. log of the calculated models of the project.
-
-    ppath = Project's path. If it is not given, it assumes the local pwd.
-
-    | extrainfo = {\
-    | 'mod01':'i=60',\
-    | 'mod02':'i=60+70',\
-    | 'mod03':'i=60+70',\
-    | 'mod04':'i=60+70/-source NO ROT',\
-    | 'mod05':'i=60+70/?',\
-    | 'mod06':'i=60+70/?'}
-
-    INPUT: `path` (string), `extrainfo` (dictionary with modn number as index),
-    `mods` (list of model folders. If None, then all).
-
-    OUTPUT: file written.
+def genlog(proj=None, mods=None):
+    """ Generate a log of the runned simulations. 
     """
-    if path is None:
-        path = _os.getcwd()
+    if proj is None:
+        proj = _os.getcwd()
+    modfld = mods
     if mods is None:
-        modfld = _glob('{0}/mod*'.format(path))
-    else:
-        modfld = mods
+        modfld = [f for f in _os.listdir(proj) if (f.startswith('mod') and 
+            _os.path.isdir(f))]
     modfld.sort()
 
-    # MODN, steps, sed2, maps, extrainfo
-    tab = _np.zeros((5000, 5), dtype='|S127')
-    i = 0
-
+    basedir = _os.getcwd()
+    # name, temp, sed2, map
+    allmods = [[], [], [], []]
     for modn in modfld:
-        modnn = _phc.trimpathname(modn)[1]
-        modglob = _glob('{0}/*'.format(modn))
-        mods = [x for x in modglob if (x.find('.txt') > -1 and x.find('{0}_'.
-            format(modnn)) > -1 )]
-        print('# Running catalogue of {0}'.format(modn))
-        for mod in mods:
-            suf = mod[mod.rfind('/') + 1:-4]
-
-            # step1 = _glob('{0}/{1}??.temp'.format(modn, suf))
-            sufglob = [x for x in modglob if (x.find(suf) > -1)]
-            step1 = [x for x in sufglob if (x.find('.temp') > -1 and
-            x.find('/{0}_'.format(modnn)) > -1 and x.find('_avg') == -1)]
-            if len(step1) == 0:
-                step1 = ['0']
-            step1.sort()
-
-            # sed2 = _glob('{0}/*{1}_*.sed2'.format(modn, suf))
-            # sed2 += _glob('{0}/*{1}.sed2'.format(modn, suf))
-            sed2 = [x for x in sufglob if x.find('.sed2') > -1]
-            sed2.sort()
-            s2out = ''
-            for sedi in sed2:
-                s2out += sedi[sedi.rfind('/') + 1:sedi.find('_')] + '+'
-            s2out += '+'
-
-            # maps = _glob('{0}/*{1}_*.maps'.format(modn, suf))
-            # maps += _glob('{0}/*{1}.maps'.format(modn, suf))
-            maps = [x for x in sufglob if x.find('.map') > -1]
-            maps.sort()
-            mout = ''
-            for mapi in maps:
-                mout += mapi[mapi.rfind('/') + 1:mapi.find('_')] + '+'
-
-            if extrainfo is not None:
-                if modnn in extrainfo:
-                    extra = extrainfo[modnn]
+        _os.chdir(_os.path.join(proj, modn))
+        modn_list = _glob(modn+'*.txt')
+        allmods[0].extend(modn_list)
+        for imodn in modn_list:
+            suf = _os.path.splitext(imodn)[0]
+            #
+            tmp = sorted(_glob(suf+'[0-9][0-9].temp'))
+            if len(tmp) > 0:
+                allmods[1].append( _os.path.splitext(tmp[-1])[0][-2:] )
             else:
-                extra = ''
+                allmods[1].append( '' )
+            #
+            tmp = [s2[:s2.find(suf)] for s2 in 
+                sorted(_glob('*'+suf+'*.sed2'))]
+            if len(tmp) > 0:
+                allmods[2].append( ' '.join(tmp) )
+            else: 
+                allmods[2].append( '' )
+            #
+            tmp = [mp[:mp.find(suf)] for mp in 
+                sorted(_glob('*'+suf+'*.map*'))]
+            if len(tmp) > 0:
+                allmods[3].append( ' '.join(tmp) )
+            else:
+                allmods[3].append( '' )
+        _os.chdir(basedir)
 
-            tab[i] = (suf, step1[-1][-7:-5], s2out[:-1], mout[:-1], extra)
-            i += 1
-
-        if len(mods) == 0:
-            print('# NO model found in {0}'.format(modn))
-
-    # tab = tab[:i,:]
-    # tab = tab[tab[:,0].argsort()]
-    # _np.savetxt('log.csv', tab, fmt='%s', delimiter=',')
-    _np.savetxt(
-        '{0}/log.csv'.format(path), tab[:i, :], fmt='%s', delimiter=',')
-    # tab = _np.loadtxt('log.csv', dtype=str)
-    # tab = tab[tab[:,0].argsort()]
-    # _np.savetxt('log.csv', tab, fmt='%s', delimiter=',')
-    print('# Generated {0}/log.csv !'.format(path))
-    return
+    f0 = open(_os.path.join(proj, 'genlog.txt'), 'w')
+    f0.writelines(_tab(_np.array(allmods).T, tablefmt="tsv"))
+    print('# Generated {0} !'.format(_os.path.join(proj, 'genlog.txt')))
+    f0.close()
+    return _np.array(allmods)
 
 
 def printN0(modn):
@@ -740,7 +709,7 @@ def fs2rm_nan(fsed2, cols=[3], refcol=None):
             f2mtx[:, col][nans] = _np.interp(
                 x(nans), x(~nans), f2mtx[:, col][~nans])
         else:
-            print('# WARNING! The output must be checked!')
+            eprint('# Warning! The output must be checked!')
             f2mtx[:, col][nans] = _np.interp(f2mtx[:, refcol][nans], 
                 f2mtx[:, refcol][~nans], f2mtx[:, col][~nans])
     #
@@ -750,8 +719,8 @@ def fs2rm_nan(fsed2, cols=[3], refcol=None):
     elif _np.max(f2mtx[_np.isfinite(f2mtx)]) < 1000000:
         fmt = '%13.5f'
     else:
-        print('# ERROR at max values of fullsed2 {0}!!!!!!!!'.format(fsed2))
-        raise SystemExit(0)
+        eprint('# ERROR at max values of fullsed2 {0}!!!!!!!!'.format(fsed2))
+        raise SystemExit(1)
     _np.savetxt(fsed2, f2mtx, header='\n'.join(
         oldf[:5]), comments="", fmt=fmt, delimiter='')
     print('# {0} file updated!'.format(fsed2))
@@ -1658,8 +1627,8 @@ def readphotxdr(xdrfile='kur_ap00k0.xdr', quiet=False):
         if not quiet:
             print('# XDR {0} completely read!'.format(xdrfile))
     else:
-        print('# Warning: XDR {0} not completely read!'.format(xdrfile))
-        print('# length difference is {0}'.format( (len(f) - ixdr) / 4 ) )
+        eprint('# Warning: XDR {0} not completely read!'.format(xdrfile))
+        eprint('# length difference is {0}'.format( (len(f) - ixdr) / 4 ) )
 
     return lbdcentr, ltemp, llogg, lambdas, profiles
 
@@ -1789,7 +1758,7 @@ def masslum_OB(logL, classL='V'):
     elif classL.upper() == 'III':
         cs = [0.2084, 0.0643, 0.0325]
     elif classL.upper() != 'V':
-        print('# Warning! Invalid "classL". Assuming "V" for masslum_OB...')
+        eprint('# Warning! Invalid "classL". Assuming "V" for masslum_OB...')
     return cs[0] + cs[1]*logL + cs[2]*logL**2
 
 # MAIN ###

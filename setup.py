@@ -11,8 +11,9 @@ def check_py_ver():
     elif (sys.version_info[1] >= 7):
         return
     else: 
-        _ = raw_input('# ERROR! Python version not supported by pyhdust! '
+        print('# ERROR! Python version not supported by pyhdust! '
             'Upgrade to 2.7+\nPress Ctlr+Z to abort or ENTER to continue... ')
+        _ = raw_input('Press Ctlr+Z to abort or ENTER to continue... ')
 
 check_py_ver()
 
@@ -53,43 +54,63 @@ def rd(filename):
     f.close()
     return r
 
+
+def recfiles(chdir, path):
+    out = []
+    opath = os.getcwd()
+    os.chdir(chdir)
+    for root, dirs, fnames in os.walk(path):
+        for f in fnames:
+            out.append(os.path.join(root, f))
+    os.chdir(opath)
+    return out
+
 if sys.argv[-1] == "publish":
     os.system("python setup.py sdist upload")
     sys.exit()
 
 setup(name='pyhdust',
-version='0.999',
-description='BeACoN’s Python tools for Hdust',
-url='http://j.mp/pyhdust',
-author='Daniel M. Faes',
-author_email='dmfaes@gmail.com',
-license='GNU GPLv3.0',      
-# packages=['pyhdust','pyhdust_refs'],
-packages=find_packages(exclude=['build', 'docs', '*egg*', 'dist']),
-include_package_data=True,
-# include=['pyhdust_refs']),
-# package_data={'pyhdust':['*']},
-# , '../filters/*', '../refs/*', '../stmodels/*']},
-# include_package_data=True,
-zip_safe=False,
-install_requires=['numpy >= 1.6.0'],
-# install_requires=['numpy >= 1.6.0'],
-# data_files = [('refs/*', 'stmodels/*')],
-# package_dir = {'../'},
-long_description=rd('README.rst'),
-classifiers=[
-    "Development Status :: 4 - Beta",
-    "Intended Audience :: Developers",
-    "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: GNU General Public License v3 or later" + \
-    " (GPLv3+)",
-    "Operating System :: OS Independent",
-    "Programming Language :: Python",
+    version='1.0.0',
+    description=('Analysis tools for multi-technique astronomical data and '
+        'hdust models'),
+    url='http://j.mp/pyhdust',
+    author='Daniel M. Faes',
+    author_email='dmfaes@gmail.com',
+    license='GNU GPLv3.0',      
+    # packages=['pyhdust','pyhdust_refs'],
+    scripts=[os.path.join('scripts', f) for f in os.listdir('scripts') if 
+        os.path.splitext(f)[1] == '.py'],
+    packages=find_packages(exclude=['build', 'docs', '*egg*', 'dist']),
+    # include_package_data=True,
+    # include=recfiles('refs'),
+    package_data={'pyhdust': recfiles('pyhdust', '../refs') + ['../LICENSE', 
+        '../README.rst']},
+    # data_files = [('refs/*', 'stmodels/*')],
+    # package_dir = {'../'},
+    zip_safe=False,
+    install_requires=['numpy >= 1.6.0', 'six'],
+    long_description=rd('README.rst'),
+    classifiers=[
+        # "Development Status :: 4 - Beta",
+        "Development Status :: 5 - Production/Stable",
+        "Intended Audience :: Developers",
+        "Intended Audience :: Science/Research",
+        "License :: OSI Approved :: GNU General Public License v3 or later" + \
+        " (GPLv3+)",
+        "Operating System :: OS Independent",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 2",
+        "Programming Language :: Python :: 3",
+        "Topic :: Scientific/Engineering :: Astronomy",
+        "Topic :: Scientific/Engineering :: Physics"
     ],
+    keywords=['astronomy', 'astrophysics', 'science', 'hdust', 'Be stars',
+        'spectroscopy', 'polarimetry', 'interferometry', 'radiative transfer',
+        'optical-interferometry'],
 )
 
 if errimport:
     print('# You don\'t have "setuptools" installed!')
-    print('# Because of this, you need to ADAPT and run this command: \n')
-    print('# Warning! The cmd path MAY change according to your system')
+    print('# Because of this, you MAY need to copy the package data: \n')
+    print('# Warning! The path can change according to your system')
     print('$ cp -r -f pyhdust ~/.local/lib/python2.7/site-packages/')

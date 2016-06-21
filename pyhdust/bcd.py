@@ -13,13 +13,20 @@
 :co-author: Bruno Mota; Daniel Moser; Ahmed Elshaer 
 :license: Copyright 2015 Antoine Merand
 """
+from __future__ import print_function
 import os as os
 import numpy as _np
+import sys as _sys
+
+
+def eprint(*args, **kwargs):
+    print(*args, file=_sys.stderr, **kwargs)
+    return
 
 try:
     import matplotlib.pyplot as _plt
-except:
-    print('# Warning! Matplotlib module not installed!!!')
+except ImportError:
+    eprint('# Warning! Matplotlib module not installed!!!')
 
 __author__ = "Antoine Merand"
 __email__ = "amerand@eso.org"

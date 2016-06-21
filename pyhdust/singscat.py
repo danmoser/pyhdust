@@ -33,6 +33,7 @@ Carciofi+2013.
 
 :license: GNU GPL v3.0  https://github.com/danmoser/pyhdust/blob/master/LICENSE 
 """
+from __future__ import print_function
 import os as _os
 import numpy as _np
 import time as _time
@@ -41,13 +42,19 @@ import pyhdust.jdcal as _jdcal
 import pyhdust.poltools as _polt
 import pyhdust.phc as _phc
 import pyhdust.triangle as _triangle
+import sys as _sys
+
+
+def eprint(*args, **kwargs):
+    print(*args, file=_sys.stderr, **kwargs)
+    return
 
 try:
     import matplotlib.pyplot as _plt
     import emcee as _emcee
     from scipy.stats import percentileofscore as _perct
-except:
-    print('# Warning! matplotlib, scipy and/or emcee module not installed!!!')
+except ImportError:
+    eprint('# Warning! matplotlib, scipy and/or emcee module not installed!!!')
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"

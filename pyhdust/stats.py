@@ -4,7 +4,7 @@
 
 :license: GNU GPL v3.0 https://github.com/danmoser/pyhdust/blob/master/LICENSE
 """
-
+from __future__ import print_function
 import numpy as _np
 import pyhdust.phc as _phc
 import matplotlib.pyplot as _plt

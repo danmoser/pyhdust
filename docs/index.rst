@@ -1,9 +1,10 @@
 .. HDUST Python Tools documentation master file
 
-Welcome to BeACoN's Python Tools (**pyhdust**) documentation!
+Welcome to **pyhdust** documentation!
 =============================================================
+**Analysis tools for multi-technique astronomical data and** *hdust* **models**.
 
-Pyhdust is currently at **version 0.999**.
+Pyhdust is currently at **version 1.0.0**.
 
 About *hdust* code: Carciofi & Bjorkman (`2006 <http://adsabs.harvard.edu/abs/2006ApJ...639.1081C>`_, `2008 <http://adsabs.harvard.edu/abs/2008ApJ...684.1374C>`_).
 
@@ -49,6 +50,15 @@ If your are not the root of the system, add the flag ``--user`` to the command a
 .. warning::
 
     Never combine ``sudo`` with ``--user``! Otherwise you will face critical permission problems for your packages!
+
+.. note:: 
+
+    To use the **pyhdust** scripts, the binaries path of your pip installation directory must be in system ``PATH``. If you don't find them, adapt the following command to your ``$HOME/.bashrc``:
+
+    .. code:: bash
+
+        PATH=$PATH:~/.local/bin/
+
 
 **pyhdust** requires the numpy module. Optionally, it makes use of: 
 
@@ -120,9 +130,9 @@ The code is free, available under the terms of the `GNU GPL v3.0 license`_.
 	https://github.com/danmoser/pyhdust/blob/master/LICENSE
 
 
-.. raw:: html
+.. .. raw:: html
     
-    <a href="http://github.com/danmoser/pyhdust/" target="_blank"><img 
-    style="position: fixed; top: 0; right: 0; border: 0;"  
-    src="http://s3.amazonaws.com/github/ribbons/forkme_right_orange_ff7600.png" 
-    alt="Fork me on GitHub"></a>
+..     <a href="http://github.com/danmoser/pyhdust/" target="_blank"><img 
+..     style="position: fixed; top: 0; right: 0; border: 0;"  
+..     src="http://s3.amazonaws.com/github/ribbons/forkme_right_orange_ff7600.png" 
+..     alt="Fork me on GitHub"></a>

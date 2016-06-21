@@ -4,9 +4,7 @@
 
 :license: MIT License
 """
-
-from __future__ import print_function
-from __future__ import unicode_literals
+from __future__ import print_function, unicode_literals
 from collections import namedtuple
 from platform import python_version_tuple
 import re
@@ -38,7 +36,6 @@ else:
 
     def _is_file(f):
         return isinstance(f, io.IOBase)
-
 
 __author__ = "Sergey Astanin"
 __all__ = ["tabulate", "tabulate_formats", "simple_separated_format"]

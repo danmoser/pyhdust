@@ -7,7 +7,7 @@ Tools for field stars
 :author: D. Bednarski
 :license: GNU GPL v3.0 (https://github.com/danmoser/pyhdust/blob/master/LICENSE)
 """
-
+from __future__ import print_function
 import os
 import re
 import csv
@@ -19,6 +19,12 @@ from glob import glob
 from pyhdust import hdtpath
 import pyhdust.poltools as polt
 import pyhdust.phc as phc
+import sys as _sys
+
+
+def eprint(*args, **kwargs):
+    print(*args, file=_sys.stderr, **kwargs)
+    return
 
 try:
     import matplotlib as mpl
@@ -26,9 +32,9 @@ try:
     from matplotlib.colors import Normalize, hsv_to_rgb
     from matplotlib.patches import Polygon
     from matplotlib.collections import PatchCollection
-except:
-    print('# Warning! matplotlib module not installed!!!')
-
+    mpl.rcParams['pdf.fonttype']=42     # Fix the % Symbol in pdf images
+except ImportError:
+    eprint('# Warning! matplotlib module not installed!!!')
 
 #from glob import glob
 #import pyhdust.phc as phc
@@ -37,8 +43,6 @@ except:
 #from pyhdust import hdtpath
 #from itertools import product
 
-
-mpl.rcParams['pdf.fonttype']=42     # Fix the % Symbol in pdf images
 filters = ['u','b','v','r','i'] 
 fonts = [20, 17, 17, 14, 13]          # Font sizes for titles, axes labels, axes values, key label of graphs, subplot labels
 
@@ -1543,7 +1547,7 @@ def graf_p(csvfile, be, thetfile=None, path=None, vfilter=[], save=False, \
                 if (pmax_fit,lmax_fit) == ([],[]):
                     # Convert to microns
                     lb = [lbi/10000 for lbi in lbd]
-                    print ''
+                    print('')
                     pmax_fit, lmax_fit, chi2 = fitSerk(lb, pBe, s, star=be, extens=extens)
 
                     csvout.writerow([be, fixName(be)+' (//)'] + list(pmax_fit) + list(lmax_fit) + [chi2, len(pBe)] + ['0']*3 + ['0','0','---',''] + ['0']*15)
@@ -1783,20 +1787,20 @@ def graf_pradial(csvfile, be, filt='pmax', vfilter=[], isfile=None, fit=False, \
         spmaxfit = np.sqrt((param[0]*x0[1])**2 + (sparam[0]*x0[0])**2 + sparam[1]**2)
         
         print(55*'-')
-        print '  Total least squares fit  (y = a*x+b):'
+        print('  Total least squares fit  (y = a*x+b):')
         print(55*'-')
-        print '             a = {0:.3f} +- {1:.3f}'.format(param[0], sparam[0])
-        print '             b = {0:.3f} +- {1:.3f}'.format(param[1], sparam[1])
-        print ''
-        print '                 N = {0:d}'.format(len(y[0]))
-        print '         red chi^2 = {0:2f}'.format(rchi2)
-        print ''
-        print ''
-        print '  Extrapolated Pmax: '
-        print ''
-        print '          Pmax = {0:.4f} +- {1:.4f}'.format(pmaxfit, spmaxfit)
+        print('             a = {0:.3f} +- {1:.3f}'.format(param[0], sparam[0]))
+        print('             b = {0:.3f} +- {1:.3f}'.format(param[1], sparam[1]))
+        print('')
+        print('                 N = {0:d}'.format(len(y[0])))
+        print('         red chi^2 = {0:2f}'.format(rchi2))
+        print('')
+        print('')
+        print('  Extrapolated Pmax: ')
+        print('')
+        print('          Pmax = {0:.4f} +- {1:.4f}'.format(pmaxfit, spmaxfit))
         print(55*'-')
-        print ''
+        print('')
 
         xadj = np.linspace(ax.get_xlim()[0],ax.get_xlim()[1],3)
         yadj = param[0]*xadj+param[1]
@@ -1962,11 +1966,11 @@ def graf_inst(logfile, mode=1, vfilter=['no-std'], save=False, extens='pdf'):
         if n == 0:
             return meanq, meanu, n
 
-        print 'FILTER {0}  ->  N = {1}'.format(filt.upper(), n)
-        print 'FILTER {0}  ->  Q (%): mean, error, stddev  =  {1:.7f}, {2:.7f}, {3:.7f}'\
-                                        .format(filt.upper(), meanq[0], meanq[1], meanq[2])
-        print 'FILTER {0}  ->  U (%): mean, error, stddev  =  {1:.7f}, {2:.7f}, {3:.7f}'\
-                                        .format(filt.upper(), meanu[0], meanu[1], meanu[2])
+        print('FILTER {0}  ->  N = {1}'.format(filt.upper(), n))
+        print('FILTER {0}  ->  Q (%): mean, error, stddev  =  {1:.7f}, {2:.7f}, {3:.7f}'\
+                                        .format(filt.upper(), meanq[0], meanq[1], meanq[2]))
+        print('FILTER {0}  ->  U (%): mean, error, stddev  =  {1:.7f}, {2:.7f}, {3:.7f}'\
+                                        .format(filt.upper(), meanu[0], meanu[1], meanu[2]))
 
         coords = [[meanq[0]-meanq[2], meanu[0]-meanu[2]]]
         coords += [[meanq[0]+meanq[2], meanu[0]-meanu[2]]]
@@ -2093,7 +2097,7 @@ def genAll(csvfile, path=None, genlogs=True, genint=True, vfilter=['no-std'], vf
     # Generating logfiles for all Be stars
     if genlogs:
         for star in objs:
-            print 'Generating logfile for star {0}...'.format(star)
+            print('Generating logfile for star {0}...'.format(star))
             polt.genTarget(star, path=path, ispol=None, skipdth=False, delta=3.5)
 
     # Generating thet_int.csv file and QU graphs
@@ -2103,8 +2107,8 @@ def genAll(csvfile, path=None, genlogs=True, genint=True, vfilter=['no-std'], vf
             genInt(star, path, vfilter=vfilter, extens=extens)
         
     for star in objs:
-        print '='*50
-        print 'Generating graphs for star {0}...'.format(star)
+        print('='*50)
+        print('Generating graphs for star {0}...'.format(star))
         graf_p(csvfile, star, rotate=rotate, path=path, bin_data=bin_data, onlyY=onlyY,
                save=save, fit=mcmc, extens=extens, vfilter=vfilter_graf_p)
         graf_pradial(csvfile, star, 'v', bin_data=bin_data, onlyY=onlyY, save=save, extens=extens, vfilter=vfilter)
@@ -2499,16 +2503,16 @@ def fitSerk(larr, parr, sarr, star='', law='w82', n_burnin=300, n_mcmc=800, \
         p0 is the initial positions for the walkers
         """
 
-        print "Burning-in ..."
+        print("Burning-in ...")
         pos, prob, state = sampler.run_mcmc(p0, n_burnin)
         sampler.reset()
 
-        print "Running MCMC ..."
+        print("Running MCMC ...")
         pos, prob, state = sampler.run_mcmc(pos, n_mcmc, rstate0=state)
 
         #~ Print out the mean acceptance fraction. 
         af = sampler.acceptance_fraction
-        print "Mean acceptance fraction:", np.mean(af)
+        print("Mean acceptance fraction:", np.mean(af))
 
 
         # The lines below were to compute the best fit parameters using the maximum value
@@ -2593,9 +2597,9 @@ def fitSerk(larr, parr, sarr, star='', law='w82', n_burnin=300, n_mcmc=800, \
         print(74*'-')
         print('Output')
         print(74*'-')
-        print '  P_max = {0:.4f}  +{1:.4f}  -{2:.4f}'.format(p_mcmc[0],p_mcmc[1],p_mcmc[2])
-        print 'lbd_max = {0:.4f}  +{1:.4f}  -{2:.4f}'.format(l_mcmc[0],l_mcmc[1],l_mcmc[2])
-        print 'reduced chi2 = {0:.4f}'.format(chi)
+        print('  P_max = {0:.4f}  +{1:.4f}  -{2:.4f}'.format(p_mcmc[0],p_mcmc[1],p_mcmc[2]))
+        print('lbd_max = {0:.4f}  +{1:.4f}  -{2:.4f}'.format(l_mcmc[0],l_mcmc[1],l_mcmc[2]))
+        print('reduced chi2 = {0:.4f}'.format(chi))
         print(74*'-')
 
 
@@ -2703,9 +2707,9 @@ def fitSerk(larr, parr, sarr, star='', law='w82', n_burnin=300, n_mcmc=800, \
             print(74*'-')
             print('Output')
             print(74*'-')
-            print '  P_max = {0:.4f}  +{1:.4f}  -{2:.4f}'.format(p_mcmc[0],p_mcmc[1],p_mcmc[2])
-            print 'lbd_max = {0:.4f}  +{1:.4f}  -{2:.4f}'.format(l_mcmc[0],l_mcmc[1],l_mcmc[2])
-            print 'reduced chi2 = {0:.4f}'.format(chi)
+            print('  P_max = {0:.4f}  +{1:.4f}  -{2:.4f}'.format(p_mcmc[0],p_mcmc[1],p_mcmc[2]))
+            print('lbd_max = {0:.4f}  +{1:.4f}  -{2:.4f}'.format(l_mcmc[0],l_mcmc[1],l_mcmc[2]))
+            print('reduced chi2 = {0:.4f}'.format(chi))
             print(74*'-')
 
             # Save the new triangle graph

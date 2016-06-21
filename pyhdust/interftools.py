@@ -24,6 +24,7 @@ Todas as leituras binarias baseiam-se no struct.
 
 :license: GNU GPL v3.0 https://github.com/danmoser/pyhdust/blob/master/LICENSE
 """
+from __future__ import print_function
 import os as _os
 import struct as _struct
 import numpy as _np
@@ -35,6 +36,12 @@ import pyhdust.images as _img
 from pyhdust.spectools import linfit as _linfit
 import copy as _copy
 from six import string_types as _strtypes
+import sys as _sys
+
+
+def eprint(*args, **kwargs):
+    print(*args, file=_sys.stderr, **kwargs)
+    return
 
 try:
     import matplotlib as _mpl
@@ -43,8 +50,8 @@ try:
     import matplotlib.ticker as _mtick
     from matplotlib.lines import Line2D as _Line2D
     import pyfits as _pyfits
-except:
-    print('# Warning! matplotlib and/or pyfits module not installed!!!')
+except ImportError:
+    eprint('# Warning! matplotlib, six and/or pyfits module not installed!!!')
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -685,6 +692,7 @@ class oiClass(object):
             self.v2 = _np.array(tlist)
             self.v2e = _np.zeros(_np.shape(tlist))*_np.NaN
             #
+            tlist = []
             for i in range(len(self.t3B1)):
                 if iscube:
                     img = imgs[_phc.find_nearest(self.t3lbm, self.t3lb[i], 

@@ -18,6 +18,7 @@ Includes functions for:
 
 :license: GNU GPL v3.0 https://github.com/danmoser/pyhdust/blob/master/LICENSE
 """
+from __future__ import print_function
 import os as _os
 import re as _re
 import numpy as _np
@@ -28,12 +29,18 @@ from collections import Iterable as _It
 import pyhdust.jdcal as _jdcal
 from pyhdust.tabulate import tabulate as _tab
 from six import string_types as _strtypes
+import sys as _sys
+
+
+def eprint(*args, **kwargs):
+    print(*args, file=_sys.stderr, **kwargs)
+    return
 
 try:
     import matplotlib.pyplot as _plt
     from scipy import optimize as _optimize
-except:
-    print('# Warning! matplotlib and/or scipy module not installed!!!')
+except ImportError:
+    eprint('# Warning! matplotlib and/or scipy module not installed!!!')
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -303,10 +310,11 @@ def convnorm(x, arr, pattern):
     OUTPUT: array
     """
     if (len(x) != len(pattern)):
-        print('# Wrong format of x and/or pattern arrays!')
+        eprint('# Warning! Wrong format of x and/or pattern arrays!')
         return None
     if (len(x) % 2 == 0):
-        print('# Warning! Even length of arrays. Interpolating n-1 dimension!')
+        eprint('# Warning! Even length of arrays. Interpolating n-1 '
+            'dimension!')
         idx = _np.argsort(x)
         x0 = x[idx]
         pattern0 = pattern[idx]
@@ -387,13 +395,19 @@ def reshapeltx(ltxtb, ncols=2, latexfmt=True):
         return t.reshape((-1, ncols))
 
 
-def renormvals(xlist, xref, yref):
-    """ Renormalize ``xlist`` according to ``_ref`` values.
+# def find_after(id, ref):
+#     """ Returns the line where `id` if found after `ref`.
+#     """
+#     return 
 
-    len(xref)=len(yref)=2
+
+def renormvals(xlist, xlims, ylims):
+    """ Renormalize ``xlist`` according to ``_lims`` values.
+
+    len(xlims)=len(ylims)=2
     """
-    a = _np.diff(yref)/_np.diff(xref)
-    b = yref[0] - a*xref[0]
+    a = _np.diff(ylims)/_np.diff(xlims)
+    b = ylims[0] - a*xlims[0]
     return a*_np.array(xlist)+b
 
 
@@ -479,7 +493,7 @@ def find_nearest(array, value, bigger=None, idx=False):
         found = _np.max([x for x in array if x < value])
         i = _np.where(array == found)
     else:
-        print('# ERROR at bigger!!')
+        eprint('# ERROR at bigger!!')
     # return
     if not idx:
         return found
@@ -594,7 +608,7 @@ def gentkdates(mjd0, mjd1, fact, step, dtstart=None):
     else:
         mjdst = _jdcal.gcal2jd(dtstart.year, dtstart.month, dtstart.day)[1]
         if mjdst < mjd0 - 1 or mjdst > mjd1:
-            print('# Warning! Invalid "dtstart". Using mjd0.')
+            eprint('# Warning! Invalid "dtstart". Using mjd0.')
             dtstart = _dt.datetime(
                 *_jdcal.jd2gcal(_jdcal.MJD_0, mjd0)[:3]).date()
     # define step 'position' and vector:
@@ -648,7 +662,7 @@ def gentkdates(mjd0, mjd1, fact, step, dtstart=None):
             basedata[i] = daysvec[j]
             mjd = _jdcal.gcal2jd(*basedata)[1]
     else:
-        print('# ERROR! Invalid step')
+        eprint('# ERROR! Invalid step')
         raise SystemExit(1)
     return dates
 
@@ -903,7 +917,7 @@ def normGScale(val, min=None, max=None, log=False):
         array([  0,   8,  19,  33,  51,  73, 103, 142, 191, 255])
     """
     if len(val) == 1 and (min is None or max is None):
-        print('# Warning! Wrong normGScale call!!')
+        eprint('# Warning! Wrong normGScale call!!')
         return 127
     #
     val = _np.array(val).astype(float)
@@ -958,7 +972,7 @@ def cycles(i=0, ctype='cor'):
 
     OUTPUT: the corresponding value of the list. """
     if ctype not in ['cor', 'ls', 'mk']:
-        print('# Warning! Invalid ctype calling phc.cycles!')
+        eprint('# Warning! Invalid ctype calling phc.cycles!')
         return
     elif ctype == 'cor':
         return colors[_np.mod(i, len(colors))]
@@ -1019,13 +1033,13 @@ def gbf(T, lbd):
         4.30, 0.1761, 0.1269, 0.0046, -0.0690, -1.1185, 0.0126,
     ]).reshape((6, -1))
     if T < 5000 or T > 22500:
-        print('# ERROR! Invalid temperature for Gaunt factors calculation!')
+        eprint('# ERROR! Invalid temperature for Gaunt factors calculation!')
         return _np.zeros(len(lbd)), _np.zeros(len(lbd))
     elif T >= 5000 and T < 10**vals[0, 0]:
-        print('# Warning! Extrapolated Gaunt factors!!')
+        eprint('# Warning! Extrapolated Gaunt factors!!')
         g0, g1, g2, b0, b1, b2 = vals[0, 1:]
     elif T <= 22500 and T > 10**vals[-1, 0]:
-        print('# Warning! Extrapolated Gaunt factors!!')
+        eprint('# Warning! Extrapolated Gaunt factors!!')
         g0, g1, g2, b0, b1, b2 = vals[-1, 1:]
     else:
         i = _np.where(vals[:, 0] == find_nearest(

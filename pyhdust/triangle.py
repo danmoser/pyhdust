@@ -8,14 +8,21 @@
 from __future__ import print_function, absolute_import, unicode_literals
 import logging
 import numpy as np
-import matplotlib.pyplot as pl
-import matplotlib.cm as cm
-from matplotlib.ticker import MaxNLocator
+import sys
+
+
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
+    return
 
 try:
+    import matplotlib.pyplot as pl
+    import matplotlib.cm as cm
+    from matplotlib.ticker import MaxNLocator
     from scipy.ndimage import gaussian_filter
 except ImportError:
     gaussian_filter = None
+    eprint('# Warning! matplotlib or scipy not installed!!!')
 
 __all__ = ["corner", "hist2d"]
 __version__ = "0.2.0"

@@ -17,7 +17,7 @@ FWHM instead of `depthcent`.
 
 :license: GNU GPL v3.0 https://github.com/danmoser/pyhdust/blob/master/LICENSE
 """
-
+from __future__ import print_function
 import os as _os
 import numpy as _np
 import datetime as _dt
@@ -28,8 +28,14 @@ import pyhdust.phc as _phc
 import pyhdust.jdcal as _jdcal
 import pyhdust as _hdt
 from six import string_types as _strtypes
+import sys as _sys
 
-try:
+
+def eprint(*args, **kwargs):
+    print(*args, file=_sys.stderr, **kwargs)
+    return
+
+try:    
     import pyfits as _pyfits
     import matplotlib as _mpl
     import matplotlib.pyplot as _plt
@@ -38,12 +44,15 @@ try:
     import matplotlib.gridspec as _gridspec
     import scipy.interpolate as _interpolate 
     from scipy.optimize import curve_fit as _curve_fit
-    import pyqt_fit.nonparam_regression as smooth
-    from pyqt_fit import npr_methods
-    # from scipy.signal import savgol_filter as _savgol
-except:
-    print('# Warning! matplotlib, scipy, pyqt_fit and/or pyfits module not' 
+except ImportError:
+    eprint('# Warning! matplotlib, scipy, and/or pyfits module not' 
         ' installed!!!')
+
+try:
+    import pyqt_fit.nonparam_regression as _smooth
+    from pyqt_fit import npr_methods as _npr_methods
+except ImportError:
+    eprint('# Warning! pyqt_fit module not installed!!!')
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -201,7 +210,7 @@ class Spec(object):
         Currently, only compatible for standard fits.
         """
         if file.find('.fit') == -1:
-            print("# ERROR! `loadspec` unrecognized format!")
+            eprint("# ERROR! `loadspec` unrecognized format!")
             return 
         (self.wl, self.flux, self.MJD, self.dateobs, self.datereduc,
             self.file) = loadfits(file)
@@ -214,7 +223,7 @@ class Spec(object):
         """Export current spec into a PNG file.
         """
         if self.wl is None or self.flux is None:
-            print('# ERROR: wrong Spec() parameters! {0}'.format(self.file))
+            eprint('# ERROR: wrong Spec() parameters! {0}'.format(self.file))
             return
         if outname == '':
             path, file = _phc.trimpathname(self.file)
@@ -330,9 +339,9 @@ def loadfits(fitsfile):
         MJD = _jdcal.gcal2jd(*dtobs)[1] + tobs
     else:
         MJD = _jdcal.MJD_JD2000
-        print('# Warning! No DATE-OBS information is available! {0}'.
+        eprint('# Warning! No DATE-OBS information is available! {0}'.
             format(fitsfile))
-        print('# Assuming MJD_JD2000')
+        eprint('# Assuming MJD_JD2000')
     if 'DATE-OBS' in imfits[0].header:
         dateobs = imfits[0].header['DATE-OBS']
     elif 'FRAME' in imfits[0].header:
@@ -435,12 +444,12 @@ def lineProf(x, flx, lbc, flxerr=_np.empty(0), hwidth=1000., ssize=0.05):
     if len(flxerr) == 0:
         flux = linfit(x[idx], flx[idx], ssize=ssize)  # yerr=flxerr,
         if len(x[idx]) == 0:
-            print('# Warning! Wrong `lbc` in the lineProf function')
+            eprint('# Warning! Wrong `lbc` in the lineProf function')
         return x[idx], flux
     else:
         flux, flxerr = linfit(x[idx], flx[idx], yerr=flxerr[idx], ssize=ssize)
         if len(x[idx]) == 0:
-            print('# Warning! Wrong `lbc` in the lineProf function')
+            eprint('# Warning! Wrong `lbc` in the lineProf function')
         return x[idx], flux, flxerr
 
 
@@ -755,7 +764,7 @@ def analline(lbd, flux, lbdc, hwidth=1000, verb=True, gaussfit=False,
     # check if the file have the desired info.
     if vels[0] > -hwidth * .95 or vels[-1] < hwidth * .95:
         if verb:
-            print('# ERROR: spec out of range (wavelength)! Check hwidth!')
+            eprint('# ERROR: spec out of range (wavelength)! Check hwidth!')
         return _np.NaN, _np.NaN, _np.NaN, _np.NaN, _np.NaN, _np.NaN
 
     idx = _np.where(_np.abs(vels) <= hwidth)
@@ -868,10 +877,10 @@ def plotAll(files, obs=None, boxes=['s'], range=[[0, -1]], ncol=None,
     """
     for interv in range:
         if len(interv) != 2:
-            print('# ERROR! Check range variable configuration!!!')
+            eprint('# ERROR! Check range variable configuration!!!')
             return
     if len(files) != len(boxes) or len(files) != len(range):
-        print('# ERROR! Check input configuration!!!')
+        eprint('# ERROR! Check input configuration!!!')
         return
     #
     nbox = len(files)
@@ -1468,17 +1477,20 @@ def normalize_spec(lb, flx, q=2):
 
     OUTPUT: norm_flx
     """
-    k1 = smooth.NonParamRegression(lb, flx, 
-        method=npr_methods.LocalPolynomialKernel(q=1))
+    k1 = _smooth.NonParamRegression(lb, flx, 
+        method=_npr_methods.LocalPolynomialKernel(q=1))
     k1.fit()
 
-    idxi = _np.where(_np.abs(k1(lb)/flx-1) < 0.03)
-    xsi = lb[idxi]
-    ysi = flx[idxi]
-    k2 = smooth.NonParamRegression(xsi, ysi, 
-        method=npr_methods.LocalPolynomialKernel(q=q))
+    idx0 = _np.where(flx != 0)
+    ilb = lb[idx0]
+    iflx = flx[idx0]
+    idxi = _np.where(_np.abs(k1(ilb)/iflx-1) < 0.03)
+    xsi = ilb[idxi]
+    ysi = iflx[idxi]
+    k2 = _smooth.NonParamRegression(xsi, ysi, 
+        method=_npr_methods.LocalPolynomialKernel(q=q))
     k2.fit()
-    return flx/k2.fit(lb)
+    return flx/k2(lb)
 
 
 def renorm(vl, y):
@@ -1959,7 +1971,7 @@ def check_dtobs(dtobs):
     elif dtobs[2] == '/':
         dtobs = dtobs.split('/')[::-1]
     else:
-        print('# ERROR! Wrong "DATE-OBS" in header! {0}'.format(dtobs))
+        eprint('# ERROR! Wrong "DATE-OBS" in header! {0}'.format(dtobs))
         raise SystemExit(1)
     dtobs = _np.array(dtobs, dtype='int32')
     return dtobs, tobs

@@ -8,6 +8,8 @@ Module contains:
 
 :license: GNU GPL v3.0 https://github.com/danmoser/pyhdust/blob/master/LICENSE
 """
+from __future__ import print_function
+import sys as _sys
 import re as _re
 import os as _os
 import numpy as _np
@@ -19,6 +21,11 @@ import pyhdust as _hdt
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
+
+
+def eprint(*args, **kwargs):
+    print(*args, file=_sys.stderr, **kwargs)
+    return
 
 
 class BAstar(object):
@@ -292,7 +299,7 @@ def createBAsed(fsedlist, xdrpath, lbdarr, param=True, savetxt=False,
                     if len(log) >= 1:
                         log = log[0]
                     else:
-                        print('# ERROR! No log file found for {0}'.format(
+                        eprint('# ERROR! No log file found for {0}'.format(
                             fsedlist[i]))
                         raise SystemExit(1)
                 f0 = open(log)
@@ -413,8 +420,8 @@ def readBAsed(xdrpath, quiet=False):
         if not quiet:
             print('# XDR {0} completely read!'.format(xdrpath))
     else:
-        print('# Warning: XDR {0} not completely read!'.format(xdrpath))
-        print('# length difference is {0}'.format( (len(f) - ixdr) / 4 ) )
+        eprint('# Warning: XDR {0} not completely read!'.format(xdrpath))
+        eprint('# length difference is {0}'.format( (len(f) - ixdr) / 4 ) )
     # 
     return listpar, lbdarr, models[:, 0:nq], models[:, nq:]
 
@@ -437,7 +444,7 @@ def interpolBA(params, ctrlarr, lparams, minfo, models, param=True):
     if not param:
         nq = 8
     if len(ctrlarr) != nq:
-        print('# ERROR in ctrlarr!!')
+        eprint('# ERROR in ctrlarr!!')
         return
     params = params[:_np.sum(_np.isnan(ctrlarr))]
     nlb = len(models[0])

@@ -117,6 +117,7 @@ Previously
 
 :license: GNU GPL v3.0 https://github.com/danmoser/pyhdust/blob/master/LICENSE
 """
+from __future__ import print_function
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
