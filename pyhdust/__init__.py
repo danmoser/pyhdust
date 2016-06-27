@@ -42,7 +42,7 @@ except ImportError:
     eprint('# Warning! matplotlib, pyfits, six and/or scipy module not '
         'installed!!!')
 
-__version__ = '1.0.1'
+__version__ = '1.0.2'
 __release__ = "Stable"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"

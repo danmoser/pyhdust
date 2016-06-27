@@ -133,9 +133,12 @@ def setRelease():
     f0 = open('{0}setup.py'.format(hdtpath()))
     lines = f0.readlines()
     f0.close()
-    i = [lines.index(x) for x in lines if x.find('version=') > -1]
-    i = i[0]
-    oldver = phc.fltTxtOccur('version', [lines[i]], asstr=True)
+    i = [lines.index(x) for x in lines if x.find('version=') > -1][0]
+    verline = lines[i]
+    if len(verline.split("'")) == 3:
+        oldver = verline.split("'")[1]
+    else:
+        oldver = verline.split('"')[1]
     lines[i] = lines[i].replace(oldver, str(__version__))
     f0 = open('{0}setup.py'.format(hdtpath()), 'w')
     f0.writelines(lines)

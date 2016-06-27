@@ -70,7 +70,7 @@ if sys.argv[-1] == "publish":
     sys.exit()
 
 setup(name='pyhdust',
-    version='1.0.1.0',
+    version='1.0.2',
     description=('Analysis tools for multi-technique astronomical data and '
         'hdust models'),
     url='http://j.mp/pyhdust',
@@ -81,10 +81,10 @@ setup(name='pyhdust',
     scripts=[os.path.join('scripts', f) for f in os.listdir('scripts') if 
         os.path.splitext(f)[1] == '.py'],
     packages=find_packages(exclude=['build', 'docs', '*egg*', 'dist']),
-    # include_package_data=True,
     # include=recfiles('refs'),
-    package_data={'pyhdust': recfiles('.', 'refs') + ['LICENSE', 
-        'README.rst']},
+    package_data={'pyhdust': recfiles('pyhdust', 'refs') + 
+        ['LICENSE', 'README.rst']},
+    include_package_data=True,
     # data_files = [('refs/*', 'stmodels/*')],
     # package_dir = {'../'},
     zip_safe=False,
