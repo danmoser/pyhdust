@@ -19,13 +19,18 @@ from itertools import product as _product
 import pyhdust.phc as _phc
 import pyhdust as _hdt
 
-__author__ = "Daniel Moser"
-__email__ = "dmfaes@gmail.com"
-
 
 def eprint(*args, **kwargs):
     print(*args, file=_sys.stderr, **kwargs)
     return
+
+try: 
+    from scipy.interpolate import griddata as _griddata
+except ImportError:
+    eprint('# Warning! scipy module not installed!')
+
+__author__ = "Daniel Moser"
+__email__ = "dmfaes@gmail.com"
 
 
 class BAstar(object):
@@ -89,7 +94,7 @@ class BAmod(BAstar):
                 self.h = _phc.find_nearest(listpars[i], ctrlarr[i])
             if len(listpars) == 9:
                 if i == 7:
-                    print(_phc.find_nearest(listpars[i], ctrlarr[i]))
+                    # print(_phc.find_nearest(listpars[i], ctrlarr[i]))
                     self.n = _phc.find_nearest(listpars[i], ctrlarr[i])
                     self.param = True
                 if i == 8:
@@ -369,6 +374,122 @@ def createBAsed(fsedlist, xdrpath, lbdarr, param=True, savetxt=False,
     return
 
 
+def createXDRmap(maplist, xdrpath, refclass, lbdlim=None, npix=128):
+    """ Is this possible? 
+
+    ``lbdlim``: discard images that are out of this limits (``None`` keeps all;
+    units of microns).
+
+    Criteria:
+    - all the images are converted the same size in pixels (``npix``).
+    - only images with zoom = `renv` are used (checked by `*.log` file)
+    - the pixel values are converted to flux units (erg/s/Ang)
+    - the pixel scale is converted to length unit (at d = 10 pc)
+
+    Example:
+    maspp = maspp * 10/5  # transform the pixel scale for d = 5 pc
+    """
+    # maspp = milli arcsec per pixel
+    raise NotImplementedError("To be done!")
+    dval, renv, maspp, cubeimages = range(4)
+    listpar = [dval, renv, maspp]
+    return listpar, cubeimages
+
+
+def createXDRsed(fsedlist, xdrpath, refclass, lbdarr, ignorelum=False, 
+    pol=False):
+    """ Create the gemeroc SED XDR release.
+
+    nob = (individual) number of observers
+    listpar = parameters of each model
+    nq = number of parameters
+    nmod = number of models
+
+    output units: 10**12 erg/s/Ang/cm2
+    """
+    if pol:
+        ignorelum = True
+    fsedlist.sort()
+    ifact = 1.
+    nq = len(refclass.vdict.keys())+1
+    nlbd = len(lbdarr)
+    listpar = _np.zeros( nq )
+    models = _np.zeros( nlbd )
+    for fs in fsedlist:
+        print('# Processing {0}'.format(fs))
+        m = refclass(fs)
+        nob = m.get_nob()
+        m.readfs2ob(pol=pol)
+        if not ignorelum:
+            ifact = m.get_lum() * _phc.Lsun.cgs / (4 * _np.pi * 
+                (10 * _phc.pc.cgs)**2) * 1e8
+        for j in range(nob):
+            listpar = _np.vstack(( listpar, [getattr(m, it) for it in 
+                refclass.vdict.keys()]+[m.ob[j]]))
+            models = _np.vstack(( models, 
+                _np.interp(lbdarr, m.arr_lbd, m.arr_flx[j])*ifact ))
+
+    models = models[1:]
+    listpar = listpar[1:]
+    nmod = len(models)
+
+    chk = []
+    for i in range( nq ):
+        if len(_np.unique(listpar[:, i])) == 1:
+            chk.append(i)
+    if len(chk) > 0:
+        listpar = _np.delete(listpar, chk, axis=1)
+    nq = len(listpar[0])
+    #
+    intervals = _np.zeros(( nq, 2 ))
+    intervals[:, 0] = _np.min(listpar, axis=0)
+    intervals[:, 1] = _np.max(listpar, axis=0)
+    #
+    f0 = open(xdrpath, 'wb')
+    stfmt = '>{0}l'.format(3)
+    f0.write( _struct.pack(stfmt, nq, nlbd, nmod) )
+    stfmt = '>{0}f'.format(nq*2)
+    f0.write( _struct.pack(stfmt, *intervals.flatten()) )
+    stfmt = '>{0}f'.format(nlbd)
+    f0.write( _struct.pack(stfmt, *lbdarr))
+    stfmt = '>{0}f'.format(nq*nmod)
+    f0.write( _struct.pack(stfmt, *listpar.flatten()) )
+    stfmt = '>{0}f'.format(nlbd*nmod)
+    f0.write( _struct.pack(stfmt, *models.flatten()) )
+    f0.close()
+    print('# XDR file {0} saved!'.format(xdrpath))
+    return
+
+
+def readXDRsed(xdrpath, quiet=False):
+    """ Doc
+    """
+    def readpck(n, tp, ixdr, f):
+        sz = dict(zip(['i', 'l', 'f', 'd'], [4, 4, 4, 8]))
+        s = sz[tp]
+        upck = '>{0}{1}'.format(n, tp)
+        return ixdr+n*s, _np.array(_struct.unpack(upck, f[ixdr:ixdr+n*s]))
+    #
+    ixdr = 0
+    f = open(xdrpath, 'rb').read()
+    ixdr, ninfo = readpck(3, 'l', ixdr, f)
+    nq, nlbd, nm = ninfo
+    ixdr, intervals = readpck(nq*2, 'f', ixdr, f)
+    ixdr, lbdarr = readpck(nlbd, 'f', ixdr, f)
+    ixdr, listpar = readpck(nq*nm, 'f', ixdr, f)
+    ixdr, models = readpck(nlbd*nm, 'f', ixdr, f)
+    #
+    if ixdr == len(f):
+        if not quiet:
+            print('# XDR {0} completely read!'.format(xdrpath))
+    else:
+        eprint('# Warning: XDR {0} not completely read!'.format(xdrpath))
+        eprint('# length difference is {0} /4'.format( (len(f) - ixdr) ) )
+    # 
+    return ( ninfo, intervals.reshape((nq, 2)), lbdarr, 
+        listpar.reshape((nm, nq)), models.reshape((nm, nlbd)) )
+
+
 def readBAsed(xdrpath, quiet=False):
     """ Read the BeAtlas SED release.
 
@@ -424,6 +545,61 @@ def readBAsed(xdrpath, quiet=False):
         eprint('# length difference is {0}'.format( (len(f) - ixdr) / 4 ) )
     # 
     return listpar, lbdarr, models[:, 0:nq], models[:, nq:]
+
+
+def parnorm(dvals, vmax, vmin_non0, issig0=True, hasvmin0=False):
+    r""" Converts density in normalized range [0-1], and vice-versa.
+
+    If ``issig0``, treats ``r01`` as :math:`\Sigma_0`; otherwise, use it
+    as [0-1] value.
+    """
+    dvals = _np.array(dvals)
+    if vmin_non0 <= 0 or _np.min(dvals) < 0:
+        raise ValueError('`vmin_non0` > 0 and `dvals` >=0 must be True')
+    if hasvmin0:
+            vmin_non0 /= vmax/vmin_non0
+    if issig0:
+        dvals[_np.where(dvals < vmin_non0)] = vmin_non0
+        return _np.log(dvals/vmin_non0)/_np.log(vmax/vmin_non0)
+    else:
+        return _np.exp(dvals*_np.log(vmax/vmin_non0))*vmin_non0
+
+
+def densBAnorm(r01, M, issig0=True):
+    r""" Converts density in normalized range [0-1], and vice-versa for the 
+    BeAtlas.
+
+    If ``issig0``, treats ``r01`` as :math:`\Sigma_0`; otherwise, use it
+    as [0-1] value.
+
+    """
+    if M < 3.8 or M > 14.6:
+        raise ValueError('# ERROR! Wrong M at bat.normdens() !')
+    vmin = 0.02/2.5
+    r01 = _np.array(r01)
+    if issig0:
+        r01[_np.where(r01 < vmin)] = vmin
+
+    # Completo, convergido etapa1, com DEPENDENCIA do vizinho inferior
+    x = [4.2, 4.8, 5.5, 6.4, 7.7, 8.6, 9.6, 10.8]
+    y = [0.05, 0.12, 0.28, 0.28, 0.68, 1.65, 1.65, 4]
+
+    # Completo, convergido etapa2, com DEPENDENCIA do vizinho inferior
+    # x = [4.2, 4.8, 5.5, 6.4, 7.7, 8.6, 9.6, 10.8]
+    # y = [0.05, 0.12, 0.28, 0.40, 0.68, 1.65, 2.46, 4]
+
+    d = 7
+    x = _np.array(x) + 10**-d
+    vmax = _np.interp(M, x, y)
+    if issig0:
+        return _np.round( _np.log(r01/vmin)/_np.log(vmax/vmin), d)
+    else:
+        return _np.round( _np.exp(r01*_np.log(vmax/vmin))*vmin, d)
+
+
+def interpolBA2(params, ctrlarr, minfo, models):
+    ctrlarr[_np.isnan(ctrlarr)] = params
+    return _griddata(minfo, models, ctrlarr)
 
 
 def interpolBA(params, ctrlarr, lparams, minfo, models, param=True):

@@ -23,24 +23,21 @@ import os as _os
 import re as _re
 import numpy as _np
 import datetime as _dt
+import gzip as _gzip
+from bz2 import BZ2File as _BZ2File
 from glob import glob as _glob
 from itertools import product as _product
 from collections import Iterable as _It
 import pyhdust.jdcal as _jdcal
 from pyhdust.tabulate import tabulate as _tab
 from six import string_types as _strtypes
-import sys as _sys
-
-
-def eprint(*args, **kwargs):
-    print(*args, file=_sys.stderr, **kwargs)
-    return
+import warnings as _warn
 
 try:
     import matplotlib.pyplot as _plt
     from scipy import optimize as _optimize
 except ImportError:
-    eprint('# Warning! matplotlib and/or scipy module not installed!!!')
+    ('matplotlib and/or scipy module not installed!!!')
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -310,10 +307,10 @@ def convnorm(x, arr, pattern):
     OUTPUT: array
     """
     if (len(x) != len(pattern)):
-        eprint('# Warning! Wrong format of x and/or pattern arrays!')
+        _warn.warn('Wrong format of x and/or pattern arrays!')
         return None
     if (len(x) % 2 == 0):
-        eprint('# Warning! Even length of arrays. Interpolating n-1 '
+        _warn.warn('Even length of arrays. Interpolating n-1 '
             'dimension!')
         idx = _np.argsort(x)
         x0 = x[idx]
@@ -399,6 +396,29 @@ def reshapeltx(ltxtb, ncols=2, latexfmt=True):
 #     """ Returns the line where `id` if found after `ref`.
 #     """
 #     return 
+
+
+def log_norm(x, vmax=1., vmin=0.01, autoscale=True, clip=True):
+    """ Renormalize ``x`` (value or vector) making a correspondance of [0-1] 
+    to [vmin, vmax] in log scale.
+
+    If ``autoscale`` and x is a vector, ``vmax`` and ``vmin`` are automatically 
+    set (``x`` must have at least a positive value).
+
+    ``clip`` force the range to be between 0 and 1.
+    """
+    x = _np.array(x)
+    if autoscale:
+        (vmin, vmax) = (_np.min(x[_np.where(x > 0)]), _np.max(x))
+    if vmin <= 0:
+        _warn.warn('vmin <= 0 at phc.log_norm!')
+        return x
+    if vmax <= vmin:
+        _warn.warn('vmax <= vmin at phc.log_norm!')
+        return x
+    if clip:
+        x = x.clip(vmin, vmax)
+    return _np.log10(x/vmin)/_np.log10(vmax/vmin)
 
 
 def renormvals(xlist, xlims, ylims):
@@ -493,12 +513,69 @@ def find_nearest(array, value, bigger=None, idx=False):
         found = _np.max([x for x in array if x < value])
         i = _np.where(array == found)
     else:
-        eprint('# ERROR at bigger!!')
+        _warn.warn('# ERROR at bigger!!')
     # return
     if not idx:
         return found
     else:
         return i
+
+
+def find_nearND(matrix, array, idx=False, bigger=None, outlen=1):
+    """ Find nearest array values in a MATRIX.
+
+    INPUT: array, value
+
+    OUTPUT: closest value (array dtype)
+    """
+    if len(array) == 1:
+        array = array[0]
+    if _np.shape(matrix)[1] != len(array):
+        raise ValueError('shape(matrix)[1] must be == len(array)') 
+    dists = []
+    for i in range(len(array)):
+        nfact = _np.max(matrix[:, i]) - _np.min(matrix[:, i])
+        if nfact <= 0:
+            continue
+        dists.append(_np.abs(matrix[:, i] - array[i])/nfact)
+
+    dists = _np.sum(dists, axis=0)
+    idsort = _np.argsort(dists)
+    if bigger:
+        valid = []
+        for nid in idsort:
+            chk = [True for i in range(len(array)) if (
+                matrix[nid, i] > array[i])]
+            if len(chk) == len(array):
+                valid.extend([nid])
+            if len(valid) == outlen:
+                idsort = valid
+                break
+        if valid == []:
+            _warn.warn('# Invalid values for bigger == {0}'.format(bigger))
+    elif not bigger:
+        valid = []
+        for nid in idsort:
+            chk = [True for i in range(len(array)) if (
+                matrix[nid, i] < array[i])]
+            if len(chk) == len(array):
+                valid.extend([nid])
+            if len(valid) == outlen:
+                idsort = valid
+                break
+        if valid == []:
+            _warn.warn('# Invalid values for bigger == {0}'.format(bigger))
+    # return
+    if not idx:
+        if outlen <= 1:
+            return matrix[idsort[0]]
+        else:
+            return matrix[idsort[:outlen]]
+    else:
+        if outlen <= 1:
+            return idsort[0]
+        else:
+            return idsort[:outlen]
 
 
 def nan_helper(y):
@@ -608,7 +685,7 @@ def gentkdates(mjd0, mjd1, fact, step, dtstart=None):
     else:
         mjdst = _jdcal.gcal2jd(dtstart.year, dtstart.month, dtstart.day)[1]
         if mjdst < mjd0 - 1 or mjdst > mjd1:
-            eprint('# Warning! Invalid "dtstart". Using mjd0.')
+            _warn.warn('Invalid "dtstart". Using mjd0.')
             dtstart = _dt.datetime(
                 *_jdcal.jd2gcal(_jdcal.MJD_0, mjd0)[:3]).date()
     # define step 'position' and vector:
@@ -662,7 +739,7 @@ def gentkdates(mjd0, mjd1, fact, step, dtstart=None):
             basedata[i] = daysvec[j]
             mjd = _jdcal.gcal2jd(*basedata)[1]
     else:
-        eprint('# ERROR! Invalid step')
+        _warn.warn('# ERROR! Invalid step')
         raise SystemExit(1)
     return dates
 
@@ -718,6 +795,56 @@ def mas2deg(mas=1.):
 
 
 # Files manipulation
+def fileread(fname, bin=False):
+    rmode = 'r'
+    if bin:
+        rmode = 'rb'
+    ext = _os.path.splitext(fname)[1]
+    if ext == '.gz':
+        return _gzip.open(fname, rmode).read()
+    elif ext == '.bz2':
+        return _BZ2File(fname, rmode).read()
+    else:
+        return open(fname, rmode).read()
+
+
+def readfixwd(fname, wlims, chklims=True):
+    """ ``chklims`` : read line from beginning until the end
+    """
+    lines = fileread(fname).split('\n')
+    lsz = [len(l) for l in lines]
+    if wlims[-1] is None or wlims[-1] < 0:
+        chklims = True
+    wlims = [int(i-1) for i in wlims if (i is not None and i >= 0)]
+    if wlims[0] < 0:
+        wlims[0] = 0
+    if chklims and wlims[0] != 0:
+        wlims = [0] + wlims
+    if chklims and wlims[-1] < max(lsz)-1:
+        wlims += [max(lsz)]
+    out = _np.chararray( (len(lines), len(wlims)-1), 
+        itemsize=_np.max([ _np.max(_np.diff(wlims)), wlims[0] ]) )
+    for j in range(len(lines)):
+        out[j] = [ lines[j][wlims[i-1]:wlims[i]].strip().replace(',', '^') 
+            for i in range(1, len(wlims))]
+    return out
+
+
+def readtextable(fname, commentchars='#', splitchars=r'&|\pm', 
+    delchars=r'\$'+'\r '):
+    lines = fileread(fname).split('\n')
+    out = []
+    for il in lines:
+        if len(il) == 0:
+            continue
+        if il[0] in commentchars:
+            continue
+        for c in delchars:
+            il = il.replace(c, '')
+        out.append( _re.split('|'.join(splitchars.split('|')), il) )
+    return out
+
+
 def sortfile(file, quiet=False):
     """ Sort the file. """
     f0 = open(file, 'r')
@@ -740,6 +867,7 @@ def outfld(fold='hdt'):
 
     OUTPUT: *system [folder creation]
     """
+    _warn.warn('# Deprecated! Use `os` tools directly')
     if not _os.path.exists(fold):
         _os.system('mkdir {0}'.format(fold))
     return
@@ -775,6 +903,7 @@ def readrange(file, i0, ie):
     INPUT: string, int, int
 
     OUTPUT: list of strings """
+    _warn.warn('Update this with linecache')
     lines = []
     fp = open(file)
     for i, line in enumerate(fp):
@@ -917,7 +1046,7 @@ def normGScale(val, min=None, max=None, log=False):
         array([  0,   8,  19,  33,  51,  73, 103, 142, 191, 255])
     """
     if len(val) == 1 and (min is None or max is None):
-        eprint('# Warning! Wrong normGScale call!!')
+        _warn.warn('Wrong normGScale call!!')
         return 127
     #
     val = _np.array(val).astype(float)
@@ -972,7 +1101,7 @@ def cycles(i=0, ctype='cor'):
 
     OUTPUT: the corresponding value of the list. """
     if ctype not in ['cor', 'ls', 'mk']:
-        eprint('# Warning! Invalid ctype calling phc.cycles!')
+        _warn.warn('Invalid ctype calling phc.cycles!')
         return
     elif ctype == 'cor':
         return colors[_np.mod(i, len(colors))]
@@ -1033,13 +1162,13 @@ def gbf(T, lbd):
         4.30, 0.1761, 0.1269, 0.0046, -0.0690, -1.1185, 0.0126,
     ]).reshape((6, -1))
     if T < 5000 or T > 22500:
-        eprint('# ERROR! Invalid temperature for Gaunt factors calculation!')
+        _warn.warn('# ERROR! Invalid temperature for Gaunt factors calculation!')
         return _np.zeros(len(lbd)), _np.zeros(len(lbd))
     elif T >= 5000 and T < 10**vals[0, 0]:
-        eprint('# Warning! Extrapolated Gaunt factors!!')
+        _warn.warn('Extrapolated Gaunt factors!!')
         g0, g1, g2, b0, b1, b2 = vals[0, 1:]
     elif T <= 22500 and T > 10**vals[-1, 0]:
-        eprint('# Warning! Extrapolated Gaunt factors!!')
+        _warn.warn('Extrapolated Gaunt factors!!')
         g0, g1, g2, b0, b1, b2 = vals[-1, 1:]
     else:
         i = _np.where(vals[:, 0] == find_nearest(

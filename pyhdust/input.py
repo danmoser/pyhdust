@@ -209,6 +209,8 @@ class Input(object):
         if bdir == _os.path.split(_os.getcwd())[1]:
             bdir = ""
         outname = _os.path.join(bdir, self.modn, self.modn + self.suf + '.inp')
+        intname = _os.path.join(self.proj, self.modn, 
+            self.modn + self.suf + '.inp')
 
         if not self._hassiminp(outname):
             print('# Message: No simulations inside {0}'.format(outname))
@@ -221,16 +223,20 @@ class Input(object):
                 reps = ( (3, 'hdust', 'hd_'+'_'.join((self.proj, self.modn))), 
                     (4, '128', self.ncore), (4, '36:00:00', self.walltime), 
                     (8, 'alexcarciofi@gmail.com', self.email), 
-                    (11, 'hdust_bestar2.02.inp', outname),
+                    (11, 'hdust_bestar2.02.inp', intname),
                     (23, 'cd ${PBS_O_WORKDIR}', ('cd ${{PBS_O_WORKDIR}}\n'
                         'printf "{0}\\n\\n" >> output_${{PBS_JOBID}}\n'.format(
-                            outname))),
+                            intname))),
                 )
             elif cl.lower().startswith('oar'):
-                raise NotImplementedError('# oar is missing for write_job')
                 cl = 'oar'
-                reffile = ''
-                reps = ('',)
+                reffile = 'REF.oar'
+                reps = ( (1, 'hdust_dmf', 'hd_'+'_'.join((self.proj, 
+                    self.modn))), 
+                    (2, '12', self.ncore), (2, '24:00:00', self.walltime), 
+                    (10, 'hdust_bestar2.02.inp', '{0}\n\nprintf "{0}\\n\\n"'
+                        ' >> $OAR_JOB_ID'.format(intname)),
+                )
             else:
                 eprint('# Warning! Option {0} for clusters ignored'.format(cl))
                 continue
@@ -375,18 +381,23 @@ class HdustMod(object):
         self.fname = fname
         self.modn, self.suf = _os.path.split(fname)
         self.suf = _os.path.splitext(self.suf)[0]
-        if not self.modn.startswith('mod'):
-            self.path, self.modn = _os.path.split(self.modn)
+        if (not self.modn.startswith('mod')) or (
+            not self.modn.startswith('fullsed')):
+            self.proj, self.modn = _os.path.split(self.modn)
         else:
-            self.path = ''
+            self.proj = ''
+        if self.modn.startswith('fullsed'):
+            self.modn = ''
         if len(self.modn) == 0:
             self.modn = 'mod' + self.suf.split('mod')[-1].split('_')[0]
         self.suf = '_'+'_'.join(self.suf.split('mod')[-1].split('_')[1:])
-        ext = _os.path.splitext(fname)[1]
-        if ext == '.log':
-            self._fill()
+        if hasattr(self, 'vdict'):
+            if _os.path.splitext(fname)[1] == '.log':
+                self._fill()
+            else:
+                self._fillfname()
         else:
-            self._fillfname()
+            eprint('Warning! No `vdict` found for HdustMod')
 
     def _fill(self):
         f0 = open(self.fname).read().split('\n')
@@ -399,12 +410,41 @@ class HdustMod(object):
             setattr(self, it, _phc.fltTxtOccur(it, self.suf))
         return
 
-    def readfs2ob(self, obidx):
+    def get_nob(self):
+        self.nob = int(_hdt.sed2info(self.fname)[1])
+        return self.nob
+
+    def get_lum(self):
+        if _os.path.splitext(self.fname)[1] == '.log':
+            logname = self.name
+        else:
+            bdir = self.proj
+            if bdir == _os.path.split(_os.getcwd())[1]:
+                bdir = ""
+            logname = _os.path.join(bdir, self.modn, self.modn + self.suf + 
+                '.log')
+            if not _os.path.exists(logname):
+                loglist = _glob(_os.path.join(bdir, self.modn, '*'+self.modn + 
+                    self.suf + '*.log'))
+                if len(loglist) == 0:
+                    raise LookupError('Not found an equivalent to {0}'.format(
+                        logname))
+                logname = loglist[0]
+        #
+        self.lum = _phc.fltTxtOccur('L =', open(logname).read().split('\n'))
+        return self.lum
+
+    def readfs2ob(self, pol=False):
+        if not hasattr(self, 'nob'):
+            self.get_nob()
+        col = 3
+        if pol:
+            col = 7
         s2d = _hdt.readfullsed2(self.fname)
-        self.arr_lbd = s2d[obidx, :, 2]
-        self.arr_flx = s2d[obidx, :, 3]
-        self.arr_pol = s2d[obidx, :, 7]
-        self.ob = _np.round(_np.arccos(s2d[obidx, 0, 0])*180./_np.pi, 1)
+        self.arr_lbd = s2d[0, :, 2]
+        self.arr_flx = s2d[:, :, col]
+        self.obdeg = _np.round(_np.arccos(s2d[:, 0, 0])*180./_np.pi, 1)
+        self.ob = s2d[:, 0, 0]
         return
 
     def __str__(self):
@@ -416,7 +456,7 @@ class HdustMod(object):
 
 class AeriMod(HdustMod):    
     """docstring for AeriMod"""
-    vdict = dict(zip(['dval', 'ht', "nr", 'renv', 'M'],
+    vdict = _OrderedDict(zip(['dval', 'ht', "nr", 'renv', 'M'],
             ['n_0', 'Fraction', ' n ', 'R_env', ' M '])) 
     vfmt = _OrderedDict(zip(['dval', 'ht', "nr", 'renv', 'M'], 
         ['{:.1e}', '{:02.0f}', '{:.1f}', '{:04.1f}', '{:04.1f}']))
@@ -816,8 +856,8 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'],
                 wout[24] = addtouch
                 modchmod = _phc.trimpathname(mod)
                 modchmod[1] = modchmod[1].replace('.txt', '*')
-                wout[31] = 'chmod -f 664 {0}/{1}/*{2}\nchmod -f 664 log/*\n' +\
-                    'chmod -f 664 ../../tmp/*\n'.format(proj, *modchmod)
+                wout[31] = ('chmod -f 664 {0}/{1}/*{2}\nchmod -f 664 log/*\n' 
+                    'chmod -f 664 ../../tmp/*\n'.format(proj, *modchmod))
             f0.writelines('qsub {0}/{1}s/{2}\n'.format(proj, sel, outname))
         elif sel == 'oar':
             wout[2] = wout[2].replace('12', '{0}'.format(nodes))

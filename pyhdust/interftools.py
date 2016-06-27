@@ -72,8 +72,7 @@ def log_transform(im):
             im[idx] = _np.NaN
             return im
     except:
-        print('#Warning! The image could not be normalized !!!')
-        pass
+        eprint('# Warning! Wrong input at log_transform !!!')
     return im
 
 

@@ -11,17 +11,17 @@ def check_py_ver():
     elif (sys.version_info[1] >= 7):
         return
     else: 
-        print('# ERROR! Python version not supported by pyhdust! '
-            'Upgrade to 2.7+\nPress Ctlr+Z to abort or ENTER to continue... ')
         _ = raw_input('Press Ctlr+Z to abort or ENTER to continue... ')
+        return
 
+print('# Warning! PyHdust in only supported for Python 2.7+\n'
+    'Press Ctlr+Z to abort or ENTER to continue... ')
 check_py_ver()
 
 try:
     from setuptools import setup, find_packages
     errimport = False
 except ImportError:
-# if True:
     from distutils.core import setup
     from glob import glob
     errimport = True
@@ -70,7 +70,7 @@ if sys.argv[-1] == "publish":
     sys.exit()
 
 setup(name='pyhdust',
-    version='1.0.0',
+    version='1.0.1.0',
     description=('Analysis tools for multi-technique astronomical data and '
         'hdust models'),
     url='http://j.mp/pyhdust',
@@ -83,8 +83,8 @@ setup(name='pyhdust',
     packages=find_packages(exclude=['build', 'docs', '*egg*', 'dist']),
     # include_package_data=True,
     # include=recfiles('refs'),
-    package_data={'pyhdust': recfiles('pyhdust', '../refs') + ['../LICENSE', 
-        '../README.rst']},
+    package_data={'pyhdust': recfiles('.', 'refs') + ['LICENSE', 
+        'README.rst']},
     # data_files = [('refs/*', 'stmodels/*')],
     # package_dir = {'../'},
     zip_safe=False,

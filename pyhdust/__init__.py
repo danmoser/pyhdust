@@ -42,7 +42,7 @@ except ImportError:
     eprint('# Warning! matplotlib, pyfits, six and/or scipy module not '
         'installed!!!')
 
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 __release__ = "Stable"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -117,7 +117,12 @@ def readfullsed2(sfile):
     """
     sed2data = _np.loadtxt(sfile, skiprows=5)
     nlbd, nobs, Rstar, Rwind = sed2info(sfile)
-    sed2data = sed2data.reshape((nobs, nlbd, -1))
+    sed2data = sed2data.reshape((int(nobs), int(nlbd), -1))
+    for i, j in _itprod([3, 7], range(int(nobs))):
+        isnan = _np.isnan(sed2data[j, :, i])
+        if any(isnan):
+            sed2data[j, :, i][isnan] = _np.interp(sed2data[0, :, 2][isnan], 
+                sed2data[0, :, 2][~isnan], sed2data[j, :, i][~isnan])
     return sed2data
 
 
@@ -608,9 +613,10 @@ def genlog(proj=None, mods=None):
                 allmods[3].append( '' )
         _os.chdir(basedir)
 
-    f0 = open(_os.path.join(proj, 'genlog.txt'), 'w')
+    glout = 'genlog_{0}.txt'.format(_time.strftime('%y%m%d'))
+    f0 = open(_os.path.join(proj, glout), 'w')
     f0.writelines(_tab(_np.array(allmods).T, tablefmt="tsv"))
-    print('# Generated {0} !'.format(_os.path.join(proj, 'genlog.txt')))
+    print('# Generated {0} !'.format(_os.path.join(proj, glout)))
     f0.close()
     return _np.array(allmods)
 
@@ -808,6 +814,23 @@ def plottemp(tfiles, philist=[0], interpol=False, xax=0, fmt=['png'],
 
 
 # Be quantities convertions
+def rho2sigp(R, rho0, a, M):
+    sig = (2 * _np.pi) ** .5 * a / (_phc.G.cgs * M / R) ** .5 * R * rho0
+    return sig
+
+
+def rho2Mdot(R, alpha, a, M, rho0, R0):
+    Mdot = 3 * _np.pi * (2 * _np.pi) ** .5 * alpha * a ** 3. / \
+        (_phc.G.cgs * M / R) * rho0 * R ** 2. * ((R0 / R) ** .5 - 1) ** -1.
+    return Mdot
+
+
+def Mdot2sig(R, Mdot, alpha, a, M, R0):
+    sig = Mdot * (_phc.G.cgs * M / R) ** .5 / \
+        (3. * _np.pi * alpha * a ** 2 * R) * ((R0 / R) ** .5 - 1)
+    return sig
+
+
 def diskcalcs(M, R, Tpole, T, alpha, R0, mu, rho0, Rd):
     """ Do the equivalence of disk density for different quantities.
 
@@ -826,21 +849,6 @@ def diskcalcs(M, R, Tpole, T, alpha, R0, mu, rho0, Rd):
 
     OUTPUT: printed status
     """
-
-    def rho2sigp(R, rho0, a, M):
-        sig = (2 * _np.pi) ** .5 * a / (_phc.G.cgs * M / R) ** .5 * R * rho0
-        return sig
-
-    def rho2Mdot(R, alpha, a, M, rho0, R0):
-        Mdot = 3 * _np.pi * (2 * _np.pi) ** .5 * alpha * a ** 3. / \
-            (_phc.G.cgs * M / R) * rho0 * R ** 2. * ((R0 / R) ** .5 - 1) ** -1.
-        return Mdot
-
-    def Mdot2sig(R, Mdot, alpha, a, M, R0):
-        sig = Mdot * (_phc.G.cgs * M / R) ** .5 / \
-            (3. * _np.pi * alpha * a ** 2 * R) * ((R0 / R) ** .5 - 1)
-        return sig
-
     a = (_phc.kB.cgs * T / mu / _phc.mH.cgs) ** .5
     rho0 = rho0 * mu * _phc.mH.cgs
     sigp = rho2sigp(R, rho0, a, M)
@@ -1496,19 +1504,20 @@ def doFilterConv(x0, y0, filt, zeropt=False):
     """
     fpath = _os.path.join(hdtpath(), 'refs', 'filters', filt+'.dat')
     fdat = _np.loadtxt(fpath, skiprows=1)
-    # fdat[:, 0] /= 1e4  # from Angs to microns
-    idx = _np.where((x0 >= fdat[0, 0]) & (x0 <= fdat[-1, 0]))
-    x0 = x0[idx]
-    y0 = y0[idx]
-    # interpfunc = interpolate.interp1d(fdat[:,0], fdat[:,1], kind='linear')
-    interpfunc = _interpolate.InterpolatedUnivariateSpline(
-        fdat[:, 0], fdat[:, 1])
-
+    #
+    # idx = _np.where((x0 >= fdat[0, 0]) & (x0 <= fdat[-1, 0]))
+    # x0 = x0[idx]
+    # y0 = y0[idx]
+    # interpfunc = interpolate.interp1d(fdat[:,0], fdat[:,1], 
+    #     kind='linear')
+    # interpfunc = _interpolate.InterpolatedUnivariateSpline(
+    #     fdat[:, 0], fdat[:, 1])
+    # dfintp = interpfunc(x0)
+    fdintp = _np.interp(x0, fdat[:, 0], fdat[:, 1], left=0, right=0)
     if not zeropt:
-        return _np.trapz(interpfunc(x0) * y0, x0)
+        return _np.trapz(fdintp * y0, x0)
     else:
-        # return _phc.wg_avg_and_std(y0, 1 / interpfunc(x0))[0]
-        return _np.trapz(interpfunc(x0) * y0, x0)/_np.trapz(interpfunc(x0), x0)
+        return _np.trapz(fdintp * y0, x0)/_np.trapz(fdintp, x0)
 
 
 def doPlotFilter(obs, filter, fsed2data, pol=False, addsuf=None, fmt=['png']):
