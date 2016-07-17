@@ -10,14 +10,8 @@ proj.get_hdr(strength=[1.],naturalness=[1.0,1.1,1.2,1.5])
 """
 from __future__ import print_function
 import os
-import os.path
-import sys
 from copy import copy
-
-
-def eprint(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)
-    return
+import warnings as _warn
 
 try:
     from PIL import Image
@@ -25,7 +19,7 @@ try:
     pylab_loaded = 1
 except ImportError:
     pylab_loaded = 0
-    eprint('# Warning! matplotlib+pylab and/or PIL/Pillow not installed!!!')
+    _warn.warn('matplotlib+pylab and/or PIL/Pillow not installed!!!')
 
 __author__ = "bpowah"
 __email__ = "bpowah@gmail.com"
@@ -82,8 +76,7 @@ class hdr:
         and resized by a factor [resize]
         """
         if not case:
-            print('case is required')
-            sys.exit(1)
+            raise ValueError('case is required')
         self.resize = resize
         self.ext = img_type.strip('.')
         self.case = case

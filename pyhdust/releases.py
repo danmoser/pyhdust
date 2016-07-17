@@ -4,6 +4,10 @@
 
 History
 ============
+v1.002 @ 2016-06-26
+----------------------
+- New folder structure
+
 v0.999 @ 2016-06-14
 ----------------------
 - Corrections on setup.py
@@ -130,7 +134,7 @@ def setRelease():
     import pyhdust.phc as phc
     from pyhdust import __version__, hdtpath
     #  
-    f0 = open('{0}setup.py'.format(hdtpath()))
+    f0 = open(os.path.join(os.path.split(hdtpath()[:-1])[0], 'setup.py'))
     lines = f0.readlines()
     f0.close()
     i = [lines.index(x) for x in lines if x.find('version=') > -1][0]
@@ -140,12 +144,13 @@ def setRelease():
     else:
         oldver = verline.split('"')[1]
     lines[i] = lines[i].replace(oldver, str(__version__))
-    f0 = open('{0}setup.py'.format(hdtpath()), 'w')
+    f0 = open(os.path.join(os.path.split(hdtpath()[:-1])[0], 'setup.py'), 'w')
     f0.writelines(lines)
     f0.close()
     print('# ../setup.py file updated!')
     #
-    f0 = open('{0}docs/index.rst'.format(hdtpath()))
+    f0 = open(os.path.join(os.path.split(hdtpath()[:-1])[0], 'docs', 
+        'index.rst'))
     lines = f0.readlines()
     f0.close()
     i = [lines.index(x) for x in lines if x.find('at **version') > -1]
@@ -154,11 +159,12 @@ def setRelease():
     for i in range(len(lines)):
         if lines[i].find(oldver):
             lines[i] = lines[i].replace(oldver, str(__version__))
-    f0 = open('{0}docs/index.rst'.format(hdtpath()), 'w')
+    f0 = open(os.path.join(os.path.split(hdtpath()[:-1])[0], 'docs', 
+        'index.rst'), 'w')
     f0.writelines(lines)
     f0.close()    
     print('# docs/index.rst file updated!')
-    os.chdir('{0}docs'.format(hdtpath()))
+    os.chdir(os.path.join(os.path.split(hdtpath()[:-1])[0], 'docs'))
     os.system('make html')
     # os.system('rsync -rP _build/html/ astroweb:/www/moser/www/doc')
     # os.system('rsync -rP _build/html/ /data/Dropbox/Public/doc')

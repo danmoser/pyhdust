@@ -2,32 +2,120 @@
 
 """PyHdust auxiliary module: third-part MCMC plotting tools.
 
-:co-author: Daniel Moser
-:license: Copyright 2013 Daniel Foreman-Mackey
+:co-author:Dan Foreman-Mackey
+:license: GNU GPL v3.0 https://github.com/danmoser/pyhdust/blob/master/LICENSE
 """
 from __future__ import print_function, absolute_import, unicode_literals
-import logging
-import numpy as np
-import sys
-
-
-def eprint(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)
-    return
+import numpy as _np
+import warnings as _warn
+import pyhdust.phc as _phc
+import pyhdust.stats as _stt
+from six import string_types as _strtypes
 
 try:
-    import matplotlib.pyplot as pl
-    import matplotlib.cm as cm
-    from matplotlib.ticker import MaxNLocator
-    from scipy.ndimage import gaussian_filter
+    import matplotlib as _mpl
+    import matplotlib.pyplot as _plt
+    import matplotlib.cm as _cm
+    import matplotlib.gridspec as _gridspec 
+    from matplotlib.ticker import MaxNLocator as _MaxNLoc
+    from scipy.ndimage import gaussian_filter as _gf
+    from scipy import stats as _stats
 except ImportError:
     gaussian_filter = None
-    eprint('# Warning! matplotlib or scipy not installed!!!')
+    _warn.warn('matplotlib or scipy not installed!!!')
 
-__all__ = ["corner", "hist2d"]
-__version__ = "0.2.0"
-__author__ = "Dan Foreman-Mackey"
-__email__ = "danfm@nyu.edu"
+__author__ = "Daniel Moser"
+__email__ = "dmfaes@gmail.com"
+
+
+def kerncorner(xs, cmapn='gray_r', ncl=3, bestvals='perc', labels=[]):
+    """ xs = (niteractions, ndim) 
+    ncl = number os contour lines
+    bestvals = None, 'peak' or 'perc'
+    """
+    ndim = _np.shape(xs)[1]
+    if len(labels) < ndim:
+        labels += ['']*(ndim-len(labels))
+
+    fig = _plt.figure(figsize=(9, 9))
+    gs = _gridspec.GridSpec(ndim, ndim)
+    gs.update(hspace=0.01)
+    fs = dict(_mpl.rcParams.viewitems())['font.size']-4
+
+    axs = []
+    xslim = []
+    for i in range(ndim):
+        ax = []
+        xslim += [[_np.min(xs[:, i]), _np.max(xs[:, i])]]
+        for j in range(i+1):
+            ax += [_plt.subplot(gs[i, j])]
+        axs += [ax]
+
+    for i in range(ndim):
+        for j in range(i+1):
+            axs[i][j].locator_params(nbins=5)
+            xmin, xmax = xslim[j]
+            if i == j:
+                kernel = _stats.gaussian_kde(xs[:, i])
+                x = _np.linspace(xmin, xmax, 101)
+                y = kernel(x)
+                axs[i][j].plot(x, y/_np.max(y))
+                axs[i][j].set_xlim([xmin, xmax])
+                ymin, ymax = axs[i][j].get_ylim()
+                if isinstance(bestvals, _strtypes):
+                    if bestvals.startswith('perc'):
+                        pc = _np.percentile(xs[:, i], [15.9, 50.0, 84.1])
+                    elif bestvals.startswith('peak'): 
+                        mode = x[_phc.find_nearest(y, _np.max(y), idx=True)]
+                        mad = _stt.mad(xs[:, i])
+                        pc = mode + _np.array([-mad, 0, mad])
+                    else:
+                        _warn.warn('Invalid `bestvals` in kerncorner', 
+                            stacklevel=2)
+                    if 'pc' in locals():
+                        dx = xmax-xmin
+                        for p in pc:
+                            if p < xmin+0.015*dx:
+                                p = xmin+0.015*dx
+                            if p > xmax-0.015*dx:
+                                p = xmax-0.015*dx
+                            axs[i][j].plot([p, p], [ymin, ymax], 'k--')
+            else:
+                y = xs[:, i]
+                x = xs[:, j]
+                ymin, ymax = xslim[i]
+                #
+                values = _np.vstack([x, y])
+                kernel = _stats.gaussian_kde(values)
+                X, Y = _np.mgrid[xmin:xmax:100j, ymin:ymax:100j]
+                positions = _np.vstack([X.ravel(), Y.ravel()])
+                Z = _np.reshape(kernel(positions), X.shape)
+                #
+                # axs[i][j].plot(x, y, 'k.')
+                axs[i][j].imshow(Z.T, cmap=_plt.get_cmap(cmapn), 
+                    extent=[xmin, xmax, ymin, ymax], 
+                    origin='lower',
+                )
+                if ncl > 0:
+                    CS = axs[i][j].contour(X, Y, Z, ncl, 
+                    colors=_phc.gradColor(range(ncl), cmapn='copper'))
+                # axs[i][j].clabel(CS, inline=1, fontsize=fs)
+            if j == 0:
+                axs[i][j].set_ylabel(labels[i])
+            if i == ndim-1:
+                axs[i][j].set_xlabel(labels[j])
+            if (i == 0 and j == 0) or (j != 0):
+                axs[i][j].set_yticklabels([])
+            axs[i][j].set_aspect(abs(xmax-xmin)/abs(ymax-ymin))
+            if i != ndim-1:
+                # axs[i][j].get_xaxis().set_visible(False)
+                # axs[i][j].xaxis.set_visible(False)
+                axs[i][j].set_xticklabels([])
+            else:
+                _plt.setp( axs[i][j].xaxis.get_majorticklabels(), rotation=50 )
+
+    _phc.savefig(fig)  # figname='outname')
+    return
 
 
 def corner(xs, bins=20, range=None, weights=None, color="k",
@@ -115,7 +203,7 @@ def corner(xs, bins=20, range=None, weights=None, color="k",
     if label_kwargs is None:
         label_kwargs = dict()
     if qtdiff is None:
-        qtdiff = np.zeros(xs.shape[1])
+        qtdiff = _np.zeros(xs.shape[1])
 
     # Try filling in labels from pandas.DataFrame columns.
     if labels is None:
@@ -125,9 +213,9 @@ def corner(xs, bins=20, range=None, weights=None, color="k",
             pass
 
     # Deal with 1D sample lists.
-    xs = np.atleast_1d(xs)
+    xs = _np.atleast_1d(xs)
     if len(xs.shape) == 1:
-        xs = np.atleast_2d(xs)
+        xs = _np.atleast_2d(xs)
     else:
         assert len(xs.shape) == 2, "The input sample array must be 1- or 2-D."
         xs = xs.T
@@ -136,7 +224,7 @@ def corner(xs, bins=20, range=None, weights=None, color="k",
 
     # Parse the weight array.
     if weights is not None:
-        weights = np.asarray(weights)
+        weights = _np.asarray(weights)
         if weights.ndim != 1:
             raise ValueError("Weights must be 1-D")
         if xs.shape[1] != weights.shape[0]:
@@ -145,19 +233,19 @@ def corner(xs, bins=20, range=None, weights=None, color="k",
     # Parse the parameter ranges.
     if range is None:
         if "extents" in hist2d_kwargs:
-            logging.warn("Deprecated keyword argument 'extents'. "
-                         "Use 'range' instead.")
+            _warn.warn("Deprecated keyword argument 'extents'. "
+                "Use 'range' instead.")
             range = hist2d_kwargs.pop("extents")
         else:
             range = [[x.min(), x.max()] for x in xs]
             # Check for parameters that never change.
-            m = np.array([e[0] == e[1] for e in range], dtype=bool)
-            if np.any(m):
+            m = _np.array([e[0] == e[1] for e in range], dtype=bool)
+            if _np.any(m):
                 raise ValueError(("It looks like the parameter(s) in "
                                   "column(s) {0} have no dynamic range. "
                                   "Please provide a `range` argument.")
                                  .format(", ".join(map(
-                                     "{0}".format, np.arange(len(m))[m]))))
+                                     "{0}".format, _np.arange(len(m))[m]))))
 
     else:
         # If any of the extents are percentiles, convert them to ranges.
@@ -189,10 +277,10 @@ def corner(xs, bins=20, range=None, weights=None, color="k",
 
     # Create a new figure if one wasn't provided.
     if fig is None:
-        fig, axes = pl.subplots(K, K, figsize=(dim, dim), tight_layout=False)
+        fig, axes = _plt.subplots(K, K, figsize=(dim, dim), tight_layout=False)
     else:
         try:
-            axes = np.array(fig.axes).reshape((K, K))
+            axes = _np.array(fig.axes).reshape((K, K))
         except:
             raise ValueError("Provided figure has {0} axes, but data has "
                              "dimensions K={1}".format(len(fig.axes), K))
@@ -216,7 +304,7 @@ def corner(xs, bins=20, range=None, weights=None, color="k",
         if hasattr(x, "compressed"):
             x = x.compressed()
 
-        if np.shape(xs)[0] == 1:
+        if _np.shape(xs)[0] == 1:
             ax = axes
         else:
             ax = axes[i, i]
@@ -227,11 +315,11 @@ def corner(xs, bins=20, range=None, weights=None, color="k",
         else:
             if gaussian_filter is None:
                 raise ImportError("Please install scipy for smoothing")
-            n, b = np.histogram(x, bins=bins[i], weights=weights,
+            n, b = _np.histogram(x, bins=bins[i], weights=weights,
                                 range=range[i])
-            n = gaussian_filter(n, smooth1d)
-            x0 = np.array(zip(b[:-1], b[1:])).flatten()
-            y0 = np.array(zip(n, n)).flatten()
+            n = _gf(n, smooth1d)
+            x0 = _np.array(zip(b[:-1], b[1:])).flatten()
+            y0 = _np.array(zip(n, n)).flatten()
             ax.plot(x0, y0, **hist_kwargs)
 
         if truths is not None and truths[i] is not None:
@@ -239,9 +327,9 @@ def corner(xs, bins=20, range=None, weights=None, color="k",
 
         # Plot quantiles if wanted.
         if len(quantiles) > 0:
-            qts = np.array(quantiles) + qtdiff[i]
-            qts = np.where(qts <= 0, 0.01, qts)
-            qts = np.where(qts >= 1, 0.99, qts)
+            qts = _np.array(quantiles) + qtdiff[i]
+            qts = _np.where(qts <= 0, 0.01, qts)
+            qts = _np.where(qts >= 1, 0.99, qts)
             qts = list(qts)
             qvalues = quantile(x, qts, weights=weights)
             for q in qvalues:
@@ -254,9 +342,9 @@ def corner(xs, bins=20, range=None, weights=None, color="k",
         if show_titles:
             # Compute the quantiles for the title. This might redo
             # unneeded computation but who cares.
-            qts = np.array(quantiles) + qtdiff[i]
-            qts = np.where(qts <= 0, 0.01, qts)
-            qts = np.where(qts >= 1, 0.99, qts)
+            qts = _np.array(quantiles) + qtdiff[i]
+            qts = _np.where(qts <= 0, 0.01, qts)
+            qts = _np.where(qts >= 1, 0.99, qts)
             qts = list(qts)
             q_16, q_50, q_84 = quantile(x, qts, weights=weights)             
             q_m, q_p = q_50 - q_16, q_84 - q_50
@@ -267,7 +355,7 @@ def corner(xs, bins=20, range=None, weights=None, color="k",
                 title = r"${{{0}}}_{{-{1}}}^{{+{2}}}$"
                 title = title.format(fmt(q_50), fmt(q_m), fmt(q_p))
             else:
-                expn = int(np.log10(q_50))
+                expn = int(_np.log10(q_50))
                 fmt = "{{0:{0}}}".format(title_fmt).format
                 title = r"${{{0}}}_{{-{1}}}^{{+{2}}}e{3}$"
                 title = title.format(fmt(q_50 * 10**-expn), fmt(q_m * 
@@ -286,12 +374,12 @@ def corner(xs, bins=20, range=None, weights=None, color="k",
         # Set up the axes.
         ax.set_xlim(range[i])
         if scale_hist:
-            maxn = np.max(n)
+            maxn = _np.max(n)
             ax.set_ylim(-0.1 * maxn, 1.1 * maxn)
         else:
-            ax.set_ylim(0, 1.1 * np.max(n))
+            ax.set_ylim(0, 1.1 * _np.max(n))
         ax.set_yticklabels([])
-        ax.xaxis.set_major_locator(MaxNLocator(max_n_ticks, prune="lower"))
+        ax.xaxis.set_major_locator(_MaxNLoc(max_n_ticks, prune="lower"))
 
         if i < K - 1:
             if top_ticks:
@@ -306,7 +394,7 @@ def corner(xs, bins=20, range=None, weights=None, color="k",
                 ax.xaxis.set_label_coords(0.5, -0.3)
 
         for j, y in enumerate(xs):
-            if np.shape(xs)[0] == 1:
+            if _np.shape(xs)[0] == 1:
                 ax = axes
             else:
                 ax = axes[i, j]
@@ -332,8 +420,8 @@ def corner(xs, bins=20, range=None, weights=None, color="k",
                 if truths[i] is not None:
                     ax.axhline(truths[i], color=truth_color)
 
-            ax.xaxis.set_major_locator(MaxNLocator(max_n_ticks, prune="lower"))
-            ax.yaxis.set_major_locator(MaxNLocator(max_n_ticks, prune="lower"))
+            ax.xaxis.set_major_locator(_MaxNLoc(max_n_ticks, prune="lower"))
+            ax.yaxis.set_major_locator(_MaxNLoc(max_n_ticks, prune="lower"))
 
             if i < K - 1:
                 ax.set_xticklabels([])
@@ -364,13 +452,13 @@ def quantile(x, q, weights=None):
 
     """
     if weights is None:
-        return np.percentile(x, [100. * qi for qi in q])
+        return _np.percentile(x, [100. * qi for qi in q])
     else:
-        idx = np.argsort(x)
+        idx = _np.argsort(x)
         xsorted = x[idx]
-        cdf = np.add.accumulate(weights[idx])
+        cdf = _np.add.accumulate(weights[idx])
         cdf /= cdf[-1]
-        return np.interp(q, cdf, xsorted).tolist()
+        return _np.interp(q, cdf, xsorted).tolist()
 
 
 def hist2d(x, y, bins=20, range=None, weights=None, levels=None, smooth=None,
@@ -383,13 +471,13 @@ def hist2d(x, y, bins=20, range=None, weights=None, levels=None, smooth=None,
 
     """
     if ax is None:
-        ax = pl.gca()
+        ax = _plt.gca()
 
     # Set the default range based on the data range if not provided.
     if range is None:
         if "extent" in kwargs:
-            logging.warn("Deprecated keyword argument 'extent'. "
-                         "Use 'range' instead.")
+            _warn.warn("Deprecated keyword argument 'extent'. "
+                "Use 'range' instead.")
             range = kwargs["extent"]
         else:
             range = [[x.min(), x.max()], [y.min(), y.max()]]
@@ -400,7 +488,7 @@ def hist2d(x, y, bins=20, range=None, weights=None, levels=None, smooth=None,
 # 
     # Choose the default "sigma" contour levels.
     # if levels is None:
-        # levels = 1.0 - np.exp(-0.5 * np.arange(0.5, 2.1, 0.5) ** 2)
+        # levels = 1.0 - _np.exp(-0.5 * _np.arange(0.5, 2.1, 0.5) ** 2)
 # 
     # This is the color map for the density plot, over-plotted to indicate the
     # density of the points near the center.
@@ -420,7 +508,7 @@ def hist2d(x, y, bins=20, range=None, weights=None, levels=None, smooth=None,
 # 
     # We'll make the 2D histogram to directly estimate the density.
     try:
-        H, X, Y = np.histogram2d(x.flatten(), y.flatten(), bins=bins,
+        H, X, Y = _np.histogram2d(x.flatten(), y.flatten(), bins=bins,
                                  range=range, weights=weights)
     except ValueError:
         raise ValueError("It looks like at least one of your sample columns "
@@ -430,15 +518,15 @@ def hist2d(x, y, bins=20, range=None, weights=None, levels=None, smooth=None,
     # if smooth is not None:
         # if gaussian_filter is None:
             # raise ImportError("Please install scipy for smoothing")
-        # H = gaussian_filter(H, smooth)
+        # H = _gf(H, smooth)
 # 
     # Compute the density levels.
     # Hflat = H.flatten()
-    # inds = np.argsort(Hflat)[::-1]
+    # inds = _np.argsort(Hflat)[::-1]
     # Hflat = Hflat[inds]
-    # sm = np.cumsum(Hflat)
+    # sm = _np.cumsum(Hflat)
     # sm /= sm[-1]
-    # V = np.empty(len(levels))
+    # V = _np.empty(len(levels))
     # for i, v0 in enumerate(levels):
         # try:
             # V[i] = Hflat[sm <= v0][-1]
@@ -449,7 +537,7 @@ def hist2d(x, y, bins=20, range=None, weights=None, levels=None, smooth=None,
     # X1, Y1 = 0.5 * (X[1:] + X[:-1]), 0.5 * (Y[1:] + Y[:-1])
 # 
     # Extend the array for the sake of the contours at the plot edges.
-    # H2 = H.min() + np.zeros((H.shape[0] + 4, H.shape[1] + 4))
+    # H2 = H.min() + _np.zeros((H.shape[0] + 4, H.shape[1] + 4))
     # H2[2:-2, 2:-2] = H
     # H2[2:-2, 1] = H[:, 0]
     # H2[2:-2, -2] = H[:, -1]
@@ -459,15 +547,15 @@ def hist2d(x, y, bins=20, range=None, weights=None, levels=None, smooth=None,
     # H2[1, -2] = H[0, -1]
     # H2[-2, 1] = H[-1, 0]
     # H2[-2, -2] = H[-1, -1]
-    # X2 = np.concatenate([
-        # X1[0] + np.array([-2, -1]) * np.diff(X1[:2]),
+    # X2 = _np.concatenate([
+        # X1[0] + _np.array([-2, -1]) * _np.diff(X1[:2]),
         # X1,
-        # X1[-1] + np.array([1, 2]) * np.diff(X1[-2:]),
+        # X1[-1] + _np.array([1, 2]) * _np.diff(X1[-2:]),
     # ])
-    # Y2 = np.concatenate([
-        # Y1[0] + np.array([-2, -1]) * np.diff(Y1[:2]),
+    # Y2 = _np.concatenate([
+        # Y1[0] + _np.array([-2, -1]) * _np.diff(Y1[:2]),
         # Y1,
-        # Y1[-1] + np.array([1, 2]) * np.diff(Y1[-2:]),
+        # Y1[-1] + _np.array([1, 2]) * _np.diff(Y1[-2:]),
     # ])
 # 
     # if plot_datapoints:
@@ -491,7 +579,7 @@ def hist2d(x, y, bins=20, range=None, weights=None, levels=None, smooth=None,
             # cmap)
         # contourf_kwargs["antialiased"] = contourf_kwargs.get("antialiased",
             # False)
-        # ax.contourf(X2, Y2, H2.T, np.concatenate([[H.max()], V, [0]]),
+        # ax.contourf(X2, Y2, H2.T, _np.concatenate([[H.max()], V, [0]]),
                     # **contourf_kwargs)
 # 
     # Plot the density map. This can't be plotted at the same time as the
@@ -499,7 +587,7 @@ def hist2d(x, y, bins=20, range=None, weights=None, levels=None, smooth=None,
     # elif plot_density:
         # ax.pcolor(X, Y, H.max() - H.T, cmap=density_cmap)
     if plot_density:
-        ax.pcolor(X, Y, H.max() - H.T, cmap=cm.get_cmap('gist_heat'))
+        ax.pcolor(X, Y, H.max() - H.T, cmap=_cm.get_cmap('gist_heat'))
 # 
     # Plot the contour edge colors.
     # if plot_contours:

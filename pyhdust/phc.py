@@ -12,6 +12,7 @@ Includes functions for:
 - Plotting 
 - Physical functions
 - `List of constants`_
+- Python-version issues
 
 .. _`List of constants`: phc_list.html
 
@@ -19,6 +20,7 @@ Includes functions for:
 :license: GNU GPL v3.0 https://github.com/danmoser/pyhdust/blob/master/LICENSE
 """
 from __future__ import print_function
+import sys as _sys
 import os as _os
 import re as _re
 import numpy as _np
@@ -32,6 +34,7 @@ import pyhdust.jdcal as _jdcal
 from pyhdust.tabulate import tabulate as _tab
 from six import string_types as _strtypes
 import warnings as _warn
+import struct as _struct
 
 try:
     import matplotlib.pyplot as _plt
@@ -78,9 +81,11 @@ def wg_avg_and_std(values, sigma):
     return (avg, _np.sqrt(_np.sum(sigma**2)) / len(values) )
 
 
-def bindata(x, y, nbins=20, yerr=None, xlim=None):
+def bindata(x, y, nbins=20, yerr=None, xlim=None, perc=0):
     """
     Return the weighted binned data.
+
+    if ``perc > 0``, then it returns the percentile value of the interval.
 
     if yerr is None:
         yerr = _np.ones(shape=_np.shape(x))
@@ -113,8 +118,14 @@ def bindata(x, y, nbins=20, yerr=None, xlim=None):
     for i in range(nbins):
         selx = _np.where( abs(x - tmpx[i]) <= shift / 2. )
         if len(selx[0]) >= 1:
-            tmpx[i] = _np.average(x[selx])
-            tmpy[i], tmpyerr[i] = wg_avg_and_std(y[selx], yerr[selx])
+            if perc <= 0:
+                tmpx[i] = _np.average(x[selx])
+                tmpy[i], tmpyerr[i] = wg_avg_and_std(y[selx], yerr[selx])
+            else:
+                tmpy[i] = _np.percentile(y[selx], perc)
+                pid = find_nearest(y[selx], tmpy[i], idx=True)
+                tmpx[i] = x[selx][pid]
+                _, tmpyerr[i] = wg_avg_and_std(y[selx], yerr[selx])
             idx[i] = True
     if _np.sum(yerr) / len(x) == 1:
         return tmpx[idx], tmpy[idx]
@@ -149,13 +160,6 @@ def splitequal(n, N):
     if n == 0:
         idx = [[0, N]]
     return idx
-
-
-def interBarND(point, grid, Zgrid):
-    """ TODO """
-    d = _np.sqrt( (point[0] - grid[:, 0])**2 + (point[1] - grid[:, 1])**2)
-    print(d)
-    return
 
 
 def interLinND(X, X0, X1, Fx, disablelog=False):
@@ -368,6 +372,22 @@ def cart_rot(x, y, z, ang_xy=0., ang_yz=0., ang_zx=0.):
 
 
 # Lists and strings manipulation
+def readpck(n, tp, ixdr, f):
+    """ Read XDR 
+
+    - n: length
+    - tp: type ('i', 'l', 'f', 'd')
+    - ixdr: counter
+    - f: file-object
+
+    :returns: ixdr (counter), np.array
+    """    
+    sz = dict(zip(['i', 'l', 'f', 'd'], [4, 4, 4, 8]))
+    s = sz[tp]
+    upck = '>{0}{1}'.format(n, tp)
+    return ixdr+n*s, _np.array(_struct.unpack(upck, f[ixdr:ixdr+n*s]))
+
+
 def reshapeltx(ltxtb, ncols=2, latexfmt=True):
     """ Reshape a latex table. 
 
@@ -496,7 +516,7 @@ def strrep(seq, n, newseq):
 
 
 def find_nearest(array, value, bigger=None, idx=False):
-    """ Find nearest VALUE in the array and return it.
+    """ Find nearest VALUE in the array and return it. 
 
     INPUT: array, value
 
@@ -553,7 +573,7 @@ def find_nearND(matrix, array, idx=False, bigger=None, outlen=1):
                 break
         if valid == []:
             _warn.warn('# Invalid values for bigger == {0}'.format(bigger))
-    elif not bigger:
+    elif bigger is False:
         valid = []
         for nid in idsort:
             chk = [True for i in range(len(array)) if (
@@ -566,6 +586,10 @@ def find_nearND(matrix, array, idx=False, bigger=None, outlen=1):
         if valid == []:
             _warn.warn('# Invalid values for bigger == {0}'.format(bigger))
     # return
+    if 'valid' in locals():
+        if len(valid) == 0:
+            print(idsort)
+            raise ValueError('Invalid values for bigger == {0}'.format(bigger))
     if not idx:
         if outlen <= 1:
             return matrix[idsort[0]]
@@ -597,12 +621,17 @@ def nan_helper(y):
 
 
 # Angular coordinates and dates manipulation
-def dtflag():
+def dtflag(ms=False):
     """ Return a "datetime" flag, i.e., a string the the current date and time
     formated as yyyymmdd-hhMM."""
     now = _dt.datetime.now()
-    return '{0}{1:02d}{2:02d}-{3:02d}{4:02d}{5:02d}'.format(now.year, 
-        now.month, now.day, now.hour, now.minute, now.second)
+    if not ms:
+        return '{0}{1:02d}{2:02d}-{3:02d}{4:02d}{5:02d}'.format(now.year, 
+            now.month, now.day, now.hour, now.minute, now.second)
+    else:
+        return '{0}{1:02d}{2:02d}-{3:02d}{4:02d}{5:02d}{6:02.0f}'.format(
+            now.year, now.month, now.day, now.hour, now.minute, now.second, 
+            now.microsecond/1e4)
 
 
 def longdate2MJD(ldate):
@@ -986,6 +1015,14 @@ def repl_fline_val(f, iline, oldval, newval):
     return f
 
 
+# Python-version stuff
+def user_input(arg):
+    if _sys.version_info[0] > 2:
+        return input(arg)
+    else: 
+        return raw_input(arg)
+
+
 # Plot-related
 def civil_ticks(ax, civcfg=[1, 'm'], civdt=None, tklab=True):
     """ Add the civil ticks in the axis.  """
@@ -1005,18 +1042,18 @@ def civil_ticks(ax, civcfg=[1, 'm'], civdt=None, tklab=True):
     return ax
 
 
-def savefig(fig, figname=None, fmt=['png'], keeppt=False, dpi=80):
+def savefig(fig, figname=None, fmt=['png'], keeppt=False, dpi=80, transp=True):
     """ Standard way of saving a figure in PyHdust. """
     if figname is None or figname == "":
-        figname = dtflag()
+        figname = dtflag(ms=True)
     elif not keeppt:
         figname = figname.replace('.', 'p')
     if _os.path.basename(figname) == figname:
         figname = _os.getcwd() + '/' + figname
     for f in fmt:
-        print('# Saved {1}.{0}'.format(f, figname))
-        fig.savefig(figname+'.{0}'.format(f), transparent=True, 
+        fig.savefig(figname+'.{0}'.format(f), transparent=transp, 
             bbox_inches='tight', dpi=dpi)
+        print('# Saved {1}.{0}'.format(f, figname))
     _plt.close(fig)
     return
 
@@ -1111,6 +1148,18 @@ def cycles(i=0, ctype='cor'):
         return filled_markers[_np.mod(i, len(filled_markers))]
 
 
+def dashes(i=0):
+    """ Dashes scheme for plot 
+    """
+    i = int(_np.mod(i, 7))
+    if i == 0:
+        return []
+    if i < 4:
+        return (32/2**i, 4, 4, 4)
+    if i < 7:
+        return (32/2**(i-2), 4, 2, 4)
+
+
 colors = ['Black', 'Blue', 'Green', 'red', 'orange', 'brown', 'purple', 'gray',
     'dodgerblue', 'lightgreen', 'tomato', 'yellow', 'peru', 'MediumVioletRed',
     'LightSteelBlue', 'cyan', 'darkred', 'olive']
@@ -1118,7 +1167,7 @@ colors = ['Black', 'Blue', 'Green', 'red', 'orange', 'brown', 'purple', 'gray',
 filled_markers = ['o', 'v', '^', '<', '>', '8', 's', 'p', '*', 'h', 'H', 'D', 
     'd']
 
-line_styles = ['-', '--', ':', '-.']
+line_styles = ['-', '--', '-.', ':']
 
 
 # Physical functions
@@ -1128,7 +1177,7 @@ def BBlbd(T, lbd=None):
     INPUT: lambda vector in cm. If None, lbd = _np.arange(1000, 10000, 100) *
     1e-8 #Angs -> cm"""
     if lbd is None:
-        lbd = _np.arange(1000, 10000, 100) * 1e-8  # Angs -> cm
+        lbd = _np.arange(1000, 10000., 100) * 1e-8  # Angs -> cm
     ft = h.cgs * c.cgs / (lbd * kB.cgs * T)
     return 2 * h.cgs * c.cgs**2 / (lbd**5 * (_np.exp(ft) - 1))
 
@@ -1136,7 +1185,7 @@ def BBlbd(T, lbd=None):
 def fBBcor(T):
     """ Correction as appendix B Vieira+2015. Stellar atmospheric models
     systematically have a LOWER flux than a BB of a given Teff temperature in 
-    IR.
+    IR (at least for Early-type stars).
 
     fBBcor(T)*BBlbd(Teff) == Kurucz(Teff) 
 

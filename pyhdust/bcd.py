@@ -10,30 +10,27 @@
         print k, result[k]
         # _np.savetxt('result',(k))
 
-:co-author: Bruno Mota; Daniel Moser; Ahmed Elshaer 
-:license: Copyright 2015 Antoine Merand
+:co-author: Bruno Mota; Antoine Merand; Ahmed Elshaer 
+:license: GNU GPL v3.0 https://github.com/danmoser/pyhdust/blob/master/LICENSE
 """
 from __future__ import print_function
 import os as os
 import numpy as _np
-import sys as _sys
-
-
-def eprint(*args, **kwargs):
-    print(*args, file=_sys.stderr, **kwargs)
-    return
+import warnings as _warn
+import pyhdust.spectools as _spt
+import pyhdust.phc as _phc
 
 try:
     import matplotlib.pyplot as _plt
 except ImportError:
-    eprint('# Warning! Matplotlib module not installed!!!')
+    _warn.warn('matplotlib module not installed!!!')
 
-__author__ = "Antoine Merand"
-__email__ = "amerand@eso.org"
+__author__ = "Daniel Moser"
+__email__ = "dmfaes@gmail.com"
 
 
 def balmer_jump(filename):
-    r""" Calculate the Balmer_jump of a given spectral. 
+    r""" Calculate the Balmer_jump of a given spectrum. 
 
     INPUT: `filename` is a file with 4 columns, as [wav (:math:`\AA`), 
     log10(wav), norm_flux, log(flux)] 
@@ -134,9 +131,56 @@ def analyze_all(fmt=['png']):
     return res
 
 
+def bcd_new(wav, flx, doplot=False):
+    r""" Calculate the Balmer_jump of a given spectrum.
+
+    INPUT: wav (:math:`\AA`), flux (**non-normalized**)
+
+    OUTPUT: offset, intersect, dD
+
+    dD < 0 means an "emission" (opposite sign)
+
+    TODO: errors"""
+    xmin = 3500
+    xbjm = 3690
+    xbcd = 3700
+    xbjp = 3900
+    xmax = 4600
+    idx = (wav >= xmin) & (wav <= xmax)
+    wav = wav[idx]
+    flx = flx[idx]
+    flx = flx/_np.interp([xmax], wav, flx)
+    nlbp = int((wav[-1]-wav[0])/40.)  # 40 AA = size of a spectral line
+    xsi, ysi = _phc.bindata(wav, flx, nbins=nlbp, perc=100)
+    w1 = (xsi >= xmin) & (xsi <= xbjm) 
+    w2 = (xsi >= xbjp) & (xsi <= xmax)
+    c1 = _np.polyfit(xsi[w1][:10], _np.log10(ysi[w1][:10]), 1)
+    c2 = _np.polyfit(xsi[w2][:10], _np.log10(ysi[w2][:10]), 1)
+    D = _np.polyval(c2, [xbcd]) - _np.polyval(c1, [xbcd])
+    w3 = (xsi >= xbjm) & (xsi <= xbjp) 
+    midflx = -D/2+_np.polyval(c2, xsi[w3])
+    lb1 = _np.interp(0, _np.log10(ysi[w3])-midflx, xsi[w3])
+    if doplot:
+        fig, ax = _plt.subplots()
+        ax.plot(wav, _np.log10(flx))
+        ax.plot(xsi, _np.log10(ysi), 'o')
+        ax.plot(xsi[w1], _np.log10(ysi[w1]), 'o')
+        ax.plot(xsi[w2], _np.log10(ysi[w2]), 'o')
+        ax.plot([xmin, xbcd], _np.polyval(c1, [xmin, xbcd]), 'k--')
+        ax.plot([xbcd, xmax], _np.polyval(c2, [xbcd, xmax]), 'k--')
+        ax.plot(xsi[w3], midflx, 'r--')
+        ax.plot([lb1], -D/2+_np.polyval(c2, [lb1]), 'ro')
+        ax.set_xlim([xmin, xmax])
+    w4 = (xsi >= xbjm) & (xsi <= xbcd+(xbcd-xbjm)) 
+    dD = 0.
+    if sum(w4) > 0:
+        dD = _np.polyval(c1, [xbcd]) - _np.min(_np.log10(flx[w4]))
+    return float(D), float(lb1), float(dD)
+
+
 def bcd(obj, wav, nflx, logflx, elogflx=None, label='Spec', folder=None, 
     doplot=False):
-    r""" Calculate the Balmer_jump of a given spectral.
+    r""" Calculate the Balmer_jump of a given spectrum.
 
     INPUT: wav (:math:`\AA`), nflux (Normalized flux), log10(flux) and
     log10(err_flux).

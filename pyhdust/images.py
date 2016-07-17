@@ -32,17 +32,12 @@ import time as _time
 import pyhdust as _hdt
 from pyhdust.hdrpil import hdr as _hdr
 import pyhdust.phc as _phc
-import sys as _sys
-
-
-def eprint(*args, **kwargs):
-    print(*args, file=_sys.stderr, **kwargs)
-    return
+import warnings as _warn
 
 try:
     import PIL as _PIL
 except ImportError:
-    print('# Warning! PIL (Pillow) module not installed!!!')
+    _warn.warn('PIL (Pillow) module not installed!!!')
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -242,7 +237,8 @@ def do_background(foreimg, backimg, savename=None, pos=[.1, .9], cut=0.5,
         minbd = _np.min(aB.size)
         minfd = _np.min(aF.size)
         f = minbd*fsize/minfd
-        fsize = ( _np.int(_np.round(f*aF.size[0])), _np.int(_np.round(f*aF.size[1])) )
+        fsize = ( _np.int(_np.round(f*aF.size[0])), _np.int(_np.round(
+            f*aF.size[1])) )
         aF = aF.resize(fsize, _PIL.Image.ANTIALIAS)
     aB = _np.asarray(aB, dtype=float)
     aF = _np.asarray(aF, dtype=float)

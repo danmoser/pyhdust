@@ -8,6 +8,7 @@ from __future__ import print_function
 import re as _re
 import numpy as _np
 import pyhdust.phc as _phc
+import warnings as _warn
 
 # try:
 #     import matplotlib.pyplot as _plt
@@ -102,7 +103,7 @@ def beta(par, is_ob=False):
     elif wfrac == 1:
         return 0.13535
     elif wfrac < 0 or wfrac > 1:
-        print('# Warning! Invalid value of wfrac.')
+        _warn.warn('Invalid value of wfrac.')
         return 0.
 
     # Espinosa-Lara VLTI-School 2013 lecture, slide 18...

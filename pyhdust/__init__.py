@@ -26,12 +26,7 @@ import pyhdust.phc as _phc
 import pyhdust.jdcal as _jdcal
 from pyhdust.tabulate import tabulate as _tab
 from six import string_types as _strtypes
-import sys as _sys
-
-
-def eprint(*args, **kwargs):
-    print(*args, file=_sys.stderr, **kwargs)
-    return
+import warnings as _warn
 
 try:
     import matplotlib.pyplot as _plt
@@ -39,10 +34,9 @@ try:
     from scipy import interpolate as _interpolate
     import pyfits as _pf
 except ImportError:
-    eprint('# Warning! matplotlib, pyfits, six and/or scipy module not '
-        'installed!!!')
+    _warn.warn('# matplotlib, pyfits, six and/or scipy module not installed!!')
 
-__version__ = '1.0.2'
+__version__ = '1.0.3'
 __release__ = "Stable"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -59,8 +53,8 @@ def hdtpath():
     >>> hdt.hdtpath()
     /home/user/Scripts/pyhdust/
     """
-    fulldir = _os.path.split(__file__)[0]
-    fulldir = _os.path.split(fulldir)[0] + _os.path.sep
+    fulldir = _os.path.split(__file__)[0] + _os.path.sep
+    # fulldir = _os.path.split(fulldir)[0] + _os.path.sep
     end = 'pyhdust' + _os.path.sep
     if not fulldir.endswith(end):
         fulldir += end
@@ -117,6 +111,7 @@ def readfullsed2(sfile):
     """
     sed2data = _np.loadtxt(sfile, skiprows=5)
     nlbd, nobs, Rstar, Rwind = sed2info(sfile)
+    # print(_np.shape(sed2data), int(nobs), int(nlbd))
     sed2data = sed2data.reshape((int(nobs), int(nlbd), -1))
     for i, j in _itprod([3, 7], range(int(nobs))):
         isnan = _np.isnan(sed2data[j, :, i])
@@ -177,8 +172,8 @@ def readtemp(tfile, quiet=False):
         if not quiet:
             print('# XDR {0} completely read!'.format(tfile))
     else:
-        eprint('# Warning: XDR {0} not completely read!'.format(tfile))
-        eprint('# length difference is {0}'.format( (len(f) - ixdr) / 4 ) )
+        _warn.warn( '# XDR {0} not completely read!\n# length difference is '
+            '{1}'.format(tfile, (len(f)-ixdr)/4 ) )
     #
     pcrc = data[0, :, 0, 0]
     pcr = _np.zeros(ncr + 1)
@@ -304,19 +299,17 @@ def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
 
     OUTPUT: *files written (status printed).
     """
-    # sufbands = ['SED', 'UV', 'IR', 'NIR', 'BALMER', 'PASCHEN', 'CM', 'MM',
-                # 'J', 'H', 'K', 'L', 'M', 'N', 'Q1', 'Q2']  # 8-14
-    # wavelength in microns
-    # suflines = {'H12': .372300, 'H11': .373543, 'H10': .375122, 
-    # 'H9': .377170,
-    # 'H8': .379899, 'H7': .383649, 'H6': .389017, 'H5': .397120, 
-    # 'Hd': .410289,
-    # 'Hg': .434169, 'Hb': .486271, 'Ha': .656461, 'Br13':1.61137, 
-    # 'Br12':1.6416,
-    # 'Brg':2.166}
+    if isinstance(models, _strtypes):
+        models = [models]
+    if isinstance(Vrots, (int, long, float)):
+        Vrots = [Vrots]
+        if len(Vrots) < len(models):
+            Vrots = list(Vrots)+(len(models)-len(Vrots))*Vrots[-1:]
+
+    for i in range(len(models)):
+        models[i] = models[i].replace('.inp', '.txt')
 
     for model in models:
-        model = model.replace('.inp', '.txt')
         modfld, modelname = _phc.trimpathname(model)
         path = _phc.trimpathname(modfld[:-1])[0]
         if not _os.path.exists('{0}fullsed'.format(path)):
@@ -342,7 +335,7 @@ def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
             suf = _phc.trimpathname(file)[-1].split('_')[0]
             sfound += [suf]
             newdata = readsed2(file)
-            if file.find('_SEI.') == -1:
+            if file.find('_SEI.') == -1 or file.find('SED_') > -1:
                 # Process broad-band
                 if len(sed2data) == 0:
                     sed2data = newdata.copy()
@@ -353,7 +346,7 @@ def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
                         == 0:
                         key = ''
                         while key.upper() != 'Y':
-                            eprint('# Warning: {0} has different HDUST '
+                            _warn.warn('# {0} has different HDUST '
                                 'output!'.format(modelname))
                             key = raw_input(
                                 'Do you want do proceed? (y/other): ')
@@ -398,7 +391,7 @@ def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
                         == 0:
                         key = ''
                         while key.upper() != 'Y':
-                            eprint('# Warning: {0} has different HDUST '
+                            _warn.warn('# {0} has different HDUST '
                                 'input!!'.format(modelname))
                             key = raw_input(
                                 'Do you want do proceed? (y/other): ')
@@ -460,7 +453,7 @@ def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
             f0.writelines(outfile)
             f0.close()
         else:
-            eprint('# Warning: No SED2 found for {0}'.format(model))
+            _warn.warn('# No SED2 found for {0}'.format(model))
     return
 
 
@@ -715,7 +708,7 @@ def fs2rm_nan(fsed2, cols=[3], refcol=None):
             f2mtx[:, col][nans] = _np.interp(
                 x(nans), x(~nans), f2mtx[:, col][~nans])
         else:
-            eprint('# Warning! The output must be checked!')
+            _warn.warn('# The output must be checked!')
             f2mtx[:, col][nans] = _np.interp(f2mtx[:, refcol][nans], 
                 f2mtx[:, refcol][~nans], f2mtx[:, col][~nans])
     #
@@ -725,8 +718,8 @@ def fs2rm_nan(fsed2, cols=[3], refcol=None):
     elif _np.max(f2mtx[_np.isfinite(f2mtx)]) < 1000000:
         fmt = '%13.5f'
     else:
-        eprint('# ERROR at max values of fullsed2 {0}!!!!!!!!'.format(fsed2))
-        raise SystemExit(1)
+        raise ValueError('# ERROR at max values of fullsed2 {0}!!!!!!'.format(
+            fsed2))
     _np.savetxt(fsed2, f2mtx, header='\n'.join(
         oldf[:5]), comments="", fmt=fmt, delimiter='')
     print('# {0} file updated!'.format(fsed2))
@@ -769,11 +762,9 @@ def plottemp(tfiles, philist=[0], interpol=False, xax=0, fmt=['png'],
     if title is None:
         title = tfiles[-1]
     if interpol:
-        print('# Interpol option currently is not available.')
-        raise SystemExit(0)
+        raise NotImplementedError('# Interpol option not available.')
     if xax not in [0, 1, 2]:
-        print('# Invalid `xax` option. Try again.')
-        raise SystemExit(0)
+        raise ValueError('# Invalid `xax` option. Try again.')
     #
     fig, axs = _plt.subplots(1, 1)  # , figsize=(21./3,29.7/3), sharex=True)
     lev = 0
@@ -810,6 +801,82 @@ def plottemp(tfiles, philist=[0], interpol=False, xax=0, fmt=['png'],
     axs.set_xlabel(xtitle)
     axs.set_ylabel(r'Temperature (10$^3$ K)')
     _phc.savefig(fig, figname=outpref, fmt=fmt)
+    return
+
+
+def plottemp2d(tfile, figname=None, fmt=['png'], icphi=0, itype='linear',
+    nimg=128, Rmax=None, xax=1):
+    """ itype = 'nearest', linear' or 'cubic'
+
+    ``xax`` = 0: log10(r/R-1), 1: r/R; 2: 1-R/r
+    """
+    if xax not in [0, 1, 2]:
+        raise ValueError('# Invalid `xax` option. Try again.')
+    lev = 0
+    ncr, ncmu, ncphi, nLTE, nNLTE, Rstar, Ra, beta, data, pcr, pcmu, pcphi\
+        = readtemp(tfile)
+    # y = data[3 + lev, :, ncmu / 2 + np + rplus, icphi]
+    fig, ax = _plt.subplots()
+    ccmu = _np.arccos(pcmu[:-1] + _np.diff(pcmu, axis=0)/2.).flatten()
+    ccr = _np.tile(pcr[:-1] + _np.diff(pcr)/2., ncmu)
+    tmp = _phc.sph2cart(ccr, ccmu)
+    x = tmp[1]
+    y = tmp[0]
+    #
+    if (xax == 0):
+        x = _np.log10(x/Rstar - 1.)
+        y = _np.log10(y/Rstar - 1.)
+        xtitle = r'$\log_{10}(r/R_*-1)$'
+    elif (xax == 1):
+        x = x/Rstar
+        y = y/Rstar
+        xtitle = r'$r/R_*$'
+    elif (xax == 2):
+        x = 1.-Rstar/x
+        y = 1.-Rstar/y
+        xtitle = r'$1-R_*/r$'
+    if Rmax is None:
+        xmax = _np.max(x)
+    else:
+        if xax == 0: 
+            xmax = _np.log10(Rmax - 1.)
+        elif xax == 1:
+            xmax = Rmax
+        elif xax == 2:
+            xmax = 1-1./Rmax
+    #
+    ymax = (xmax-_np.min(x))/2.
+    #
+    coords = _np.column_stack((x, y))
+    ax.set_xlim([_np.min(x), xmax])
+    ax.set_ylim([-ymax, ymax])
+    # xo, yo = _np.meshgrid( _np.linspace(_np.min(x), _np.max(x), nimg), 
+    #     _np.linspace(_np.min(y), _np.max(y), nimg) )
+    xo, yo = _np.meshgrid( _np.linspace(_np.min(x), xmax, nimg), 
+        _np.linspace(-ymax, ymax, nimg) )
+    msgri = _np.column_stack((xo.flatten(), yo.flatten()))
+    # xo = _np.linspace(_np.min(ccr), _np.max(ccr), 21)
+    # yo = _np.linspace(_np.min(ccmu), _np.max(ccmu), 21) 
+    cax = ax.imshow(_interpolate.griddata(coords, 
+        data[3+lev, :, :, icphi].T.flatten()/1e3, 
+        msgri, method=itype).reshape((nimg, nimg)), origin='lower', 
+        extent=[_np.min(x), xmax, -ymax, ymax], 
+        cmap='gist_heat', interpolation='bilinear')
+    ax.set_title(_os.path.basename(tfile))
+    ax.set_xlabel(xtitle)
+    ax.set_ylabel(xtitle)
+    cbar = fig.colorbar(cax, label=r'Temp. (10$^3$ K)')  
+    # , orientation='horizontal')
+    # cbar.ax.set_yticklabels(['< -1', '0', '> 1'])  # vertically colorbar
+    # if Rmax is None:
+    #     Rmax = Ra
+    # else:
+    #     Rmax *= Rstar
+    # ymax = abs(Rmax/Rstar-1)/2
+    # ax.set_xlim([1, Rmax/Rstar])
+    # ax.set_ylim([-ymax, ymax])
+    ax.set_aspect(abs(xmax-_np.min(x))/abs(ymax-(-ymax)))
+    _phc.savefig(fig, figname=figname, fmt=fmt)
     return
 
 
@@ -1592,29 +1659,17 @@ def readphotxdr(xdrfile='kur_ap00k0.xdr', quiet=False):
     """ doc """
     f = open(xdrfile, 'rb').read()
     ixdr = 0
+    ixdr, arr = _phc.readpck(4, 'l', ixdr, f)
+    _, nlin, nlbd, nmod = arr
 
-    _ = _struct.unpack('>l', f[ixdr:ixdr+ 4])
-    ixdr += 4
-    nlin, nlbd, nmod = _struct.unpack('>3l', f[ixdr:ixdr+ 4*3])
-    ixdr += 4*3
+    ixdr, _ = _phc.readpck(1, 'l', ixdr, f)
+    ixdr, lbdcentr = _phc.readpck(nlin, 'f', ixdr, f)
 
-    _ = _struct.unpack('>l', f[ixdr:ixdr+ 4])
-    ixdr += 4
-    istr = '>{0:d}f'.format(nlin)
-    lbdcentr = _struct.unpack(istr, f[ixdr:ixdr+ 4*nlin])
-    ixdr += 4*nlin
+    ixdr, _ = _phc.readpck(1, 'l', ixdr, f)
+    ixdr, ltemp = _phc.readpck(nmod, 'f', ixdr, f)
 
-    _ = _struct.unpack('>l', f[ixdr:ixdr+ 4])
-    ixdr += 4
-    istr = '>{0:d}f'.format(nmod)
-    ltemp = _struct.unpack(istr, f[ixdr:ixdr+ 4*nmod])
-    ixdr += 4*nmod
-
-    _ = _struct.unpack('>l', f[ixdr:ixdr+ 4])
-    ixdr += 4
-    istr = '>{0:d}f'.format(nmod)
-    llogg = _struct.unpack(istr, f[ixdr:ixdr+ 4*nmod])
-    ixdr += 4*nmod
+    ixdr, _ = _phc.readpck(1, 'l', ixdr, f)
+    ixdr, llogg = _phc.readpck(nmod, 'f', ixdr, f)
 
     lambdas = _np.zeros((nlin, nlbd))
     for i in range(nlin):
@@ -1636,8 +1691,8 @@ def readphotxdr(xdrfile='kur_ap00k0.xdr', quiet=False):
         if not quiet:
             print('# XDR {0} completely read!'.format(xdrfile))
     else:
-        eprint('# Warning: XDR {0} not completely read!'.format(xdrfile))
-        eprint('# length difference is {0}'.format( (len(f) - ixdr) / 4 ) )
+        _warn.warn('# XDR {0} not completely read!\n# length difference is '
+            '{1}'.format(xdrfile, (len(f) - ixdr) / 4 ) )
 
     return lbdcentr, ltemp, llogg, lambdas, profiles
 
@@ -1733,7 +1788,7 @@ def tefflum_dJN(s, b):
 
     def Tk(k, x):
         if not isinstance( k, ( int, long ) ):
-            print('# Wrong Tk call! Invalid k')
+            _warn.warn('# Wrong Tk call! Invalid k')
             return
         if k == 0:
             return 1
@@ -1767,7 +1822,7 @@ def masslum_OB(logL, classL='V'):
     elif classL.upper() == 'III':
         cs = [0.2084, 0.0643, 0.0325]
     elif classL.upper() != 'V':
-        eprint('# Warning! Invalid "classL". Assuming "V" for masslum_OB...')
+        _warn.warn('# Invalid "classL". Assuming "V" for masslum_OB...')
     return cs[0] + cs[1]*logL + cs[2]*logL**2
 
 # MAIN ###

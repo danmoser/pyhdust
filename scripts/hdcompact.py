@@ -8,13 +8,12 @@ If the compacted files have more than 40 KB (i.e., the size of compacted
 header), then the original file is automatically excluded. 
 """
 import bz2
-# import gzip
 import os
 import sys
 from multiprocessing import Pool
 from argparse import ArgumentParser
 
-__version__ = "0.93"
+__version__ = "0.941"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
 
@@ -30,7 +29,7 @@ parser.add_argument('--version', action='version',
     version='%(prog)s {0}'.format(__version__))
 parser.add_argument("-n", action="store", dest="n", 
     help=("Number of cores to be used [default: %(default)s]"), 
-    type=float, default=2)
+    type=int, default=2)
 
 group2 = parser.add_argument_group('other arguments')
 group2.add_argument("-c", "--check", action="store_true", dest="chk", 
@@ -41,16 +40,21 @@ args = parser.parse_args()
 
 
 def compact(fp):
-    fpnew = fp+'.bz2'
-    # fpnew = fp+'.gz'
-    print('# Creating '+fpnew)
-    # with gzip.open(fpnew, 'wb') as fout:
-    with bz2.BZ2File(fpnew, 'wb', compresslevel=1) as fout:
-        fout.write(open(fp).read())
-    if os.path.exists(fpnew):
-        if os.path.getsize(fpnew) > 40000:
-            os.remove(fp)
-    return '# Removing '+fp
+    if os.path.exists(fp):
+        # print('# Creating '+fpnew)
+        fpnew = fp+'.bz2'
+        # fpnew = fp+'.gz'
+        # with gzip.open(fpnew, 'wb') as fout:
+        with bz2.BZ2File(fpnew, 'wb', compresslevel=1) as fout:
+            fout.write(open(fp).read())
+        if os.path.exists(fpnew):
+            if os.path.getsize(fpnew) > 40000:
+                os.remove(fp)
+        print('# Processed '+fp)
+        return 0
+    else:
+        print('# {0} was not found!'.format(fp))
+        return 1
 
 if __name__ == '__main__':
     extensions = ['.tau', '.map']
@@ -76,5 +80,6 @@ if __name__ == '__main__':
 
     if not args.chk:
         pool = Pool(processes=args.n)
-        for result in pool.imap_unordered(compact, clist):
-            print(result)
+        # for result in pool.imap_unordered(compact, clist):
+        result = pool.map(compact, clist)
+        print('# DONE!')

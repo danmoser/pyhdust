@@ -42,19 +42,14 @@ import pyhdust.jdcal as _jdcal
 import pyhdust.poltools as _polt
 import pyhdust.phc as _phc
 import pyhdust.triangle as _triangle
-import sys as _sys
-
-
-def eprint(*args, **kwargs):
-    print(*args, file=_sys.stderr, **kwargs)
-    return
+import warnings as _warn
 
 try:
     import matplotlib.pyplot as _plt
     import emcee as _emcee
     from scipy.stats import percentileofscore as _perct
 except ImportError:
-    eprint('# Warning! matplotlib, scipy and/or emcee module not installed!!!')
+    _warn.warn('matplotlib, scipy and/or emcee module not installed!!!')
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -681,13 +676,12 @@ class BlobDiskMod(object):
             self.Uobs = _np.empty(0)
             self.sigP = _np.empty(0)
             self.sigth = _np.empty(0)
-            print('# Warning! Invalid {0} log file. Nothing done.'.
-                format(self.tgt))
+            _warn.warn('Invalid {0} log file. Nothing done.'.format(self.tgt))
         #
         data = _np.loadtxt('{0}/{1}.log'.format(path, self.tgt), dtype=str)
-        data = _np.core.records.fromarrays(data.transpose(), names='MJD,night,filt,\
-        calc,ang.ref,dth,P,Q,U,th,sigP,sigQU,sigth', formats='f8,a7,a1,f8,f8,f8,f8,\
-        f8,f8,f8,f8,f8,f8')
+        data = _np.core.records.fromarrays(data.transpose(), names='MJD,night,'
+            'filt,calc,ang.ref,dth,P,Q,U,th,sigP,sigQU,sigth', formats='f8,a7,'
+            'a1,f8,f8,f8,f8,f8,f8,f8,f8,f8,f8')
         idx = _np.where(data['filt'] == 'v')
         data = data[idx]
         if r > 0:
@@ -704,8 +698,7 @@ class BlobDiskMod(object):
         phase = _np.modf(phase)[0]
         idx = _np.where(phase < 0)
         if len(idx[0]) > 0:
-            print('# EWrr!')
-            raise SystemExit(1)
+            raise ValueError('BlobDiskMod calc phases error')
         #
         self.phiobs = phase
         self.Pobs = data['P']

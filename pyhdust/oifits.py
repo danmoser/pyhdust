@@ -82,17 +82,12 @@ import datetime as _datetime
 import copy as _copy
 import numpy as _np
 import numbers as _numbers
-import sys as _sys
-
-
-def eprint(*args, **kwargs):
-    print(*args, file=_sys.stderr, **kwargs)
-    return
+import warnings as _warn
 
 try:
     import pyfits as _pyfits
 except ImportError:
-    eprint('# Warning! pyfits module not installed!!!')
+    _warn.warn('pyfits module not installed!!!')
 
 __author__ = "Paul Boley"
 __email__ = "boley@mpia-hd.mpg.de"

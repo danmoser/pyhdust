@@ -36,12 +36,7 @@ import pyhdust.images as _img
 from pyhdust.spectools import linfit as _linfit
 import copy as _copy
 from six import string_types as _strtypes
-import sys as _sys
-
-
-def eprint(*args, **kwargs):
-    print(*args, file=_sys.stderr, **kwargs)
-    return
+import warnings as _warn
 
 try:
     import matplotlib as _mpl
@@ -51,7 +46,7 @@ try:
     from matplotlib.lines import Line2D as _Line2D
     import pyfits as _pyfits
 except ImportError:
-    eprint('# Warning! matplotlib, six and/or pyfits module not installed!!!')
+    _warn.warn('matplotlib, six and/or pyfits module not installed!!!')
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -72,7 +67,7 @@ def log_transform(im):
             im[idx] = _np.NaN
             return im
     except:
-        eprint('# Warning! Wrong input at log_transform !!!')
+        _warn.warn('# Warning! Wrong input at log_transform !!!')
     return im
 
 

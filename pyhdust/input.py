@@ -16,7 +16,6 @@ for the projects.
 :license: GNU GPL v3.0 https://github.com/danmoser/pyhdust/blob/master/LICENSE
 """
 from __future__ import print_function
-import sys as _sys
 import os as _os
 import numpy as _np
 from glob import glob as _glob
@@ -27,14 +26,10 @@ import pyhdust as _hdt
 from collections import OrderedDict as _OrderedDict
 from collections import Mapping as _mapdict
 from six import string_types as _string_types
+import warnings as _warn
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
-
-
-def eprint(*args, **kwargs):
-    print(*args, file=_sys.stderr, **kwargs)
-    return
 
 
 class Input(object):
@@ -233,12 +228,14 @@ class Input(object):
                 reffile = 'REF.oar'
                 reps = ( (1, 'hdust_dmf', 'hd_'+'_'.join((self.proj, 
                     self.modn))), 
-                    (2, '12', self.ncore), (2, '24:00:00', self.walltime), 
+                    (2, '12', int(round(self.ncore/6.))), 
+                    (2, '24:00:00', self.walltime), 
                     (10, 'hdust_bestar2.02.inp', '{0}\n\nprintf "{0}\\n\\n"'
                         ' >> $OAR_JOB_ID'.format(intname)),
                 )
             else:
-                eprint('# Warning! Option {0} for clusters ignored'.format(cl))
+                _warn.warn('# Warning! Option {0} for clusters ignored'.format(
+                    cl))
                 continue
 
             if not _os.path.exists(_os.path.join(bdir, cl)):
@@ -268,7 +265,7 @@ class Disk(Input):
         super(Disk, self).__init__(proj=proj, modn=modn)
         return
 
-    def set_disk(self, renv=18.6, mh=1.5, ht=60., mr=2., dval=1e12, hseq=False, 
+    def set_disk(self, renv=18.6, mh=1.5, ht=60., nr=2., dval=1e12, hseq=False, 
         alpha=.5, mu=.5, R0r=100, denstype=None, **kwargs):
         """ denstype = ['n0', 'sig0', 'mdot'] 
 
@@ -276,7 +273,7 @@ class Disk(Input):
         self.renv = renv
         self.mh = mh
         self.ht = ht
-        self.mr = mr
+        self.nr = nr
         self.dval = dval
         self.hseq = hseq
         self.alpha = alpha
@@ -287,7 +284,7 @@ class Disk(Input):
                 self.denstype = denstype
             denstype = None
         if denstype is None:
-            eprint('# Warning! Guessing the denstype...')
+            _warn.warn('# Warning! Guessing the denstype...')
             self.denstype = 'n0'
             if dval < 1e-2:
                 self.denstype = 'mdot'
@@ -327,7 +324,7 @@ class Disk(Input):
 
         _ = _phc.repl_fline_val(modi, 13, '18.6', self.renv)
         if self.denstype != 'mdot':
-            _ = _phc.repl_fline_val(modi, 20, '2.0', self.mr)
+            _ = _phc.repl_fline_val(modi, 20, '2.0', self.nr)
         else:
             _ = _phc.repl_fline_val(modi, 23, '1.', self.alpha)
             _ = _phc.repl_fline_val(modi, 24, '0.', self.R0r)
@@ -386,7 +383,7 @@ class HdustMod(object):
             self.proj, self.modn = _os.path.split(self.modn)
         else:
             self.proj = ''
-        if self.modn.startswith('fullsed'):
+        if not self.modn.startswith('mod'):
             self.modn = ''
         if len(self.modn) == 0:
             self.modn = 'mod' + self.suf.split('mod')[-1].split('_')[0]
@@ -397,7 +394,7 @@ class HdustMod(object):
             else:
                 self._fillfname()
         else:
-            eprint('Warning! No `vdict` found for HdustMod')
+            _warn.warn('Warning! No `vdict` found for HdustMod')
 
     def _fill(self):
         f0 = open(self.fname).read().split('\n')
@@ -426,12 +423,15 @@ class HdustMod(object):
             if not _os.path.exists(logname):
                 loglist = _glob(_os.path.join(bdir, self.modn, '*'+self.modn + 
                     self.suf + '*.log'))
-                if len(loglist) == 0:
+                logname = [l for l in loglist if _os.path.getsize(l) > 500]
+                if len(logname) == 0:
                     raise LookupError('Not found an equivalent to {0}'.format(
                         logname))
-                logname = loglist[0]
+                logname = logname[0]
         #
         self.lum = _phc.fltTxtOccur('L =', open(logname).read().split('\n'))
+        self.vrot = _phc.fltTxtOccur('Vrot ', open(logname).read().split('\n'))
+        self.log = logname
         return self.lum
 
     def readfs2ob(self, pol=False):
@@ -463,6 +463,15 @@ class AeriMod(HdustMod):
 
     def __init__(self, fname):
         super(AeriMod, self).__init__(fname)
+
+
+class PhotMod(HdustMod):    
+    """docstring for AeriMod"""
+    vdict = _OrderedDict(zip(['W', 'M'], ['w =', ' M '])) 
+    vfmt = _OrderedDict(zip(['W', 'M'], ['{:.3f}', '{:04.1f}']))
+
+    def __init__(self, fname):
+        super(PhotMod, self).__init__(fname)
 
 
 def makeDiskGrid(modn='01', mhvals=[1.5], hvals=[60.], rdvals=[18.6], 
@@ -860,7 +869,8 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'],
                     'chmod -f 664 ../../tmp/*\n'.format(proj, *modchmod))
             f0.writelines('qsub {0}/{1}s/{2}\n'.format(proj, sel, outname))
         elif sel == 'oar':
-            wout[2] = wout[2].replace('12', '{0}'.format(nodes))
+            wout[2] = wout[2].replace('12', '{0}'.format(int(round(
+                nodes/6.))))
             wout[2] = wout[2].replace('24:0:0', '{0}'.format(walltime))
             wout[10] = wout[10].replace('hdust_bestar2.02.inp', '{0}/{1}'.
             format(proj, mod.replace('.txt', '.inp')))
@@ -1247,7 +1257,7 @@ def makeStarGrid(oblats, Hfs, path=None):
         runIDL = False
 
     if runIDL:
-        key = raw_input('# Do you want to run "geneve_par" (y/other):')
+        key = _phc.user_input('# Do you want to run "geneve_par" (y/other):')
         if key != 'y':
             runIDL = False
 
@@ -1258,7 +1268,7 @@ def makeStarGrid(oblats, Hfs, path=None):
         idl('.r geneve_par')
         for ob in oblats:
             for H in Hfs:
-                idl('geneve_par, {0}, {1}, /oblat,/makeeps'.format(ob, H))
+                idl('geneve_par, {0}, {1}, /OBLAT,/makeeps'.format(ob, H))
                 _os.system('mv {0}/geneve_lum.eps stmodels/geneve_lum_' +
                     '{1:.2f}_{2:.2f}.eps'.format(propath, ob, H))
                 _os.system(

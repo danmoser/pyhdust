@@ -10,7 +10,7 @@
 #
 
 MASTERFILE=hdust_bestar2.02.inp
-HDUST=./hdustparv2.02.bc
+HDUST=./hdustparv2.1.bc
 
 #NO NEED DO MODIFY BEYOND THIS POINT
 NSLOTS=`cat $PBS_NODEFILE | wc -l`

@@ -9,7 +9,6 @@ Module contains:
 :license: GNU GPL v3.0 https://github.com/danmoser/pyhdust/blob/master/LICENSE
 """
 from __future__ import print_function
-import sys as _sys
 import re as _re
 import os as _os
 import numpy as _np
@@ -18,16 +17,12 @@ from glob import glob as _glob
 from itertools import product as _product
 import pyhdust.phc as _phc
 import pyhdust as _hdt
-
-
-def eprint(*args, **kwargs):
-    print(*args, file=_sys.stderr, **kwargs)
-    return
+import warnings as _warn
 
 try: 
     from scipy.interpolate import griddata as _griddata
 except ImportError:
-    eprint('# Warning! scipy module not installed!')
+    _warn.warn('# scipy module not installed!')
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -304,9 +299,8 @@ def createBAsed(fsedlist, xdrpath, lbdarr, param=True, savetxt=False,
                     if len(log) >= 1:
                         log = log[0]
                     else:
-                        eprint('# ERROR! No log file found for {0}'.format(
-                            fsedlist[i]))
-                        raise SystemExit(1)
+                        raise LookupError('# No log file found for {0}'.
+                            format(fsedlist[i]))
                 f0 = open(log)
                 lines = f0.readlines()
                 f0.close()
@@ -464,27 +458,21 @@ def createXDRsed(fsedlist, xdrpath, refclass, lbdarr, ignorelum=False,
 def readXDRsed(xdrpath, quiet=False):
     """ Doc
     """
-    def readpck(n, tp, ixdr, f):
-        sz = dict(zip(['i', 'l', 'f', 'd'], [4, 4, 4, 8]))
-        s = sz[tp]
-        upck = '>{0}{1}'.format(n, tp)
-        return ixdr+n*s, _np.array(_struct.unpack(upck, f[ixdr:ixdr+n*s]))
-    #
     ixdr = 0
     f = open(xdrpath, 'rb').read()
-    ixdr, ninfo = readpck(3, 'l', ixdr, f)
+    ixdr, ninfo = _phc.readpck(3, 'l', ixdr, f)
     nq, nlbd, nm = ninfo
-    ixdr, intervals = readpck(nq*2, 'f', ixdr, f)
-    ixdr, lbdarr = readpck(nlbd, 'f', ixdr, f)
-    ixdr, listpar = readpck(nq*nm, 'f', ixdr, f)
-    ixdr, models = readpck(nlbd*nm, 'f', ixdr, f)
+    ixdr, intervals = _phc.readpck(nq*2, 'f', ixdr, f)
+    ixdr, lbdarr = _phc.readpck(nlbd, 'f', ixdr, f)
+    ixdr, listpar = _phc.readpck(nq*nm, 'f', ixdr, f)
+    ixdr, models = _phc.readpck(nlbd*nm, 'f', ixdr, f)
     #
     if ixdr == len(f):
         if not quiet:
             print('# XDR {0} completely read!'.format(xdrpath))
     else:
-        eprint('# Warning: XDR {0} not completely read!'.format(xdrpath))
-        eprint('# length difference is {0} /4'.format( (len(f) - ixdr) ) )
+        _warn.warn('# XDR {0} not completely read!\n# length '
+            'difference is {1} /4'.format(xdrpath), (len(f)-ixdr) )
     # 
     return ( ninfo, intervals.reshape((nq, 2)), lbdarr, 
         listpar.reshape((nm, nq)), models.reshape((nm, nlbd)) )
@@ -541,13 +529,13 @@ def readBAsed(xdrpath, quiet=False):
         if not quiet:
             print('# XDR {0} completely read!'.format(xdrpath))
     else:
-        eprint('# Warning: XDR {0} not completely read!'.format(xdrpath))
-        eprint('# length difference is {0}'.format( (len(f) - ixdr) / 4 ) )
+        _warn.warn('# XDR {0} not completely read!\n# length '
+            'difference is {0}'.format(xdrpath, (len(f)-ixdr)/4) )
     # 
     return listpar, lbdarr, models[:, 0:nq], models[:, nq:]
 
 
-def parnorm(dvals, vmax, vmin_non0, issig0=True, hasvmin0=False):
+def parnorm(dvals, vmax, vmin_non0, issig0=True, s_non0=0):
     r""" Converts density in normalized range [0-1], and vice-versa.
 
     If ``issig0``, treats ``r01`` as :math:`\Sigma_0`; otherwise, use it
@@ -556,8 +544,10 @@ def parnorm(dvals, vmax, vmin_non0, issig0=True, hasvmin0=False):
     dvals = _np.array(dvals)
     if vmin_non0 <= 0 or _np.min(dvals) < 0:
         raise ValueError('`vmin_non0` > 0 and `dvals` >=0 must be True')
-    if hasvmin0:
-            vmin_non0 /= vmax/vmin_non0
+    if s_non0 >= 1:
+        raise ValueError('`s_non0` <1 must be True')
+    if s_non0 > 0:
+        vmin_non0 /= (vmax/vmin_non0)**((1/s_non0-1)**-1.)
     if issig0:
         dvals[_np.where(dvals < vmin_non0)] = vmin_non0
         return _np.log(dvals/vmin_non0)/_np.log(vmax/vmin_non0)
@@ -574,7 +564,7 @@ def densBAnorm(r01, M, issig0=True):
 
     """
     if M < 3.8 or M > 14.6:
-        raise ValueError('# ERROR! Wrong M at bat.normdens() !')
+        raise ValueError('# Wrong M at bat.normdens() !')
     vmin = 0.02/2.5
     r01 = _np.array(r01)
     if issig0:
@@ -620,8 +610,7 @@ def interpolBA(params, ctrlarr, lparams, minfo, models, param=True):
     if not param:
         nq = 8
     if len(ctrlarr) != nq:
-        eprint('# ERROR in ctrlarr!!')
-        return
+        raise ValueError('# Wrong ctrlarr format!!')
     params = params[:_np.sum(_np.isnan(ctrlarr))]
     nlb = len(models[0])
     outmodels = _np.empty((2**len(params), nlb))

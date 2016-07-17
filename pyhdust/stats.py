@@ -14,8 +14,11 @@ __email__ = "dmfaes@gmail.com"
 
 
 def mad(data, axis=None):
-    """ Return 1.48xMAD (median absolute deviation) """
-    return 1.48*_np.median(_np.abs(data - _np.median(data, axis)), axis)
+    """ Return 1.48xMAD (median absolute deviation) 
+
+    The MAD is a robust statistic, being more resilient to outliers in a data 
+    set than the standard deviation."""
+    return 1.4826*_np.median(_np.abs(data - _np.median(data, axis)), axis)
 
 
 def summary(x, verbose=False):

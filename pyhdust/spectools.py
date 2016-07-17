@@ -21,19 +21,16 @@ from __future__ import print_function
 import os as _os
 import numpy as _np
 import datetime as _dt
-import time as _time
+# import time as _time
 from glob import glob as _glob
-from itertools import product as _iproduct
+# from itertools import product as _iproduct
 import pyhdust.phc as _phc
 import pyhdust.jdcal as _jdcal
+import pyhdust.input as _inp
 import pyhdust as _hdt
 from six import string_types as _strtypes
-import sys as _sys
+import warnings as _warn
 
-
-def eprint(*args, **kwargs):
-    print(*args, file=_sys.stderr, **kwargs)
-    return
 
 try:    
     import pyfits as _pyfits
@@ -45,14 +42,13 @@ try:
     import scipy.interpolate as _interpolate 
     from scipy.optimize import curve_fit as _curve_fit
 except ImportError:
-    eprint('# Warning! matplotlib, scipy, and/or pyfits module not' 
-        ' installed!!!')
+    _warn.warn('matplotlib, scipy, and/or pyfits module not installed!!!')
 
 try:
     import pyqt_fit.nonparam_regression as _smooth
     from pyqt_fit import npr_methods as _npr_methods
 except ImportError:
-    eprint('# Warning! pyqt_fit module not installed!!!')
+    _warn.warn('pyqt_fit module not installed!!!')
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -210,7 +206,7 @@ class Spec(object):
         Currently, only compatible for standard fits.
         """
         if file.find('.fit') == -1:
-            eprint("# ERROR! `loadspec` unrecognized format!")
+            _warn.warn("# ERROR! `loadspec` unrecognized format!")
             return 
         (self.wl, self.flux, self.MJD, self.dateobs, self.datereduc,
             self.file) = loadfits(file)
@@ -223,7 +219,7 @@ class Spec(object):
         """Export current spec into a PNG file.
         """
         if self.wl is None or self.flux is None:
-            eprint('# ERROR: wrong Spec() parameters! {0}'.format(self.file))
+            _warn.warn('wrong Spec() parameters! {0}'.format(self.file))
             return
         if outname == '':
             path, file = _phc.trimpathname(self.file)
@@ -339,9 +335,8 @@ def loadfits(fitsfile):
         MJD = _jdcal.gcal2jd(*dtobs)[1] + tobs
     else:
         MJD = _jdcal.MJD_JD2000
-        eprint('# Warning! No DATE-OBS information is available! {0}'.
-            format(fitsfile))
-        eprint('# Assuming MJD_JD2000')
+        _warn.warn('No DATE-OBS information is available! {0}\nAssuming '
+            'MJD_JD2000'.format(fitsfile))
     if 'DATE-OBS' in imfits[0].header:
         dateobs = imfits[0].header['DATE-OBS']
     elif 'FRAME' in imfits[0].header:
@@ -444,12 +439,12 @@ def lineProf(x, flx, lbc, flxerr=_np.empty(0), hwidth=1000., ssize=0.05):
     if len(flxerr) == 0:
         flux = linfit(x[idx], flx[idx], ssize=ssize)  # yerr=flxerr,
         if len(x[idx]) == 0:
-            eprint('# Warning! Wrong `lbc` in the lineProf function')
+            _warn.warn('Wrong `lbc` in the lineProf function')
         return x[idx], flux
     else:
         flux, flxerr = linfit(x[idx], flx[idx], yerr=flxerr[idx], ssize=ssize)
         if len(x[idx]) == 0:
-            eprint('# Warning! Wrong `lbc` in the lineProf function')
+            _warn.warn('Wrong `lbc` in the lineProf function')
         return x[idx], flux, flxerr
 
 
@@ -473,7 +468,7 @@ def linfit(x, y, ssize=0.05, yerr=_np.empty(0)):
         import pyhdust.phc as phc
         import pyhdust.spectools as spt
 
-        wv = np.linspace(6500, 6600, 101)
+        wv = _np.linspace(6500, 6600, 101)
         flx = (np.arange(101)[::-1])/100.+1+phc.normgauss(4, x=wv, 
         xc=6562.79)*5
 
@@ -489,8 +484,8 @@ def linfit(x, y, ssize=0.05, yerr=_np.empty(0)):
         :width: 500
     '''
     if ssize < 0 or ssize > .5:
-        print('# Invalid ssize value...')
-        raise SystemExit(1)
+        _warn.warn('Invalid ssize value...', stacklevel=2)
+        ssize = 0
     ssize = int(ssize * len(y))
     if ssize == 0:
         ssize = 1
@@ -764,7 +759,7 @@ def analline(lbd, flux, lbdc, hwidth=1000, verb=True, gaussfit=False,
     # check if the file have the desired info.
     if vels[0] > -hwidth * .95 or vels[-1] < hwidth * .95:
         if verb:
-            eprint('# ERROR: spec out of range (wavelength)! Check hwidth!')
+            _warn.warn('spec out of range (wavelength)! Check hwidth!')
         return _np.NaN, _np.NaN, _np.NaN, _np.NaN, _np.NaN, _np.NaN
 
     idx = _np.where(_np.abs(vels) <= hwidth)
@@ -855,82 +850,131 @@ def kuruczflux(teff, logg, range=None):
         return wave[idx], flux[idx], best    
 
 
-def plotAll(files, obs=None, boxes=['s'], range=[[0, -1]], ncol=None, 
-    fmt=['png'], out=None):
-    """ PlotAll routine for fullsed files.
+def choose_obs(dobs):
+    # if obsl is None:
+    #         obsl = dobs
+    #     else:
+    #         for 
+    return list(dobs)
 
-    | `files` and `obs` are lists that define files and observers. 
-    |
-    | The number of boxes is defined by the `boxes` list.
-    | Valid boxes are: 's' for SED, 'p' for polarimetry, 'l' for line.
-    | 
-    | `Range` is a list of lists and defines the interval for 's' and 'p'
-    | (in microns). For automatic selection, leave [0,-1] for the respective 
-    | box. 'l' option must be [hwidht, lbd0] (mandatory).
-    |
-    | `ncol` fix the number of columns of the output file.
 
-    The standard output name will be `date_time.png`, but it can be change
-    with the variables `out` and `fmt`.
+def plot_all(fs2list, obsl=None, fmt=['png'], out=None, lbc=.6564, 
+    hwidth=1000., solidfiles=True, xax=0, philist=[0], figname=None):
+    """ plot_all-like routine
 
-    TDB: normalize line, yrange and (x,y) log_scale !
+    ``obs`` in degrees. It will find the closest values. It the find 
+    :math:`\Delta\theta > 3^\circ`, a warning message is displayed. The ``obs``
+    index can be used if ``obsidx = True``.
+
+    ``solinefiles`` keep solid lines for files (changes only colors), and 
+    change line shapes between observers. If ``False``, do the opposite.
     """
-    for interv in range:
-        if len(interv) != 2:
-            eprint('# ERROR! Check range variable configuration!!!')
-            return
-    if len(files) != len(boxes) or len(files) != len(range):
-        eprint('# ERROR! Check input configuration!!!')
+    if isinstance(fs2list, _strtypes):
+        fs2list = [fs2list]
+    if not isinstance(obsl, list) and obsl is not None:
+        _warn.warn('Wrong `obsl` format (None or list)', stacklevel=2)
         return
-    #
-    nbox = len(files)
-    if ncol is None:
-        nlin = int(round(_np.sqrt(nbox)))
-        if nlin**2 <= nbox:
-            ncol = nlin
-        else:
-            ncol = nlin + 1
-    else:
-        nlin = nbox / ncol
-        if nlin * ncol < nbox:
-            ncol += 1
-    #
-    boxn = {'s': 3, 'p': 7, 'l': 3}
-    if obs is None:
-        obs = [0]
-    fig, axs = _plt.subplots(nlin, ncol)  # , sharex=True, sharey=True)
-    for file in files:
-        sed2data = _hdt.readfullsed2(file)
-        for ob in obs:
-            for I in _iproduct(nlin, ncol):
-                i, j = I
-                type = boxn[boxes[i + j]]
-                y = _hdt.sed2data[ob, :, type]
-                if boxes[i + j] == 'l':
-                    print('linha')
-                axs[i, j].plot(sed2data[ob, :, 2], y)
-    for I in _iproduct(nlin, ncol):
-        i, j = I
-        if boxes[i + j] == 'l':
-            axs[i, j].set_ylabel('Norm. flux')
-        if boxes[i + j] == 'p':
-            axs[i, j].set_ylabel('Q (%)')
-        if boxes[i + j] == 's':
-            axs[i, j].set_ylabel('Flux (arb. unit)')
-        axs[i, j].set_xlabel(r'$\lambda$ ($\mu$m)')
-        if list(range(i + j)) != [0, -1] and boxes[i + j] != 'l':
-            axs[i, j].set_xlim(range(i + j))
-    #
-    if out is None:
-        out = 'plotall_{0}{1}{2}_{3}{4}'.format(*_time.localtime[:5])
-    for format in fmt:
-        _plt.savefig('{0}.{1}'.format(out, format))
-        print('# File {0}.{1} saved!'.format(out, format))
-    _plt.close()
+
+    fig = _plt.figure(figsize=(9, 9))
+    lins, cols = (3, 2)
+    gs = _gridspec.GridSpec(lins, cols)
+    gs.update(hspace=0.25)
+
+    axt = _plt.subplot(gs[0, 1])
+    ax0 = _plt.subplot(gs[1, 0])
+    ax1 = _plt.subplot(gs[1, 1])
+    ax2 = _plt.subplot(gs[2, 0])
+    ax3 = _plt.subplot(gs[2, 1])
+
+    xtitle = 'radial scale'
+    for f in fs2list:
+        m = _inp.HdustMod(f)
+        tfile = _os.path.join(m.proj, m.modn, m.modn+m.suf+'*avg.temp')
+        tfile = _glob(tfile)
+        if len(tfile) > 0:
+            npt, rplus, lev = (0, 0, 0)
+            tfile.sort()
+            tfile = tfile[-1]
+            ncr, ncmu, ncphi, nLTE, nNLTE, Rstar, Ra, beta, data, pcr, pcmu, \
+                pcphi = _hdt.readtemp(tfile)
+            for phiidx in range(0, len(philist)):
+                icphi = philist[phiidx]
+                x = data[0, :, 0, icphi]
+                if (xax == 0):
+                    x = _np.log10(x / Rstar - 1.)
+                    xtitle = r'$\log_{10}(r/R_*-1)$'
+                elif (xax == 1):
+                    x = x / Rstar
+                    xtitle = r'$r/R_*$'
+                elif (xax == 2):
+                    x = 1. - Rstar / x
+                    xtitle = r'$1-R_*/r$'
+                y = data[3 + lev, :, ncmu / 2 + npt + rplus, icphi]
+                y = y / 1000.
+                axt.plot(x, y, 'o-')
+
+        fs2d = _hdt.readfullsed2(f)
+
+        iobs = range(len(fs2d))
+        if obsl is not None:
+            dobs = choose_obs(dobs)
+
+        for ob in iobs:
+            obfmt = r'{:.1f}$^\circ$'.format(_np.arccos(fs2d[ob, 0, 0])*
+                180/_np.pi)
+            if solidfiles:
+                pdict = {'color': _phc.cycles(fs2list.index(f)), 
+                    'dashes': _phc.dashes(iobs.index(ob))}
+            else:
+                pdict = {'dashes': _phc.dashes(fs2list.index(f)), 
+                    'color': _phc.cycles(iobs.index(ob))}
+
+            ax0.plot(fs2d[ob, :, 2], fs2d[ob, :, 3], 
+                label=_os.path.basename(f), **pdict)
+            ax1.plot(fs2d[ob, :, 2], fs2d[ob, :, 3], 
+                label=obfmt, **pdict)
+            ax2.plot(fs2d[ob, :, 2], fs2d[ob, :, 7]*100, **pdict)
+            ax3.plot(*lineProf(fs2d[ob, :, 2], fs2d[ob, :, 3], lbc=lbc, 
+                hwidth=hwidth), **pdict)
+
+    axt.set_xlabel(xtitle, labelpad=1)
+    axt.set_ylabel(r'Temperature (10$^3$ K)')
+    ax0.set_xlim([.37, 1.])
+    ax0.autoscale(axis='y', tight=True)
+    ax0.set_yscale('log')
+    ax0.set_xlabel(r'$\mu$m')
+    ax0.set_ylabel(r'$\lambda F_\lambda/F$')
+    ax1.set_xlim([1., 100.])
+    ax1.autoscale(axis='y', tight=True)
+    ax1.set_xscale('log')
+    ax1.set_yscale('log')
+    ax1.set_xlabel(r'$\mu$m', labelpad=1)
+    ax1.yaxis.tick_right()
+    ax1.yaxis.set_label_position("right")
+    ax1.yaxis.set_ticks_position('both')
+    ax1.set_ylabel(r'$\lambda F_\lambda/F$')
+    ax2.set_xlim([.37, .9])
+    ax2.autoscale(axis='y', tight=True)
+    ax2.set_xlabel(r'$\mu$m')
+    ax2.set_ylabel('P (%)')
+    ax3.set_xlim([-hwidth, hwidth])
+    ax3.set_xlabel(r'km/s')
+    ax3.yaxis.tick_right()
+    ax3.yaxis.set_label_position("right")
+    ax3.yaxis.set_ticks_position('both')
+    ax3.set_ylabel('Normalized Flux')
+
+    ax1.legend(loc='best', fancybox=True, framealpha=0.5, fontsize=9,
+        labelspacing=0.05)
+    if len(fs2list) > 1:
+        ax0.legend(loc='best', fancybox=True, framealpha=0.5, fontsize=8,
+            labelspacing=0.05)
+
+    _phc.savefig(fig, fmt=fmt, figname=figname)  # figname='outname')
     return
 
 
-def splitKurucz(file, path=None):
+def splitKurucz(filen, path=None):
     """
     Split atmospheric Kurucz file (e.g., 'ap00k0.dat') into individual models.
 
@@ -940,7 +984,11 @@ def splitKurucz(file, path=None):
     """
     if path is None:
         path = _os.getcwd()
-    allk = _np.loadtxt(file, dtype=str, delimiter='\n')
+    allk = _np.loadtxt(filen, dtype=str, delimiter='\n')
+    src = _os.path.splitext(_os.path.split(filen)[1])[0]
+    if not _os.path.exists(src):
+        _os.mkdir(src)
+    src = _os.path.join(src, src)
 
     for i in range(0, len(allk) - 1):
         if 'EFF' in allk[i]:
@@ -950,10 +998,10 @@ def splitKurucz(file, path=None):
         elif 'DECK6 72' in allk[i]:
             allk[i] = allk[i].replace('DECK6 72', 'DECK6 71')
         elif 'EFF' in allk[i + 1]:
-            _np.savetxt('ap00k0tef%05dg%.1f.dat' % (teff, logg), 
+            _np.savetxt(src+'tef%05dg%.1f.dat' % (teff, logg), 
                 allk[iref:i + 1], fmt='%s')
 
-    _np.savetxt('ap00k0tef%05dg%.1f.dat' % (teff, logg), allk[iref:], fmt='%s')
+    _np.savetxt(src+'tef%05dg%.1f.dat' % (teff, logg), allk[iref:], fmt='%s')
     return
 
 
@@ -1467,9 +1515,12 @@ def normalize_range(lb, spec, a, b):
     return spec / (a1 + a2 * lb)
 
 
-def normalize_spec(lb, flx, q=2):
+def normalize_spec(lb, flx, q=2, diff=0.03, perc=0, nlbp=50):
     """ Normalize a spectrum using the non-parametric regression algorithm of
     Local Polynomial Kernel (order=``q``). 
+
+    If perc > 0, a "percentile filter" is applyed to the spectrum (divided in
+    nlbp bins).
 
     For details, see http://pythonhosted.org/PyQt-Fit/NonParam_tut.html .
 
@@ -1477,16 +1528,20 @@ def normalize_spec(lb, flx, q=2):
 
     OUTPUT: norm_flx
     """
-    k1 = _smooth.NonParamRegression(lb, flx, 
-        method=_npr_methods.LocalPolynomialKernel(q=1))
-    k1.fit()
+    if perc <= 0:
+        k1 = _smooth.NonParamRegression(lb, flx, 
+            method=_npr_methods.LocalPolynomialKernel(q=1))
+        k1.fit()
 
-    idx0 = _np.where(flx != 0)
-    ilb = lb[idx0]
-    iflx = flx[idx0]
-    idxi = _np.where(_np.abs(k1(ilb)/iflx-1) < 0.03)
-    xsi = ilb[idxi]
-    ysi = iflx[idxi]
+        idx0 = _np.where(flx != 0)
+        ilb = lb[idx0]
+        iflx = flx[idx0]
+        idxi = _np.where(_np.abs(k1(ilb)/iflx-1) < diff)
+        xsi = ilb[idxi]
+        ysi = iflx[idxi]
+    else:
+        xsi, ysi = _phc.bindata(lb, flx, nbins=nlbp, perc=perc)
+
     k2 = _smooth.NonParamRegression(xsi, ysi, 
         method=_npr_methods.LocalPolynomialKernel(q=q))
     k2.fit()
@@ -1971,7 +2026,7 @@ def check_dtobs(dtobs):
     elif dtobs[2] == '/':
         dtobs = dtobs.split('/')[::-1]
     else:
-        eprint('# ERROR! Wrong "DATE-OBS" in header! {0}'.format(dtobs))
+        _warn.warn('Wrong "DATE-OBS" in header! {0}'.format(dtobs))
         raise SystemExit(1)
     dtobs = _np.array(dtobs, dtype='int32')
     return dtobs, tobs

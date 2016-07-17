@@ -40,8 +40,7 @@ inspired by the IAU SOFA C library.
 
 :license: BSD (http://www.opensource.org/licenses/bsd-license.php)
 """
-from __future__ import division
-from __future__ import print_function
+from __future__ import division, print_function
 import math as _math
 
 __author__ = "Prasanth Nair"
