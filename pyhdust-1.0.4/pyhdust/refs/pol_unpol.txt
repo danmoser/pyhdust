@@ -1,0 +1,26 @@
+h142    
+h1461
+h5370   
+h6734   
+h6763   
+h9540        # not a good unpol standard!
+h10360 
+h10361
+h20496
+h20630
+h34045
+h38800
+h39587
+h88830
+h90156
+h109055      # Alex's target
+h131923
+h134083
+h150474
+h156365
+h155918
+h209100      # eps Ind, from Antonio Mario's page
+h210302
+h215037
+h220378
+h223024

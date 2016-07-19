@@ -1,0 +1,24 @@
+IV) SOURCE
+	A) STAR = 1
+		1) SELF-CONSISTENT RIGID ROTATOR
+			M = 8.60 Msun			!Stellar mass in solar masses
+			R_pole = 5.30 Rsun			!Polar radius (ATTENTION: solar radii!)
+			W = 0.6325				!Critical fraction (Eq. 11 of RCM 2013)
+			L = 5538.04 Lsun				!Luminosity (in solar luminosities)
+			Beta_GD = 0.19709	  			!Gravity Darkening exponent (0.19709 = von Zeipel)
+
+	B) STELLAR ATMOSPHERE
+		a) SPECTRUM = 1
+			1) KURUCZ				!(SPECTRUM = 1)
+				File = 'data/fp00k0.pck'
+
+		b) ADD LINE PROFILE
+			File = 'spec/kur_ap00k0.xdr'
+
+		c) LIMB DARKENING = 1
+			1) CLARET				!(LIMB DARKENING = 1)
+				V_t = 2 km/s
+				Log[Fe/H] = 0.
+
+		d) LIMB POLARIZATION = 0
+			0) NO LIMB POLARIZATION			!(LIMB POLARIZATION = 0)

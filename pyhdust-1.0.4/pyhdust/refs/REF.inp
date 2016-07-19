@@ -1,0 +1,14 @@
+PROJECT=bestar2.02
+
+MODEL = 1
+
+SUFFIX=''  
+ADDSUFFIX='b'
+COMPOSITION='pureH' 
+CONTROLS='controls' 
+GRIDCELLS='grid' 
+!IMAGES=''
+OBSERVERS=''
+!PERTURBATIONS=''
+SIMULATION='step1' 		 
+SOURCE='sample_be' 

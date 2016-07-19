@@ -1,0 +1,79 @@
+VII) IMAGES = 1				!Make images? 0 = no; 1 = yes
+	!---------------------------------------------------------------
+	! If images and polarization maps are wanted, set IMAGES = 1.
+	! When this option is enabled, HDUST will produce images for the
+	! same set of observers as defined in the preceding section 
+	! (VI.B).  Enter the number of images to be made, the 
+	! size (field of view) of the image, and the resolution (number
+	! of pixels).  Each image will be a square of the given size, 
+	! projected on the plane of the sky and centered at the origin 
+	! of the Cartesian coordinate system.
+	!---------------------------------------------------------------
+	N_images = 2			!number of images
+	IMAGE SIZES:			!for each image, give its field of view
+		R_1 = -1. Rstar		!(half size) in units of length 
+							!If R_1 < 0, the code will set it to
+							!   ABS(R_1)*Envelope Radius
+		R_2 = -0.125 Rstar	!
+	N_xy = 128				!image resolution (number of pixels)
+	!---------------------------------------------------------------
+	! Provide the wavelength binning for the images, using the same
+	! scheme as described above in section (IV.A.2.c)
+	!---------------------------------------------------------------
+	N_bands = 1
+	Bands = 'Br gamma'
+
+	A) IMAGE BANDS
+	!---------------------------------------------------------------
+	! Define the wavelength bands for the images, using the same
+	! scheme as described above in section (IV.A.2.d)
+	!---------------------------------------------------------------
+
+        UV = CONTINUUM
+        Nbins = 10
+        Bin Spacing = 0
+        Lower Lambda = .12 um
+        Upper Lambda = .345 um
+		
+		IR = CONTINUUM
+		Nbins = 2		
+		Bin Spacing = 1
+		Lower Lambda = 1. um
+		Upper Lambda = 100. um
+		
+		J BAND = CONTINUUM
+		Nbins = 10
+		Bin Spacing = 0
+		Lower Lambda = 1.35 um
+		Upper Lambda = 1.95 um
+		
+		K BAND = CONTINUUM 
+		Nbins = 10
+		Bin Spacing = 0
+		Lower Lambda = 2.00 um
+		Upper Lambda = 2.30 um
+		
+		Halpha = LINE
+		Nbins = 25
+		Bin Spacing = 0
+		Line center = 6564.61 Angstrom	
+		Line width  = 700. km/s
+		
+		Hbeta = LINE
+		Nbins = 25
+		Bin Spacing = 0
+		Line center = 4862.6831 Angstrom	  
+		Line width  = 700. km/s
+		
+		Br gamma = LINE
+		Nbins = 56
+		Bin Spacing = 0
+		Line center = 21661.178 Angstrom	 
+		Line width  = 700. km/s
+
+	B)  IMAGE FILE CONTENTS = 1			!0(short) or 1(full) = 1
+		!-------------------------------------------------------------------
+		! Choose between short output (*.maps: flux only) and full output 
+		! (*.map: transmitted, scattered and emitted flux; Q, U and V stokes
+		! parameters).
+		!-------------------------------------------------------------------

@@ -1,0 +1,141 @@
+VI) SIMULATION
+	!---------------------------------------------------------------------------
+	! HDUST must be run in two separate phases: an initial iteration phase
+	! (STEP = 1), followed by a post-processing phase (STEP > 1).
+	!
+	! Iteration phase:
+	!	STEP 1: The program iterates the solution to calculate the H level 
+	!			populations, temperatures, and hydrostatic equilibrium density
+	!			(where required) for all cells.  The results are output in the
+	!			...nn.temp, and ...nn.dust files, where nn is the iteration 
+	!			number.
+	!		  
+	! Post processing phase: In this mode, the program calculates the emergent 
+	! spectrum. There are three different methods for this:
+	!	STEP 2: performs a simulation for a specified wavelength range. The 
+	!			initial position of the emitted photon is sampled using the
+	!			total emissivity of each cell and the luminosity of the star.
+	!			In this method, photons are destroyed when they are absorbed by
+	!			the gas.
+	!	STEP 4: employs a radiative equilibrium procedure, in which photons are
+	!			emitted from the star using the entire frequency distribution 
+	!			of the stellar spectrum.  In this method the photons are not 
+	!			destroyed when they are absorbed by gas, but rather are 
+	!			reemitted in the same position with a frequency given by the
+	!			local emissivity.
+	!	STEP 5: performs a simulation for a specified wavelength range, like
+	!			STEP 2, but instead an equal number of (weighted) photons is
+	!			emitted by each cell.  This is usually the most efficient 
+	!			method (especially when images are desired).
+	!---------------------------------------------------------------------------
+	! SELECT WHICH STEP TO PERFORM
+	!---------------------------------------------------------------------------
+	A) STEP = 1						!sets which step is to be run
+		1) ITERATION PHASE			!(STEP = 1) *** FIRST STEP ***
+			a) PHOTONS
+				!---------------------------------------------------------------
+				! Select the total number, N_f, of photons to run.  The master 
+				! process will divide this total into batches of N_batch 
+				! photons, and give them to the slaves for parallel processing.
+				! Notes: 
+				! 1) You want to select N_f large enough to obtain a sampling 
+				!	 error [~ 1/sqrt(N_f)], which is less than the errors in the
+				!	 current solution, but not so large that the sampling errors
+				!	 are much smaller (which wastes run time).
+				! 2) To equally balance the load across the cpus, the batch size
+				!	 should be chosen so that N_batch << N_f/N_cpu, but larger 
+				!	 than a minimum number where the run time is dominated by 
+				!	 inter-process communication.
+				! 3) If you want HDUST to automatically set the number of
+				!    photons per batch, make N_batch = 0
+				! 4) A separate simulation is run to sample each spectral line
+				!	 (from NLTE levels), and each of these simulations will
+				!	 be run with N_f photons.  This means that the run time will
+				!	 scale as N_f*(NLTE Levels)^2
+				!---------------------------------------------------------------
+				N_f	 = 2500000			!Number of photons per simulation
+				N_batch =  0			!Number of photons per batch
+
+			b) ITERATIONS
+				!---------------------------------------------------------------
+				! If NewModel = 1, the iterations start from scratch (using the
+				! initial values specified below), and any previous results are
+				! overwritten.
+				! If NewModel = 0, the code starts with the results of the
+				! last iteration.  If no previous iterations are available, it
+				! will start from scratch (the same as NewModel = 1).
+				!---------------------------------------------------------------
+				N_it = 26				!Number of iterations to perform
+				NewModel = 1			!(1) start from scratch; (0) add to old
+
+			c) INITIAL VALUES
+				!---------------------------------------------------------------
+				!First guess for the level populations and temperatures
+				!---------------------------------------------------------------
+				i) WIND/DISK CELLS
+					!-----------------------------------------------------------
+					! The initial H level populations can be either estimated by
+					! HDUST (via a simple approximation) or read from a file 
+					! (e.g., previous results from a similar model).  If any of 
+					! the options below are set to 1 (read from file), be sure 
+					! to give the name of a file containing the results of a 
+					! previous simulation.  NOTE: this file must have been 
+					! generated with the same grid structure (section I.F above)
+					! as that to be used for this run.
+					!-----------------------------------------------------------
+					Read Level Populations	= 0		!0 (approx) or 1 (file)
+					Read Electron Temperature = 0	!0 (use Te) or 1 (file)
+					Te = 16000. K					!initial temperature
+						!-------------------------------------------------------
+						! NOTE: even if the initial temperatures are read from a
+						! file, this temperature, Te, is used to set up the mu 
+						! grid, and it may also be used for setting the disk
+						! scale height in models without HSEQ iteration
+						!-------------------------------------------------------
+					Read Density = 0				!0 (no) or 1 (yes)
+					File = 'mod.temp'
+
+				ii) DUST CELLS
+					!-----------------------------------------------------------
+					! The initial temperature of the dust cells is either given 
+					! by the optically thin approximation or read from a file.
+					!-----------------------------------------------------------
+					Read Dust Temperature = 1		!0 (approx) or 1 (file)
+					0) DUST SHELL TEMPERATURE
+						!-------------------------------------------------------
+						! Provide an estimate of the temperature on the inner 
+						! wall of each dust shell.
+						!-------------------------------------------------------
+						Shell 1: T = 1000. K
+						Shell 2: T = 500. K
+						Shell 3: T = 400. K
+						Shell 4: T = 300. K
+						Shell 5: T = 200. K
+					1) DUST TEMPERATURE FILE
+						File = mod.dust
+
+			d) DUST EVAPORATION = 1	 !0 (off) or 1 (on) 
+				!---------------------------------------------------------------
+				! If dust evaporation is turned on, Hdust will remove from the 
+				! simulation any dust cells that are hotter than the dust 
+				! destruction temperature.
+				!---------------------------------------------------------------
+				T_destruction = 1200. K !dust destruction temperature
+
+			e) SOBOLEV METHOD = 0
+				! For line emission processes, the code employs an escape 
+				! probability formalism.  This flag controls how that escape 
+				! probability is calculated (0 = use Sobolev optical depths; 1 =
+				! perform the optical depth integral, which is significantly 
+				! slower). The Sobolev approximation is not valid in directions 
+				! with zero velocity gradients, so SOBOLEV METHOD = 0 can 
+				! produce incorrect images and emergent fluxes for some 
+				! directions of observation (e.g. observers on the polar axis, 
+				! because the disk has no vertical velocity gradient).  
+				! However, the Sobolev method does produce good estimates of the 
+				! line source functions.  These considerations imply that in 
+				! general one should set
+				!					0	for STEP = 1  (iteration phase)
+				! SOBOLEV METHOD =
+				!					1	for STEP > 1  (emergent flux and images)
+				!---------------------------------------------------------------

@@ -1,0 +1,64 @@
+VERSION
+
+	Version = 2.02	!Version number of this input file.  It should match the
+					!HDUST version.
+
+I) ENVELOPE DESCRIPTION
+
+	A) MODEL COMPONENTS
+		Wind = 0			!Is a stellar wind present?
+		Disk = 1			!Is the disk present?
+		Dust = 0			!Is there a dusty region exterior to the gas?
+
+	B) DIMENSIONS
+		R_env  = 18.6		!envelope outer radius (must be larger than the 
+
+	C) DENSITY
+
+		b) DISK DENSITY
+			i) SURFACE DENSITY = 1
+				1) POWER-LAW		!(SURFACE DENSITY = 1): radial power law
+					n = 2.0			!radial exponent 
+
+				2) STEADY-STATE DECRETION DISK	!(SURFACE DENSITY = 2): VD
+					alpha = 1.  !alpha disk parameter (Shakura & Sunyaev)
+					R0 = 0.
+					ITERATE SURFACE DENSITY = 0 !(0 = no) OR (1 = yes)
+
+				4) 1-D FILE			!(SURFACE DENSITY = 4): 1-D SD from a file
+					File = 'deltasco/Atsuo/1D/data/dSco_a035_01'
+					Time = 2.3 yrs  !which time (epoch) to read from the file
+
+			ii) VERTICAL DENSITY = 0
+				0) GAUSSIAN		 !(VERTICAL DENSITY = 0)
+					betad = 1.5 !disk flaring parameter.
+
+				1) HSEQ VD			  !(VERTICAL DENSITY = 1)
+					betad = 1.5 !disk flaring parameter (used to define the disk
+
+			iii) VERTICAL SCALE HEIGHT = 1
+				 1) ACTUAL TEMPERATURE
+					Teff_SH = 18000. K	!Effective temperature for setting the  
+										!scale height.  
+				 2) FRACTION OF TEFF OF PRIMARY STAR
+					Fraction = 72.%
+				
+			iv) DISK SURFACE
+				RATIO = 1.E7
+
+	D) DENSITY SCALE
+		b) DISK DENSITY MODE = 2
+			2) BASE DENSITY			 	!(DISK DENSITY MODE = 2)
+				!requires SURFACE DENSITY = 1
+				n_0 = 2.35E13 cm^-3	 	!number density at r=R
+			3) MASS LOSS RATE			!(DISK DENSITY MODE = 3)
+				!requires SURFACE DENSITY = 2
+				Mdot = 1.E-9 Msun/yr  !mass loss rate
+
+	E) VELOCITY FIELD						! (velocities must be in km/s)
+		b) DISK VELOCITY = 3
+			3) KEPLERIAN ROTATION			!(DISK VELOCITY = 3); Pure rotation
+				V_orb = -1 km/s				!orbital speed at stellar radius
+
+		d) TURBULENT VELOCITY 
+			V_turb = 0. km/s !turbulent velocity; sets line profile width

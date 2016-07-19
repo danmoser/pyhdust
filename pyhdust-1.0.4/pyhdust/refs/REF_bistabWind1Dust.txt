@@ -1,0 +1,57 @@
+VERSION
+
+	Version = 2.02	!Version number of this input file.  It should match the
+
+I) ENVELOPE DESCRIPTION
+
+	A) MODEL COMPONENTS
+		Wind = 1			!Is a stellar wind present?
+		Disk = 0			!Is the disk present?
+		Dust = 1			!Is there a dusty region exterior to the gas?
+			N_dust = 1		!Number of dust shells (maximum is 5; minimum is 1)
+
+	B) DIMENSIONS
+		R_env  = 18.6		!envelope outer radius (must be larger than the 
+		R_dust = 3.			!dust shell (inner) radii. There must be (at least)
+
+	C) DENSITY
+		a) WIND DENSITY = 10
+			10) BI-STABILITY	 !(WIND DENSITY = 10): Bi-stability model
+				A_1 = 9.		!(Mdot_eq/Mdot_pole)-1
+				m = 182.		!latitudinal exponent
+
+		c) DUST DENSITY
+			i) DUST SHELLS
+				SHELL 1
+					SHELL DENSITY = 10	!BI-STABILITY
+						A_1 = 39.		!(Mdot_eq/Mdot_p)-1
+						m = 182.		!latitudinal exponent
+
+			ii) DUST OPENING ANGLE
+				Theta_dust = -1.
+
+	D) DENSITY SCALE
+		a) WIND DENSITY MODE = 3
+			3) MASS LOSS RATE			!(WIND DENSITY MODE = 3)
+				Mdot = 2.E-9 Msun/yr	!mass loss rate
+
+		c) SHELL DENSITY SCALE
+			SHELL 1
+				DUST DENSITY MODE = 3	  	!MASS LOSS RATE
+					Mdot = 1.E-7 Msun/year  !mass loss rate
+					Grain Density = 1. g/cm3!bulk density of the dust grains
+					Gas-to-Dust = 200.		!gas-to-dust mass ratio
+
+	E) VELOCITY FIELD						! (velocities must be in km/s)
+		a) WIND VELOCITY = 10
+			10) BI-STABILITY				!(WIND VELOCITY = 10);Pure expansion
+				V_0 = 10. km/s				!initial velocity (r=R)
+				V_inf_p = 400. km/s			!terminal speed at the pole
+				A_2 = -0.7					!Vinf_e/Vinf_p - 1 (A2 < 0.)
+				Beta_p = 0.8				!velocity law exponent at the pole
+				A_3 = 2.75					!B_e/B_p - 1
+
+		c) DUST VELOCITY
+
+		d) TURBULENT VELOCITY 
+			V_turb = 0. km/s !turbulent velocity; sets line profile width

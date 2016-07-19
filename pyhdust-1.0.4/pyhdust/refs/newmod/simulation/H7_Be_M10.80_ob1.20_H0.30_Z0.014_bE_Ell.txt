@@ -1,0 +1,111 @@
+VI) SIMULATION
+	A) STEP = 5						!sets which step is to be run
+		2) POST-PROCESSING PHASE		!(STEP = 2,4,5) *** SECOND STEP ***
+			a) PHOTONS
+				!---------------------------------------------------------------
+				! Select the total number of photons, N_f, and the number of 
+				! photons per batch, N_batch.  See section IV.A.1.a for more
+				! discussion.
+				!---------------------------------------------------------------
+				N_f	 = 150000000	 !Number of photons per simulation
+				N_batch =	 0	 !Number of photons per batch
+			b) INPUT FILES
+				!---------------------------------------------------------------
+				!Attention: if filename is "last", the code will search for the
+				!last iteration available and set the filenames accordingly.
+				!If Average last iterations is on, the code will make an 
+				!average of the last N_average iterations.
+				!Note: due to oscilations in the values of the level populations  
+				!temperature, best results are achieved when N_average is 
+				!an odd number.
+				!---------------------------------------------------------------
+				Population File = last  !level pops. & electron temps.
+				Dust File		= last		  !dust temperature
+				Average last iterations = 1
+					N_average = 4
+			c) WAVELENGTH BINS 
+				!---------------------------------------------------------------
+				! This section selects the wavelength bins to be used for the 
+				! output SED or LINE PROFILE.  Enter the number of spectral 
+				! regions to be sampled (N_bands), and provide a list of their
+				! names (Bands = 'band name 1', 'band name 2', ...).  The bands
+				! are listed in the next section.  Note that the band names must
+				! be given in the same order as they appear in the BAND LIST
+				! below.  Note that the frequency range of the simulation will
+				! be set to span the requested collection of wave bands.  This
+				! means that using a high resolution line region in combination
+				! with a broad set of continua will likely result in poor 
+				! sampling of the line profile.
+				!---------------------------------------------------------------
+				N_bands = 1
+				Bands = 'H7'
+%				N_bands = 3
+%				Bands = 'VISIBLE','Halpha','Hbeta'
+			d) BAND LIST
+				!---------------------------------------------------------------
+				! Each spectral region (BAND NAME = CONTINUUM or LINE) is 
+				! defined by 5 quantities: 
+				!  1) the number of bins (Nbins); 
+				!  2) the Bin Spacing (0 = linear; 1 = log)
+				!  3,4) the Lower and Upper Lambdas in microns if 
+				!		BAND NAME = CONTINUUM
+				!  3,4) the Line center in Angstroms and Line width in km/s if 
+				!		BAND NAME = LINE).  
+				!  5) the prefix that will be appended to the output filename
+				!  6) the photospheric line profile. The options are:
+				!       0 = no changes at the continuum spectrum.
+				!       1 = force a flat line profile.
+				!       2 = use the file specified at Section (IV.B.b) of the 
+				!           input. The code will add all lines profiles present 
+				!           within the band spectral range, for the closest 
+				!           values of Teff na log(g) of current stellar bin.				            
+				!
+				! A sample continuum region is:
+				!
+				!	VISIBLE = CONTINUUM			!Name = CONTINUUM
+				!	Nbins = 40					!number of bins
+				!	Bin Spacing = 1				!0 = linear; 1= logarithmic
+				!	Lower Lambda = .2 um		!lower wavelength of region
+				!	Upper Lambda = 1. um		!upper wavelength of region
+				!	File prefix = SED_
+				!   Add photospheric line profile = 0   !0=cont.; 1=flat; 2=file
+				!	SOBOLEV METHOD = 0
+				!
+				! and a sample line region is:
+				!
+				!	Halpha = LINE				!Name = LINE
+				!	Nbins = 100					!number of bins
+				!	Bin Spacing = 0				!0 = linear; 1= logarithmic
+				!	Line center = 6564.61 Angstrom !wavelength at line center
+				!	Line width  = 1020. km/s		!velocity width of region
+				!	File prefix = Ha_
+				!   Add photospheric line profile = 1   !0=cont.; 1=flat; 2=file
+				!	SOBOLEV METHOD = 1
+				!
+				! You can add as many new regions to this file as you want, but
+				! their names must be unique.  NOTE: As the code reads the 
+				! regions, it builds a cumulative, sorted list of the wavelength
+				! bins by inserting the new bins into the list.  For this reason
+				! you should always define high resolution regions AFTER low 
+				! resolution regions in this file.
+				!---------------------------------------------------------------
+				K BAND = CONTINUUM
+				Nbins = 30
+				Bin Spacing = 1
+				Lower Lambda = 1.85 um
+				Upper Lambda = 2.45 um
+				File prefix = K_
+				Add photospheric line profile = 0
+
+				H7 = LINE
+				Nbins = 245
+				Bin Spacing = 0
+				Line center = 3836.49 Angstrom	 
+				Line width  = 1836.8 km/s
+				File prefix = H7_
+				Add photospheric line profile = 2
+
+			e) SOBOLEV METHOD = 1 !1 = line
+				!---------------------------------------------------------------
+				! See explanation above
+				!---------------------------------------------------------------
