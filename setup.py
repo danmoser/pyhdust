@@ -80,7 +80,8 @@ setup(name='pyhdust',
     # packages=['pyhdust','pyhdust_refs'],
     scripts=[os.path.join('scripts', f) for f in os.listdir('scripts') if 
         os.path.splitext(f)[1] == '.py'],
-    packages=find_packages(exclude=['build', 'docs', '*egg*', 'dist']),
+    packages=find_packages(exclude=['build', 'docs', '*egg*', 'dist', 
+        'scripts']),
     # include=recfiles('refs'),
     package_data={'pyhdust': recfiles('pyhdust', 'refs') + 
         ['LICENSE', 'README.rst']},
@@ -88,7 +89,7 @@ setup(name='pyhdust',
     # data_files = [('refs/*', 'stmodels/*')],
     # package_dir = {'../'},
     zip_safe=False,
-    install_requires=['numpy >= 1.6.0', 'six'],
+    install_requires=['numpy >= 1.9.0', 'six'],
     long_description=rd('README.rst'),
     classifiers=[
         # "Development Status :: 4 - Beta",

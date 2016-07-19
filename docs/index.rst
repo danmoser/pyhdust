@@ -60,7 +60,7 @@ If your are not the root of the system, add the flag ``--user`` to the command a
         PATH=$PATH:~/.local/bin/
 
 
-**pyhdust** requires the numpy module. Optionally, it makes use of: 
+**pyhdust** requires numpy and six modules. Optionally, it makes use of: 
 
     - matplotlib
     - pyfits
