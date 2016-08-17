@@ -11,7 +11,7 @@
 #@ bg_size = 32 
 #@ queue
  
-EXE="./hdustparv2.02.bc"
+EXE="./hdustparv2.10.bc"
 ARGS=" = hdust_bestar2.02.inp"
 
 runjob --np 512 --ranks-per-node=16 --exe $EXE --args $ARGS

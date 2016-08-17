@@ -1340,10 +1340,10 @@ def mcmc(tgt, p_info, birun=50, emrun=500, nd_walk=10, a=2, threads=4,
     if False:
         p0sig = (p_info[:, 2][ind] - p_info[:, 0][ind]) / 6.
         p0 = _np.array([_np.random.normal(p0val, p0sig, ndim)
-                       for i in xrange(nwalkers)])
+                       for i in range(nwalkers)])
     else:
         p0 = _np.array([_np.random.uniform(p_info[:, 0][ind], 
-            p_info[:, 2][ind], ndim) for i in xrange(nwalkers)])
+            p_info[:, 2][ind], ndim) for i in range(nwalkers)])
     # Initialize the sampler with the chosen specs.
     sampler = _emcee.EnsembleSampler(
         nwalkers, ndim, chi2f, args=[p_info, tgt], a=a, threads=threads)
@@ -1381,7 +1381,7 @@ def mcmc(tgt, p_info, birun=50, emrun=500, nd_walk=10, a=2, threads=4,
     maxprob_index = _np.argmax(prob)
     # Get the best parameters and their respective errors
     params_fit = pos[maxprob_index]
-    errors_fit = [sampler.flatchain[:, i].std() for i in xrange(ndim) ]
+    errors_fit = [sampler.flatchain[:, i].std() for i in range(ndim) ]
     # ~ print("# Best fit ...")
     # ~ print('# 1 == Fixed; ',p_info[:,-1])
     # ~ print('# chi2_red = ',_np.max(prob)*-2)

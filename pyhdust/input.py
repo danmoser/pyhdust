@@ -444,7 +444,7 @@ class HdustMod(object):
         self.arr_lbd = s2d[0, :, 2]
         self.arr_flx = s2d[:, :, col]
         self.obdeg = _np.round(_np.arccos(s2d[:, 0, 0])*180./_np.pi, 1)
-        self.ob = s2d[:, 0, 0]
+        self.obs = s2d[:, 0, 0]
         return
 
     def __str__(self):

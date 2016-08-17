@@ -8,7 +8,7 @@
 source /softs/env_default.sh
 mpiexec.hydra  -machinefile $OAR_FILE_NODES \
 -bootstrap ssh -bootstrap-exec /usr/bin/oarsh \
--envall ./hdustparv2.1.bc input = hdust_bestar2.02.inp
+-envall ./hdustparv2.10.bc input = hdust_bestar2.02.inp
 
 # chmod +x open.oar 
 # oarsub -S ./open.oar 

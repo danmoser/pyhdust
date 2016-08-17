@@ -4,7 +4,7 @@ Welcome to **pyhdust** documentation!
 =============================================================
 **Analysis tools for multi-technique astronomical data and** *hdust* **models**.
 
-Pyhdust is currently at **version 1.0.4**.
+Pyhdust is currently at **version 1.0.5**.
 
 About *hdust* code: Carciofi & Bjorkman (`2006 <http://adsabs.harvard.edu/abs/2006ApJ...639.1081C>`_, `2008 <http://adsabs.harvard.edu/abs/2008ApJ...684.1374C>`_).
 
@@ -130,9 +130,9 @@ The code is free, available under the terms of the `GNU GPL v3.0 license`_.
 	https://github.com/danmoser/pyhdust/blob/master/LICENSE
 
 
-.. .. raw:: html
+.. raw:: html
     
-..     <a href="http://github.com/danmoser/pyhdust/" target="_blank"><img 
-..     style="position: fixed; top: 0; right: 0; border: 0;"  
-..     src="http://s3.amazonaws.com/github/ribbons/forkme_right_orange_ff7600.png" 
-..     alt="Fork me on GitHub"></a>
+    <a href="http://github.com/danmoser/pyhdust/" target="_blank"><img 
+    style="position: fixed; top: 0; right: 0; border: 0;"  
+    src="http://s3.amazonaws.com/github/ribbons/forkme_right_orange_ff7600.png" 
+    alt="Fork me on GitHub"></a>

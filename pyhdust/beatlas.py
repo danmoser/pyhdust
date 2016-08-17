@@ -392,7 +392,7 @@ def createXDRmap(maplist, xdrpath, refclass, lbdlim=None, npix=128):
 
 def createXDRsed(fsedlist, xdrpath, refclass, lbdarr, ignorelum=False, 
     pol=False):
-    """ Create the gemeroc SED XDR release.
+    """ Create the generic SED XDR release.
 
     nob = (individual) number of observers
     listpar = parameters of each model
@@ -418,8 +418,8 @@ def createXDRsed(fsedlist, xdrpath, refclass, lbdarr, ignorelum=False,
             ifact = m.get_lum() * _phc.Lsun.cgs / (4 * _np.pi * 
                 (10 * _phc.pc.cgs)**2) * 1e8
         for j in range(nob):
-            listpar = _np.vstack(( listpar, [getattr(m, it) for it in 
-                refclass.vdict.keys()]+[m.ob[j]]))
+            listpar = _np.vstack(( listpar, [ getattr(m, it) for it in 
+                refclass.vdict.keys()]+[ m.obs[j] ] ))
             models = _np.vstack(( models, 
                 _np.interp(lbdarr, m.arr_lbd, m.arr_flx[j])*ifact ))
 

@@ -262,7 +262,7 @@ def shiftfits(fitsfile, newsh=None):
         print('# No WLSHIFT available for {0}'.format(
             _phc.trimpathname(fitsfile)[1]))
     if newsh is None:
-        newsh = raw_input('Type the new shift: ')
+        newsh = _phc.user_input('Type the new shift: ')
     if newsh != '':
         imfits[0].header['WLSHIFT'] = float(newsh)
         imfits.close()
@@ -294,10 +294,10 @@ def checkshiftfits(fitslist, lbc=6562.8):
             ax.plot(veli, flx)
             _plt.show()
             _plt.draw()
-            ri = raw_input('\n# Is it good?(y/other): ')
+            ri = _phc.user_input('\n# Is it good?(y/other): ')
             if ri != 'y':
                 try:
-                    shift = float(raw_input('Type shift: '))
+                    shift = float(_phc.user_input('Type shift: '))
                 except:
                     shift = 0.
             else:
@@ -808,11 +808,11 @@ def kurlog(file=None, output=None):
     return teffs, loggs
 
 
-def kuruczflux(teff, logg, range=None):
+def kuruczflux(teff, logg, wavrange=None):
     """ Return fluxes from a Kurucz model.
 
-    Fluxes are in ergs/cm**2/s/hz/ster and wavelength in nm (range must be in
-    nm).
+    Fluxes are in ergs/cm**2/s/hz/ster and wavelength in nm (wavrange must be 
+    in nm).
 
     OUTPUT: wv, flux, info"""
     kurfile = _os.path.join(_hdt.hdtpath(), 'refs', 'fp00k0.pck')
@@ -840,22 +840,14 @@ def kuruczflux(teff, logg, range=None):
     # read best flux
     read = _phc.readrange(kurfile, i0, i0 + kurwvlines)
     flux = _np.array([val for line in read for val in 
-        (line[i:i + kurflxcol] for i in xrange(0, len(line) - 1, kurflxcol))], 
+        (line[i:i + kurflxcol] for i in range(0, len(line) - 1, kurflxcol))], 
         dtype=float)
     # cut range
-    if range is None:
+    if wavrange is None:
         return wave, flux, best
     else:
-        idx = _np.where((wave > range[0]) & (wave < range[-1]))
+        idx = _np.where((wave > wavrange[0]) & (wave < wavrange[-1]))
         return wave[idx], flux[idx], best    
-
-
-def choose_obs(dobs):
-    # if obsl is None:
-    #         obsl = dobs
-    #     else:
-    #         for 
-    return list(dobs)
 
 
 def plot_all(fs2list, obsl=None, fmt=['png'], out=None, lbc=.6564, 
@@ -917,7 +909,8 @@ def plot_all(fs2list, obsl=None, fmt=['png'], out=None, lbc=.6564,
 
         iobs = range(len(fs2d))
         if obsl is not None:
-            dobs = choose_obs(dobs)
+            iobs = [_phc.find_nearest(_np.arccos(fs2d[:, 0, 0])*180/_np.pi, ob,
+                idx=True) for ob in obsl]
 
         for ob in iobs:
             obfmt = r'{:.1f}$^\circ$'.format(_np.arccos(fs2d[ob, 0, 0])*
@@ -1698,7 +1691,6 @@ def plotSpecData(dtb, limits=None, civcfg=[1, 'm', 2013, 1, 1],
                 ax[i - 1].set_ylim([ lims[i - 1][0], lims[i - 1][1] ])
 
     if ident is not None:
-        patch = []
         for id in idref:
             idx = _np.where(id == idref)[0]
             icolor = _phc.colors[idx]
@@ -2041,7 +2033,7 @@ def overplotsubdirs(path, star, limits=(6540, 6600), showleg=True):
     Gera os arquivos `path/star/star.log` e `path/star/star_specs.png`.
     """
     # path = _os.getcwd()
-    # star = raw_input('Type the star name: ')
+    # star = _phc.user_input('Type the star name: ')
     # ref0 = 6540
     # ref1 = 6600
 
@@ -2054,7 +2046,6 @@ def overplotsubdirs(path, star, limits=(6540, 6600), showleg=True):
     nights = [o for o in _os.listdir(path) if _os.path.isdir('{0}/{1}'.
         format(path, o))]
 
-    legendl = ()
     i = 0
     for night in nights:
         targets = [o for o in _os.listdir('%s/%s' % (path, night)) if
@@ -2074,7 +2065,7 @@ def overplotsubdirs(path, star, limits=(6540, 6600), showleg=True):
                         lbda = _np.arange(len(spec)) * \
                             imfits[0].header['CDELT1'] + \
                             imfits[0].header['CRVAL1']
-                        # a = raw_input('type to continue: ')
+                        # a = _phc.user_input('type to continue: ')
                         if lbda[-1] > 6560:  # and flag == '1':
                             min_dif = min(abs(lbda - ref0))
                             a0 = _np.where(abs(lbda - ref0) == min_dif)[0][0]
@@ -2167,12 +2158,11 @@ def diffplotsubdirs(path, star, limits=(6540, 6600)):
 
     if not _os.path.exists('{0}/{1}'.format(path, star)):
         _os.system('mkdir {0}/{1}'.format(path, star))
-    f0 = open('{0}/{1}/{1}.log'.format(path, star), 'w')
+    # f0 = open('{0}/{1}/{1}.log'.format(path, star), 'w')
 
     nights = [o for o in _os.listdir(path) if _os.path.isdir('{0}/{1}'.
         format(path, o))]    
 
-    legendl = ()
     i = 0
     for night in nights:
         targets = [o for o in _os.listdir('%s/%s' % (path, night)) if 
@@ -2191,7 +2181,7 @@ def diffplotsubdirs(path, star, limits=(6540, 6600)):
                         spec = imfits[0].data
                         lbda = _np.arange(len(spec)) * imfits[0].\
                             header['CDELT1'] + imfits[0].header['CRVAL1']
-                        # a = raw_input('type to continue: ')
+                        # a = _phc.user_input('type to continue: ')
                         if lbda[0] > 5500:  # and flag == '1':
                             min_dif = min(abs(lbda - ref0))
                             a0 = _np.where(abs(lbda - ref0) == min_dif)[0][0]
@@ -2284,9 +2274,7 @@ def refplotsubdirs(path, star, limits=(6540, 6600)):
     nights = [o for o in _os.listdir(path) if 
         _os.path.isdir('{0}/{1}'.format(path, o))]
 
-    legendl = ()
     i = 0
-
     for night in nights:
         targets = [o for o in _os.listdir('%s/%s' % (path, night)) if 
             _os.path.isdir('%s/%s/%s' % (path, night, o))]
@@ -2302,7 +2290,7 @@ def refplotsubdirs(path, star, limits=(6540, 6600)):
                         spec = imfits[0].data
                         lbda = _np.arange(len(spec)) * imfits[0].\
                             header['CDELT1'] + imfits[0].header['CRVAL1']
-                        # a = raw_input('type to continue: ')
+                        # a = _phc.user_input('type to continue: ')
                         if lbda[0] > 5500:  # and flag == '1':
                             min_dif = min(abs(lbda - ref0))
                             a0 = _np.where(abs(lbda - ref0) == min_dif)[0][0]
@@ -2352,7 +2340,7 @@ def refplotsubdirs(path, star, limits=(6540, 6600)):
                         spec = imfits[0].data
                         lbda = _np.arange(len(spec)) * imfits[0].\
                             header['CDELT1'] + imfits[0].header['CRVAL1']
-                        # a = raw_input('type to continue: ')
+                        # a = _phc.user_input('type to continue: ')
                         if lbda[0] > 5500:  # and flag == '1':
                             min_dif = min(abs(lbda - ref0))
                             a0 = _np.where(abs(lbda - ref0) == min_dif)[0][0]
@@ -2452,7 +2440,6 @@ def overplotsubdirs2(path, star, limits=(6540, 6600)):
     nights = [o for o in _os.listdir(path) if _os.path.isdir('{0}/{1}'.
         format(path, o))]
 
-    legendl = ()
     ax = _plt.figure()
     i = 0
     for night in nights:
@@ -2472,7 +2459,7 @@ def overplotsubdirs2(path, star, limits=(6540, 6600)):
                         spec = imfits[0].data
                         lbda = _np.arange(len(spec)) * imfits[0].\
                             header['CDELT1'] + imfits[0].header['CRVAL1']
-                        # a = raw_input('type to continue: ')
+                        # a = _phc.user_input('type to continue: ')
                         if lbda[0] > 5500:  # and flag == '1':
                             min_dif = min(abs(lbda - ref0))
                             a0 = _np.where(abs(lbda - ref0) == min_dif)[0][0]
@@ -2602,7 +2589,7 @@ def overPlotLineSeries(fullseds, obsers=[0], lbc=.6564606, fmt=['png'],
             y2 = 0.
             if convgauss > 0:
                 step = _np.min([x[j + 1] - x[j] for j in range(len(x) - 1)])
-                xn = _np.arange(-hwidth - 3 * convgauss, hwidth + 3 * convgauss + step,
+                xn = _np.arange(-hwidth-3*convgauss, hwidth+3*convgauss+step,
                     step)
                 cf = _phc.normgauss(convgauss, x=xn)
                 yo = _np.interp(xn, x, yo)
@@ -2689,8 +2676,9 @@ def incrPlotLineSeries(fullseds, obsers=[0], lbc=.6564606, fmt=['png'],
             (x, y) = lineProf(sed2data[obs, :, 2], sed2data[obs, :, 3], 
                 lbc=lbc)
             if file == fullseds[0]:
-                ax.plot(x, y + 0.1 * i, label='{0:02.1f} deg.'.format(obsdegs[k]), 
-                    color=_phc.colors[_np.mod(i, len(_phc.colors))])
+                ax.plot(x, y + 0.1 * i, label='{0:02.1f} deg.'.format(
+                    obsdegs[k]), color=_phc.colors[_np.mod(i, 
+                    len(_phc.colors))])
             else:
                 ax.plot(x, y + 0.1 * i, color=_phc.colors[_np.mod(i, 
                     len(_phc.colors))])
@@ -2722,7 +2710,6 @@ def incrPlotLineFits(specs, lbc=.6564606, fmt=['png'], hwidth=1500.,
         elif dateobs.find('/') > 0:
             dtobs = dateobs.split('/')[::-1]
             dateobs = "-".join(dtobs)
-        ls = 2 * ['-.'] + ['-'] + 3 * ['-.'] + 2 * ['-']
         if dlim is None:
             cor = _phc.colors[_np.mod(i, len(_phc.colors))]
         else:

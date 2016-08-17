@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 
-""" Program that shifts a FITS spectrum based on an Halpha Gaussian fit 
-(designed to work within a few tenths of km/s).
+""" Program that shifts a FITS spectrum based on an line-profile Gaussian fit 
+(optimized to work within a few tenths of km/s).
 """
 
 from glob import glob
@@ -13,8 +13,9 @@ import pyhdust.phc as phc
 from argparse import ArgumentParser
 import pyfits as pf
 from scipy.optimize import curve_fit
+from warnings import warn
 
-__version__ = "0.91"
+__version__ = "0.92"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
 
@@ -53,13 +54,11 @@ def find_max_peak(vl, nflx, idx=-1):
     """ Based on max flux. 
     """
     if idx == -1:
-        idx = np.where(nflx == np.max(nflx))
-        return nflx[idx], vl[idx]
-    else:
-        idx_ = np.where(nflx[:idx] == np.max(nflx[:idx]))
-        nfV, vlV = nflx[idx_], vl[idx_]
-        idx_ = np.where(nflx[idx:] == np.max(nflx[idx:]))
-        nfR, vlR = nflx[idx_], vl[idx_]
+        idx = len(vl)/2
+    idx_ = phc.find_nearest(nflx[:idx], np.max(nflx[:idx]), idx=True)
+    nfV, vlV = nflx[idx_], vl[idx_]
+    idx_ = phc.find_nearest(nflx[idx:], np.max(nflx[idx:]), idx=True)
+    nfR, vlR = nflx[idx+idx_], vl[idx+idx_]
     return nfV, vlV, nfR, vlR
 
 
@@ -85,7 +84,7 @@ def gauss_fit(x, y, a0=None, x0=None, sig0=None, y0=None, emission=True):
         func = np.min
         q = 95
     if a0 is None:
-        a0 = np.percentile(y, q) - np.mean(y)
+        a0 = np.percentile(y, q) - np.median(y)
     if x0 is None:
         x0 = x[np.where(y == func(y))]
     if sig0 is None:
@@ -97,7 +96,7 @@ def gauss_fit(x, y, a0=None, x0=None, sig0=None, y0=None, emission=True):
 
 def apply_shift(imfits, vshift, wl=None):
     if wl is None:
-        print('watch!', imfits[0].header['CDELT1'], len(imfits[0].data))
+        # print('watch!', imfits[0].header['CDELT1'], len(imfits[0].data))
         wl = np.arange(len(imfits[0].data)) * imfits[0].header['CDELT1'] + \
             imfits[0].header['CRVAL1']
 
@@ -130,7 +129,7 @@ if __name__ == '__main__':
                 vshift = -imfits[0].header['VELSHIFT']
                 apply_shift(imfits, vshift)
             else: 
-                print('# Warning! No VELSHIFT for {0}'.format(fitsfile))
+                warn.warn('No VELSHIFT for {0}'.format(fitsfile))
 
         elif args.vs != 0:
             v0 = 0
@@ -146,13 +145,14 @@ if __name__ == '__main__':
                     imfits[0].header['CRVAL1']
 
                 vl, nflx = spt.lineProf(wl, flux, lbc=lbc)
-                idx0 = phc.find_nearest(vl, 0., idx=True)
+                v0 = np.median( vl[nflx > np.percentile(nflx, 80)] )
+                idx0 = phc.find_nearest(vl, v0, idx=True)
                 nf0 = nflx[idx0]
                 nfV, vlV, nfR, vlR = find_max_peak(vl, nflx, idx=idx0)
 
                 if has_central_absorp(nf0, vlV, vlR):
                     idxV = phc.find_nearest(vl, vlV, idx=True)
-                    idxR = phc.find_nearest(vl, vlR, idx=True)+idx0
+                    idxR = phc.find_nearest(vl, vlR, idx=True)
                     popt, pcov = gauss_fit(vl[idxV:idxR], nflx[idxV:idxR], 
                         emission=False)
                 else:
@@ -161,17 +161,15 @@ if __name__ == '__main__':
                 vshift = -popt[1]
                 apply_shift(imfits, vshift, wl)
             except RuntimeError:
-                print('# ERROR! Gaussian fit did not work for {0}'.format(
-                    fitsfile))
-                vshift = raw_input('Enter a vshift value (km/s): ')
+                warn.warn('Gaussian fit did not work for {0}'.format(fitsfile))
+                vshift = phc.user_input('Enter a vshift value (km/s): ')
                 try:
                     vshift = float(vshift)
                     apply_shift(imfits, vshift, wl)
                 except ValueError:
-                    print("# Warning! You entered a invalid value, keep file "
-                        "unchanged")
+                    warn.warn("You entered a invalid value! File unchanged.")
 
         imfits.close()
 
     if len(glob(linput)) == 0:
-        print('# ERROR! {0} files were not found!'.format(linput))
+        warn.warn('{0} files were not found!'.format(linput))

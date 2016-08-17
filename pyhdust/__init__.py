@@ -36,7 +36,7 @@ try:
 except ImportError:
     _warn.warn('# matplotlib, pyfits, six and/or scipy module not installed!!')
 
-__version__ = '1.0.4'
+__version__ = '1.0.5'
 __release__ = "Stable"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -348,7 +348,7 @@ def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
                         while key.upper() != 'Y':
                             _warn.warn('# {0} has different HDUST '
                                 'output!'.format(modelname))
-                            key = raw_input(
+                            key = _phc.user_input(
                                 'Do you want do proceed? (y/other): ')
                     nlbd += sed2info(file)[0]
                     sed2data = _np.vstack((sed2data, newdata))
@@ -367,7 +367,7 @@ def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
                         'or empty to continue): ')
                     loop = True
                     while loop:
-                        userinp = raw_input('# lbd: ')
+                        userinp = _phc.user_input('# lbd: ')
                         if len(userinp) == 0:
                             loop = False
                         elif userinp.replace('.', '', 1).isdigit():
@@ -393,7 +393,7 @@ def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
                         while key.upper() != 'Y':
                             _warn.warn('# {0} has different HDUST '
                                 'input!!'.format(modelname))
-                            key = raw_input(
+                            key = _phc.user_input(
                                 'Do you want do proceed? (y/other): ')
                     idx = _np.where(
                         (sed2data[:, 2] < mini) | (sed2data[:, 2] > maxi))
@@ -1158,11 +1158,11 @@ def obsCalc():
     print("# Horas em UT=%d ! (horario de 'inverno' de Brasilia)" % (ut))
     print("# Digite a Data de Observacao, ou 'ENTER' para hoje...\n#")
     dg = []
-    dg = dg + [str(raw_input("Digite o Ano (xxxx): "))]
+    dg = dg + [str(_phc.user_input("Digite o Ano (xxxx): "))]
     try:
         j = float(dg[-1])
-        dg = dg + [str(raw_input("Digite o Mes (1-12): "))]
-        dg = dg + [str(raw_input("Digite o Dia (1-31): "))]
+        dg = dg + [str(_phc.user_input("Digite o Mes (1-12): "))]
+        dg = dg + [str(_phc.user_input("Digite o Dia (1-31): "))]
     except:
         now = _dt.datetime.now()
         dg = []
@@ -1353,7 +1353,7 @@ def obsCalc():
             outfile = outfile + ("%s\t-- --\t-- --\t-- --\t-.--\t-.--" %
                  (alvos[i][0][:7]) ) + '\n'
 
-    wfile = raw_input("\nDeseja salvar a lista?(Sim/outro): ")
+    wfile = _phc.user_input("\nDeseja salvar a lista?(Sim/outro): ")
     if wfile in ['s', 'sim', 'Sim', 'S', 'y', 'yes', 'Yes', 'Y']:
         f0 = open('obs_%2d_%2d_%4d.txt' % (dg[2], dg[1], dg[0]), 'w')
         f0.writelines(outfile)
