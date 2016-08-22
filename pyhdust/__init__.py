@@ -36,7 +36,7 @@ try:
 except ImportError:
     _warn.warn('# matplotlib, pyfits, six and/or scipy module not installed!!')
 
-__version__ = '1.0.5'
+__version__ = '1.0.6'
 __release__ = "Stable"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -727,7 +727,7 @@ def fs2rm_nan(fsed2, cols=[3], refcol=None):
 
 
 def plottemp(tfiles, philist=[0], interpol=False, xax=0, fmt=['png'],
-    outpref=None, tlabels=None, title=None):
+    figname=None, tlabels=None, title=None):
     """
     :Example:
 
@@ -745,7 +745,7 @@ def plottemp(tfiles, philist=[0], interpol=False, xax=0, fmt=['png'],
 
     `xax` = 0: log10(r/R-1), 1: r/R; 2: 1-R/r
 
-    `outpref` = prefix of the output images
+    `figname` = prefix of the output images
 
     `fmts` = format os the output images.
 
@@ -762,7 +762,7 @@ def plottemp(tfiles, philist=[0], interpol=False, xax=0, fmt=['png'],
     if title is None:
         title = tfiles[-1]
     if interpol:
-        raise NotImplementedError('# Interpol option not available.')
+        raise NotImplementedError('# Interpol option not yet available.')
     if xax not in [0, 1, 2]:
         raise ValueError('# Invalid `xax` option. Try again.')
     #
@@ -800,12 +800,12 @@ def plottemp(tfiles, philist=[0], interpol=False, xax=0, fmt=['png'],
     axs.set_title(title)
     axs.set_xlabel(xtitle)
     axs.set_ylabel(r'Temperature (10$^3$ K)')
-    _phc.savefig(fig, figname=outpref, fmt=fmt)
+    _phc.savefig(fig, figname=figname, fmt=fmt)
     return
 
 
 def plottemp2d(tfile, figname=None, fmt=['png'], icphi=0, itype='linear',
-    nimg=128, Rmax=None):
+    nimg=128, Rmax=None, trange=None):
     """ itype = 'nearest', linear' or 'cubic'
 
     ``xax`` = 0: log10(r/R-1), 1: r/R; 2: 1-R/r
@@ -867,10 +867,15 @@ def plottemp2d(tfile, figname=None, fmt=['png'], icphi=0, itype='linear',
     msgri = _np.column_stack((xo.flatten(), yo.flatten()))
     # xo = _np.linspace(_np.min(ccr), _np.max(ccr), 21)
     # yo = _np.linspace(_np.min(ccmu), _np.max(ccmu), 21) 
+    vmin = _np.min(idata)
+    vmax = _np.max(idata)
+    if trange is not None:
+        vmin = trange[0]
+        vmax = trange[-1]        
     cax = ax.imshow(_interpolate.griddata(coords, idata, 
         msgri, method=itype).reshape((nimg, nimg)), origin='lower', 
-        extent=[_np.min(x), xmax, -ymax, ymax], vmin=_np.min(idata), 
-        vmax=_np.max(idata), cmap='gist_heat', interpolation='bilinear')
+        extent=[_np.min(x), xmax, -ymax, ymax], vmin=vmin, 
+        vmax=vmax, cmap='gist_heat', interpolation='bilinear')
     ax.set_title(_os.path.basename(tfile))
     ax.set_xlabel(xtitle)
     ax.set_ylabel(xtitle)

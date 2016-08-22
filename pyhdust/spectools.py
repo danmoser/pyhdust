@@ -851,10 +851,11 @@ def kuruczflux(teff, logg, wavrange=None):
 
 
 def plot_all(fs2list, obsl=None, fmt=['png'], out=None, lbc=.6564, 
-    hwidth=1000., solidfiles=True, xax=0, philist=[0], figname=None):
-    """ plot_all-like routine
+    hwidth=1000., solidfiles=True, xax=0, philist=[0], figname=None, 
+    nolabels=False, obsidx=False):
+    r""" plot_all-like routine
 
-    ``obs`` in degrees. It will find the closest values. It the find 
+    ``obsl`` list, in degrees. It will find the closest values. It the find 
     :math:`\Delta\theta > 3^\circ`, a warning message is displayed. The ``obs``
     index can be used if ``obsidx = True``.
 
@@ -909,12 +910,15 @@ def plot_all(fs2list, obsl=None, fmt=['png'], out=None, lbc=.6564,
 
         iobs = range(len(fs2d))
         if obsl is not None:
-            iobs = [_phc.find_nearest(_np.arccos(fs2d[:, 0, 0])*180/_np.pi, ob,
-                idx=True) for ob in obsl]
+            if not obsidx:
+                iobs = [_phc.find_nearest(_np.arccos(fs2d[:, 0, 0])*180/_np.pi, 
+                    ob, idx=True) for ob in obsl]
+            else:
+                iobs = obsl
 
         for ob in iobs:
-            obfmt = r'{:.1f}$^\circ$'.format(_np.arccos(fs2d[ob, 0, 0])*
-                180/_np.pi)
+            obfmt = r'{:.1f}$^\circ$, {:.1f}$^\circ$'.format(_np.arccos(
+                fs2d[ob, 0, 0])*180/_np.pi, _np.arccos(fs2d[ob, 0, 1]))
             if solidfiles:
                 pdict = {'color': _phc.cycles(fs2list.index(f)), 
                     'dashes': _phc.dashes(iobs.index(ob))}
@@ -957,9 +961,10 @@ def plot_all(fs2list, obsl=None, fmt=['png'], out=None, lbc=.6564,
     ax3.yaxis.set_ticks_position('both')
     ax3.set_ylabel('Normalized Flux')
 
-    ax1.legend(loc='best', fancybox=True, framealpha=0.5, fontsize=9,
+    if not nolabels:
+        ax1.legend(loc='best', fancybox=True, framealpha=0.5, fontsize=9,
         labelspacing=0.05)
-    if len(fs2list) > 1:
+    if len(fs2list) > 1 and not nolabels:
         ax0.legend(loc='best', fancybox=True, framealpha=0.5, fontsize=8,
             labelspacing=0.05)
 
