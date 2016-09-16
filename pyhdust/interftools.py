@@ -55,6 +55,23 @@ __email__ = "dmfaes@gmail.com"
 colors = ["red", "green", "blue", "black"]
 
 
+def azim_avg(img):
+    """ Azimuthaly average a given image.
+
+    .. note:: `round=0`. If it bigger than 0, then rounding problem appears.
+    """
+    img = img.copy()
+    nrows, ncols = img.shape
+    xx, yy = _np.meshgrid( *_np.ogrid[:ncols, :nrows] )
+    xx = xx-(nrows-1)/2.
+    yy = yy-(ncols-1)/2.
+    rr = -_np.sqrt( xx**2 + yy**2 ).round(0)
+    for r in _np.unique(rr):
+        idx = _np.where(rr == r)
+        img[idx] = _np.average(img[idx])
+    return img
+
+
 def log_transform(im):
     """ Returns log(image) scaled to the interval [0,1]
     """

@@ -47,6 +47,89 @@ __email__ = "dmfaes@gmail.com"
 
 
 # Data manipulation (includes fitting)
+def find_nearest_pt(x0, y0, x, y, z, case=1):
+    dx = _np.max(x) - _np.min(x)
+    dy = _np.max(y) - _np.min(y)
+    if case == 1:
+        idx = _np.where( (x < x0) & (y < y0))
+    elif case == 2:
+        idx = _np.where( (x > x0) & (y < y0))
+    elif case == 3:
+        idx = _np.where( (x < x0) & (y > y0))
+    elif case == 4:
+        idx = _np.where( (x > x0) & (y > y0))
+    else:
+        idx = _np.argsort(x)
+    z = z[idx]
+    if len(z) > 0:
+        x = x[idx]
+        y = y[idx]
+        d = _np.sqrt( ((x0-x)/dx)**2 + ((y0-y)/dy)**2 )
+        idx = _np.where(d == _np.min(d))
+        return _np.average(x[idx]), _np.average(y[idx]), _np.average(z[idx]), \
+            _np.average(d[idx])
+    else:
+        return _np.NaN, _np.NaN, _np.NaN, _np.NaN
+
+
+def baricent_calc(x0, y0, x, y, z, fullrange=False):
+    x1, y1, z1, d1 = find_nearest_pt(x0, y0, x, y, z, case=1)
+    x2, y2, z2, d2 = find_nearest_pt(x0, y0, x, y, z, case=2)
+    x3, y3, z3, d3 = find_nearest_pt(x0, y0, x, y, z, case=3)
+    x4, y4, z4, d4 = find_nearest_pt(x0, y0, x, y, z, case=4)
+    if _np.sum(_np.isnan([x1, x2, x3, x4])) == 0:
+        # DO THE BARICENTER CALCULATIONS HERE
+        idx = _np.argsort([d1, d2, d3, d4])
+        xs = _np.array([x1, x2, x3, x4])[idx]
+        ys = _np.array([y1, y2, y3, y4])[idx]
+        zs = _np.array([z1, z2, z3, z4])[idx]
+        inside = False
+        seq = _np.array([[0, 1, 2], [0, 1, 3], [0, 2, 3], [1, 2, 3]])
+        for i in seq:
+            # http://mathworld.wolfram.com/TriangleInterior.html    
+            # http://stackoverflow.com/questions/13300904/
+            # determine-whether-point-lies-inside-triangle
+            if not inside:
+                X, Y = (xs[i], ys[i])
+                alpha = ((Y[1] - Y[2])*(x0 - X[2]) + (X[2] - X[1])*(y0 - 
+                    Y[2])) / ((Y[1] - Y[2])*(X[0] - X[2]) + (X[2] - 
+                    X[1])*(Y[0] - Y[2]))
+                beta = ((Y[2] - Y[0])*(x0 - X[2]) + (X[0] - X[2])*(y0 - 
+                    Y[2])) / ((Y[1] - Y[2])*(X[0] - X[2]) + (X[2] - 
+                    X[1])*(Y[0] - Y[2]))
+                gamma = 1.0 - alpha - beta
+                if alpha > 0 and beta > 0 and gamma > 0:
+                    Z = zs[i]
+                    inside = True
+        # http://www.mathopenref.com/coordtrianglearea.html
+        a = _np.zeros(3.)
+        a[2] = _np.abs(0.5 * (X[0]*(Y[1]-y0) + X[1]*(y0-Y[0]) + 
+            x0*(Y[0]-Y[1])))
+        a[1] = _np.abs(0.5 * (X[0]*(Y[2]-y0) + X[2]*(y0-Y[0]) + 
+            x0*(Y[0]-Y[2])))
+        a[0] = _np.abs(0.5 * (X[1]*(Y[2]-y0) + X[2]*(y0-Y[1]) + 
+            x0*(Y[1]-Y[2])))
+        return _np.sum(Z*a)/_np.sum(a)
+    elif _np.sum(_np.isnan([x1, x2, x3, x4])) == 1 and fullrange:
+        idx = _np.argsort([d1, d2, d3, d4])
+        zs = _np.array([z1, z2, z3, z4])[idx][:3]
+        ds = _np.array([d1, d2, d3, d4])[idx][:3]
+        return _np.sum(zs/ds) / _np.sum(1/ds)
+    else:
+        return _np.NaN
+
+
+def baricent_map(x, y, z, res=100, fullrange=False):
+    X = _np.linspace(_np.min(x), _np.max(x), res)
+    Y = _np.linspace(_np.min(y), _np.max(y), res)
+    X, Y = _np.meshgrid(X, Y[::-1])
+    img = _np.zeros((res, res))
+    for i, j in _product(range(res), range(res)):
+        img[i, j] = baricent_calc(X[i, j], Y[i, j], x, y, z, 
+            fullrange=fullrange)
+    return img
+
+
 def flatten(list_, outlist=None):
     """ Return a flatten list. 
 
@@ -216,7 +299,7 @@ def optim(p0, x, y, yerr, func, errfunc=None):
     if errfunc is None:
         def errfunc(p, x, y, yerr, func):
             """ error function """
-            # return np.sum( ((y-func(p,x))/yerr)**2 )
+            # return _np.sum( ((y-func(p,x))/yerr)**2 )
             return ((y - func(p, x)) / yerr)**2
     bestp, tmp = _optimize.leastsq(errfunc, p0, args=(x, y, yerr, func))
     c2red = chi2calc(func(bestp, x), y, yerr, npar=len(p0))
@@ -247,7 +330,7 @@ def bin_ndarray(ndarray, new_shape, operation='avg'):
 
     Example
     -------
-    >>> m = np.arange(0,100,1).reshape((10,10))
+    >>> m = _np.arange(0,100,1).reshape((10,10))
     >>> n = bin_ndarray(m, new_shape=(5,5), operation='sum')
     >>> print(n)
     [[ 22  30  38  46  54]
@@ -380,7 +463,7 @@ def readpck(n, tp, ixdr, f):
     - ixdr: counter
     - f: file-object
 
-    :returns: ixdr (counter), np.array
+    :returns: ixdr (counter), _np.array
     """    
     sz = dict(zip(['i', 'l', 'f', 'd'], [4, 4, 4, 8]))
     s = sz[tp]
@@ -393,7 +476,7 @@ def reshapeltx(ltxtb, ncols=2, latexfmt=True):
 
     :param ltxtb: latex table (only contents)
     :type ltxtb: string, or list of strings
-    :rtype: string, or np.array (str)
+    :rtype: string, or _np.array (str)
     :returns: latex formatted table, or matrix
     """
     t = ltxtb
@@ -615,7 +698,7 @@ def nan_helper(y):
         >>> # linear interpolation of NaNs
         >>> nans, x = nan_helper(y)
         >>> # x is a lambda "sequence" function to interpolation purposes
-        >>> y[nans]= np.interp(x(nans), x(~nans), y[~nans])
+        >>> y[nans]= _np.interp(x(nans), x(~nans), y[~nans])
     """
     return _np.isnan(y), lambda z: z.nonzero()[0]
 

@@ -11,6 +11,7 @@ This module contains:
 - Astronomic useful and plotting functions
 - Astronomic filters tools
 
+:co-author: Despina Panoglou
 :license: GNU GPL v3.0 https://github.com/danmoserp/yhdust/blob/master/LICENSE
 """
 from __future__ import print_function
@@ -36,7 +37,7 @@ try:
 except ImportError:
     _warn.warn('# matplotlib, pyfits, six and/or scipy module not installed!!')
 
-__version__ = '1.0.6'
+__version__ = '1.0.7'
 __release__ = "Stable"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -804,8 +805,89 @@ def plottemp(tfiles, philist=[0], interpol=False, xax=0, fmt=['png'],
     return
 
 
+def plotdens(tfiles, philist=[0], interpol=False, xax=0, fmt=['png'],
+    outpref=None, tlabels=None, title=None):
+    """
+    VARIABLES:
+        interpol: 
+            - True: What will be plotted is the population along rays of a
+                given latitude. The latitudes are defined in array muplot 
+                below.
+            - False: What will be plotted is the population for a given mu
+                index as a function of radius, starting with index
+                ncmu/2(midplane) + plus
+        tfile:   file names' list
+        xax:     0: log10(r/R-1), 1: r/R; 2: 1-R/r
+        figname: prefix of the output images
+        fmts:    format of the output images.
+
+    :Example:
+        >>> import pyhdust as hdt
+        >>> tfiles, tlabels = hdt.gentemplist('bestar2.02/mod01/mod01b33.temp', 
+                tfrange=[30,33])
+        >>> hdt.plottemp(tfiles, tlabels=tlabels)
+            .. image:: _static/hdt_plottemp.png
+                :width: 512px
+                :align: center
+                :alt: hdt.plottemp example
+
+    OUTPUT = ...
+    """
+    # despo SP 160908: copied from pyhdust's plottemp
+    if isinstance(tfiles, _strtypes):
+        tfiles = [tfiles]
+    if title is None:
+        title = tfiles[-1]
+    if interpol:
+        raise NotImplementedError('# Interpol option not available.')
+    if xax not in [0, 1, 2, 3]:
+        raise ValueError('# Invalid `xax` option. Try again.')
+    #
+    fig, axs = _plt.subplots(1, 1)  # , figsize=(21./3,29.7/3), sharex=True)
+    np = 0
+    rplus = 0
+    for i in range(len(tfiles)):
+        rtfile = tfiles[i]
+        ncr, ncmu, ncphi, nLTE, nNLTE, Rstar, Ra, beta, data, pcr, pcmu, \
+            pcphi = readtemp(rtfile, quiet=True)
+        # print(rtfile, nLTE, nNLTE)
+        for phiidx in range(0, len(philist)):
+            icphi = philist[phiidx]
+            x = data[0, :, 0, icphi]
+            if (xax == 0):
+                x = _np.log10(x / Rstar - 1.)
+                xtitle = r'$\log_{10}(r/R_*-1)$'
+            elif (xax == 1):
+                x = x / Rstar
+                xtitle = r'$r/R_*$'
+            elif (xax == 2):
+                x = 1. - Rstar / x
+                xtitle = r'$1-R_*/r$'
+            elif (xax == 3):
+                x = _np.log10(x / Rstar)
+                xtitle = r'$\log_{10}(r/R_*)$'
+            # despo: number density numbers appear at column 5
+            #        temperature is at lev+3
+            y = data[5+nLTE, :, ncmu / 2 + np + rplus, icphi]
+            y = _np.log10(y)  # /.6/mp)
+            mk = 'o:'
+            if rtfile.find('avg') > 0:
+                mk = 'o-'
+            if tlabels is not None:
+                axs.plot(x, y, mk, label=tlabels[i])
+            else:
+                axs.plot(x, y, mk)
+    #
+    axs.legend(loc='best', fancybox=True, framealpha=0.5)
+    axs.set_title(title)
+    axs.set_xlabel(xtitle)
+    axs.set_ylabel(r'$\log_{10}(n)$')
+    _phc.savefig(fig, figname=outpref, fmt=fmt)
+    return
+
+
 def plottemp2d(tfile, figname=None, fmt=['png'], icphi=0, itype='linear',
-    nimg=128, Rmax=None, trange=None):
+    nimg=128, Rmax=None, trange=None, hres=False):
     """ itype = 'nearest', linear' or 'cubic'
 
     ``xax`` = 0: log10(r/R-1), 1: r/R; 2: 1-R/r
@@ -872,14 +954,116 @@ def plottemp2d(tfile, figname=None, fmt=['png'], icphi=0, itype='linear',
     if trange is not None:
         vmin = trange[0]
         vmax = trange[-1]        
-    cax = ax.imshow(_interpolate.griddata(coords, idata, 
-        msgri, method=itype).reshape((nimg, nimg)), origin='lower', 
+    if hres:
+        img = _interpolate.griddata(coords, idata, msgri, 
+            method=itype).reshape((nimg, nimg))
+    else:
+        img = _phc.baricent_map(x, y, idata)
+    cax = ax.imshow(img, origin='lower', extent=[_np.min(x), xmax, -ymax, 
+        ymax], vmin=vmin, vmax=vmax, cmap='gist_heat', 
+        interpolation='bilinear')
+    ax.set_title(_os.path.basename(tfile))
+    ax.set_xlabel(xtitle)
+    ax.set_ylabel(xtitle)
+    cbar = fig.colorbar(cax, label=r'Temp. (10$^3$ K)')  
+    # , orientation='horizontal')
+    # cbar.ax.set_yticklabels(['< -1', '0', '> 1'])  # vertically colorbar
+    # if Rmax is None:
+    #     Rmax = Ra
+    # else:
+    #     Rmax *= Rstar
+    # ymax = abs(Rmax/Rstar-1)/2
+    # ax.set_xlim([1, Rmax/Rstar])
+    # ax.set_ylim([-ymax, ymax])
+    ax.set_aspect(abs(xmax-_np.min(x))/abs(ymax-(-ymax)))
+    _phc.savefig(fig, figname=figname, fmt=fmt)
+    return
+
+
+def plotdens2d(tfile, figname=None, fmt=['png'], icphi=0, itype='linear',
+    nimg=128, Rmax=None, trange=None, hres=False, zlim=None):
+    """ itype = 'nearest', linear' or 'cubic'
+
+    :param hres: high-resolution mode
+    :param zlim: limits the z-axis (color) scale. Ex.: `[6, 13]` sets the log
+    scale to :math:`10^6-10^{13}` .
+    """
+    xax = 1
+    if xax not in [0, 1, 2]:
+        raise ValueError('# Invalid `xax` option. Try again.')
+    ncr, ncmu, ncphi, nLTE, nNLTE, Rstar, Ra, beta, data, pcr, pcmu, pcphi\
+        = readtemp(tfile)
+    lev = nLTE+2
+    #
+    fig, ax = _plt.subplots()
+    # pcmu[0, :] = 2*pcmu[1, :] - pcmu[2, :]
+    # pcmu[-1, :] = 2*pcmu[-2, :] - pcmu[-3, :]
+    ccmu = _np.arccos(pcmu[:-1] + _np.diff(pcmu, axis=0)/2.).flatten()
+    ccr = _np.tile(pcr[:-1] + _np.diff(pcr)/2., ncmu)
+    tmp = _phc.sph2cart(ccr, ccmu)
+    x = tmp[1]
+    y = tmp[0]
+    #
+    if (xax == 0):
+        idx = _np.where(y > Rstar)
+        x = _np.log10(x[idx]/Rstar - 1.)
+        y = _np.log10(y[idx]/Rstar - 1.)
+        idata = data[3+lev, :, :, icphi].T.flatten()[idx]
+        xtitle = r'$\log_{10}(r/R_*-1)$'
+    elif (xax == 1):
+        idata = ( data[3+lev, :, :, icphi].T.flatten() )
+        idx = _np.where(idata > data[3+lev, 0, 0, icphi])
+        idata = _np.log10(idata[idx])
+        x = x[idx]/Rstar
+        y = y[idx]/Rstar
+        xtitle = r'$r/R_*$'
+    elif (xax == 2):
+        idx = _np.where(y > Rstar)
+        x = 1.-Rstar/x[idx]
+        y = 1.-Rstar/y[idx]
+        idata = data[3+lev, :, :, icphi].T.flatten()[idx]
+        xtitle = r'$1-R_*/r$'
+    if Rmax is None:
+        xmax = _np.max(x)
+    else:
+        if xax == 0: 
+            xmax = _np.log10(Rmax - 1.)
+        elif xax == 1:
+            xmax = Rmax
+        elif xax == 2:
+            xmax = 1-1./Rmax
+    #
+    ymax = (xmax-_np.min(x))/2.
+    #
+    coords = _np.column_stack((x, y))
+    ax.set_xlim([_np.min(x), xmax])
+    ax.set_ylim([-ymax, ymax])
+    # xo, yo = _np.meshgrid( _np.linspace(_np.min(x), _np.max(x), nimg), 
+    #     _np.linspace(_np.min(y), _np.max(y), nimg) )
+    xo, yo = _np.meshgrid( _np.linspace(_np.min(x), xmax, nimg), 
+        _np.linspace(-ymax, ymax, nimg) )
+    msgri = _np.column_stack((xo.flatten(), yo.flatten()))
+    # xo = _np.linspace(_np.min(ccr), _np.max(ccr), 21)
+    # yo = _np.linspace(_np.min(ccmu), _np.max(ccmu), 21) 
+    vmin = _np.min(idata)
+    vmax = _np.max(idata)
+    if zlim is not None:
+        vmin, vmax = zlim
+    if trange is not None:
+        vmin = trange[0]
+        vmax = trange[-1]
+    if hres:
+        img = _interpolate.griddata(coords, idata, msgri, 
+            method=itype).reshape((nimg, nimg))
+    else:
+        img = _phc.baricent_map(x, y, idata, fullrange=False)
+    cax = ax.imshow(img, origin='lower', 
         extent=[_np.min(x), xmax, -ymax, ymax], vmin=vmin, 
         vmax=vmax, cmap='gist_heat', interpolation='bilinear')
     ax.set_title(_os.path.basename(tfile))
     ax.set_xlabel(xtitle)
     ax.set_ylabel(xtitle)
-    cbar = fig.colorbar(cax, label=r'Temp. (10$^3$ K)')  
+    cbar = fig.colorbar(cax, label=r'$\log_{10}(d)$ (cm$^{-3}$)')  
     # , orientation='horizontal')
     # cbar.ax.set_yticklabels(['< -1', '0', '> 1'])  # vertically colorbar
     # if Rmax is None:

@@ -4,6 +4,10 @@
 
 History
 ============
+v1.007 @ 2016-09-16
+---------------------
+- New ploting 2d routines
+
 v1.005 @ 2016-08-17
 ---------------------
 - New working generic interpolation sed2/XDR
