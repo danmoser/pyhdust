@@ -25,6 +25,7 @@ import os as _os
 import re as _re
 import numpy as _np
 import datetime as _dt
+from dateutil.relativedelta import relativedelta as _dtdelta
 import gzip as _gzip
 from bz2 import BZ2File as _BZ2File
 from glob import glob as _glob
@@ -774,17 +775,18 @@ def dec2degf(decstr, delimiter=":"):
 
 
 def gentkdates(mjd0, mjd1, fact, step, dtstart=None):
-    """ Generates round dates between > mjd0 and < mjd1 in a given step.
-    Valid steps are:
+    """ Generates round dates between ``mjd0`` and ``mjd1`` in a given step.
+    Valid ``steps`` are:
 
         'd/D/dd/DD' for days;
+        'w/W/ww/WW' for weeks;
         'm/M/mm/MM' for months;
         'y/Y/yy/YY/yyyy/YYYY' for years.
 
     dtstart (optional) is expected to be in _datetime._datetime.date() format
-    [i.e., _datetime.date(yyyy, m, d)].
+    [i.e., datetime.date(yyyy, m, d)].
 
-    fact must be an integer.
+    ``fact`` must be an integer.
 
     INPUT: float, float, float, int, step (see above), dtstart (see above)
 
@@ -801,58 +803,25 @@ def gentkdates(mjd0, mjd1, fact, step, dtstart=None):
             dtstart = _dt.datetime(
                 *_jdcal.jd2gcal(_jdcal.MJD_0, mjd0)[:3]).date()
     # define step 'position' and vector:
-    if dtstart.day > 28:
-        dtstart = dtstart.replace(day=28)
-    basedata = [dtstart.year, dtstart.month, dtstart.day]
+    # if dtstart.day > 28:
+    #     dtstart = dtstart.replace(day=28)
+    basedata = dtstart
     dates = []
     mjd = mjdst
-    if step.upper() in ['Y', 'YY', 'YYYY']:
-        i = 0
-        while mjd < mjd1 + 1:
-            dates += [_dt.datetime(*basedata).date()]
-            basedata[i] += fact
-            mjd = _jdcal.gcal2jd(*basedata)[1]
-    elif step.upper() in ['M', 'MM']:
-        i = 1
-        while mjd < mjd1 + 1:
-            dates += [_dt.datetime(*basedata).date()]
-            basedata[i] += fact
-            while basedata[i] > 12:
-                basedata[0] += 1
-                basedata[1] -= 12
-            mjd = _jdcal.gcal2jd(*basedata)[1]
-    elif step.upper() in ['D', 'DD']:
-        i = 2
-        # daysvec = _np.arange(1, 29, fact)
-        # if basedata[i] not in daysvec:
-        #     j = 0
-        #     while daysvec[j + 1] < basedata[i]:
-        #         j += 1
-        #     daysvec += basedata[i] - daysvec[j]
-        #     idx = _np.where(daysvec < 29)
-        #     daysvec = daysvec[idx]
-        # else:
-        #     j = _np.where(daysvec == basedata[i])[0]
-        j = 0
-        daysvec = _np.arange(1, 29)[j::fact]
-        while basedata[i] not in daysvec:
-            j += 1
-            daysvec = _np.arange(1, 29)[j::fact]
-        j = 0
-        while mjd < mjd1 + 1:
-            dates += [_dt.datetime(*basedata).date()]
-            j += 1
-            if j == len(daysvec):
-                j = 0
-                basedata[1] += 1
-                if basedata[1] == 13:
-                    basedata[1] = 1
-                    basedata[0] += 1
-            basedata[i] = daysvec[j]
-            mjd = _jdcal.gcal2jd(*basedata)[1]
-    else:
-        _warn.warn('# ERROR! Invalid step')
-        raise SystemExit(1)
+    while mjd < mjd1 + 1:
+        dates += [basedata]
+        if step.upper() in ['Y', 'YY', 'YYYY']:
+            basedata += _dtdelta(years=fact)
+        elif step.upper() in ['M', 'MM']:
+            basedata += _dtdelta(months=fact)
+        elif step.upper() in ['W', 'WW']:
+            basedata += _dtdelta(weeks=fact)
+        elif step.upper() in ['D', 'DD']:
+            basedata += _dtdelta(days=fact)
+        else:
+            _warn.warn('# ERROR! Invalid step')
+            raise SystemExit(1)
+        mjd = _jdcal.gcal2jd(basedata.year, basedata.month, basedata.day)[1]
     return dates
 
 
@@ -1107,8 +1076,22 @@ def user_input(arg):
 
 
 # Plot-related
-def civil_ticks(ax, civcfg=[1, 'm'], civdt=None, tklab=True):
-    """ Add the civil ticks in the axis.  """
+def civil_ticks(ax, civcfg=[1, 'm'], civdt=None, tklab=True, label="%y %b %d"):
+    """ Add the civil ticks in the axis.
+
+    :param civcfg: forces a given timestep between the ticks [`n`, interval].
+    Interval can be day (`d`), month (`m`) or year (`y`). 
+    :param civdt: sets the initial tick date. Format: [Y, M, D]
+    :param tklab: if False, the civil date labels are not written.
+    :param label: define the label for the ``date.strftime`` to be displayed in 
+    the tick labels.
+
+    :EXAMPLE:
+
+        fig, ax = plt.subplots()
+        ax.plot(x, y)
+        ax = phc.civil_ticks(ax)
+    """
     if civdt is not None:
         civdt = _dt.datetime(civdt[0], civdt[1], civdt[2]).date()
     mjd0, mjd1 = ax.get_xlim()
@@ -1119,7 +1102,7 @@ def civil_ticks(ax, civcfg=[1, 'm'], civdt=None, tklab=True):
     ax2.set_xlim( ax.get_xlim() )
     ax2.set_xticks(mjdticks)
     if tklab:
-        ax2.set_xticklabels([date.strftime("%d %b %y") for date in dtticks])
+        ax2.set_xticklabels([date.strftime(label) for date in dtticks])
     else:
         ax2.set_xticklabels([])
     return ax

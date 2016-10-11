@@ -443,7 +443,7 @@ def fastnumvis(img, lbd, Bproj, PA, rad_per_pixel, PAdisk=90.):
     output: complexVis, VisAmp, VisPhase
     """
     if lbd < 1e-6 or lbd > 4e-6:
-        print('# Warning! *fastnumvis*(lbd) is {.1e} m!'.format(lbd))
+        print('# Warning! *fastnumvis*(lbd) is {0:.1e} m!'.format(lbd))
     PA = PA - PAdisk + 90.
     idx = _np.where(img > 0)
 
