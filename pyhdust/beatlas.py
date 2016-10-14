@@ -321,9 +321,9 @@ def createBAsed(fsedlist, xdrpath, lbdarr, param=True, savetxt=False,
                 f0 = open(log)
                 lines = f0.readlines()
                 f0.close()
-                iL = _phc.fltTxtOccur('L =', lines, seq=2) * _phc.Lsun.cgs
+                iL = _phc.fltTxtOccur('L =', lines) * _phc.Lsun.cgs
                 if saveextra is not None:
-                    R_pole = _phc.fltTxtOccur('R_pole =', lines, seq=2)
+                    R_pole = _phc.fltTxtOccur('R_pole =', lines)
                     Vrot = _phc.fltTxtOccur('Vrot', lines)
                     f0 = open(saveextra, 'a')
                     f0.writelines('{0}\t{1}\t{2}\n'.format(R_pole, Vrot, iL))

@@ -1277,7 +1277,8 @@ def gbf(T, lbd):
         4.30, 0.1761, 0.1269, 0.0046, -0.0690, -1.1185, 0.0126,
     ]).reshape((6, -1))
     if T < 5000 or T > 22500:
-        _warn.warn('# ERROR! Invalid temperature for Gaunt factors calculation!')
+        _warn.warn('# ERROR! Invalid temperature for Gaunt factors '
+            'calculation!')
         return _np.zeros(len(lbd)), _np.zeros(len(lbd))
     elif T >= 5000 and T < 10**vals[0, 0]:
         _warn.warn('Extrapolated Gaunt factors!!')
