@@ -483,10 +483,10 @@ def fastnumvis3(img, lbd, Bprojs, PAs, rad_per_pixel, PAdisk=90.):
 
     output: complexVis, VisAmp, VisPhase (closure phase)
     """
-    u1 = Bprojs[0] * _np.cos(PAs[0] * _np.pi / 180.)
-    u2 = Bprojs[1] * _np.cos(PAs[1] * _np.pi / 180.)
-    v1 = Bprojs[0] * _np.sin(PAs[0] * _np.pi / 180.)
-    v2 = Bprojs[1] * _np.sin(PAs[1] * _np.pi / 180.)
+    u1 = Bprojs[0] * _np.sin(PAs[0] * _np.pi / 180.)
+    u2 = Bprojs[1] * _np.sin(PAs[1] * _np.pi / 180.)
+    v1 = Bprojs[0] * _np.cos(PAs[0] * _np.pi / 180.)
+    v2 = Bprojs[1] * _np.cos(PAs[1] * _np.pi / 180.)
     B3 = _np.sqrt( (u1 + u2)**2 + (v1 + v2)**2 )
     PA3 = _np.arctan2( u1 + u2, v1 + v2 ) * 180 / _np.pi
 

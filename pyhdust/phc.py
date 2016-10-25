@@ -36,6 +36,7 @@ from pyhdust.tabulate import tabulate as _tab
 from six import string_types as _strtypes
 import warnings as _warn
 import struct as _struct
+import unicodedata as _unicdata
 
 try:
     import matplotlib.pyplot as _plt
@@ -456,6 +457,11 @@ def cart_rot(x, y, z, ang_xy=0., ang_yz=0., ang_zx=0.):
 
 
 # Lists and strings manipulation
+def unic2ascii(string):
+    return _unicdata.normalize('NFKD', unicode(string)).encode('ascii', 
+        'ignore')
+
+
 def readpck(n, tp, ixdr, f):
     """ Read XDR 
 
