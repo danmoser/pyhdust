@@ -40,6 +40,7 @@ import unicodedata as _unicdata
 
 try:
     import matplotlib.pyplot as _plt
+    from matplotlib.ticker import AutoMinorLocator as _AutoMinorLocator
     from scipy import optimize as _optimize
 except ImportError:
     ('matplotlib and/or scipy module not installed!!!')
@@ -1082,6 +1083,85 @@ def user_input(arg):
 
 
 # Plot-related
+def add_subplot_axes(ax, rect, axisbg='w'):
+    """ Generate a subplot in the current axis. **Warning**: the labels with 
+    be proportionally smaller. 
+
+    Originally in http://stackoverflow.com/questions/17458580/
+
+    :Example:
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)]
+        rect = [0.2,0.2,0.7,0.7]
+        ax1 = add_subplot_axes(ax,rect)
+
+    :Alternative solution:
+
+        # Here the labels have the same size
+        from mpl_toolkits.axes_grid.inset_locator import inset_axes
+        inset_axes = inset_axes(parent_axes,
+            width="30%", # width = 30% of parent_bbox
+            height=1., # height : 1 inch
+            loc=3)
+        # "bbox_to_anchor" gives VERY strange results...
+    """
+    fig = _plt.gcf()
+    box = ax.get_position()
+    width = box.width
+    height = box.height
+    inax_position = ax.transAxes.transform(rect[0:2])
+    transFigure = fig.transFigure.inverted()
+    infig_position = transFigure.transform(inax_position)    
+    x = infig_position[0]
+    y = infig_position[1]
+    width *= rect[2]
+    height *= rect[3]  # <= Typo was here
+    subax = fig.add_axes([x, y, width, height], axisbg=axisbg)
+    x_labelsize = subax.get_xticklabels()[0].get_size()
+    y_labelsize = subax.get_yticklabels()[0].get_size()
+    x_labelsize *= rect[2]**0.5
+    y_labelsize *= rect[3]**0.5
+    subax.xaxis.set_tick_params(labelsize=x_labelsize)
+    subax.yaxis.set_tick_params(labelsize=y_labelsize)
+    return subax
+
+
+def mag_plot(ax, ylabel=r'mag$_V$', civcfg=[1, 'y'], 
+    civdt=[1996, 1, 1], civlabel='%Y'):
+    """ TODO 
+    """
+    # ax.legend()
+    # ax.locator_params(axis='x', nbins=6)
+    # fig.subplots_adjust(left=0.125, right=0.9, bottom=0.1, wspace=0.2)
+    ax2 = civil_ticks(ax, civcfg=civcfg, civdt=civdt, label=civlabel)
+    # minorLocator = AutoMinorLocator(2)
+    # ax.xaxis.set_minor_locator(minorLocator)
+    ax = enable_minorticks(ax, auto=4, axis='b')
+    ax2 = enable_minorticks(ax2, auto=4, axis='x')
+    ax.invert_yaxis()
+    ax.set_title('Epoch', y=1.05)
+    ax.set_xlabel('MJD')
+    ax.set_ylabel(ylabel)
+    return ax, ax2
+
+
+def enable_minorticks(ax, auto=None, axis='x'):
+    """ Enable minor ticks
+
+    :param auto: argument to AutoMinorLocator, to specify a fixed number of 
+    minor intervals per major interval. 
+    :param axis: ['x', 'y', 'both']
+    """
+    minorLocator = _AutoMinorLocator(auto)
+    if axis[0].lower() in ['x', 'b']:
+        ax.xaxis.set_minor_locator(minorLocator)
+    minorLocator = _AutoMinorLocator(auto)
+    if axis[0].lower() in ['y', 'b']:
+        ax.yaxis.set_minor_locator(minorLocator)
+    return ax
+
+
 def civil_ticks(ax, civcfg=[1, 'm'], civdt=None, tklab=True, label="%y %b %d"):
     """ Add the civil ticks in the axis.
 
@@ -1111,7 +1191,7 @@ def civil_ticks(ax, civcfg=[1, 'm'], civdt=None, tklab=True, label="%y %b %d"):
         ax2.set_xticklabels([date.strftime(label) for date in dtticks])
     else:
         ax2.set_xticklabels([])
-    return ax
+    return ax2
 
 
 def savefig(fig, figname=None, fmt=['png'], keeppt=False, dpi=80, transp=True):
@@ -1402,9 +1482,10 @@ Tsun = Constant(5779.57, 5779.57, 'K', 'Solar Temperature')
 # In astronomy, the Julian year is defined as 365.25 days of exactly 86400 SI 
 #  seconds each, totalling exactly 31557600 SI (IAU style manual, 1989, 
 #  Wilkins)
+yr = Constant(60*60*24*365.25, 60*60*24*365.25, 'sec', 'year')
 # For the Gregorian calendar the average length of the calendar year (the mean 
 #  year) across the complete leap cycle of 400 years is 365.2425 days!
-yr = Constant(60*60*24*365.25, 60*60*24*365.25, 'sec', 'year')
+gyr = Constant(60*60*24*365.2425, 60*60*24*365.2425, 'sec', 'year')
 ly = Constant(yr.cgs*c.cgs, yr.SI*c.SI, 'cm', 'Light year')
 pc = Constant(au.cgs*60*60*180/_np.pi, au.SI*60*60*180/_np.pi, 'cm', 'Parsec')
 e = Constant(10*c.cgs*1.6021766208e-19, 1.6021766208e-19, 'esu', 

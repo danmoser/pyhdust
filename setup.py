@@ -14,6 +14,7 @@ def check_py_ver():
         _ = raw_input('Press Ctlr+Z to abort or ENTER to continue... ')
         return
 
+
 print('# Warning! PyHdust in only supported for Python 2.7+\n'
     'Press Ctlr+Z to abort or ENTER to continue... ')
 check_py_ver()
@@ -65,15 +66,16 @@ def recfiles(chdir, path):
     os.chdir(opath)
     return out
 
+
 if sys.argv[-1] == "publish":
     os.system("python setup.py sdist upload")
     sys.exit()
 
 setup(name='pyhdust',
-    version='1.1.0',
+    version='1.1.1',
     description=('Analysis tools for multi-technique astronomical data and '
         'hdust models'),
-    url='http://j.mp/pyhdust',
+    url='http://pyhdust.readthedocs.io',
     author='Daniel M. Faes',
     author_email='dmfaes@gmail.com',
     license='GNU GPLv3.0',      
