@@ -37,7 +37,7 @@ try:
 except ImportError:
     _warn.warn('# matplotlib, pyfits, six and/or scipy module not installed!!')
 
-__version__ = '1.1.1'
+__version__ = '1.1.2'
 __release__ = "Stable"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -945,7 +945,7 @@ def plottemp2d(tfile, figname=None, fmt=['png'], icphi=0, itype='linear',
     # xo, yo = _np.meshgrid( _np.linspace(_np.min(x), _np.max(x), nimg), 
     #     _np.linspace(_np.min(y), _np.max(y), nimg) )
     xo, yo = _np.meshgrid( _np.linspace(_np.min(x), xmax, nimg), 
-        _np.linspace(-ymax, ymax, nimg) )
+        _np.linspace(-ymax, ymax, nimg)[::-1] )
     msgri = _np.column_stack((xo.flatten(), yo.flatten()))
     # xo = _np.linspace(_np.min(ccr), _np.max(ccr), 21)
     # yo = _np.linspace(_np.min(ccmu), _np.max(ccmu), 21) 
@@ -1041,7 +1041,7 @@ def plotdens2d(tfile, figname=None, fmt=['png'], icphi=0, itype='linear',
     # xo, yo = _np.meshgrid( _np.linspace(_np.min(x), _np.max(x), nimg), 
     #     _np.linspace(_np.min(y), _np.max(y), nimg) )
     xo, yo = _np.meshgrid( _np.linspace(_np.min(x), xmax, nimg), 
-        _np.linspace(-ymax, ymax, nimg) )
+        _np.linspace(-ymax, ymax, nimg)[::-1] )
     msgri = _np.column_stack((xo.flatten(), yo.flatten()))
     # xo = _np.linspace(_np.min(ccr), _np.max(ccr), 21)
     # yo = _np.linspace(_np.min(ccmu), _np.max(ccmu), 21) 

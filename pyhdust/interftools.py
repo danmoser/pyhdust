@@ -57,14 +57,13 @@ colors = ["red", "green", "blue", "black"]
 
 def azim_avg(img):
     """ Azimuthaly average a given image.
-
-    .. note:: `round=0`. If it bigger than 0, then rounding problem appears.
     """
     img = img.copy()
     nrows, ncols = img.shape
     xx, yy = _np.meshgrid( *_np.ogrid[:ncols, :nrows] )
     xx = xx-(nrows-1)/2.
     yy = yy-(ncols-1)/2.
+    # `round=0`. If it bigger than 0, then rounding problem appears.
     rr = -_np.sqrt( xx**2 + yy**2 ).round(0)
     for r in _np.unique(rr):
         idx = _np.where(rr == r)
@@ -96,7 +95,7 @@ def imshowl(img, cmap='gist_heat', origin='lower'):
     return
 
 
-def readmap(file, quiet=False):
+def readmap(mapfile, quiet=False):
     r"""
     Read *Hdust* MAP or MAPS files.
 
@@ -122,14 +121,14 @@ def readmap(file, quiet=False):
     | .map, dfact = 6
     | .maps, dfact = 1
     """
-    if file[-4:] == '.map':
-        dfact = 6
-    elif file[-5:] == '.maps':
+    if mapfile.find('.maps') > 0:
         dfact = 1
+    elif mapfile.find('.map') > 0:
+        dfact = 6
     else:
         print('# ERROR: This is not a HDUST valid image!')
         return
-    f = open(file, 'rb').read()
+    f = _phc.fileread(mapfile, bin=True)
     #
     ixdr = 0
     nobs, lnum, nx, ny = _struct.unpack('>4l', f[ixdr:ixdr + 4 * 4])
@@ -148,7 +147,13 @@ def readmap(file, quiet=False):
     xmax = _np.array( _struct.unpack(upck, f[ixdr:ixdr + npxs * 4]) )
     ixdr += npxs * 4
 
-    if file[-4:] == '.map':
+    if mapfile.find('.maps') > 0:
+        npxs = dfact * nx * ny * lnum * nobs * nm
+        upck = '>{}f'.format(npxs)
+        data = _np.array( _struct.unpack(upck, f[ixdr:ixdr + npxs * 4]) ).\
+            reshape((nm, nobs, lnum, ny, nx))
+        ixdr += npxs * 4
+    elif mapfile.find('.map') > 0:
         # tmp must be a "small" array. Otherwise, a MemoryError will be raised
         npxs = nx * ny * lnum * nobs * nm
         tmp = _np.empty((npxs * dfact))
@@ -164,13 +169,6 @@ def readmap(file, quiet=False):
                 nm, nobs, lnum, ny, nx))
         data[:, :, :, :, :, 0] = data[:, :, :, :, :, 1] +\
             data[:, :, :, :, :, 2] + data[:, :, :, :, :, 3]
-        #
-    elif file[-5:] == '.maps':
-        npxs = dfact * nx * ny * lnum * nobs * nm
-        upck = '>{}f'.format(npxs)
-        data = _np.array( _struct.unpack(upck, f[ixdr:ixdr + npxs * 4]) ).\
-            reshape((nm, nobs, lnum, ny, nx))
-        ixdr += npxs * 4
 
     npxs = 2 * nobs
     upck = '>{}f'.format(npxs)
@@ -185,9 +183,9 @@ def readmap(file, quiet=False):
     # this will check if the XDR is finished.
     if ixdr == len(f):
         if not quiet:
-            print('# XDR {} completely read!'.format(file))
+            print('# XDR {} completely read!'.format(mapfile))
     else:
-        print('# Warning: XDR {} not completely read!'.format(file))
+        print('# Warning: XDR {} not completely read!'.format(mapfile))
         print('# length difference is {}'.format( (len(f) - ixdr) / 4 ) )
 
     # lbdarr tem lnum+1, pois reflete o INTERVALO de cada imagem.
@@ -1095,11 +1093,13 @@ def mapinterf(modf, im=0, obs=0, iflx=0, dist=10, PA=0., B=100., PAdisk=90.,
     """ Return Squared Visibilities (V2) and Diferential Phases (DP) for a given
     `hdust` map(s) file.
 
-    If *.map file format, it takes `iflx` image layer.
+    :param modf: input: *.map(s) path (string)
+    :param iflx: If *.map file format, it takes `iflx` image layer.
+    :param PA: degrees
+    :param dist: parsecs
+    :param B: meters
 
-    input: *.map(s) path (string), `dist` (float, parsecs)
-
-    output: lbdc, V2, DP (float arrays) """
+    output: lbdc, V2, DP (float arrays, as function of wavelength) """
     data, obslist, lbdc, Ra, xmax = readmap(modf, quiet=quiet)
     pixsize = 2 * xmax[0] / _np.shape(data)[-1]
     rad_per_pixel = _np.double(pixsize * 6.96E10 / (dist * 3.08567758E18))
@@ -1674,8 +1674,8 @@ def I(Disk, Ms=7.7, Teff=20200., Rs=4.94, iang=0., bm2n=-5.5, fmin=5e-3,
     # Create map structure
     xaxis = _np.linspace(-Rmax, Rmax, px)
     yaxis = xaxis / _np.cos(iang)
-    X, Y = _np.meshgrid(xaxis, yaxis)
-    X, Y2 = _np.meshgrid(xaxis, xaxis)
+    X, Y = _np.meshgrid(xaxis, yaxis[::-1])
+    X, Y2 = _np.meshgrid(xaxis, xaxis[::-1])
     R = _np.sqrt(X**2 + Y**2)
     Rrs = _np.sqrt(X**2 + Y2**2)
 

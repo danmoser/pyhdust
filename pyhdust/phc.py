@@ -3,6 +3,7 @@
 """PyHdust *phc* module: physical constants and general use functions
 
 Includes functions for:
+- Geometrical functions in deg
 - Data manipulation (average, bin, fitting)
 - Manipulation of 3D coordinates 
 - Convolution functions
@@ -47,6 +48,42 @@ except ImportError:
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
+
+
+# Trigonometric functions in deg
+def cos(ang):
+    """ Ang in DEGREES """
+    return _np.cos(ang*_np.pi/180)
+
+
+def sin(ang):
+    """ Ang in DEGREES """
+    return _np.sin(ang*_np.pi/180)
+
+
+def arcsin(arg):
+    """ Output in DEGREES """
+    return _np.arcsin(arg)*180/_np.pi
+
+
+def arccos(arg):
+    """ Output in DEGREES """
+    return _np.arccos(arg)*180/_np.pi
+
+
+def tan(ang):
+    """ Ang in DEGREES """
+    return _np.tan(ang*_np.pi/180)
+
+
+def arctan(arg):
+    """ Output in DEGREES """
+    return _np.arctan(arg)*180/_np.pi
+
+
+def arctan2(y, x):
+    """ Output in DEGREES """
+    return _np.arctan2(y, x)*180/_np.pi
 
 
 # Data manipulation (includes fitting)
@@ -105,7 +142,7 @@ def baricent_calc(x0, y0, x, y, z, fullrange=False):
                     Z = zs[i]
                     inside = True
         # http://www.mathopenref.com/coordtrianglearea.html
-        a = _np.zeros(3.)
+        a = _np.zeros(3)
         a[2] = _np.abs(0.5 * (X[0]*(Y[1]-y0) + X[1]*(y0-Y[0]) + 
             x0*(Y[0]-Y[1])))
         a[1] = _np.abs(0.5 * (X[0]*(Y[2]-y0) + X[2]*(y0-Y[0]) + 
@@ -122,14 +159,17 @@ def baricent_calc(x0, y0, x, y, z, fullrange=False):
         return _np.NaN
 
 
-def baricent_map(x, y, z, res=100, fullrange=False):
+def baricent_map(x, y, z, res=100, fullrange=False, xfact=1., yfact=1.):
+    """ _fact = apply an factor in the input values **in the interpolation**
+    """
     X = _np.linspace(_np.min(x), _np.max(x), res)
     Y = _np.linspace(_np.min(y), _np.max(y), res)
-    X, Y = _np.meshgrid(X, Y[::-1])
+    # Must be [::-1] to match the img std
+    X, Y = _np.meshgrid(X, Y[::-1])  
     img = _np.zeros((res, res))
     for i, j in _product(range(res), range(res)):
-        img[i, j] = baricent_calc(X[i, j], Y[i, j], x, y, z, 
-            fullrange=fullrange)
+        img[i, j] = baricent_calc(X[i, j], Y[i, j], _np.array(x)*xfact, 
+            _np.array(y)*yfact, z, fullrange=fullrange)
     return img
 
 
@@ -321,7 +361,7 @@ def optim2(p0, x, y, yerr, func):
         best params (p), params errors (perr), chi2_red value
      """
     bestp, cov = _optimize.curve_fit(func, x, y, p0=p0, sigma=yerr)
-    c2red = chi2calc(func(x, bestp), y, yerr, npar=len(p0))
+    c2red = chi2calc(func(x, *bestp), y, yerr, npar=len(p0))
     return bestp, _np.sqrt(_np.diag(cov)), c2red
 
 
@@ -414,27 +454,31 @@ def convnorm(x, arr, pattern):
 
 # 3D Coordinates manipulation (rotation)
 def cart2sph(x, y, z=None):
-    """ Cartesian to spherical coordinates.
+    """ Cartesian to spherical coordinates. Output in **rad**.
+    **Warning**: :math:`z=0\rightarrow \theta=\pi`.
+
+    TODO: check is len(x)==len(y) 
 
     INPUT: arrays of same length
 
-    OUTPUT: arrays """
+    OUTPUT: arrays 
+    """
     if z is None:
         z = _np.zeros(len(x))
-    hxy = _np.hypot(x, y)
-    r = _np.hypot(hxy, z)
-    el = _np.arctan2(z, hxy)
-    az = _np.arctan2(y, x)
-    return r, az, el
+    r = _np.sqrt(x**2+y**2+z**2)
+    th = _np.arccos(z/r)
+    phi = _np.arctan2(y, x)
+    return r, phi, th
 
 
-def sph2cart(r, az, el=None):
-    if el is None:
-        el = _np.zeros(len(r))
-    rcos_theta = r * _np.cos(el)
-    x = rcos_theta * _np.cos(az)
-    y = rcos_theta * _np.sin(az)
-    z = r * _np.sin(el)
+def sph2cart(r, phi, th=None):
+    """ **Warning**: the sequence is :math:`(r, \phi, \theta)`.
+    """
+    if th is None:
+        th = _np.zeros(len(r))
+    x = r*_np.sin(th)*_np.cos(phi)
+    y = r*_np.sin(th)*_np.sin(phi)
+    z = r*_np.cos(th)
     return x, y, z
 
 

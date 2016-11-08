@@ -1,6 +1,6 @@
 VERSION
 
-	Version = 2.02	!Version number of this input file.  It should match the
+	Version = 2.10	!Version number of this input file.  It should match the
 
 I) ENVELOPE DESCRIPTION
 

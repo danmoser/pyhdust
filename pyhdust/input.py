@@ -266,7 +266,7 @@ class Disk(Input):
         return
 
     def set_disk(self, renv=18.6, mh=1.5, ht=60., nr=2., dval=1e12, hseq=False, 
-        alpha=.5, mu=.5, R0r=100, denstype=None, **kwargs):
+        alpha=.5, mu=.5, R0r=100, vt=0., denstype=None, **kwargs):
         """ denstype = ['n0', 'sig0', 'mdot'] 
 
         ``sig0`` means g/cm2 instead of ``n0``"""
@@ -279,6 +279,7 @@ class Disk(Input):
         self.alpha = alpha
         self.mu = mu
         self.R0r = R0r
+        self.vt = vt
         if isinstance(denstype, _string_types):
             if denstype.lower() in ['n0', 'sig0', 'mdot']:
                 self.denstype = denstype
@@ -349,6 +350,8 @@ class Disk(Input):
         else:
             _ = _phc.repl_fline_val(modi, 49, '2', '3')
             _ = _phc.repl_fline_val(modi, 55, '1.E-9', self.dval)
+
+        _ = _phc.repl_fline_val(modi, 63, '0.', self.vt)
 
         bdir = self.proj
         if bdir == _os.path.split(_os.getcwd())[1]:
@@ -456,10 +459,10 @@ class HdustMod(object):
 
 class AeriMod(HdustMod):    
     """docstring for AeriMod"""
-    vdict = _OrderedDict(zip(['dval', 'ht', "nr", 'renv', 'M'],
-            ['n_0', 'Fraction', ' n ', 'R_env', ' M '])) 
-    vfmt = _OrderedDict(zip(['dval', 'ht', "nr", 'renv', 'M'], 
-        ['{:.1e}', '{:02.0f}', '{:.1f}', '{:04.1f}', '{:04.1f}']))
+    vdict = _OrderedDict(zip(['dval', 'ht', "nr", 'renv', 'M', 'vt'],
+            ['n_0', 'Fraction', ' n ', 'R_env', ' M ', 'V_turb'])) 
+    vfmt = _OrderedDict(zip(['dval', 'ht', "nr", 'renv', 'M', 'vt'], 
+        ['{:.1e}', '{:02.0f}', '{:.1f}', '{:04.1f}', '{:04.1f}', '{:03.0f}']))
 
     def __init__(self, fname):
         super(AeriMod, self).__init__(fname)
