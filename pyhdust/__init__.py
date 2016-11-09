@@ -37,7 +37,7 @@ try:
 except ImportError:
     _warn.warn('# matplotlib, pyfits, six and/or scipy module not installed!!')
 
-__version__ = '1.1.2'
+__version__ = '1.1.3'
 __release__ = "Stable"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -197,8 +197,82 @@ def readtemp(tfile, quiet=False):
         pcphi[icphi] = pcphi[icphi - 1] + 2 * \
             (pcphic[icphi - 1] - pcphi[icphi - 1])
     # 
+    if not quiet:
+        lev = nLTE+2
+        mass = 0.
+        for icr in range(ncr):
+            for icmu in range(ncmu):
+                for icphi in range(ncphi):
+                    ma = pcphi[icphi+1]-pcphi[icphi]
+                    ma = ma*(pcmu[icmu+1, 0]-pcmu[icmu, 0])
+                    ma = ma*(pcr[icr+1]**3.-pcr[icr]**3.)/3.
+                    ma = ma*_phc.Rsun.cgs**3.
+                    ma = ma*data[3+lev, icr, icmu, icphi]*_phc.mp.cgs
+                    mass = mass + ma
+        print('# Disk mass is {0:.2e} Msun'.format(mass/_phc.Msun.cgs))
+
     return ncr, ncmu, ncphi, nLTE, nNLTE, Rstar, Ra, beta, data, pcr, pcmu,\
         pcphi
+
+
+def readtempmass(tfile, quiet=False):
+    """ Read HDUST temp file
+
+    OUTPUT = mass (in g)
+    """
+    f = open(tfile, 'rb').read()
+    ixdr = 0
+    ncr, ncmu, ncphi, nLTE, nNLTE = _struct.unpack('>5l', f[ixdr:ixdr + 4 * 5])
+    ixdr += 4 * 5
+    Rstar, Ra, beta = _struct.unpack('>3f', f[ixdr:ixdr + 4 * 3])
+    ixdr += 4 * 3
+    # 
+    rlen = (nLTE + 6) * ncr * ncmu * ncphi
+    data = _struct.unpack('>{0}f'.format(rlen), f[ixdr:ixdr + 4 * rlen])
+    ixdr += 4 * rlen
+    data = _np.reshape(data, (nLTE + 6, ncr, ncmu, ncphi), order='F')
+    #
+    # this will check if the XDR is finished.
+    if ixdr == len(f):
+        if not quiet:
+            print('# XDR {0} completely read!'.format(tfile))
+    else:
+        _warn.warn( '# XDR {0} not completely read!\n# length difference is '
+            '{1}'.format(tfile, (len(f)-ixdr)/4 ) )
+    #
+    pcrc = data[0, :, 0, 0]
+    pcr = _np.zeros(ncr + 1)
+    pcr[0] = Rstar
+    for icr in range(1, ncr + 1):
+        pcr[icr] = pcr[icr - 1] + 2 * (pcrc[icr - 1] - pcr[icr - 1])
+    pcmu = _np.zeros((ncmu + 1, ncr))
+    # 
+    for icr in range(0, ncr):
+        pcmuc = data[1, icr, :, 0]
+        pcmu[0, icr] = -1.
+        for icmu in range(1, ncmu + 1):
+            pcmu[icmu, icr] = pcmu[icmu - 1, icr] + 2. * \
+                (pcmuc[icmu - 1] - pcmu[icmu - 1, icr])
+    #
+    pcphic = data[2, 0, 0, :]
+    pcphi = _np.zeros(ncphi + 1)
+    pcphi[0] = 0.
+    for icphi in range(1, ncphi + 1):
+        pcphi[icphi] = pcphi[icphi - 1] + 2 * \
+            (pcphic[icphi - 1] - pcphi[icphi - 1])
+    # 
+    lev = nLTE+2
+    mass = 0.
+    for icr in range(ncr):
+        for icmu in range(ncmu):
+            for icphi in range(ncphi):
+                ma = pcphi[icphi+1]-pcphi[icphi]
+                ma = ma*(pcmu[icmu+1, 0]-pcmu[icmu, 0])
+                ma = ma*(pcr[icr+1]**3.-pcr[icr]**3.)/3.
+                ma = ma*_phc.Rsun.cgs**3.
+                ma = ma*data[3+lev, icr, icmu, icphi]*_phc.mp.cgs
+                mass = mass + ma
+    return mass
 
 
 def readdust(dfile):
@@ -1079,70 +1153,75 @@ def plotdens2d(tfile, figname=None, fmt=['png'], icphi=0, itype='linear',
 
 
 # Be quantities convertions
-def rho2sigp(R, rho0, a, M):
-    sig = (2 * _np.pi) ** .5 * a / (_phc.G.cgs * M / R) ** .5 * R * rho0
+def rho2sig(Req, rho0, cs, M):
+    """ Equation A.8, Faes (2015) 
+
+    All values in cgs units!
+    """
+    sig = (2*_np.pi)**.5 * cs / (_phc.G.cgs * M / Req)** .5 * Req * rho0
     return sig
 
 
-def rho2Mdot(R, alpha, a, M, rho0, R0):
-    Mdot = 3 * _np.pi * (2 * _np.pi) ** .5 * alpha * a ** 3. / \
-        (_phc.G.cgs * M / R) * rho0 * R ** 2. * ((R0 / R) ** .5 - 1) ** -1.
+def rho2Mdot(Req, alpha, cs, M, rho0, R0):
+    """ Equation A.12 Faes (2015) 
+
+    All values in cgs units!
+    """
+    Mdot = 3*_np.pi * (2*_np.pi)**.5 * alpha * cs**3. * rho0 * Req**3. / \
+        (_phc.G.cgs*M) * ((R0 / Req)** .5 - 1)**-1.
     return Mdot
 
 
-def Mdot2sig(R, Mdot, alpha, a, M, R0):
-    sig = Mdot * (_phc.G.cgs * M / R) ** .5 / \
-        (3. * _np.pi * alpha * a ** 2 * R) * ((R0 / R) ** .5 - 1)
+def Mdot2sig(Req, Mdot, alpha, cs, M, R0):
+    """ Equation A.2 Faes (2015)
+
+    All values in cgs units! 
+    """
+    sig = Mdot * (_phc.G.cgs*M/Req)**.5 / \
+        (3. * _np.pi * alpha * cs**2 * Req) * ((R0 / Req)**.5 - 1)
     return sig
 
 
-def diskcalcs(M, R, Tpole, T, alpha, R0, mu, rho0, Rd):
+def diskcalcs(M, Req, T, alpha, R0, mu, n0, Rd):
     """ Do the equivalence of disk density for different quantities.
 
     Note that they all depend of specific stellar quantities!!!
 
     INPUT: 
     M = 10.3065*Msun,
-    R = 7*Rsun,
+    R = 7*Rsun, (Req)
     Tpole = 26025.,
     T = 0.72*Tpole,
     alpha = 1.,
-    R0 = 1e14*R,
+    R0 = 1e4*Req,
     mu = 0.5,
-    rho0 = 5e12 #in particles per cubic centimeter,
-    Rd = 18.6*R.
+    n0 = 5e12 #in particles per cubic centimeter,
+    Rd = 18.6*Req.
 
     OUTPUT: printed status
     """
-    a = (_phc.kB.cgs * T / mu / _phc.mH.cgs) ** .5
-    rho0 = rho0 * mu * _phc.mH.cgs
-    sigp = rho2sigp(R, rho0, a, M)
-    rho0p = sigp / (2 * _np.pi) ** .5 / a * (_phc.G.cgs * M / R) ** .5 / R
-    Mdot = rho2Mdot(R, alpha, a, M, rho0, R0)
-    sig = Mdot2sig(R, Mdot, alpha, a, M, R0)
-    # sigl = Mdot * (_phc.G.cgs * M) ** .5 / 3 / _np.pi
-    Mdisk0 = (2 * _np.pi) ** 1.5 * rho0 * R ** 2. * \
-        (Rd - R) * a / (_phc.G.cgs * M / R) ** .5
-    Mdisk = 2 * _np.pi * Mdot * \
-        (_phc.G.cgs * M / R) ** .5 * R ** .5 / 3 / _np.pi / \
-        alpha / a ** 2. * R0 ** .5 * _np.log( Rd / R)
-    if Mdisk == 0:
-        Mdisk = 4 * _np.pi * Mdot * \
-            (_phc.G.cgs * M / R) ** .5 * R ** .5 / 3 / \
-            _np.pi / alpha / a ** 2. * (Rd ** .5 - R ** .5)
-    MdiskG = 2 * Mdot * (_phc.G.cgs * M / R) ** .5 * R ** .5 / 3 / alpha /\
-        a ** 2 * (R0 ** .5 * _np.log(Rd / R) + 2 * R ** .5 - 2 * Rd ** .5)
+    a = (_phc.kB.cgs * T / mu / _phc.mH.cgs)**.5
+    rho0 = n0 * mu * _phc.mH.cgs
+    sigp = rho2sig(Req, rho0, a, M)
+    rho0p = sigp / (2 * _np.pi)** .5 / a * (_phc.G.cgs * M / Req) ** .5 / Req
+    Mdot = rho2Mdot(Req, alpha, a, M, rho0, R0)
+    sig = Mdot2sig(Req, Mdot, alpha, a, M, R0)
 
-    print('R0/R  = {0:.1f}'.format(R0 / R))
+    Mdisk = 2*_np.pi*Req**2*sig*_np.log(Rd/Req)
+    Mdisk1 = 2*Mdot*_np.sqrt(_phc.G.cgs*M)/(3*alpha*a**3)*(_np.sqrt(R0)*
+        _np.log(Rd/Req)+2*(_np.sqrt(Req)-_np.sqrt(R0)))
+
+    print('R0/R  = {0:.1f}'.format(R0 / Req))
     print('Valid sigma (1)?: {0}'.format(round(sigp / sig) == 1))
     print('Valid sigma (2)?: {0}'.format(round(rho0 / rho0p) == 1))
     print('rho0  = {0:.2e} g/cm3'.format(rho0))
-    print('sigma0= {0:.2e} g/cm2'.format(sig / alpha / a ** 2))
+    print('sigma0= {0:.3f} g/cm2'.format(sig))
     print('Mdot  = {0:.2e} Msun/yr'.format(Mdot / _phc.Msun.cgs * _phc.yr.cgs))
-    print('Mdisk0= {0:.2e} Msun [#from rho0]'.format(Mdisk0 / _phc.Msun.cgs))
-    print('Mdisk = {0:.2e} Msun [#approx.]'.format(Mdisk / _phc.Msun.cgs))
-    print('MdiskG= {0:.2e} Msun'.format(MdiskG / _phc.Msun.cgs))
-    print('PS: Mdisk for both isothermal Sigma(r) and H(r)')
+    print('Mdisk0~ {0:.2e} Msun [#from sig0, A.13]'.format(Mdisk / 
+        _phc.Msun.cgs))
+    print('Mdisk = {0:.2e} Msun [#from Mdot, A.15, wrong!]'.format(Mdisk1 / 
+        _phc.Msun.cgs))
+    print('# PS: Mdisk for isothermal H(r)')
     return
 
 

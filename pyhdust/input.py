@@ -462,7 +462,7 @@ class AeriMod(HdustMod):
     vdict = _OrderedDict(zip(['dval', 'ht', "nr", 'renv', 'M', 'vt'],
             ['n_0', 'Fraction', ' n ', 'R_env', ' M ', 'V_turb'])) 
     vfmt = _OrderedDict(zip(['dval', 'ht', "nr", 'renv', 'M', 'vt'], 
-        ['{:.1e}', '{:02.0f}', '{:.1f}', '{:04.1f}', '{:04.1f}', '{:03.0f}']))
+        ['{:.1e}', '{:03.0f}', '{:.1f}', '{:04.1f}', '{:04.1f}', '{:03.0f}']))
 
     def __init__(self, fname):
         super(AeriMod, self).__init__(fname)
