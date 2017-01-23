@@ -437,6 +437,22 @@ class HdustMod(object):
         self.log = logname
         return self.lum
 
+    def get_sig0(self):
+        self.get_lum()
+        self.tf = _phc.fltTxtOccur('Fraction ', open(self.log).read().split(
+            '\n'))/100.
+        self.tp = _phc.fltTxtOccur('Teff_pole ', open(self.log).read().split(
+            '\n'))
+        self.rp = _phc.fltTxtOccur(' R_pole', open(self.log).read().split(
+            '\n')) 
+        self.rf = _phc.fltTxtOccur('R_eq/R_pole ', open(self.log).read().split(
+            '\n')) 
+        self.mu = _phc.fltTxtOccur('mu =', open(self.log).read().split('\n')) 
+        self.M = _phc.fltTxtOccur(' M =', open(self.log).read().split('\n')) 
+        self.n0 = _phc.fltTxtOccur('n_0', open(self.log).read().split('\n'))
+        self.sig0 = _hdt.n0toSigma0(self.n0, self.M, self.rp*self.rf, 
+            self.tf/100., self.tp, self.mu)
+
     def readfs2ob(self, pol=False):
         if not hasattr(self, 'nob'):
             self.get_nob()

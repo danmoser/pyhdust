@@ -259,14 +259,15 @@ def bindata(x, y, nbins=20, yerr=None, xlim=None, perc=0):
         return tmpx[idx], tmpy[idx], tmpyerr[idx]
 
 
-def chi2calc(mod, obs, sig_obs=None, npar=1):
+def chi2calc(mod, obs, sig_obs=None, npar=1, fast=False):
     """ Calculate the chi2 """
-    nans, tmp = nan_helper(obs)
-    obs = _np.array(obs)[~nans]
-    mod = _np.array(mod)[~nans]
+    if not fast:
+        nans, tmp = nan_helper(obs)
+        obs = _np.array(obs)[~nans]
+        mod = _np.array(mod)[~nans]
     if sig_obs is None:
         sig_obs = _np.ones(len(obs))
-    else:
+    if not fast:
         sig_obs = _np.array(sig_obs)[~nans]
     return _np.sum( (mod - obs)**2 / sig_obs**2 ) / (len(sig_obs) - npar - 1)
 

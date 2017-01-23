@@ -81,6 +81,8 @@ def wfrac_rot(W):
 
     Equation 1.23 de Faes (2015).
     """
+    if W < 0 or W > 1:
+        _warn.warn('Invalid W value')
     return _np.sqrt(27/8.*W**2/(1+.5*W**2)**3)
 
 
@@ -163,6 +165,28 @@ def beta(par, is_ob=False):
     return beta
 
 
+def ellips_th(th, rf):
+    """ Ellipsoid radius 
+
+    :param th: theta, in radians (0 = pole; pi/2 = equator).
+    :param rt: radius fraction (Req/Rp >= 1) 
+    """
+    return _np.sqrt(_np.cos(th)**2 + (rf*_np.sin(th))**2)
+
+
+def rt(th, wfrac):
+    """ Roche Rpole normalized radius as function of wfrac. 
+
+    :param th: theta, in radians (0 = pole; pi/2 = equator).
+    """
+    if th == 0:
+        r = 1.
+    else:
+        r = (-3. * _np.cos((_np.arccos(wfrac * _np.sin(th)) + 4 *
+            _np.pi) / 3)) / (wfrac * _np.sin(th))
+    return r
+
+
 def rotStar(Tp=20000., M=10.3065, rp=5.38462, star='B', beta=0.25, wfrac=0.8,
             th_res=5001, quiet=False, LnotTp=False):
     """ Return the photospheric parameters of a rotating star.
@@ -190,13 +214,7 @@ def rotStar(Tp=20000., M=10.3065, rp=5.38462, star='B', beta=0.25, wfrac=0.8,
         Tp = (Tp * Lsun / 4. / _np.pi / rp**2 / sigma)**.25
 
     # DEFS ###
-    def rt(th, wfrac):
-        if th == 0:
-            r = 1.
-        else:
-            r = (-3. * _np.cos((_np.arccos(wfrac * _np.sin(th)) + 4 *
-                _np.pi) / 3)) / (wfrac * _np.sin(th))
-        return r
+    # rh = outside
 
     def area(wfrac):
         ths = _np.linspace(_np.pi / 2, 0, th_res)

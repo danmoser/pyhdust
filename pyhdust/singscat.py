@@ -213,7 +213,7 @@ def blobs_cicle(phi_ar, irad, Req=_phc.Rsun.cgs, rb=1/3., db=2., bres=3,
 def blobsdisk_cicle(phi_ar, irad, Req=_phc.Rsun.cgs, rb=1/3., db=2., bres=3, 
         nb=8e11, rd=1/3., dd=2., dres=11, H=.1, beta=0., nd=8e11, 
         overlap=False):
-    """ doc 
+    """ :param phi_ar: phi array (in rad; [0, 2pi))
     """
     for i in range(len(phi_ar)):
         phi0 = phi_ar[i]

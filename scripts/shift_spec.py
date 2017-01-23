@@ -26,6 +26,7 @@ class MyParser(ArgumentParser):
         self.print_help()
         sys.exit(2)
 
+
 parser = MyParser(description=__doc__)
 parser.add_argument('--version', action='version', 
     version='%(prog)s {0}'.format(__version__))
@@ -115,6 +116,7 @@ def apply_shift(imfits, vshift, wl=None):
     print('# {0} updated with {1:.1f} km/s shift (accum. {2:.0f} km/s)'.
         format(fitsfile, vshift, vshift+old_sh))
     return
+
 
 if __name__ == '__main__':
 
