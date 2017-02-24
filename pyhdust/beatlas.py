@@ -113,6 +113,7 @@ class BAmod(BAstar):
                 (minfo[:, 6] == self.h) & (minfo[:, -1] == self.cosi)
         return self.idx
 
+
 # Only for H=0.30
 vrots = [
     [259.759, 354.834, 417.792, 464.549, 483.847],
@@ -557,6 +558,10 @@ def parnorm(dvals, vmax, vmin_non0, issig0=True, s_non0=0):
 
     If ``issig0``, treats ``r01`` as :math:`\Sigma_0`; otherwise, use it
     as [0-1] value.
+
+    ``s_non0`` forces ``vmin_non0`` to be lower limit of the density scale 
+    interval. Example: ``s_non0 = 0.25`` forces the density scale to be 
+    between [0.25-1.00].
     """
     dvals = _np.array(dvals)
     if vmin_non0 <= 0 or _np.min(dvals) < 0:
@@ -567,9 +572,9 @@ def parnorm(dvals, vmax, vmin_non0, issig0=True, s_non0=0):
         vmin_non0 /= (vmax/vmin_non0)**((1/s_non0-1)**-1.)
     if issig0:
         dvals[_np.where(dvals < vmin_non0)] = vmin_non0
-        return _np.log(dvals/vmin_non0)/_np.log(vmax/vmin_non0)
+        return _np.round( _np.log(dvals/vmin_non0)/_np.log(vmax/vmin_non0), 7 )
     else:
-        return _np.exp(dvals*_np.log(vmax/vmin_non0))*vmin_non0
+        return _np.round( _np.exp(dvals*_np.log(vmax/vmin_non0))*vmin_non0, 7 )
 
 
 def densBAnorm(r01, M, issig0=True):

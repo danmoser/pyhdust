@@ -433,6 +433,8 @@ class HdustMod(object):
                 logname = logname[0]
         #
         self.lum = _phc.fltTxtOccur('L =', open(logname).read().split('\n'))
+        if _np.isnan(self.lum):
+            raise ValueError('# ERROR! Lum is NaN. Check '+logname)
         self.vrot = _phc.fltTxtOccur('Vrot ', open(logname).read().split('\n'))
         self.log = logname
         return self.lum

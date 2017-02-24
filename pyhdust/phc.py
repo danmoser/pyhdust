@@ -35,6 +35,7 @@ from collections import Iterable as _It
 import pyhdust.jdcal as _jdcal
 from pyhdust.tabulate import tabulate as _tab
 from six import string_types as _strtypes
+from functools import reduce as _ftreduce
 import warnings as _warn
 import struct as _struct
 import unicodedata as _unicdata
@@ -503,6 +504,16 @@ def cart_rot(x, y, z, ang_xy=0., ang_yz=0., ang_zx=0.):
 
 
 # Lists and strings manipulation
+def closest_idx(arr, mtx):
+    """ Return the closest index of `mtx` corresponding to the values of `arr`.
+    """
+    lidx = []
+    for i in range(len(arr)):
+        lidx.append( _np.where(mtx[:, i] == find_nearest(mtx[:, i], arr[i])
+            )[0] )
+    return _ftreduce(_np.intersect1d, lidx)[0]
+
+
 def unic2ascii(string):
     return _unicdata.normalize('NFKD', unicode(string)).encode('ascii', 
         'ignore')

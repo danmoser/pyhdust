@@ -37,7 +37,7 @@ try:
 except ImportError:
     _warn.warn('# matplotlib, pyfits, six and/or scipy module not installed!!')
 
-__version__ = '1.1.4'
+__version__ = '1.1.5'
 __release__ = "Stable"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -1078,9 +1078,9 @@ def plottemp2d(tfile, figname=None, fmt=['png'], icphi=0, itype='linear',
     # pcmu[-1, :] = 2*pcmu[-2, :] - pcmu[-3, :]
     ccmu = _np.arccos(pcmu[:-1] + _np.diff(pcmu, axis=0)/2.).flatten()
     ccr = _np.tile(pcr[:-1] + _np.diff(pcr)/2., ncmu)
-    tmp = _phc.sph2cart(ccr, ccmu)
-    x = tmp[1]
-    y = tmp[0]
+    tmp = _phc.sph2cart(ccr, _np.zeros(len(ccr)), th=ccmu)
+    x = tmp[0]
+    y = tmp[2]
     #
     if (xax == 0):
         idx = _np.where(y > Rstar)
@@ -1149,7 +1149,8 @@ def plottemp2d(tfile, figname=None, fmt=['png'], icphi=0, itype='linear',
     # ymax = abs(Rmax/Rstar-1)/2
     # ax.set_xlim([1, Rmax/Rstar])
     # ax.set_ylim([-ymax, ymax])
-    ax.set_aspect(abs(xmax-_np.min(x))/abs(ymax-(-ymax)))
+    # ax.set_aspect(abs(xmax-_np.min(x))/abs(ymax-(-ymax)))
+    ax.set_aspect('equal')
     _phc.savefig(fig, figname=figname, fmt=fmt)
     return
 
@@ -1461,13 +1462,13 @@ def obsCalc():
         modf = _math.modf
         # Julian calendar on or before 1582 October 4 and Gregorian calendar
         # afterwards.
-        if ((long(10000) * year + long(100) * month + day) <= long(15821004)):
+        if ((int(10000) * year + int(100) * month + day) <= int(15821004)):
             b = -2 + int(modf((year + 4716) / 4)[1]) - 1179
         else:
             b = int(modf(year / 400)[1]) - int(modf(year / 100)[1]) + \
                 int(modf(year / 4)[1])
 
-        mjdmidnight = long(365) * year - long(679004) + \
+        mjdmidnight = int(365) * year - int(679004) + \
             b + int(30.6001 * (month + 1)) + day
 
         fracofday = base60_to_decimal(
@@ -1578,14 +1579,14 @@ def obsCalc():
     # dmax = julian_date(dg[0],dg[1],dg[2]+1,3+6,0,-rt/2) #seg. so' >0!!!
 
     # carrega lista de alvos
-    alvos = _np.loadtxt('{0}refs/obs_alvos.txt'.format(hdtpath()), 
+    alvos = _np.genfromtxt('{0}refs/obs_alvos.txt'.format(hdtpath()), 
         dtype=str, delimiter='\t')
     # carrega tempo das declinacoes
     obsdec = _np.loadtxt(
         '{0}refs/obs_dec.txt'.format(hdtpath()), delimiter='\t')
     # carrega efemerides
     if _os.path.exists('{0}refs/obs_ef.txt'.format(hdtpath())):
-        ef_alvos = _np.loadtxt('{0}refs/obs_ef.txt'.format(hdtpath()),
+        ef_alvos = _np.genfromtxt('{0}refs/obs_ef.txt'.format(hdtpath()),
                                delimiter='\t', dtype=str)
         ef_alvos = ef_alvos.T
 
@@ -1602,6 +1603,7 @@ def obsCalc():
 
     outfile = "ALVO\tINICIO\tFIM\tMERID.\tF_INI\tF_FIM\n"
     for i in range(len(alvos)):
+        print(alvos[i])
         # calcula a ascencao reta (ra) e declinacao (dec)
         ra = float(alvos[i][2][:2]) + float(alvos[i][2][3:5]) / 60
         dec = float(alvos[i][3][:3]) + \
@@ -1871,7 +1873,7 @@ def plotMJDdates(spec=None, pol=None, interf=None, limits=None):
         # ax.errorbar(spJD, y, yerr, marker='o', color='blue', ls='')
 
     if pol is not None:
-        polJD = _np.loadtxt(pol, dtype=str)
+        polJD = _np.genfromtxt(pol, dtype=str)
         polJD = polJD[:, 9]
         polJD = _np.array(polJD, dtype=float) - 2400000.5
         y = [-.5 for JD in polJD]
@@ -1880,7 +1882,7 @@ def plotMJDdates(spec=None, pol=None, interf=None, limits=None):
         # ax.errorbar(polJD, y, yerr, marker='x', color='green', ls='')
 
     if interf is not None:
-        intJD = _np.loadtxt(interf, dtype=str, delimiter=',', skiprows=1)
+        intJD = _np.genfromtxt(interf, dtype=str, delimiter=',', skiprows=1)
         intJD = _np.array(intJD[:, -2], dtype=float)
         y = [.5 for JD in intJD]
         ax.plot(intJD, y, marker='s', color='darkgrey', ls='')

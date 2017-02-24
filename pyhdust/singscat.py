@@ -294,7 +294,7 @@ def loadpol(txt, old=False, p_sigP=0):
 
     :param p_sigP: if > 0, filter values P/sigP
     """
-    dtb = _np.loadtxt(txt, dtype=str)
+    dtb = _np.genfromtxt(txt, dtype=str)
     if not old:
         dtb = _np.core.records.fromarrays(dtb.transpose(), 
             names='MJD,night,ccd,filt,calc,stdstars,dth,sigdth,P,Q,U,th,sigP,'

@@ -191,7 +191,7 @@ def gencsv(csvin, path=None, skipdth=False, delta=3.5, epssig=2.0):
         path = os.getcwd()
 
     try:
-        objs = np.loadtxt('{0}/refs/pol_hip.txt'.format(hdtpath()), dtype=str)
+        objs = np.genfromtxt('{0}/refs/pol_hip.txt'.format(hdtpath()), dtype=str)
     except:
         print('# ERROR: Can\'t read files pyhdust/refs/pol_hip.txt.')
         raise SystemExit(1)
@@ -247,7 +247,7 @@ def gencsv(csvin, path=None, skipdth=False, delta=3.5, epssig=2.0):
 #                print semilines
 #                lixo = raw_input('Clique qualquer coisa para continuar...')
 
-            fobj = np.loadtxt('{0}/{1}.log'.format(path,obj), dtype=str, comments='#')
+            fobj = np.genfromtxt('{0}/{1}.log'.format(path,obj), dtype=str, comments='#')
             # Test if is needed to reshape
             if len(fobj) > 0 and type(fobj[0]) != np.ndarray:
                 fobj = fobj.reshape(-1,18)
@@ -275,7 +275,7 @@ def gencsv(csvin, path=None, skipdth=False, delta=3.5, epssig=2.0):
     # Process the found star with the substring 'field'
     polt.genTarget('field', path=path, skipdth=skipdth, delta=delta, epssig=epssig)
     if os.path.exists('{0}/field.log'.format(path)):
-        fobj = np.loadtxt('{0}/field.log'.format(path), dtype=str, comments='#')
+        fobj = np.genfromtxt('{0}/field.log'.format(path), dtype=str, comments='#')
         # Test if is needed to reshape
         if len(fobj) > 0 and type(fobj[0]) != np.ndarray:
             fobj = fobj.reshape(-1,18)
@@ -1914,7 +1914,7 @@ def graf_inst(logfile, mode=1, vfilter=['no-std'], save=False, extens='pdf'):
             factor=1.
             
         try:
-            lines = np.loadtxt(logfile, dtype=str)
+            lines = np.genfromtxt(logfile, dtype=str)
         except:
             print('# ERROR: Can\'t read file {0}.'.format(logfile))
             raise SystemExit(1)
@@ -2089,7 +2089,7 @@ def genAll(csvfile, path=None, genlogs=True, genint=True, vfilter=['no-std'], vf
         print('Warning: field graphs will lose the transparency at .eps format')
 
     try:
-        objs = np.loadtxt('{0}/refs/pol_alvos.txt'.format(hdtpath()), dtype=str)
+        objs = np.genfromtxt('{0}/refs/pol_alvos.txt'.format(hdtpath()), dtype=str)
     except:
         print('# ERROR: Can\'t read files pyhdust/refs/pol_alvos.txt.')
         raise SystemExit(1)
@@ -2320,7 +2320,7 @@ def rotQUBe(be, thetfile, path=None, every=False, vfilter=['no-std']):
         raise SystemExit(1)
 
     try:
-        lines = np.loadtxt('{0}/{1}.log'.format(path, be), dtype=str)
+        lines = np.genfromtxt('{0}/{1}.log'.format(path, be), dtype=str)
     except:
         print('# ERROR: {0}.log file not found inside {1}.'.format(be, path))
         return [],[],[],[]

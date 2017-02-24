@@ -188,7 +188,8 @@ class Spec(object):
         """
         self.data = _np.loadtxt(datafile)
         if _os.path.exists(metafile):
-            self.metadata = _np.loadtxt(metafile, dtype='str', delimiter=',')
+            self.metadata = _np.genfromtxt(metafile, dtype='str', 
+                delimiter=',')
         self.updatecount()
         return
 

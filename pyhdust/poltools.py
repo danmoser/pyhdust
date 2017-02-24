@@ -90,8 +90,8 @@ def stdchk(stdname):
     Check if the standard star name contains a known name, and return
     its position in `padroes.txt`.
     """
-    lstds = list(_np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str,\
-    usecols=[0]))
+    lstds = list(_np.genfromtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), 
+        dtype=str, usecols=[0]))
     chk = False
     i = -1
     for std in lstds:
@@ -114,7 +114,8 @@ def countStars(objdir, f):
     if len(louts) == 0:
         counts = 0
     else:
-        file0 = _np.loadtxt(louts[0], dtype=str, delimiter='\n', comments=None)
+        file0 = _np.genfromtxt(louts[0], dtype=str, delimiter='\n', 
+            comments=None)
         counts = len(file0)-1    # -1 because the header line
 
     return counts
@@ -233,7 +234,7 @@ def readoutMJD(out, nstar=1):
 
     try:
         if ccd not in ('301','654'):
-            coords = _np.loadtxt(coords[0])
+            coords = _np.genfromtxt(coords[0])
             ang = _np.arctan( (coords[1,1]-coords[0,1])/(coords[1,0]-coords[0,0]) )*180/_np.pi
         else:
             coords = _np.array([[0.,0.],[0.,0.]])
@@ -1092,7 +1093,7 @@ def grafpol(filename, nstar=1, fig=None, ax1=None, ax2=None, save=False, extens=
 
         try:
             # CAUTION! BLANK LINES WILL BE SKIPPED!
-            file0 = _np.loadtxt(filename, dtype=str, delimiter='\n', comments=None)
+            file0 = _np.genfromtxt(filename, dtype=str, delimiter='\n', comments=None)
         except:
             print('# ERROR: File {0} not found!\n'.format(filename))
             raise SystemExit(1)
@@ -1276,7 +1277,7 @@ def verStdPol(std, filt, p, sig):
     Return z = abs(ppub-p)/sqrt(sigpub^2+sig^2) or -1 if there is
     no such object or filter.
     """
-    lstds = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str, usecols=range(0,22))
+    lstds = _np.genfromtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str, usecols=range(0,22))
 
     # Get P_pub value
     i = stdchk(std)[1]
@@ -1374,7 +1375,7 @@ def chkStdLog(f, calc, path=None, delta=3.5, verbose=True):
     # Read `obj.dat` and `std.dat`. If there are errors, assigns [''] to get inside
     # ifs below and print error messages
     try:
-        std = _np.loadtxt('{0}/std.dat'.format(path), dtype=str)
+        std = _np.genfromtxt('{0}/std.dat'.format(path), dtype=str)
     except:
         std = _np.array([], dtype=str)
 
@@ -1475,7 +1476,7 @@ def genLog(path, subdirs, tgts, fileout, sigtol=lambda sigm: 1.4*sigm, \
 
     continuerun = False
     # Checking if there exists a previous run and if it has generated unless one line.
-    if _os.path.exists('{0}/{1}.tmp'.format(path,fileout)) and len(_np.loadtxt('{0}/{1}.tmp'.format(path,fileout), dtype=str)) != 0:
+    if _os.path.exists('{0}/{1}.tmp'.format(path,fileout)) and len(_np.genfromtxt('{0}/{1}.tmp'.format(path,fileout), dtype=str)) != 0:
         opt = ''
         while opt not in ('y','Y','n','N'):
             opt = raw_input(('There exists one file concerning to a uncompleted previous run for {0}. ' +\
@@ -1490,7 +1491,7 @@ def genLog(path, subdirs, tgts, fileout, sigtol=lambda sigm: 1.4*sigm, \
         f0.close()
     # Case continuing a previous run, identify the stars already runned
     else:
-        ftemp = _np.loadtxt('{0}/{1}.tmp'.format(path,fileout), dtype=str)
+        ftemp = _np.genfromtxt('{0}/{1}.tmp'.format(path,fileout), dtype=str)
         odone=[]  # odone and fdone is lists that contains subdirectories, star number and the
         fdone=[]                                    # filters already done by the previous run
         # If there is just one line, transform np array type [] for [[]]
@@ -1668,20 +1669,20 @@ def genAllLog(path=None, sigtol=lambda sigm: 1.4*sigm, autochoose=False, delta=3
 
     # Generates lists
     try:
-        ltgts = _np.loadtxt('{0}/refs/pol_alvos.txt'.format(_hdtpath()), dtype=str)
+        ltgts = _np.genfromtxt('{0}/refs/pol_alvos.txt'.format(_hdtpath()), dtype=str)
         if _os.path.exists('{0}/refs/pol_hip.txt'.format(_hdtpath())):
             try:
-                ltgts = _np.concatenate((ltgts,_np.loadtxt('{0}/refs/pol_hip.txt'.\
+                ltgts = _np.concatenate((ltgts,_np.genfromtxt('{0}/refs/pol_hip.txt'.\
                                                     format(_hdtpath()), dtype=str)))
             except:
                 pass
         if _os.path.exists('{0}/refs/pol_unpol.txt'.format(_hdtpath())):
             try:
-                ltgts = _np.concatenate((ltgts,_np.loadtxt('{0}/refs/pol_unpol.txt'.\
+                ltgts = _np.concatenate((ltgts,_np.genfromtxt('{0}/refs/pol_unpol.txt'.\
                                                     format(_hdtpath()), dtype=str)))
             except:
                 pass
-        lstds = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), \
+        lstds = _np.genfromtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), \
                                                            dtype=str, usecols=[0])
     except:
         print('# ERROR: Can\'t read files pyhdust/refs/pol_alvos.txt and/or pyhdust/refs/pol_padroes.txt.\n')
@@ -1792,7 +1793,7 @@ def corObjStd(night, f, calc, path=None, delta=3.5, verbose=True):
         """
         
         try:
-            dthref = _np.loadtxt('{0}/refs/dths.txt'.format(_hdtpath()), dtype=str)
+            dthref = _np.genfromtxt('{0}/refs/dths.txt'.format(_hdtpath()), dtype=str)
         except:
             print('# ERROR: Can\'t read files pyhdust/refs/dths.txt')
             raise SystemExit(1)
@@ -1909,7 +1910,7 @@ def corObjStd(night, f, calc, path=None, delta=3.5, verbose=True):
         """
 
         try:
-            stdref = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str, usecols=range(0,22))
+            stdref = _np.genfromtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str, usecols=range(0,22))
         except:
             print('# ERROR: Can\'t read files pyhdust/refs/pol_padroes.txt')
             raise SystemExit(1)
@@ -1921,7 +1922,7 @@ def corObjStd(night, f, calc, path=None, delta=3.5, verbose=True):
         flag = 'OK'
 
         if _os.path.exists('{0}/{1}/std.dat'.format(path,night)):
-            stds = _np.loadtxt('{0}/{1}/std.dat'.format(path,night), dtype=str)
+            stds = _np.genfromtxt('{0}/{1}/std.dat'.format(path,night), dtype=str)
 
             if len(stds) > 0 and len(stds[-1]) != 9:
                 stds = stds.reshape(-1,9)
@@ -2089,12 +2090,12 @@ def genTarget(target, path=None, path2=None, ispol=None, skipdth=False, delta=3.
 
     # Read lists and verify if target is a valid target
     try:
-        obj = _np.loadtxt('{0}/refs/pol_alvos.txt'.format(_hdtpath()), dtype=str)
+        obj = _np.genfromtxt('{0}/refs/pol_alvos.txt'.format(_hdtpath()), dtype=str)
         if _os.path.exists('{0}/refs/pol_hip.txt'.format(_hdtpath)):
-            obj = _np.concatenate((obj,_np.loadtxt('{0}/refs/pol_hip.txt'.format(_hdtpath()), dtype=str)))
+            obj = _np.concatenate((obj,_np.genfromtxt('{0}/refs/pol_hip.txt'.format(_hdtpath()), dtype=str)))
         if _os.path.exists('{0}/refs/pol_unpol.txt'.format(_hdtpath)):
-            obj = _np.concatenate((obj,_np.loadtxt('{0}/refs/pol_unpol.txt'.format(_hdtpath()), dtype=str)))
-        std = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str, usecols=range(0,22))
+            obj = _np.concatenate((obj,_np.genfromtxt('{0}/refs/pol_unpol.txt'.format(_hdtpath()), dtype=str)))
+        std = _np.genfromtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str, usecols=range(0,22))
     except:
         print('# ERROR: Can\'t read files pyhdust/refs/pol_alvos.txt and/or pyhdust/refs/pol_padroes.txt.')
         raise SystemExit(1)
@@ -2118,7 +2119,7 @@ def genTarget(target, path=None, path2=None, ispol=None, skipdth=False, delta=3.
         # Check obj.dat/std.dat for the night
         if _os.path.exists('{0}/{1}/{2}.dat'.format(path,night,ftype)):
             try:
-                objs = _np.loadtxt('{0}/{1}/{2}.dat'.format(path,night,ftype), dtype=str)
+                objs = _np.genfromtxt('{0}/{1}/{2}.dat'.format(path,night,ftype), dtype=str)
             except:
                 print('{0:<12s} ERROR! Can\'t read {1}.dat file. Ignoring this night...\n'.format(night+':',ftype))
                 continue
@@ -2185,7 +2186,7 @@ def genTarget(target, path=None, path2=None, ispol=None, skipdth=False, delta=3.
 #                        print _os.path.exists('{0}/{1}/std.link'.format(path,night))
                         if vald and _os.path.exists('{0}/{1}/std.link'.format(path,night)):
 #                            print 'entrou'
-                            file0 = _np.loadtxt('{0}/{1}/std.link'.format(path,night), dtype=str)
+                            file0 = _np.genfromtxt('{0}/{1}/std.link'.format(path,night), dtype=str)
                             if type(file0[0]) != _np.ndarray and _np.size(file0) == 2:
                                 file0 = file0.reshape(-1,2)
                             for line0 in file0:
@@ -2388,7 +2389,7 @@ def fixISP(logfile, ispol, path2=None):
 
 
     try:
-        lines = _np.loadtxt(logfile, dtype=str)
+        lines = _np.genfromtxt(logfile, dtype=str)
     except:
         print('# ERROR: Can\'t read file {0}.'.format(logfile))
         raise SystemExit(1)
@@ -2657,8 +2658,8 @@ def listNights(path, tgt):
     """
     List Nights
     """
-    ltgts = _np.loadtxt('{0}/refs/pol_alvos.txt'.format(_hdtpath()), dtype=str)
-    lstds = _np.loadtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str,\
+    ltgts = _np.genfromtxt('{0}/refs/pol_alvos.txt'.format(_hdtpath()), dtype=str)
+    lstds = _np.genfromtxt('{0}/refs/pol_padroes.txt'.format(_hdtpath()), dtype=str,\
     usecols=[0])
     if tgt not in _np.hstack((ltgts,lstds)):
         print('# Warning! Target {0} is not a default target or standard!!'.\
@@ -2696,13 +2697,13 @@ def plotMagStar(tgt, path=None):
     """
     if path == None or path == '.':
         path = _os.getcwd()
-    lmags = _np.loadtxt('{0}/refs/pol_mags.txt'.format(_hdtpath()), dtype=str)
+    lmags = _np.genfromtxt('{0}/refs/pol_mags.txt'.format(_hdtpath()), dtype=str)
 
     if tgt not in lmags[:,0]:
         print('# ERROR! {0} is not a valid mag. star!'.format(tgt))
         return
 
-    data = _np.loadtxt('{0}/{1}.log'.format(path,tgt), dtype=str)
+    data = _np.genfromtxt('{0}/{1}.log'.format(path,tgt), dtype=str)
     data = _np.core.records.fromarrays(data.transpose(), names='MJD,night,filt,\
     calc,ang.ref,dth,P,Q,U,th,sigP,sigth', formats='f8,a7,a1,f8,f8,f8,f8,\
     f8,f8,f8,f8,f8')
@@ -2769,7 +2770,7 @@ def sortLog(filename):
     f0 = open(filename)
     lines = f0.readlines()
     f0.close()
-    log = _np.loadtxt(filename, dtype=str)
+    log = _np.genfromtxt(filename, dtype=str)
     log = log[log[:,0].argsort()]
     fmt = '%12s %7s %1s %5s %5s %6s %5s %6s %6s %6s %5s %5s'
     _np.savetxt(filename.replace('.log','.txt'), log, fmt=fmt, header=lines[0])
@@ -3146,7 +3147,7 @@ def graf_t(logfile, path2=None, vfilter=['no-std'], save=False, extens='pdf', fi
         factor=0.7                   # Factor to fix the font sizes
             
         try:
-            lines = _np.loadtxt(logfile, dtype=str)
+            lines = _np.genfromtxt(logfile, dtype=str)
         except:
             print('# ERROR: Can\'t read file {0}.'.format(logfile))
             raise SystemExit(1)
@@ -3487,7 +3488,7 @@ def graf_qu(logfile, path2=None, mode=1, thetfile=None, isp=[], odr=True, mcmc=F
             factor=1.
             
         try:
-            lines = _np.loadtxt(logfile, dtype=str)
+            lines = _np.genfromtxt(logfile, dtype=str)
         except:
             print('# ERROR: Can\'t read file {0}.'.format(logfile))
             raise SystemExit(1)
@@ -3861,7 +3862,7 @@ def graf_qu(logfile, path2=None, mode=1, thetfile=None, isp=[], odr=True, mcmc=F
         """
 
         try:
-            lines = _np.loadtxt(logfile, dtype=str)
+            lines = _np.genfromtxt(logfile, dtype=str)
         except:
             print('# ERROR: Can\'t read file {0}.'.format(logfile))
             raise SystemExit(1)
@@ -4057,12 +4058,12 @@ def sintLeff(ccdn='ixon', step=5., save=True, extens='pdf'):
     stars = _glob('{0}/stars/uk*.dat'.format(_hdtpath()))
 
     # Open file with informations about the standard stars models
-    dstars = _np.loadtxt('{0}/stars/synphot.dat'.format(_hdtpath()),usecols=[4,6,7], dtype=str)
+    dstars = _np.genfromtxt('{0}/stars/synphot.dat'.format(_hdtpath()),usecols=[4,6,7], dtype=str)
     lbds = _np.arange(2800.,11000.001,step)
 
     # Open file with CCD Quantum Efficience (QE)
     try:
-        fqe = _np.loadtxt('{0}/refs/QE_{1}.dat'.format(_hdtpath(),ccdn),skiprows=1, dtype=float, unpack=True) # unpack is to get the transposed array
+        fqe = _np.genfromtxt('{0}/refs/QE_{1}.dat'.format(_hdtpath(),ccdn),skiprows=1, dtype=float, unpack=True) # unpack is to get the transposed array
     except:
         print('ERROR: CCD name \'{0}\' not identified!'.format(ccdn))
         return
@@ -4092,7 +4093,7 @@ def sintLeff(ccdn='ixon', step=5., save=True, extens='pdf'):
     for filt in filters:
 
         # Open file with Filter Transmitance
-        ftr = _np.loadtxt('{0}/filters/T{1}_POL.dat'.format(_hdtpath(),filt.upper()),skiprows=1)
+        ftr = _np.genfromtxt('{0}/filters/T{1}_POL.dat'.format(_hdtpath(),filt.upper()),skiprows=1)
 
         # Interpolate Filter Transmitance
         if filt=='u':
@@ -4167,7 +4168,7 @@ def sintLeff(ccdn='ixon', step=5., save=True, extens='pdf'):
 
     # Once concluded, we need compute lambda_eff as function of u-b and b-v
     print('\n\n\n# GENERAL ADJUST\n')
-    leffs = _np.loadtxt('leff_stars_{0}.dat'.format(ccdn), dtype=str, unpack=True)
+    leffs = _np.genfromtxt('leff_stars_{0}.dat'.format(ccdn), dtype=str, unpack=True)
     for filt in filters:
         
         ub, bv, leff = _np.array([], dtype=float), _np.array([], dtype=float), _np.array([], dtype=float)
@@ -4253,7 +4254,7 @@ def lbds(color, filt, ccdn, airmass=1.3, skiperror=False):
     
     """
     
-    data = _np.loadtxt('{0}/filters/leff.dat'.format(_hdtpath()), dtype=str)
+    data = _np.genfromtxt('{0}/filters/leff.dat'.format(_hdtpath()), dtype=str)
 
     # Optical deepth according to Kepler de Oliveira et al (Astronomia
     # e Astrofisica), for altitude above 2000m
@@ -4802,7 +4803,7 @@ def fitMCMCline(x, y, sx, sy, star='', margin=False, plot_adj=True, fig=None, ax
 
 def loadpol(txt):
     """ Load polarization txt file. """
-    dtb = _np.loadtxt(txt, dtype=str)
+    dtb = _np.genfromtxt(txt, dtype=str)
     dtb = _np.core.records.fromarrays(dtb.transpose(), names='MJD,night,filt,\
     calc,stdstars,dth,devdth,P,Q,U,th,sigP,sigth', formats='f8,{0},{0},f8,{0},\
     f8,f8,f8,f8,f8,f8,f8,f8'.format(dtb.dtype))
