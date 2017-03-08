@@ -37,7 +37,7 @@ try:
 except ImportError:
     _warn.warn('# matplotlib, pyfits, six and/or scipy module not installed!!')
 
-__version__ = '1.1.5'
+__version__ = '1.1.6'
 __release__ = "Stable"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -213,6 +213,88 @@ def readtemp(tfile, quiet=False):
 
     return ncr, ncmu, ncphi, nLTE, nNLTE, Rstar, Ra, beta, data, pcr, pcmu,\
         pcphi
+
+
+def read_vol_dens_temp(tfile):
+    """ Returns the values of ``volume, dens, temp`` of ``tfile``.
+
+    :Example:
+
+        >>> tfile = "bestar2.02/mod01/mod01b33.temp"
+        >>> volume, dens, temp =  read_vol_dens_temp(tfile)
+        >>> total_mass = np.sum(volume*dens)  # grams (CGS)
+        >>> avg_temp_by_mass = np.sum(volume*dens*temp) / total_mass
+        >>> avg_temp_by_vol = np.sum(volume*temp) / np.sum(volume)
+    """
+    ncr, ncmu, ncphi, nLTE, nNLTE, Rstar, Ra, beta, data, pcr, pcmu, pcphi =\
+        readtemp(tfile)
+    # r_coord = data[0, :, 0, icphi]
+    # x = r_coord
+    # xax = type of r_coord display
+    # if (xax == 0):
+    #     x = _np.log10(x / Rstar - 1.)
+    #     xtitle = r'$\log_{10}(r/R_*-1)$'
+    # elif (xax == 1):
+    #     x = x / Rstar
+    #     xtitle = r'$r/R_*$'
+    # elif (xax == 2):
+    #     x = 1. - Rstar / x
+    #     xtitle = r'$1-R_*/r$'
+    # y = temp
+    # y = data[3 + lev, :, ncmu / 2 + np + rplus, icphi]
+    # 
+    lev = nLTE+2
+    levt = 0
+    dens = _np.zeros(ncr*ncmu*ncphi)
+    temp = _np.zeros(ncr*ncmu*ncphi)
+    volume = _np.zeros(ncr*ncmu*ncphi)
+    i = 0
+    for icr in range(ncr):
+        for icmu in range(ncmu):
+            for icphi in range(ncphi):
+                vol = pcphi[icphi+1]-pcphi[icphi]
+                vol = vol*(pcmu[icmu+1, 0]-pcmu[icmu, 0])
+                vol = vol*(pcr[icr+1]**3.-pcr[icr]**3.)/3.
+                vol = vol*_phc.Rsun.cgs**3.
+                volume[i] = vol
+                dens[i] = data[3+lev, icr, icmu, icphi]*_phc.mp.cgs
+                temp[i] = data[3+levt, icr, icmu, icphi]
+                i += 1
+    # avgtemp = 0
+    #         FOR icr=0,ncr-1 DO BEGIN
+    #         FOR icmu=0,ncmu-1 DO BEGIN
+    #         FOR icphi=0,ncphi-1 DO BEGIN
+    # ;cell volume          
+    #             temp = pcphi[icphi+1]-pcphi[icphi]
+    #             temp = vol*(pcmu[icmu+1]-pcmu[icmu])
+    #             temp = vol*(pcr[icr+1]^3.-pcr[icr]^3.)/3.
+    # ;multiply by number density
+    #             temp = vol*data[3+nLTE+2,icr,icmu,icphi]
+    # ;multiply by temperature
+    #             temp = vol*data[3,icr,icmu,icphi]
+    #             avgtemp = avgtemp+temp
+    #         ENDFOR
+    #         ENDFOR
+    #         ENDFOR
+
+    # ;calculate total mass
+    # mass = 0
+    #         FOR icr=0,ncr-1 DO BEGIN
+    #         FOR icmu=0,ncmu-1 DO BEGIN
+    #         FOR icphi=0,ncphi-1 DO BEGIN
+    # ;cell volume          
+    #             temp = pcphi[icphi+1]-pcphi[icphi]
+    #             temp = vol*(pcmu[icmu+1]-pcmu[icmu])
+    #             temp = vol*(pcr[icr+1]^3.-pcr[icr]^3.)/3.
+    # ;multiply by number density
+    #             temp = vol*data[3+nLTE+2,icr,icmu,icphi]
+    #             mass = mass+temp
+    #         ENDFOR
+    #         ENDFOR
+    #         ENDFOR
+
+    # avgtemp = avgtemp/mass
+    return volume, dens, temp
 
 
 def readtempmass(tfile, quiet=False):
@@ -628,9 +710,6 @@ class SingleBe(object):
                                                             #(units?)
         return
 
-
-
-        
 
 def readSingleBe(sBfile):
     """ Read the singleBe output

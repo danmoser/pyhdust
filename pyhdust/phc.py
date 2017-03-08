@@ -1218,7 +1218,8 @@ def enable_minorticks(ax, auto=None, axis='x'):
     return ax
 
 
-def civil_ticks(ax, civcfg=[1, 'm'], civdt=None, tklab=True, label="%y %b %d"):
+def civil_ticks(ax, civcfg=[1, 'm'], civdt=None, tklab=True, label="%y %b %d",
+    **kwargs):
     """ Add the civil ticks in the axis.
 
     :param civcfg: forces a given timestep between the ticks [`n`, interval].
@@ -1244,7 +1245,8 @@ def civil_ticks(ax, civcfg=[1, 'm'], civdt=None, tklab=True, label="%y %b %d"):
     ax2.set_xlim( ax.get_xlim() )
     ax2.set_xticks(mjdticks)
     if tklab:
-        ax2.set_xticklabels([date.strftime(label) for date in dtticks])
+        ax2.set_xticklabels([date.strftime(label) for date in dtticks], 
+            **kwargs)
     else:
         ax2.set_xticklabels([])
     return ax2
