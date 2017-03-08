@@ -37,7 +37,7 @@ try:
 except ImportError:
     _warn.warn('# matplotlib, pyfits, six and/or scipy module not installed!!')
 
-__version__ = '1.1.6'
+__version__ = '1.1.7'
 __release__ = "Stable"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -199,17 +199,29 @@ def readtemp(tfile, quiet=False):
     # 
     if not quiet:
         lev = nLTE+2
-        mass = 0.
+        dens = _np.zeros(ncr*ncmu*ncphi)
+        volume = _np.zeros(ncr*ncmu*ncphi)
+        i = 0
         for icr in range(ncr):
             for icmu in range(ncmu):
                 for icphi in range(ncphi):
-                    ma = pcphi[icphi+1]-pcphi[icphi]
-                    ma = ma*(pcmu[icmu+1, 0]-pcmu[icmu, 0])
-                    ma = ma*(pcr[icr+1]**3.-pcr[icr]**3.)/3.
-                    ma = ma*_phc.Rsun.cgs**3.
-                    ma = ma*data[3+lev, icr, icmu, icphi]*_phc.mp.cgs
-                    mass = mass + ma
-        print('# Disk mass is {0:.2e} Msun'.format(mass/_phc.Msun.cgs))
+                    # vol = pcphi[icphi+1]-pcphi[icphi]
+                    # vol = vol*(pcmu[icmu+1, icr]-pcmu[icmu, icr])
+                    # vol = vol*(pcr[icr+1]**3.-pcr[icr]**3.)/3.
+                    # vol = vol*_phc.Rsun.cgs**3.
+                    pcmu = _np.where(pcmu>1, 1, pcmu)
+                    r = (pcr[icr+1]+pcr[icr])/2.*_phc.Rsun.cgs
+                    dr = (pcr[icr+1]-pcr[icr])*_phc.Rsun.cgs 
+                    th = (_np.arccos(pcmu[icmu+1, icr]) + 
+                        _np.arccos(pcmu[icmu, icr]))/2.
+                    dth = _np.arccos(pcmu[icmu, icr]) - \
+                        _np.arccos(pcmu[icmu+1, icr])
+                    dphi = pcmu[icmu+1, icr]-pcmu[icmu, icr]
+                    volume[i] = r**2*_np.sin(th)*dr*dth*dphi
+                    dens[i] = data[3+lev, icr, icmu, icphi]*_phc.mp.cgs
+                    i += 1
+        print('# Disk mass is {0:.2e} Msun'.format(_np.sum(dens*volume)/
+            _phc.Msun.cgs))
 
     return ncr, ncmu, ncphi, nLTE, nNLTE, Rstar, Ra, beta, data, pcr, pcmu,\
         pcphi
@@ -228,21 +240,6 @@ def read_vol_dens_temp(tfile):
     """
     ncr, ncmu, ncphi, nLTE, nNLTE, Rstar, Ra, beta, data, pcr, pcmu, pcphi =\
         readtemp(tfile)
-    # r_coord = data[0, :, 0, icphi]
-    # x = r_coord
-    # xax = type of r_coord display
-    # if (xax == 0):
-    #     x = _np.log10(x / Rstar - 1.)
-    #     xtitle = r'$\log_{10}(r/R_*-1)$'
-    # elif (xax == 1):
-    #     x = x / Rstar
-    #     xtitle = r'$r/R_*$'
-    # elif (xax == 2):
-    #     x = 1. - Rstar / x
-    #     xtitle = r'$1-R_*/r$'
-    # y = temp
-    # y = data[3 + lev, :, ncmu / 2 + np + rplus, icphi]
-    # 
     lev = nLTE+2
     levt = 0
     dens = _np.zeros(ncr*ncmu*ncphi)
@@ -252,48 +249,21 @@ def read_vol_dens_temp(tfile):
     for icr in range(ncr):
         for icmu in range(ncmu):
             for icphi in range(ncphi):
-                vol = pcphi[icphi+1]-pcphi[icphi]
-                vol = vol*(pcmu[icmu+1, 0]-pcmu[icmu, 0])
-                vol = vol*(pcr[icr+1]**3.-pcr[icr]**3.)/3.
-                vol = vol*_phc.Rsun.cgs**3.
-                volume[i] = vol
+                # vol = pcphi[icphi+1]-pcphi[icphi]
+                # vol = vol*(pcmu[icmu+1, icr]-pcmu[icmu, icr])
+                # vol = vol*(pcr[icr+1]**3.-pcr[icr]**3.)/3.
+                # vol = vol*_phc.Rsun.cgs**3.
+                pcmu = _np.where(pcmu>1, 1, pcmu)
+                r = (pcr[icr+1]+pcr[icr])/2.*_phc.Rsun.cgs
+                dr = (pcr[icr+1]-pcr[icr])*_phc.Rsun.cgs 
+                th = (_np.arccos(pcmu[icmu+1, icr]) + 
+                    _np.arccos(pcmu[icmu, icr]))/2.
+                dth = _np.arccos(pcmu[icmu, icr])-_np.arccos(pcmu[icmu+1, icr])
+                dphi = pcmu[icmu+1, icr]-pcmu[icmu, icr]
+                volume[i] = r**2*_np.sin(th)*dr*dth*dphi
                 dens[i] = data[3+lev, icr, icmu, icphi]*_phc.mp.cgs
                 temp[i] = data[3+levt, icr, icmu, icphi]
                 i += 1
-    # avgtemp = 0
-    #         FOR icr=0,ncr-1 DO BEGIN
-    #         FOR icmu=0,ncmu-1 DO BEGIN
-    #         FOR icphi=0,ncphi-1 DO BEGIN
-    # ;cell volume          
-    #             temp = pcphi[icphi+1]-pcphi[icphi]
-    #             temp = vol*(pcmu[icmu+1]-pcmu[icmu])
-    #             temp = vol*(pcr[icr+1]^3.-pcr[icr]^3.)/3.
-    # ;multiply by number density
-    #             temp = vol*data[3+nLTE+2,icr,icmu,icphi]
-    # ;multiply by temperature
-    #             temp = vol*data[3,icr,icmu,icphi]
-    #             avgtemp = avgtemp+temp
-    #         ENDFOR
-    #         ENDFOR
-    #         ENDFOR
-
-    # ;calculate total mass
-    # mass = 0
-    #         FOR icr=0,ncr-1 DO BEGIN
-    #         FOR icmu=0,ncmu-1 DO BEGIN
-    #         FOR icphi=0,ncphi-1 DO BEGIN
-    # ;cell volume          
-    #             temp = pcphi[icphi+1]-pcphi[icphi]
-    #             temp = vol*(pcmu[icmu+1]-pcmu[icmu])
-    #             temp = vol*(pcr[icr+1]^3.-pcr[icr]^3.)/3.
-    # ;multiply by number density
-    #             temp = vol*data[3+nLTE+2,icr,icmu,icphi]
-    #             mass = mass+temp
-    #         ENDFOR
-    #         ENDFOR
-    #         ENDFOR
-
-    # avgtemp = avgtemp/mass
     return volume, dens, temp
 
 
@@ -343,18 +313,32 @@ def readtempmass(tfile, quiet=False):
         pcphi[icphi] = pcphi[icphi - 1] + 2 * \
             (pcphic[icphi - 1] - pcphi[icphi - 1])
     # 
-    lev = nLTE+2
-    mass = 0.
-    for icr in range(ncr):
-        for icmu in range(ncmu):
-            for icphi in range(ncphi):
-                ma = pcphi[icphi+1]-pcphi[icphi]
-                ma = ma*(pcmu[icmu+1, 0]-pcmu[icmu, 0])
-                ma = ma*(pcr[icr+1]**3.-pcr[icr]**3.)/3.
-                ma = ma*_phc.Rsun.cgs**3.
-                ma = ma*data[3+lev, icr, icmu, icphi]*_phc.mp.cgs
-                mass = mass + ma
-    return mass
+    if not quiet:
+        lev = nLTE+2
+        dens = _np.zeros(ncr*ncmu*ncphi)
+        volume = _np.zeros(ncr*ncmu*ncphi)
+        i = 0
+        for icr in range(ncr):
+            for icmu in range(ncmu):
+                for icphi in range(ncphi):
+                    # vol = pcphi[icphi+1]-pcphi[icphi]
+                    # vol = vol*(pcmu[icmu+1, icr]-pcmu[icmu, icr])
+                    # vol = vol*(pcr[icr+1]**3.-pcr[icr]**3.)/3.
+                    # vol = vol*_phc.Rsun.cgs**3.
+                    pcmu = _np.where(pcmu>1, 1, pcmu)
+                    r = (pcr[icr+1]+pcr[icr])/2.*_phc.Rsun.cgs
+                    dr = (pcr[icr+1]-pcr[icr])*_phc.Rsun.cgs 
+                    th = (_np.arccos(pcmu[icmu+1, icr]) + 
+                        _np.arccos(pcmu[icmu, icr]))/2.
+                    dth = _np.arccos(pcmu[icmu, icr]) - \
+                        _np.arccos(pcmu[icmu+1, icr])
+                    dphi = pcmu[icmu+1, icr]-pcmu[icmu, icr]
+                    volume[i] = r**2*_np.sin(th)*dr*dth*dphi
+                    dens[i] = data[3+lev, icr, icmu, icphi]*_phc.mp.cgs
+                    i += 1
+        print('# Disk mass is {0:.2e} Msun'.format(_np.sum(dens*volume)/
+            _phc.Msun.cgs))
+    return _np.sum(dens*volume)
 
 
 def readdust(dfile):
