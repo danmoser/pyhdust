@@ -37,7 +37,7 @@ try:
 except ImportError:
     _warn.warn('# matplotlib, pyfits, six and/or scipy module not installed!!')
 
-__version__ = '1.1.7'
+__version__ = '1.1.8'
 __release__ = "Stable"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -210,8 +210,8 @@ def readtemp(tfile, quiet=False):
                     # vol = vol*(pcr[icr+1]**3.-pcr[icr]**3.)/3.
                     # vol = vol*_phc.Rsun.cgs**3.
                     pcmu = _np.where(pcmu>1, 1, pcmu)
-                    r = (pcr[icr+1]+pcr[icr])/2.*_phc.Rsun.cgs
-                    dr = (pcr[icr+1]-pcr[icr])*_phc.Rsun.cgs 
+                    r = (pcr[icr+1]+pcr[icr])/2.*_phc.Rsun.cgs*Rstar
+                    dr = (pcr[icr+1]-pcr[icr])*_phc.Rsun.cgs*Rstar
                     th = (_np.arccos(pcmu[icmu+1, icr]) + 
                         _np.arccos(pcmu[icmu, icr]))/2.
                     dth = _np.arccos(pcmu[icmu, icr]) - \
@@ -254,8 +254,8 @@ def read_vol_dens_temp(tfile):
                 # vol = vol*(pcr[icr+1]**3.-pcr[icr]**3.)/3.
                 # vol = vol*_phc.Rsun.cgs**3.
                 pcmu = _np.where(pcmu>1, 1, pcmu)
-                r = (pcr[icr+1]+pcr[icr])/2.*_phc.Rsun.cgs
-                dr = (pcr[icr+1]-pcr[icr])*_phc.Rsun.cgs 
+                r = (pcr[icr+1]+pcr[icr])/2.*_phc.Rsun.cgs*Rstar
+                dr = (pcr[icr+1]-pcr[icr])*_phc.Rsun.cgs*Rstar
                 th = (_np.arccos(pcmu[icmu+1, icr]) + 
                     _np.arccos(pcmu[icmu, icr]))/2.
                 dth = _np.arccos(pcmu[icmu, icr])-_np.arccos(pcmu[icmu+1, icr])
@@ -326,8 +326,8 @@ def readtempmass(tfile, quiet=False):
                     # vol = vol*(pcr[icr+1]**3.-pcr[icr]**3.)/3.
                     # vol = vol*_phc.Rsun.cgs**3.
                     pcmu = _np.where(pcmu>1, 1, pcmu)
-                    r = (pcr[icr+1]+pcr[icr])/2.*_phc.Rsun.cgs
-                    dr = (pcr[icr+1]-pcr[icr])*_phc.Rsun.cgs 
+                    r = (pcr[icr+1]+pcr[icr])/2.*_phc.Rsun.cgs*Rstar
+                    dr = (pcr[icr+1]-pcr[icr])*_phc.Rsun.cgs*Rstar
                     th = (_np.arccos(pcmu[icmu+1, icr]) + 
                         _np.arccos(pcmu[icmu, icr]))/2.
                     dth = _np.arccos(pcmu[icmu, icr]) - \

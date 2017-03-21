@@ -795,6 +795,19 @@ def hms2fracday(hms):
     return (hms[0] + hms[1]/60. + hms[2]/3600) / 24.
 
 
+def hms2sec(hms):
+    """ Enter hour:min:sec (string) and return it in seconds (float) """
+    hms = _np.array(hms.split(':'), dtype='float')
+    if len(hms) == 3:
+        return (hms[0]*3600. + hms[1]*60. + hms[2])
+    elif len(hms) == 2:
+        return (hms[0]*60. + hms[1])
+    else:
+        _warn.warn("# WRONG hms FORMAT!")
+        print(hms)
+        return 0.
+
+
 def fracday2hms(frac):
     """Enter fraction of a day (e.g., MJD) and return integers of hour, min,
     sec.

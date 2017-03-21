@@ -310,12 +310,12 @@ def corner(xs, bins=20, range=None, weights=None, color="k",
             ax = axes[i, i]
         # Plot the histograms.
         if smooth1d is None:
-            n, _, _ = ax.hist(x, bins=bins[i], weights=weights,
+            n, _, _ = ax.hist(x, bins=int(round(bins[i])), weights=weights,
                               range=range[i], **hist_kwargs)
         else:
             if gaussian_filter is None:
                 raise ImportError("Please install scipy for smoothing")
-            n, b = _np.histogram(x, bins=bins[i], weights=weights,
+            n, b = _np.histogram(x, bins=int(round(bins[i])), weights=weights,
                                 range=range[i])
             n = _gf(n, smooth1d)
             x0 = _np.array(zip(b[:-1], b[1:])).flatten()
