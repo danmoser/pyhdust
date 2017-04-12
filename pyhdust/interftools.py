@@ -813,7 +813,7 @@ def plot_pio_res(loic, oitype='PIO', outname=None, legend=True, fmt=['png'],
     axV.set_ylabel('V$^2$')
     axC.set_ylabel(r'$\phi_{123}$ (deg$.$)')
     axCr.set_ylabel(r'$\phi_{123}$(data-mod)/err')
-    axVr.set_ylabel(r'$\phi_{123}$(data-mod)/err')
+    axVr.set_ylabel(r'V$^2$(data-mod)/err')
     axB1.set_xlabel(r'$B_{\rm proj}$ (m)')
     axB2.set_xlabel(r'$B_{\rm proj}/\lambda$')
     axCr.set_xlabel(r'$B_{\rm proj}/\lambda$')
