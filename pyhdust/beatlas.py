@@ -417,7 +417,7 @@ def createXDRsed(fsedlist, xdrpath, refclass, lbdarr, ignorelum=False,
     nq = number of parameters
     nmod = number of models
 
-    output units: 10**12 erg/s/Ang/cm2
+    output units: 10**-4 erg/s/Ang/cm2
     """
     if pol:
         ignorelum = True
@@ -434,7 +434,9 @@ def createXDRsed(fsedlist, xdrpath, refclass, lbdarr, ignorelum=False,
         m.readfs2ob(pol=pol)
         if not ignorelum:
             ifact = m.get_lum() * _phc.Lsun.cgs / (4 * _np.pi * 
-                (10 * _phc.pc.cgs)**2) * 1e8
+                (10 * _phc.pc.cgs)**2) * 1e4 * 1e4
+        # 1e4 = from erg/s/um2/um to erg/s/cm$^{2}$/Ang
+        # 1e4 = to deliver 10**-4 erg/s/Ang/cm2
         for j in range(nob):
             listpar = _np.vstack(( listpar, [ getattr(m, it) for it in 
                 refclass.vdict.keys()]+[ m.obs[j] ] ))
@@ -468,6 +470,43 @@ def createXDRsed(fsedlist, xdrpath, refclass, lbdarr, ignorelum=False,
     f0.write( _struct.pack(stfmt, *listpar.flatten()) )
     stfmt = '>{0}f'.format(nlbd*nmod)
     f0.write( _struct.pack(stfmt, *models.flatten()) )
+    f0.close()
+    print('# XDR file {0} saved!'.format(xdrpath))
+    return
+
+
+def create_custom_sed(xdrpath, listpar, lbdarr, minfo, models):
+    """ Create the generic SED XDR release.
+
+    nob = (individual) number of observers
+    listpar = parameters of each model
+    nq = number of parameters
+    nmod = number of models
+
+    output units: 10**-4 erg/s/Ang/cm2
+    """
+    nmod = len(minfo)
+    nq = len(minfo[0])
+    nlbd = len(lbdarr)
+    #
+    lplen = [len(i) for i in listpar]
+    #
+    lbdarr = _np.array(lbdarr)
+    minfo = _np.array(minfo)
+    lbdarr = _np.array(lbdarr)
+    f0 = open(xdrpath, 'wb')
+    stfmt = '>{0}l'.format(3)
+    f0.write( _struct.pack(stfmt, nq, nlbd, nmod) )
+    stfmt = '>{0}l'.format(nq)
+    f0.write( _struct.pack(stfmt, *_np.array(lplen)) )
+    for i in range(nq):
+        stfmt = '>{0}f'.format(lplen[i])
+        f0.write( _struct.pack(stfmt, *listpar[i].flatten()) )
+    stfmt = '>{0}f'.format(nlbd)
+    f0.write( _struct.pack(stfmt, *lbdarr))
+    stfmt = '>{0}f'.format((nq+nlbd)*nmod)
+    tmp = _np.hstack((minfo, models))
+    f0.write( _struct.pack(stfmt, *tmp.flatten()) )
     f0.close()
     print('# XDR file {0} saved!'.format(xdrpath))
     return
@@ -548,7 +587,7 @@ def readBAsed(xdrpath, quiet=False):
             print('# XDR {0} completely read!'.format(xdrpath))
     else:
         _warn.warn('# XDR {0} not completely read!\n# length '
-            'difference is {0}'.format(xdrpath, (len(f)-ixdr)/4) )
+            'difference is {1}'.format(xdrpath, (len(f)-ixdr)/4) )
     # 
     return listpar, lbdarr, models[:, 0:nq], models[:, nq:]
 
@@ -587,21 +626,24 @@ def densBAnorm(r01, M, issig0=True):
     """
     if M < 3.8 or M > 14.6:
         raise ValueError('# Wrong M at bat.normdens() !')
-    vmin = 0.02/2.5
+    vmin = 0.02/1.5
     r01 = _np.array(r01)
     if issig0:
         r01[_np.where(r01 < vmin)] = vmin
 
     # Completo, convergido etapa1, com DEPENDENCIA do vizinho inferior
-    x = [4.2, 4.8, 5.5, 6.4, 7.7, 8.6, 9.6, 10.8]
-    y = [0.05, 0.12, 0.28, 0.28, 0.68, 1.65, 1.65, 4]
+    # x = [4.2, 4.8, 5.5, 6.4, 7.7, 8.6, 9.6, 10.8]
+    # y = [0.05, 0.12, 0.28, 0.28, 0.68, 1.65, 1.65, 4]
 
     # Completo, convergido etapa2, com DEPENDENCIA do vizinho inferior
     # x = [4.2, 4.8, 5.5, 6.4, 7.7, 8.6, 9.6, 10.8]
     # y = [0.05, 0.12, 0.28, 0.40, 0.68, 1.65, 2.46, 4]
 
+    x = [3.8, 4.2, 4.8, 5.5, 6.4, 7.7, 8.6, 9.6, 10.8, 12.5, 14.6]
+    y = [0.05, 0.12, 0.28, 0.40, 0.68, 1.65, 1.65, 4.00, 4.00, 4.00, 4.00]
+
     d = 7
-    x = _np.array(x) + 10**-d
+    x = _np.array(x)  # + 10**-d
     vmax = _np.interp(M, x, y)
     if issig0:
         return _np.round( _np.log(r01/vmin)/_np.log(vmax/vmin), d)

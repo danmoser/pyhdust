@@ -378,12 +378,12 @@ def data2fitscube(data, obs, lbdc, xmax, dist, zoom=0, outname='model',
     hdulist[0].header['CDELT2'] = (ang_per_pixel, ucdelt)
     hdulist[0].header['CDELT3'] = ((lbdc[-1] - lbdc[0]) / len(lbdc), ulbd)
     hdulist[0].header['CRVAL3'] = (lbdc[0], ulbd)
-    hdulist[0].header['NAXIS1'] = len(imgs)
-    hdulist[0].header['NAXIS2'] = len(imgs[0])
-    hdulist[0].header['CRPIX1'] = len(imgs) / 2.
-    hdulist[0].header['CRPIX2'] = len(imgs[0]) / 2.
-    hdulist[0].header['CPPIX1'] = len(imgs) / 2
-    hdulist[0].header['CPPIX2'] = len(imgs[0]) / 2
+    hdulist[0].header['NAXIS1'] = len(imgs[1])
+    hdulist[0].header['NAXIS2'] = len(imgs[2])
+    hdulist[0].header['CRPIX1'] = len(imgs[1]) / 2.
+    hdulist[0].header['CRPIX2'] = len(imgs[2]) / 2.
+    hdulist[0].header['CPPIX1'] = len(imgs[1]) / 2
+    hdulist[0].header['CPPIX2'] = len(imgs[2]) / 2
     hdulist[0].header['CROTA2'] = (float('{0:.3f}'.format(orient)), 'degrees')
     if lum != 0:
         hdulist[0].header['BUNIT'] = '10^-17 erg/s/cm^2/Ang'
@@ -617,7 +617,7 @@ class oiClass(object):
             else:
                 tlist.append(['unnamed']*n)
             for st in vi.station:
-                if st.sta_name not in self.idt:
+                if any(x == st.sta_name for x in self.idt):
                     self.idt = _np.append(self.idt, st.sta_name)
             u = vi.ucoord
             v = vi.vcoord
@@ -718,8 +718,23 @@ class oiClass(object):
                 self.vlbm = _np.array(lbm) 
             # else:
             #     self.vlbm = _np.array([2.21e-6])               
-            self.v = _np.empty(0)
-            self.vp = _np.empty(0)
+            # self.v = _np.empty(0)
+            # self.vp = _np.empty(0)
+            #
+            tlist_v = []
+            tlist_vp = []
+            for i in range(len(self.vB)):
+                if iscube:
+                    img = imgs[_phc.find_nearest(self.vlbm, self.vlb[i], 
+                        idx=True)]
+                _, v, vp = fastnumvis(img, self.vlb[i], self.vB[i], 
+                    self.vPA[i], rpx, PAdisk=PAdisk)
+                tlist_v.extend([v])
+                tlist_vp.extend([vp])
+            self.v = _np.array(tlist_v)
+            self.ve = _np.zeros(_np.shape(tlist_v))*_np.NaN
+            self.vp = _np.array(tlist_vp)
+            self.vpe = _np.zeros(_np.shape(tlist_vp))*_np.NaN
         return
 
 
@@ -2173,7 +2188,7 @@ def printinfo(file, extract=False):
 
 
 def plot_oifits(oidata, ffile='last_run', fmt=['png'], xlim=None,
-    legend=True):
+    legend=True, outfold="./"):
     """ Standard observational log for AMBER
 
     If the file starts with "PRODUCT_", it searchs for the specs in the "AVG"
@@ -2232,10 +2247,10 @@ def plot_oifits(oidata, ffile='last_run', fmt=['png'], xlim=None,
         if xlim is None:
             xmin = None
             xmax = None
-            xmin = _np.amin(_np.append(1e6 * vis.wavelength.eff_wave[
-                _np.where(vis.flag is False)], xmax))
-            xmax = _np.amax(_np.append(1e6 * vis.wavelength.eff_wave[
-                _np.where(vis.flag is False)], xmin))
+            xmin = _np.min(vis.wavelength.eff_wave[
+                _np.where(vis.flag == False)])*1e6
+            xmax = _np.max(vis.wavelength.eff_wave[
+                _np.where(vis.flag == False)])*1e6
             xlim = (xmin, xmax)
         u = vis.ucoord
         v = vis.vcoord
@@ -2255,7 +2270,7 @@ def plot_oifits(oidata, ffile='last_run', fmt=['png'], xlim=None,
     if legend:
         ax2.legend(prop={'size': 8}, numpoints=1, bbox_to_anchor=(-0.25, 1.0))
     # ax3 = dif.phases, RIGHT COLUMN
-    plotid = (5,2,3)
+    plotid = [5, 2, 3]
     names = []
     colorid = 0
     yrange = [0, 0]
@@ -2283,7 +2298,7 @@ def plot_oifits(oidata, ffile='last_run', fmt=['png'], xlim=None,
         #    title += ', %s'%(name)
         # ax1.set_title(title)
         # ax1.set_ylabel('Differential phase')
-        plotid += 2
+        plotid[-1] += 2
         # ax3.get_xaxis().set_visible(False)
         ax3.get_xaxis().set_ticklabels([])
         _plt.grid(b=True, linestyle=':', alpha=alp)
@@ -2293,7 +2308,7 @@ def plot_oifits(oidata, ffile='last_run', fmt=['png'], xlim=None,
     colorid = 3
     for t3 in oidata.t3:
         ax5 = fig.add_subplot(5, 2, 10)
-        if (t3.station[0] and t3.station[1] and  t3.station[2]):
+        if (t3.station[0] and t3.station[1] and t3.station[2]):
             label = t3.station[0].sta_name + t3.station[1].sta_name + \
                 t3.station[2].sta_name 
         else:
@@ -2312,7 +2327,7 @@ def plot_oifits(oidata, ffile='last_run', fmt=['png'], xlim=None,
     _plt.setp( ax5.xaxis.get_majorticklabels(), rotation=-35 )
     _plt.grid(b=True, linestyle=':', alpha=alp)
     # ax4 = visibilities, LEFT COLUMN
-    plotid = (5,2,4)
+    plotid = [5, 2, 4]
     names = []
     colorid = 0
     yrange = [1, 0]
@@ -2343,7 +2358,7 @@ def plot_oifits(oidata, ffile='last_run', fmt=['png'], xlim=None,
             # title += ', %s'%(name)
         # ax1.set_title(title)
         # ax1.set_ylabel('Differential phase')
-        # plotid += 2
+        plotid[-1] += 2
         ax4.get_xaxis().set_ticklabels([])
         _plt.grid(b=True, linestyle=':', alpha=alp)
     # ax1 = Line profile
@@ -2368,7 +2383,9 @@ def plot_oifits(oidata, ffile='last_run', fmt=['png'], xlim=None,
         ax1.set_ylabel('Norm. flux')
         _plt.setp( ax1.xaxis.get_majorticklabels(), rotation=-35 )
         _plt.grid(b=True, linestyle=':', alpha=alp)
-    _phc.outfld()
+    # TODO: output folder + Windows compatibility
+    if not _os.path.exists(outfold):
+        _os.mkdir(outfold)
     dir, name = _phc.trimpathname(ffile)
     name = _phc.rmext(name)
     # _plt.savefig('hdt/{}_{}.png'.format(hdrinfo[0], hdrinfo[2]), 
@@ -2377,7 +2394,8 @@ def plot_oifits(oidata, ffile='last_run', fmt=['png'], xlim=None,
     _plt.subplots_adjust(
         left=0.12, right=0.95, top=0.96, bottom=0.09, hspace=.009, wspace=.32)
     for suf in fmt:
-        _plt.savefig('hdt/{0}.{1}'.format(name, suf), transparent=True)
+        _plt.savefig('{2}/{0}.{1}'.format(name, suf, outfold), 
+            transparent=True)
     _plt.close()
     return
 

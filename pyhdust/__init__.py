@@ -37,7 +37,7 @@ try:
 except ImportError:
     _warn.warn('# matplotlib, pyfits, six and/or scipy module not installed!!')
 
-__version__ = '1.1.8'
+__version__ = '1.2.0'
 __release__ = "Stable"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -1379,7 +1379,7 @@ def diskcalcs(M, Req, T, alpha, R0, mu, n0, Rd):
     print('Valid sigma (1)?: {0}'.format(round(sigp / sig) == 1))
     print('Valid sigma (2)?: {0}'.format(round(rho0 / rho0p) == 1))
     print('rho0  = {0:.2e} g/cm3'.format(rho0))
-    print('sigma0= {0:.3f} g/cm2'.format(sig))
+    print('sigma0= {0:.4f} g/cm2'.format(sig))
     print('Mdot  = {0:.2e} Msun/yr'.format(Mdot / _phc.Msun.cgs * _phc.yr.cgs))
     print('Mdisk0~ {0:.2e} Msun [#from sig0, A.13]'.format(Mdisk / 
         _phc.Msun.cgs))
