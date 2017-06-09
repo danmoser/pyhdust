@@ -37,6 +37,7 @@ from pyhdust.spectools import linfit as _linfit
 import copy as _copy
 from six import string_types as _strtypes
 import warnings as _warn
+from array import array as _array
 
 try:
     import matplotlib as _mpl
@@ -95,7 +96,7 @@ def imshowl(img, cmap='gist_heat', origin='lower'):
     return
 
 
-def readmap(mapfile, quiet=False):
+def readmap(mapfile, quiet=False, old=False):
     r"""
     Read *Hdust* MAP or MAPS files.
 
@@ -137,8 +138,9 @@ def readmap(mapfile, quiet=False):
     ixdr += 4 * 4
     # nf no IDL estah como DOUBLE, mas com certea eh float ou int...
     # caso contrario nm nao faz sentido.
-    nf = _struct.unpack('>f', f[ixdr:ixdr + 1 * 4])[0]
-    ixdr += 1 * 4
+    if not old:
+        nf = _struct.unpack('>f', f[ixdr:ixdr + 1 * 4])[0]
+        ixdr += 1 * 4
     nm = _struct.unpack('>l', f[ixdr:ixdr + 1 * 4])[0]
     ixdr += 1 * 4
 
