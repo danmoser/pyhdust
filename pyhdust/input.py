@@ -416,7 +416,7 @@ class HdustMod(object):
 
     def get_lum(self):
         if _os.path.splitext(self.fname)[1] == '.log':
-            logname = self.name
+            logname = self.fname
         else:
             bdir = self.proj
             if bdir == _os.path.split(_os.getcwd())[1]:
@@ -428,8 +428,8 @@ class HdustMod(object):
                     self.suf + '*.log'))
                 logname = [l for l in loglist if _os.path.getsize(l) > 500]
                 if len(logname) == 0:
-                    raise LookupError('Not found an equivalent to {0}'.format(
-                        logname))
+                    raise LookupError('Not found an log file to {0}'.format(
+                        self.fname))
                 logname = logname[0]
         #
         self.lum = _phc.fltTxtOccur('L =', open(logname).read().split('\n'))

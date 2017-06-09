@@ -454,6 +454,7 @@ def createXDRsed(fsedlist, xdrpath, refclass, lbdarr, ignorelum=False,
     if len(chk) > 0:
         listpar = _np.delete(listpar, chk, axis=1)
     nq = len(listpar[0])
+    print(nq, _np.shape(listpar), _np.shape(models))
     #
     intervals = _np.zeros(( nq, 2 ))
     intervals[:, 0] = _np.min(listpar, axis=0)
@@ -462,6 +463,7 @@ def createXDRsed(fsedlist, xdrpath, refclass, lbdarr, ignorelum=False,
     f0 = open(xdrpath, 'wb')
     stfmt = '>{0}l'.format(3)
     f0.write( _struct.pack(stfmt, nq, nlbd, nmod) )
+    print(stfmt, nq, nlbd, nmod)
     stfmt = '>{0}f'.format(nq*2)
     f0.write( _struct.pack(stfmt, *intervals.flatten()) )
     stfmt = '>{0}f'.format(nlbd)
