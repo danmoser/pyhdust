@@ -617,13 +617,15 @@ def keys_values(keys, text, delimiter='_'):
 
         print( phc.keys_values(keys, text) )
     """
-    d = delimiter
     vals = []
     for k in keys:
-        afterk = text[text.find(d+k)+len(d+k):]
-        vals.append( afterk[:afterk.find(d)] )
-    if len(vals) == 1:
-        vals = vals[0]
+        rule = ".*{0}{1}([0-9.e+-]+)[{0}\.].*".format(delimiter, k)
+        out = _re.findall(rule, text, flags=_re.DOTALL)
+        if len(out) == 1:
+            vals += [out[0]]
+        else:
+            vals += [""]
+            _warn("# Invalid keys for {0}".format(text))
     return vals
 
 

@@ -1869,7 +1869,123 @@ def plot_line_str(fig, ax, lbc='', ylabel='', fs=14, xlim=None, dlim=None,
     return fig, ax
 
 
-def spec_time(speclist, lbc=6562.8, fmt=['png', 'pdf'], outname=None, 
+def spec_time(speclist, lbc=6562.8, ref_spec=("/data/Dropbox/work/"
+    "sci_16-15aeri/alpEri_FEROS_2000AVE.mt"), mod_lbc=.656461, MJDref=None,
+    mod_ref=("/data/Dropbox/work/sci_16-15aeri/"
+        "fullsed_mod03_VDDn0_1p4e12_Be_aeri2014.sed2"), 
+    fmt=['png', 'pdf'], outname=None, cmapn='inferno', hwidth=1000., 
+    outpath='', figsize=(5, 7), ysh=0.01):
+    """ Plot specs over time as suggested by Rivi.
+
+    ``speclist`` is an array of strings to the path of the `*.fits` files.
+
+    ``ref_spec`` is a reference `*.fits` and ``mod_ref`` an hdust reference 
+    model. They are ignored if the path is not found.is
+
+    ``ysh`` control the vertical separation of the profiles.
+     """
+    if outname is None or outname is "":
+        outname = _phc.dtflag()
+    MJDs = [_np.inf, 0]
+    for sp in speclist:
+        wl, flux, MJD, dateobs, datereduc, fitsfile = loadfits(sp)
+        if MJD < MJDs[0]:
+            MJDs[0] = MJD
+        if MJD > MJDs[1]:
+            MJDs[1] = MJD
+    if MJDref is None:
+        MJDref = MJDs[0]    
+    elif MJDs[0] > MJDref:
+        MJDs[0] = MJDref
+    # Plot
+    extrem = [_np.inf, 0]
+    fig, ax = _plt.subplots()
+    for sp in speclist:
+        wl, flux, MJD, dateobs, datereduc, fitsfile = loadfits(sp)
+        vel, flux = lineProf(wl, flux, lbc, hwidth=hwidth)
+        if len(flux) == 0:
+            raise NameError('Wrong lbc in spt.spe')
+        if cmapn is not None:
+            cor = _phc.gradColor([MJD], min=MJDs[0], max=(MJDs[1]+
+                0.1*(MJDs[1]-MJDs[0])), cmapn=cmapn)[0]
+        else:
+            cor = 'k'
+        # print(MJD, MJDs, extrem, ysh, (MJD-MJDs[0])*ysh, flux, sp)
+        ax.plot(vel, flux+(MJD-MJDs[0])*ysh, color=cor)
+        if _np.max(flux+(MJD-MJDs[0])*ysh) > extrem[1]:
+            extrem[1] = _np.max(flux+(MJD-MJDs[0])*ysh)
+        if _np.min(flux+(MJD-MJDs[0])*ysh) < extrem[0]:
+            extrem[0] = _np.min(flux+(MJD-MJDs[0])*ysh)
+    print(extrem)
+    if _os.path.exists(ref_spec):
+        wl, flux, MJD, dateobs, datereduc, fitsfile = loadfits(ref_spec)
+        vel, flux = lineProf(wl, flux, lbc, hwidth=hwidth)
+        ax.text(650., 0.8, 'refenrence', horizontalalignment='center', 
+            verticalalignment='center')  # , transform=ax.transAxes)
+        ax.plot(vel, flux+(MJDref-MJDs[0])*ysh, color='k', ls=':')
+        # print(MJDref, MJDs, ysh, extrem, _np.min(flux), _np.max(flux))
+        if _np.min(flux+(MJDref-MJDs[0])*ysh) < extrem[0]:
+            extrem[0] = _np.min(flux+(MJDref-MJDs[0])*ysh)
+    if _os.path.exists(mod_ref):
+        s2d = _hdt.readfullsed2(mod_ref)
+        vel, flux = lineProf(s2d[4, :, 2], s2d[4, :, 3], mod_lbc, 
+            hwidth=hwidth)
+        ax.plot(vel, flux+(56910-MJDs[0])*ysh, color='k', ls='--')
+        ax.text(800, 1.06+(56910-MJDs[0])*ysh, 'model', 
+        horizontalalignment='center', verticalalignment='center') 
+    ax.set_xlabel(r'Velocity (km s$^{-1}$)')
+    ax.set_ylabel(r'Julian Day - 2400000.5')
+    ax.set_ylim(extrem)
+    ax.set_xlim([-hwidth, hwidth])
+    # ax.set_yticks(_np.arange(56300, 57000+100, 100))
+    yref = [1., 1+_np.diff(MJDs)*ysh]
+    # yMJDs = _np.arange(56300, 57100, 100)
+    yMJDs = _np.arange(MJDs[0], MJDs[1], 100)
+    ax.set_yticks(list(_phc.renormvals(yMJDs, MJDs, yref)))
+    ax.set_yticklabels(yMJDs, rotation='vertical')
+    fig.set_size_inches(figsize)
+    fig.subplots_adjust(left=0.1, right=0.94, top=0.99, bottom=0.04)
+    ax.minorticks_on()
+    ax3 = ax.twinx()
+    ax3.set_yticks(list(_phc.renormvals(yMJDs, MJDs, yref)))
+    ax3.set_yticklabels([])
+    ax3.minorticks_on()
+    ax2 = ax.twinx()
+    ax2.spines['right'].set_position(('axes', 1.05))
+    ax2.set_ylabel('Civil date')
+    # dtminticks = _phc.gentkdates(56201., 57023., 1, 'm')
+    dtminticks = _phc.gentkdates(MJDs[0], MJDs[1], 1, 'm')
+    i = 1
+    # dtticks = _phc.gentkdates(56201., 57023., 3, 'm')
+    dtticks = _phc.gentkdates(MJDs[0], MJDs[1], 3, 'm')
+    mjdticks = [_jdcal.gcal2jd(date.year, date.month, date.day)[1] for date in 
+        dtticks]
+    while dtticks[0] not in dtminticks:
+        dtminticks = _phc.gentkdates(yMJDs[0]+i, yMJDs[-1], 1, 'm')
+        i += 1
+    minjdticks = [_jdcal.gcal2jd(date.year, date.month, date.day)[1] for date 
+        in dtminticks]
+    ax2.set_yticks(list(_phc.renormvals(mjdticks, MJDs, yref)))
+    ax2.set_yticks(list(_phc.renormvals(minjdticks, MJDs, yref)), minor=True)
+    xlabs = [date.strftime('%Y-%m-%d') for date in dtticks]
+    # xlabs[1::2] = ['']*len(xlabs[1::2])
+    ax2.set_yticklabels(xlabs, rotation='vertical')
+    ax2.set_ylim(extrem)
+    ax3.set_ylim(extrem)
+    ax.xaxis.set_tick_params(length=8, width=1.5)
+    ax.xaxis.set_tick_params(length=6, which='minor')
+    ax.yaxis.set_tick_params(length=4, which='minor')
+    ax.yaxis.set_tick_params(length=8, width=1.5)
+    ax2.yaxis.set_tick_params(length=4, which='minor')
+    ax2.yaxis.set_tick_params(length=8, width=1.5)
+    ax3.yaxis.set_tick_params(length=4, which='minor')
+    ax3.yaxis.set_tick_params(length=8, width=1.5)
+        # , fontsize=10)
+    _phc.savefig(fig, figname=outpath+outname, fmt=fmt)
+    return
+
+
+def spec_time_Achernar(speclist, lbc=6562.8, fmt=['png', 'pdf'], outname=None, 
     cmapn='inferno', hwidth=1000., outpath='', figsize=(5, 15), ysh=0.01):
     """ Plot specs over time as suggested by Rivi """
     if outname is None or outname is "":
