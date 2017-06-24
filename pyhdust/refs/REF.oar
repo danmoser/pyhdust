@@ -1,6 +1,6 @@
 #!/bin/bash
 #OAR -n hdust_dmf
-#OAR -l /cpu=12,walltime=24:00:00
+#OAR -l /core=12,walltime=24:00:00
 #OAR -p gpu='NO'
 #OAR -O out.%jobid%
 #OAR -E err.%jobid%

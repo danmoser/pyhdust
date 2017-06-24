@@ -17,6 +17,7 @@ for the projects.
 """
 from __future__ import print_function
 import os as _os
+import re as _re
 import numpy as _np
 from glob import glob as _glob
 from itertools import product as _product
@@ -891,7 +892,7 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'],
             f0.writelines('qsub {0}/{1}s/{2}\n'.format(proj, sel, outname))
         elif sel == 'oar':
             wout[2] = wout[2].replace('12', '{0}'.format(int(round(
-                nodes/6.))))
+                nodes))))
             wout[2] = wout[2].replace('24:0:0', '{0}'.format(walltime))
             wout[10] = wout[10].replace('hdust_bestar2.02.inp', '{0}/{1}'.
             format(proj, mod.replace('.txt', '.inp')))
@@ -1483,6 +1484,119 @@ def makeCSGrid_bistabWind1Dust(modn='01', renv=[18.6], rcs=[5.],
         _os.chdir(path0)
     # END PROGRAM
     return
+
+
+def check_inp(mods=None, step1=["step1", 20], step1_ref=["step1_refine", 30],
+    cust_sim=[["SED", "SED"]], ignore_comm=True):
+    """ To be executed in the PROJECT folder. 
+
+    ``mods`` = array of model folders. Ex: ["mod01", "mod02"]. ``None`` 
+    do it for all.
+
+    ``cust_sim`` = specifies a pair of *simulation-prefix* to be check (by 
+    default, these are equal).
+
+    ``ignore_comm`` = ignore already comments simulations inputs.
+
+    WARNING: It assumes that *SUFFIX* is consistent with filename.
+    """
+    if mods is None:
+        mods = _glob("mod*")
+    rule = (r"^(?![#!])[A-Za-z0-9'\"\-_+\. =]*SIMULATION.*?=.*?"
+        "([A-Za-z0-9_-]+).*?")
+    if ignore_comm is False:
+        rule = (r"SIMULATION.*?=.*?([A-Za-z0-9_-]+).*?")
+    for m in mods:
+        inps = _glob(_os.path.join(m, 'mod*.inp'))
+        for i in inps:
+            modname = _os.path.split(i)[1]
+            modname = _os.path.splitext(modname)[0]
+            f0 = open(i).read().split("\n")
+            out = _re.findall(rule, open(i).read(), flags=_re.M)
+            for sim in out:
+                if sim == step1[0]:
+                    chk = sorted(_glob(_os.path.join(m, "{0}*.temp".format(
+                        modname))))
+                    print(chk)
+                    if len(chk) > 0:
+                        last = chk[-1][-7:-5]
+                        print(last)
+                        if int(last) >= step1[1]:
+                            for j in range(len(f0)):
+                                if f0[j].find(sim) > 0:
+                                    f0[j] = "! "+f0[j]
+                                    if f0[j].upper().find("SUFFIX") > -1:
+                                        break
+                                    k = j
+                                    while f0[k].upper().find("SUFFIX") == -1:
+                                        k -= 1
+                                        f0[k] = "! "+f0[k]
+                                    k = j
+                                    while f0[k+1].upper().find("SUFFIX") == -1:
+                                        f0[k+1] = "! "+f0[k+1]
+                                        k += 1
+                                    break
+                elif sim == step1_ref[0]:
+                    chk = sorted(_glob(_os.path.join(m, "{0}*.temp".format(
+                        modname))))
+                    if len(chk) > 0:
+                        last = chk[-1][-7:-5]
+                        if int(last) >= step1[1]:
+                            for j in range(len(f0)):
+                                if f0[j].find(sim) > 0:
+                                    f0[j] = "! "+f0[j]
+                                    if f0[j].upper().find("SUFFIX") > -1:
+                                        break
+                                    k = j
+                                    while f0[k].upper().find("SUFFIX") == -1:
+                                        k -= 1
+                                        f0[k] = "! "+f0[k]
+                                    k = j
+                                    while f0[k+1].upper().find("SUFFIX") == -1:
+                                        f0[k+1] = "! "+f0[k+1]
+                                        k += 1
+                                    break
+                else:
+                    prefix = sim
+                    for c in cust_sim:
+                        if c[0] == sim:
+                            prefix = c[1]
+                    chk = _glob(_os.path.join(m, "{0}*{1}*.sed2".format(prefix,
+                        modname)))
+                    print(_os.path.join(m, "{0}*{1}*.sed2".format(prefix,
+                        modname)))
+                    if len(chk) == 1:
+                        for j in range(len(f0)):
+                            if f0[j].find(sim) > 0:
+                                    f0[j] = "! "+f0[j]
+                                    if f0[j].upper().find("SUFFIX") > -1:
+                                        break
+                                    k = j
+                                    while f0[k].upper().find("SUFFIX") == -1:
+                                        k -= 1
+                                        f0[k] = "! "+f0[k]
+                                    k = j
+                                    while f0[k+1].upper().find("SUFFIX") == -1:
+                                        f0[k+1] = "! "+f0[k+1]
+                                        k += 1
+                                    break
+                    elif len(chk) > 1:
+                        _warn("Multiple outputs for "+prefix+'*'+modname)
+            f1 = open(i, "w")
+            f1.writelines("\n".join(f0))
+            f1.close()
+            found = False
+            for j in range(len(f0)):
+                if f0[j].upper().find("SUFFIX") == 0:
+                    found = True
+                    break
+            if not found:
+                if _os.path.exists(_os.path.join("oars", modname+".oar")):
+                    print("# Removed "+modname+".oar")
+                    _os.remove(_os.path.join("oars", modname+".oar"))
+                _os.remove(_os.path.join("jobs", modname+".job"))
+    return 
+
 
 # MAIN ###
 if __name__ == "__main__":
