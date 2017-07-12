@@ -59,7 +59,7 @@ def sph_hyper_rej(res):
     return xx0[idx], yy0[idx], zz0[idx]
 
 
-def blobs_coords(db=2, rb=1./3, res=3, Req=1., phi0=0):
+def blobs_coords(db=2, rb=1./3, res=3, Req=1., phi0=0, beta=0.):
     """ 
     :param db: distance from stellar center to blob center (Req)
     :param rb: radius of the blob (sphere; Req) 
@@ -68,6 +68,7 @@ def blobs_coords(db=2, rb=1./3, res=3, Req=1., phi0=0):
     :param phi0: central position of the blob (in rad) 
     """
     x, y, z = sph_hyper_rej(res)
+    x, y, z = _phc.cart_rot(x, y, z, ang_xy=0., ang_yz=beta, ang_zx=0.)
     r, phi, th = _phc.cart2sph((x*rb+db), y*rb, z*rb)
     phi += phi0
     return r*Req, phi, th
@@ -189,10 +190,11 @@ def blobsdiskmodel_geo(phi0, Req=_phc.Rsun.cgs, rb=1/3., db=2., bres=3,
     Warning: only :math:`\phi` direction is checked (ie., coplanar overlap).
     :param beta: obliquity, in rad
     """
-    r1, phi1, th1 = blobs_coords(phi0=phi0, rb=rb, Req=Req, db=db, res=bres)
+    r1, phi1, th1 = blobs_coords(phi0=phi0, rb=rb, Req=Req, db=db, res=bres, 
+        beta=beta)
     xb1, yb1, zb1 = _phc.sph2cart(r1, phi1, th1)
     r2, phi2, th2 = blobs_coords(phi0=phi0+_np.pi, rb=rb, Req=Req, db=db, 
-        res=bres)
+        res=bres, beta=beta)
     xb2, yb2, zb2 = _phc.sph2cart(r2, phi2, th2)
     Vb = 4./3*_np.pi*(rb*Req)**3 
     dVb = _np.zeros(len(r1))+Vb/len(r1)
@@ -219,17 +221,18 @@ def blobsdiskmodel_geo(phi0, Req=_phc.Rsun.cgs, rb=1/3., db=2., bres=3,
 
 
 def blobsmodel_geo(phi0, Req=_phc.Rsun.cgs, rb=1/3., db=2., bres=3, 
-        nb=8e11):
+        nb=8e11, beta=0.):
     """ Doc
 
     :param overlap: disk and blob overlap each other? Default is `False`.
     Warning: only :math:`\phi` direction is checked (ie., coplanar overlap).
     :param beta: obliquity, in rad
     """
-    r1, phi1, th1 = blobs_coords(phi0=phi0, rb=rb, Req=Req, db=db, res=bres)
+    r1, phi1, th1 = blobs_coords(phi0=phi0, rb=rb, Req=Req, db=db, res=bres, 
+        beta=beta)
     xb1, yb1, zb1 = _phc.sph2cart(r1, phi1, th1)
     r2, phi2, th2 = blobs_coords(phi0=phi0+_np.pi, rb=rb, Req=Req, db=db, 
-        res=bres)
+        res=bres, beta=beta)
     xb2, yb2, zb2 = _phc.sph2cart(r2, phi2, th2)
     Vb = 4./3*_np.pi*(rb*Req)**3 
     dVb = _np.zeros(len(r1))+Vb/len(r1)
