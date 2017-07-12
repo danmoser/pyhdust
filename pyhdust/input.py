@@ -229,7 +229,7 @@ class Input(object):
                 reffile = 'REF.oar'
                 reps = ( (1, 'hdust_dmf', 'hd_'+'_'.join((self.proj, 
                     self.modn))), 
-                    (2, '12', int(round(self.ncore/6.))), 
+                    (2, '12', int(round(self.ncore/12.))), 
                     (2, '24:00:00', self.walltime), 
                     (10, 'hdust_bestar2.02.inp', '{0}\n\nprintf "{0}\\n\\n"'
                         ' >> $OAR_JOB_ID'.format(intname)),
@@ -892,7 +892,7 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'],
             f0.writelines('qsub {0}/{1}s/{2}\n'.format(proj, sel, outname))
         elif sel == 'oar':
             wout[2] = wout[2].replace('12', '{0}'.format(int(round(
-                nodes))))
+                nodes/12.))))
             wout[2] = wout[2].replace('24:0:0', '{0}'.format(walltime))
             wout[10] = wout[10].replace('hdust_bestar2.02.inp', '{0}/{1}'.
             format(proj, mod.replace('.txt', '.inp')))
@@ -1498,7 +1498,8 @@ def check_inp(mods=None, step1=["step1", 20], step1_ref=["step1_refine", 30],
 
     ``ignore_comm`` = ignore already comments simulations inputs.
 
-    WARNING: It assumes that *SUFFIX* is consistent with filename.
+    WARNING: It assumes that *SUFFIX* inside `inp` file is consistent with 
+    the filename. The function also removes the ``*.oar`` and ``*.job`` files.
     """
     if mods is None:
         mods = _glob("mod*")
@@ -1515,15 +1516,14 @@ def check_inp(mods=None, step1=["step1", 20], step1_ref=["step1_refine", 30],
             out = _re.findall(rule, open(i).read(), flags=_re.M)
             for sim in out:
                 if sim == step1[0]:
-                    chk = sorted(_glob(_os.path.join(m, "{0}*.temp".format(
-                        modname))))
-                    print(chk)
+                    chk = sorted(_glob(_os.path.join(m, "{0}*[0-9].temp".
+                        format(modname))))
                     if len(chk) > 0:
                         last = chk[-1][-7:-5]
-                        print(last)
                         if int(last) >= step1[1]:
                             for j in range(len(f0)):
-                                if f0[j].find(sim) > 0:
+                                if (_re.search(r"SIMULATION.*?=.*?" + sim + 
+                                r"[\"' \t\n]", f0[j]) is not None):
                                     f0[j] = "! "+f0[j]
                                     if f0[j].upper().find("SUFFIX") > -1:
                                         break
@@ -1537,13 +1537,14 @@ def check_inp(mods=None, step1=["step1", 20], step1_ref=["step1_refine", 30],
                                         k += 1
                                     break
                 elif sim == step1_ref[0]:
-                    chk = sorted(_glob(_os.path.join(m, "{0}*.temp".format(
-                        modname))))
+                    chk = sorted(_glob(_os.path.join(m, "{0}*[0-9].temp".
+                        format(modname))))
                     if len(chk) > 0:
                         last = chk[-1][-7:-5]
                         if int(last) >= step1[1]:
                             for j in range(len(f0)):
-                                if f0[j].find(sim) > 0:
+                                if (_re.search(r"SIMULATION.*?=.*?" + sim + 
+                                r"[\"' \t\n]", f0[j]) is not None):
                                     f0[j] = "! "+f0[j]
                                     if f0[j].upper().find("SUFFIX") > -1:
                                         break
@@ -1555,33 +1556,37 @@ def check_inp(mods=None, step1=["step1", 20], step1_ref=["step1_refine", 30],
                                     while f0[k+1].upper().find("SUFFIX") == -1:
                                         f0[k+1] = "! "+f0[k+1]
                                         k += 1
+                                        if k == len(f0)-1:
+                                            break
                                     break
                 else:
                     prefix = sim
                     for c in cust_sim:
                         if c[0] == sim:
                             prefix = c[1]
-                    chk = _glob(_os.path.join(m, "{0}*{1}*.sed2".format(prefix,
-                        modname)))
-                    print(_os.path.join(m, "{0}*{1}*.sed2".format(prefix,
+                    chk = _glob(_os.path.join(m, "{0}_{1}*.sed2".format(prefix,
                         modname)))
                     if len(chk) == 1:
                         for j in range(len(f0)):
-                            if f0[j].find(sim) > 0:
-                                    f0[j] = "! "+f0[j]
-                                    if f0[j].upper().find("SUFFIX") > -1:
-                                        break
-                                    k = j
-                                    while f0[k].upper().find("SUFFIX") == -1:
-                                        k -= 1
-                                        f0[k] = "! "+f0[k]
-                                    k = j
-                                    while f0[k+1].upper().find("SUFFIX") == -1:
-                                        f0[k+1] = "! "+f0[k+1]
-                                        k += 1
+                            if (_re.search(r"SIMULATION.*?=.*?" + sim + 
+                            r"[\"' \t\n]", f0[j]) is not None):
+                                f0[j] = "! "+f0[j]
+                                # print(f0[0])
+                                if f0[j].upper().find("SUFFIX") > -1:
                                     break
+                                k = j
+                                while f0[k].upper().find("SUFFIX") == -1:
+                                    k -= 1
+                                    f0[k] = "! "+f0[k]
+                                k = j
+                                while f0[k+1].upper().find("SUFFIX") == -1:
+                                    f0[k+1] = "! "+f0[k+1]
+                                    k += 1
+                                    if k == len(f0)-1:
+                                        break
+                                break
                     elif len(chk) > 1:
-                        _warn("Multiple outputs for "+prefix+'*'+modname)
+                        _warn.warn("Multiple outputs for "+prefix+'_'+modname)
             f1 = open(i, "w")
             f1.writelines("\n".join(f0))
             f1.close()
@@ -1594,7 +1599,8 @@ def check_inp(mods=None, step1=["step1", 20], step1_ref=["step1_refine", 30],
                 if _os.path.exists(_os.path.join("oars", modname+".oar")):
                     print("# Removed "+modname+".oar")
                     _os.remove(_os.path.join("oars", modname+".oar"))
-                _os.remove(_os.path.join("jobs", modname+".job"))
+                if _os.path.exists(_os.path.join("jobs", modname+".job")):
+                    _os.remove(_os.path.join("jobs", modname+".job"))
     return 
 
 

@@ -95,14 +95,59 @@ def disk_coords(dd=2, rd=1./3, res=11., Req=1., beta=0., phi0=0.):
     #  phi0=_np.pi/2 and ang_yz, one could directly use ang_zx.
     # x, y, z = _phc.cart_rot(x, y, z, ang_xy=0., ang_yz=0., ang_zx=beta)
     x, y, z = _phc.cart_rot(x, y, z, ang_xy=0., ang_yz=beta, ang_zx=0.)
-    r, phi, th = _phc.cart2sph(x*Req, y*Req, z*Req)
+    r, phi, th = _phc.cart2sph(x, y, z)
     phi += phi0
-    return r, phi, th
+    return r*Req, phi, th
 
 
 def idx_phi_blobdisk_coords(phib, rd, phid, thd):
-    idx = _np.where( (_np.cos(phid) < _np.min(_np.cos(phib))) | 
-        (_np.cos(phid) > _np.max(_np.cos(phib))) )
+    # idx = _np.where( (_np.cos(phid) < _np.min(_np.cos(phib))) | 
+    #     (_np.cos(phid) > _np.max(_np.cos(phib))) )
+    # return rd[idx], phid[idx], thd[idx]
+    # Function standard: always between 0 to 2pi
+    # if len(radcut)!= 2:
+    #     raise ValueError("len(`radcut`) != 2: {}".format(radcut))
+    # elif _np.min(radcut) == _np.max(radcut):
+    #     raise ValueError("delta-radcut > 0: {}".format(radcut))
+    tpi = 2*_np.pi
+    phib = _np.array([_np.min(phib), _np.max(phib)])
+    phib = _np.where(phib < 0, phib+tpi, phib)
+    phib = _np.where(phib > tpi, phib-tpi, phib)
+    if _np.diff(phib) > _np.pi:
+        phib = phib[::-1]
+    phid = _np.where(phid < 0, phid+tpi, phid)
+    phid = _np.where(phid > tpi, phid-tpi, phid)
+    if phib[0] < phib[1]:
+        # 350, 10
+        idx = _np.where( (phid < phib[0]) | (phid > phib[1]) )
+    else:
+        idx = _np.where( (phid < phib[0]) & (phid > phib[1]) )
+    return rd[idx], phid[idx], thd[idx]
+
+
+def idx_phi_disklimit_coords(radcut, rd, phid, thd):
+    """ Enter the coordinates of a 2*pi disk and cuts it with the limits of 
+    radcut
+
+    :param radcut: vector as [-np.pi/6, np.pi/6]
+    """
+    # Function standard: always between 0 to 2pi
+    if len(radcut)!= 2:
+        raise ValueError("len(`radcut`) != 2: {}".format(radcut))
+    elif _np.min(radcut) == _np.max(radcut):
+        raise ValueError("delta-radcut > 0: {}".format(radcut))
+    tpi = 2*_np.pi
+    radcut = _np.array(radcut)
+    radcut = _np.where(radcut < 0, radcut+tpi, radcut)
+    radcut = _np.where(radcut > tpi, radcut-tpi, radcut)
+    phid = _np.where(phid < 0, phid+tpi, phid)
+    phid = _np.where(phid > tpi, phid-tpi, phid)
+    print(radcut)
+    if radcut[0] < radcut[1]:
+        # 350, 10
+        idx = _np.where( (phid < radcut[0]) | (phid > radcut[1]) )
+    else:
+        idx = _np.where( (phid < radcut[0]) & (phid > radcut[1]) )
     return rd[idx], phid[idx], thd[idx]
 
 
@@ -139,6 +184,7 @@ def blobsdiskmodel_geo(phi0, Req=_phc.Rsun.cgs, rb=1/3., db=2., bres=3,
         overlap=False):
     """ Doc
 
+    :param rb: in Req units
     :param overlap: disk and blob overlap each other? Default is `False`.
     Warning: only :math:`\phi` direction is checked (ie., coplanar overlap).
     :param beta: obliquity, in rad
@@ -195,9 +241,36 @@ def blobsmodel_geo(phi0, Req=_phc.Rsun.cgs, rb=1/3., db=2., bres=3,
         _np.concatenate((dVb, dVb)), _np.concatenate((nb, nb)))
 
 
+def diskmodel_geo(phi0, Req=_phc.Rsun.cgs, rd=1/3., dd=2., dres=11, H=.1, 
+    beta=0., nd=8e11, radcut=[]):
+    """ Doc
+
+    :param rd: in Req units
+    :param beta: obliquity, in rad
+    :param radcut: vector as [[-np.pi/6, np.pi/6], [-np.pi/6+np.pi, 
+        np.pi/6+np.pi]]. ``[]`` returns a full (2*pi) disk (Radian units).
+    """
+    rD, phid, thd = disk_coords(rd=rd, Req=Req, dd=dd, res=dres, beta=beta,
+        phi0=phi0)
+    total_phi_disk = 2*_np.pi
+    for philim in radcut:
+        # Remove an interval from the disk model.
+        rD, phid, thd = idx_phi_disklimit_coords(philim, rD, phid, thd)
+        total_phi_disk -= _np.max(philim)-_np.min(philim)
+    area_d = (total_phi_disk/2.)*( (dd+rd)**2 - (dd-rd)**2 )    
+    Vd = area_d*H*Req**3
+    dVd = _np.zeros(len(rD))+Vd/len(rD)
+    nd = _np.zeros(len(rD))+nd
+    xd, yd, zd = _phc.sph2cart(rD, phid, thd)
+
+    return xd, yd, zd, rD, phid, thd, dVd, nd
+
+
 def blobs_cicle(phi_ar, irad, Req=_phc.Rsun.cgs, rb=1/3., db=2., bres=3, 
         nb=8e11):
-    """ doc 
+    """ Calculates the stokes parameters of blobsmodel over a full cycle
+
+    :param phi_ar: phi array (in rad; [0, 2pi))
     """
     for i in range(len(phi_ar)):
         phi0 = phi_ar[i]
@@ -213,7 +286,9 @@ def blobs_cicle(phi_ar, irad, Req=_phc.Rsun.cgs, rb=1/3., db=2., bres=3,
 def blobsdisk_cicle(phi_ar, irad, Req=_phc.Rsun.cgs, rb=1/3., db=2., bres=3, 
         nb=8e11, rd=1/3., dd=2., dres=11, H=.1, beta=0., nd=8e11, 
         overlap=False):
-    """ :param phi_ar: phi array (in rad; [0, 2pi))
+    """ Calculates the stokes parameters of blobs+disk model over a full cycle
+
+    :param phi_ar: phi array (in rad; [0, 2pi))
     """
     for i in range(len(phi_ar)):
         phi0 = phi_ar[i]
@@ -229,7 +304,7 @@ def blobsdisk_cicle(phi_ar, irad, Req=_phc.Rsun.cgs, rb=1/3., db=2., bres=3,
 
 # general 
 def angQU(Q, U, filter=True):
-    """ ### Q,U angles ### """
+    """ Calculate [Q, U] angles with filters* (avg-180 < degs > avg+180) """
     Q = _np.array(Q)
     U = _np.array(U)
     ind = _np.where(Q == 0)
@@ -255,7 +330,7 @@ def angQU(Q, U, filter=True):
 
 
 def mod2obs(Qmod, Umod, Qis, Uis, ths):
-    """ ### MODEL TO OBSERV ### 
+    """ MODEL TO OBSERV
 
     :param ths: theta sky in rad
     :param Qis: IS Q
@@ -381,7 +456,9 @@ def plot_QU_gd(x, y, Q, U, irad, Req):
 
 def plot_QU_bc(x, y, Q, U, irad, Req):
     """ using baricenter 
-    """
+
+    TODO: discover why it is not working
+    """ 
     fig2 = _plt.figure()
     lins, cols = (1, 2)
     gs = _gridspec.GridSpec(lins, cols)

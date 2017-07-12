@@ -370,7 +370,7 @@ def data2fitscube(data, obs, lbdc, xmax, dist, zoom=0, outname='model',
     #
     hdu = _pyfits.PrimaryHDU(imgs)
     hdulist = _pyfits.HDUList([hdu])
-    pixsize = 2 * xmax[0] / len(data[zoom, obs, 0, :, :])
+    pixsize = 2 * xmax[zoom] / len(data[zoom, obs, 0, :, :])
     ang_per_pixel = _np.double(pixsize * _phc.Rsun.cgs / (dist * _phc.pc.cgs))
     # *60.*60.*1000.*180./_np.pi)
     if deg:
@@ -1118,7 +1118,7 @@ def mapinterf(modf, im=0, obs=0, iflx=0, dist=10, PA=0., B=100., PAdisk=90.,
 
     output: lbdc, V2, DP (float arrays, as function of wavelength) """
     data, obslist, lbdc, Ra, xmax = readmap(modf, quiet=quiet)
-    pixsize = 2 * xmax[0] / _np.shape(data)[-1]
+    pixsize = 2 * xmax[im] / _np.shape(data)[-1]
     rad_per_pixel = _np.double(pixsize * 6.96E10 / (dist * 3.08567758E18))
     npts = len(lbdc)
     V2 = _np.zeros(npts)
