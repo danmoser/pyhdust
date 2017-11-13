@@ -143,7 +143,6 @@ def idx_phi_disklimit_coords(radcut, rd, phid, thd):
     radcut = _np.where(radcut > tpi, radcut-tpi, radcut)
     phid = _np.where(phid < 0, phid+tpi, phid)
     phid = _np.where(phid > tpi, phid-tpi, phid)
-    print(radcut)
     if radcut[0] < radcut[1]:
         # 350, 10
         idx = _np.where( (phid < radcut[0]) | (phid > radcut[1]) )
@@ -250,14 +249,16 @@ def diskmodel_geo(phi0, Req=_phc.Rsun.cgs, rd=1/3., dd=2., dres=11, H=.1,
 
     :param rd: in Req units
     :param beta: obliquity, in rad
-    :param radcut: vector as [[-np.pi/6, np.pi/6], [-np.pi/6+np.pi, 
-        np.pi/6+np.pi]]. ``[]`` returns a full (2*pi) disk (Radian units).
+    :param radcut: vector as [[1*np.pi/4, 3*np.pi/4], [5*np.pi/4, 7*np.pi/4]]. 
+        It must be around pi/2 and 3pi/2 for phase consistency. ``[]`` returns 
+        a full (2*pi) disk (Radian units).
     """
     rD, phid, thd = disk_coords(rd=rd, Req=Req, dd=dd, res=dres, beta=beta,
         phi0=phi0)
     total_phi_disk = 2*_np.pi
     for philim in radcut:
-        # Remove an interval from the disk model.
+        # Remove an interval from the disk model
+        philim = _np.array(philim)+phi0
         rD, phid, thd = idx_phi_disklimit_coords(philim, rD, phid, thd)
         total_phi_disk -= _np.max(philim)-_np.min(philim)
     area_d = (total_phi_disk/2.)*( (dd+rd)**2 - (dd-rd)**2 )    
@@ -275,13 +276,12 @@ def blobs_cicle(phi_ar, irad, Req=_phc.Rsun.cgs, rb=1/3., db=2., bres=3,
 
     :param phi_ar: phi array (in rad; [0, 2pi))
     """
+    stk = _np.zeros((len(phi_ar), 4))
     for i in range(len(phi_ar)):
         phi0 = phi_ar[i]
         x, y, z, r, phi, th, dV, ne = blobsmodel_geo(phi0, Req=Req, rb=rb, 
             db=db, bres=bres)
         istk = stokes(r, phi, th, dV=dV, ne=ne, irad=irad, Req=Req)
-        if i == 0:
-            stk = _np.zeros((len(phi_ar), 4))
         stk[i] = _np.array(istk).sum(axis=1)
     return stk.T
 
@@ -293,14 +293,31 @@ def blobsdisk_cicle(phi_ar, irad, Req=_phc.Rsun.cgs, rb=1/3., db=2., bres=3,
 
     :param phi_ar: phi array (in rad; [0, 2pi))
     """
+    stk = _np.zeros((len(phi_ar), 4))
     for i in range(len(phi_ar)):
         phi0 = phi_ar[i]
         x, y, z, r, phi, th, dV, ne = blobsdiskmodel_geo(phi0, Req=Req, rb=rb, 
             db=db, bres=bres, nb=nb, rd=rd, dd=dd, dres=dres, H=H, beta=beta, 
             nd=nd, overlap=overlap)
         istk = stokes(r, phi, th, dV=dV, ne=ne, irad=irad, Req=Req)
-        if i == 0:
-            stk = _np.zeros((len(phi_ar), 4))
+        stk[i] = _np.array(istk).sum(axis=1)
+    return stk.T
+
+
+def disk_cicle(phi_ar, irad, Req=_phc.Rsun.cgs, rd=1/3., dd=2., dres=11, 
+        H=.1, beta=0., nd=8e11, radcut=[]):
+    """ Calculates the stokes parameters of disk model over a full cycle
+
+    :param phi_ar: phi array (in rad; [0, 2pi))
+    :param radcut: vector as [[-np.pi/4, np.pi/4], [-np.pi/4+np.pi, 
+        np.pi/4+np.pi]]. ``[]`` returns a full (2*pi) disk (Radian units).
+    """
+    stk = _np.zeros((len(phi_ar), 4))
+    for i in range(len(phi_ar)):
+        phi0 = phi_ar[i]
+        x, y, z, r, phi, th, dV, ne = diskmodel_geo(phi0, Req=Req, rd=rd, 
+            dd=dd, dres=dres, H=H, beta=beta, nd=nd, radcut=radcut)
+        istk = stokes(r, phi, th, dV=dV, ne=ne, irad=irad, Req=Req)
         stk[i] = _np.array(istk).sum(axis=1)
     return stk.T
 

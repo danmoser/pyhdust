@@ -41,11 +41,12 @@ import struct as _struct
 import unicodedata as _unicdata
 
 try:
+    import csv as _csv
     import matplotlib.pyplot as _plt
     from matplotlib.ticker import AutoMinorLocator as _AutoMinorLocator
     from scipy import optimize as _optimize
 except ImportError:
-    ('matplotlib and/or scipy module not installed!!!')
+    ('matplotlib, csv and/or scipy module not installed!!!')
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -192,8 +193,8 @@ def flatten(list_, outlist=None):
 def wg_avg_and_std(values, sigma):
     """ Return the weighted average and standard deviation.
 
-    This IS NOT the problem of Wikipedia > Weighted_arithmetic_mean >
-        Weighted_sample_variance.
+    This IS NOT the problem of Wikipedia > Weighted_arithmetic_mean +
+        Weighted_sample_variance!
 
     average = _np.average(values, weights=weights)
     #Fast and numerically precise:
@@ -206,6 +207,57 @@ def wg_avg_and_std(values, sigma):
     """
     avg = _np.average(values, weights=1 / sigma)
     return (avg, _np.sqrt(_np.sum(sigma**2)) / len(values) )
+
+
+def wg_avg_t(t, y, yerr=None):
+    """ average weighted on ``t`` with optional ``yerr`` array.
+
+    Warning: If there is two (or more) ``y`` points for the same value of 
+    ``t``, all these points will be ignored.
+
+    INPUT: ``t``, ``y`` -- arrays with the same shape.
+
+    OUTPUT: average
+    """
+    idx = _np.argsort(t)
+    t = _np.array(t)[idx]
+    y = _np.array(y)[idx]
+    n = len(t)
+    if yerr is None:
+        yerr = _np.ones(n).astype(float)
+
+    dx = _np.diff(t)
+    avg = 0.
+    for i in range(n-1):
+        avg += dx[i]*(y[i+1]/yerr[i+1] + y[i]/yerr[i]) / \
+            (1./yerr[i] + 1./yerr[i+1])
+
+    return avg/_np.sum(dx)
+
+
+def fill_points(in_arr, dx, n=1):
+    """ Return a list of points to be filled in an array.
+
+    If the distance of two sucessive points is bigger than ``dx``, then ``n`` 
+        new points will be generated.
+
+    :param in_arr: Input array.
+    """ 
+    size = len(in_arr)
+    new_x = []
+    idx_extra = []
+    j = 0
+    for i in range(size-1):
+        new_x += [in_arr[i]]
+        j += 1
+        if abs(in_arr[i+1]-in_arr[i]) > dx:
+            npts = int(round(abs(in_arr[i+1]-in_arr[i])/dx))
+            tmp = list(_np.linspace(in_arr[i], in_arr[i+1], npts+n)[1:-1])
+            new_x += tmp
+            idx_extra += [k+j for k in range(len(tmp))]
+            j += len(tmp)
+    new_x += [in_arr[-1]]
+    return new_x, idx_extra
 
 
 def bindata(x, y, nbins=20, yerr=None, xlim=None, perc=0):
@@ -237,13 +289,13 @@ def bindata(x, y, nbins=20, yerr=None, xlim=None, perc=0):
         xmin = _np.min(x)
     else:
         xmin, xmax = xlim
-    shift = (xmax - xmin) / (nbins - 1)
+    shift = (xmax - xmin) / (nbins - 1.)
     tmpx = _np.arange(nbins) * shift + xmin
     tmpy = _np.zeros(nbins)
     tmpyerr = _np.zeros(nbins)
     idx = _np.zeros(nbins, dtype=bool)
     for i in range(nbins):
-        selx = _np.where( abs(x - tmpx[i]) <= shift / 2. )
+        selx = _np.where( abs(x - tmpx[i]) <= shift / 2.+1e-6 )
         if len(selx[0]) >= 1:
             if perc <= 0:
                 tmpx[i] = _np.average(x[selx])
@@ -261,14 +313,15 @@ def bindata(x, y, nbins=20, yerr=None, xlim=None, perc=0):
 
 
 def chi2calc(mod, obs, sig_obs=None, npar=1, fast=False):
-    """ Calculate the chi2 """
+    """ Calculate the chi2.
+
+    If `fast=False`, the function skips a NaN test in the arrays."""
+    if sig_obs is None:
+        sig_obs = _np.ones(len(obs))
     if not fast:
         nans, tmp = nan_helper(obs)
         obs = _np.array(obs)[~nans]
         mod = _np.array(mod)[~nans]
-    if sig_obs is None:
-        sig_obs = _np.ones(len(obs))
-    if not fast:
         sig_obs = _np.array(sig_obs)[~nans]
     return _np.sum( (mod - obs)**2 / sig_obs**2 ) / (len(sig_obs) - npar - 1)
 
@@ -304,7 +357,7 @@ def interLinND(X, X0, X1, Fx, disablelog=False):
     | INPUT:
     | X = position in with the interpolation is desired;
     | X0 = minimal values of the interval;
-    | X1 = maximum values of the inveral
+    | X1 = vmaximum values of the inveral
     | Fx = function values along the interval, ORDERED BY DIMENSTION.
     | Example: Fx = [F00, F01, F10, F11]
 
@@ -954,6 +1007,17 @@ def mas2deg(mas=1.):
 
 
 # Files manipulation
+def csvread(fname):
+    """ Read a CSV file and return it as a list (table).
+    """
+    out = []
+    with open(fname, 'rb') as f:
+        reader = _csv.reader(f)
+        for row in reader:
+            out += [row]
+    return out
+
+
 def fileread(fname, bin=False):
     rmode = 'r'
     if bin:
@@ -979,7 +1043,7 @@ def readfixwd(fname, wlims, chklims=True):
         wlims[0] = 0
     if chklims and wlims[0] != 0:
         wlims = [0] + wlims
-    if chklims and wlims[-1] < max(lsz)-1:
+    if chklims and wlims[-1] < vmax(lsz)-1:
         wlims += [max(lsz)]
     out = _np.chararray( (len(lines), len(wlims)-1), 
         itemsize=_np.max([ _np.max(_np.diff(wlims)), wlims[0] ]) )
@@ -1283,7 +1347,7 @@ def savefig(fig, figname=None, fmt=['png'], keeppt=False, dpi=80, transp=True):
     return
 
 
-def normGScale(val, min=None, max=None, log=False):
+def normGScale(val, vmin=None, vmax=None, log=False):
     """ Return the normalized values of a given array to 0 and 255 (gray 
     scale).
 
@@ -1307,32 +1371,32 @@ def normGScale(val, min=None, max=None, log=False):
         >>> phc.normGScale(np.logspace(0,1,10))
         array([  0,   8,  19,  33,  51,  73, 103, 142, 191, 255])
     """
-    if len(val) == 1 and (min is None or max is None):
+    if len(val) == 1 and (min is None or vmax is None):
         _warn.warn('Wrong normGScale call!!')
         return 127
     #
     val = _np.array(val).astype(float)
-    if min is None:
-        min = _np.min(val)
-    if max is None:
-        max = _np.max(val)
+    if vmin is None:
+        vmin = _np.min(val)
+    if vmax is None:
+        vmax = _np.max(val)
     # 
     if not log:
-        val = (val - min) / (max - min) * 255
+        val = (val - vmin) / (max - vmin) * 255
     else:
-        if min <= 0:
-            min = _np.min(val[_np.where(val > 0)])
-            val[_np.where(val <= 0)] = min
-        val = (_np.log(_np.array(val).astype(float)) - _np.log(min)) / \
-            (_np.log(max) - _np.log(min)) * 255
+        if vmin <= 0:
+            vmin = _np.min(val[_np.where(val > 0)])
+            val[_np.where(val <= 0)] = vmin
+        val = (_np.log(_np.array(val).astype(float)) - _np.log(vmin)) / \
+            (_np.log(vmax) - _np.log(vmin)) * 255
     return _np.round(val).astype(int)
 
 
-def gradColor(val, cmapn='jet', min=None, max=None, log=False):
+def gradColor(val, cmapn='jet', vmin=None, vmax=None, log=False):
     """ Return the corresponding value(s) color of a given colormap.
 
     Good options, specially for lines, are 'jet', 'gnuplot', 'brg', 
-    'cool' and 'gist_heat' (attention! Here max is white!). 
+    'cool' and 'gist_heat' (attention! Here vmax is white!). 
 
     .. code-block:: python
 
@@ -1350,7 +1414,7 @@ def gradColor(val, cmapn='jet', min=None, max=None, log=False):
         :align: center
         :alt: phc.gradColor example
     """
-    val = normGScale(val, min=min, max=max, log=log)
+    val = normGScale(val, vmin=vmin, vmax=vmax, log=log)
     cmap = _plt.get_cmap(cmapn)
     return cmap(val)
 
@@ -1396,6 +1460,20 @@ line_styles = ['-', '--', '-.', ':']
 
 
 # Physical functions
+def n_air(lbd=.55, T=300.15, P=1013.25, wp=6.113):
+    """ Air refraction index.
+
+    :param lbd: wavelength in microms
+    :param T: temperature in K
+    :param P: atmospheric pressure in mbar
+    :param wp: water vapor pressure in mbar
+
+    For all practical purposes, the refractive index is affected only by air
+    temperature. 
+    """
+    return 1+77.6e-6/T*(1+7.52e-3*lbd**-2)*(P+4810*wp/T)
+
+
 def BBlbd(T, lbd=None):
     """ Black body radiation as function of lambda. CGS units (erg s-1 sr−1 cm−3).
 
@@ -1527,7 +1605,7 @@ me = Constant(9.10938356e-28, 9.10938356e-31, 'g', 'Mass of electron')
 mp = Constant(1.672621898e-24, 1.672621898e-27, 'g', 'Mass of proton')
 mn = Constant(1.00137841898*mp.cgs, 1.00137841898*mp.SI, 'g', 
     'Mass of neutron')
-h = Constant(6.62607004e-27, 6.62607004e-34, 'erg s-1', 'Planck constant')
+h = Constant(6.62607004e-27, 6.62607004e-34, 'erg s', 'Planck constant')
 eV = Constant(1.6021766208e-12, 1.6021766208e-19, 'erg', 'Electron volt')
 kB = Constant(1.38064852e-16, 1.38064852e-23, 'erg K-1', 'Boltzmann constant')
 alpha = Constant(7.2973525664e-3, 7.2973525664e-3, '', 

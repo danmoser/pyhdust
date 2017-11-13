@@ -1042,10 +1042,13 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'],
 
         if chkout and 3 in cases:
             for i in range(len(simulations)):
+                sim = simulations[i]
+                if sim.find('Be_') > 0:
+                    sim = sim[:sim.find('Be_')-1]
                 outs2a = 'mod{0}/{1}_mod{0}{2}.sed2'.format(
-                    modn, simulations[i], suf)
+                    modn, sim, suf)
                 outs2b = 'mod{0}/{1}_mod{0}{2}_SEI.sed2'.format(
-                    modn, simulations[i], suf)
+                    modn, sim, suf)
                 if _os.path.exists(outs2a) or _os.path.exists(outs2b):
                     simchk[i] = False
             if True not in simchk:

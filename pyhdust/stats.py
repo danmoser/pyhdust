@@ -7,7 +7,14 @@
 from __future__ import print_function
 import numpy as _np
 import pyhdust.phc as _phc
-import matplotlib.pyplot as _plt
+import warnings as _warn
+
+try:
+    import matplotlib.pyplot as _plt
+    from scipy.stats import mode as _mode
+except ImportError:
+    _warn.warn('Matplotlib and/or Scipy module not installed!!!')
+
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -69,3 +76,41 @@ def cdf(x, xlim=None, savefig=False):
     if savefig:
         _phc.savefig(fig)  # figname='outname')
     return
+
+
+def means(inarr, wtharr=None, quiet=False):
+    """ Calculate many "means" for a given input array `inarr`.
+
+    Return simple, geom, harm, rms, median, mode
+    """
+    inarr = _np.array(inarr).astype(float)
+    if wtharr is None:
+        wtharr = _np.ones(len(inarr))
+    simp = _np.sum(wtharr*inarr)/_np.sum(wtharr)
+    geom = _np.exp(_np.sum(wtharr*_np.log(inarr))/_np.sum(wtharr))
+    harm = _np.sum(wtharr)/_np.sum(wtharr*1/inarr)
+    rms = _np.sqrt(_np.sum(wtharr*inarr**2)/_np.sum(wtharr))
+    medi = _np.median(inarr)
+    mode = _mode(inarr)[0][0]
+    if not quiet:
+        print('# Simple: {}'.format(simp))
+        print('# Geometric: {}'.format(geom))
+        print('# Harmonic: {}'.format(harm))
+        print('# RMS: {}'.format(harm))
+        print('# Median: {}'.format(medi))
+        print('# Mode: {}'.format(mode))
+    return simp, geom, harm, rms, medi, mode
+
+
+def snr(count_rate, texp=1., nexp=1, npix=10., bg=10., dk=0., ron=2., var=0.):
+    """Calcute the Signal-to-Noise ratio based on Poisson statistics.
+
+    :param count_rate: = rate of counts (e-/time)
+    :param npix: = number os pixels for the given count
+    :param bg: = background rate per pixel (e-/time)
+    :param dk: = dark rate per pixel (e-/time)
+    :param ron: = readout noise (single pixel, in e-)
+    :param var: = variance on the source erroes (e-)
+    """
+    return count_rate*texp*nexp / \
+        _np.sqrt(texp*nexp*(count_rate+bg*npix+dk*npix) +ron**2*npix*nexp+ var)
