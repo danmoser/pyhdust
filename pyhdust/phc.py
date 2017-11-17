@@ -260,7 +260,7 @@ def fill_points(in_arr, dx, n=1):
     return new_x, idx_extra
 
 
-def bindata(x, y, nbins=20, yerr=None, xlim=None, perc=0):
+def bindata(x, y, nbins=20, yerr=None, xlim=None, perc=0, interp=False):
     """
     Return the weighted binned data.
 
@@ -268,6 +268,8 @@ def bindata(x, y, nbins=20, yerr=None, xlim=None, perc=0):
 
     if yerr is None:
         yerr = _np.ones(shape=_np.shape(x))
+
+    `interp` linearly interpolates `y` alone (no change on `x` and `yerr`).
 
     INPUT: x, y, err - arrays with the same shape (they don't need to be
     sorted); nbins=int, xlim=[xmin, xmax]
@@ -281,9 +283,12 @@ def bindata(x, y, nbins=20, yerr=None, xlim=None, perc=0):
     else:
         yerr = _np.array(yerr)
     nans, tmp = nan_helper(y)
-    x = x[~nans]
-    y = y[~nans]
-    yerr = yerr[~nans]
+    if interp and _np.sum(nans) > 0:
+        y = _np.interp(x, x[~nans], y[~nans])
+    else:
+        x = x[~nans]
+        y = y[~nans]
+        yerr = yerr[~nans]
     if xlim is None:
         xmax = _np.max(x)
         xmin = _np.min(x)
@@ -651,6 +656,25 @@ def renormvals(xlist, xlims, ylims):
     return a*_np.array(xlist)+b
 
 
+def expand_list(xlist, logspaced=False):
+    """ Expand ``xlist`` centered values to interval limits.
+
+    `logspaced` assumed to be in base 10.
+
+    OUTPUT: array[len(xlist)+1]
+    """
+    if logspaced:
+        xlist = _np.log10(xlist)
+    d = _np.diff(xlist)
+    out = _np.zeros(len(xlist)+1)
+    out[0] = xlist[0]-d[0]/2
+    out[1:-1] = xlist[:-1]+d/2
+    out[-1] = xlist[-1]+d[-1]/2
+    if logspaced:
+        out = 10**out
+    return out
+
+
 def keys_values(keys, text, delimiter='_'):
     """ Return the values in a string coded as *KeyValueDelimiter*. The keys 
     do not need to be in order in the text. 
@@ -678,7 +702,7 @@ def keys_values(keys, text, delimiter='_'):
             vals += [out[0]]
         else:
             vals += [""]
-            _warn("# Invalid keys for {0}".format(text))
+            _warn.warn("# Invalid key {0} for {1}".format(k, text))
     return vals
 
 
@@ -1102,7 +1126,8 @@ def trimpathname(file):
     INPUT: full file path
 
     OUTPUT: folder path, filename (strings)"""
-    return [ file[:file.rfind('/') + 1], file[file.rfind('/') + 1:] ]
+    _warn('# This is Deprecated! Use `os.path.split` instead!')
+    return _os.path.split(file)
 
 
 def rmext(name):
@@ -1207,6 +1232,18 @@ def repl_fline_val(f, iline, oldval, newval):
     """
     f[iline] = f[iline].replace(str(oldval), str(newval))
     return f
+
+
+def output_rename(fullpath, prefix):
+    """ Replace FILENAME prefix to the one set here. 
+
+    The routine is based on the '_' character.
+
+    Example:
+    folder/SED_mod1a.sed2 > folder/bin_mod1a.sed2 
+    """
+    path, fname = _os.path.split(fullpath)
+    return _os.path.join(path, prefix+fname[fname.find('_')+1:])
 
 
 # Python-version stuff

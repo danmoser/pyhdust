@@ -37,7 +37,8 @@ from pyhdust.spectools import linfit as _linfit
 import copy as _copy
 from six import string_types as _strtypes
 import warnings as _warn
-from array import array as _array
+# from array import array as _array
+from itertools import product as _iprod
 
 try:
     import matplotlib as _mpl
@@ -199,6 +200,124 @@ def readmap(mapfile, quiet=False, old=False):
     return data, obslist, lbdc, Ra, xmax
 
 
+def savemap(mfile, imap, obslist, lbdc, Ra, xmax, new_pref='BIN_', 
+    logspaced=False):
+    r"""
+    Read *Hdust* MAP or MAPS files.
+
+    `imap`: extract this component from the *.map* file.
+
+        - 0 = total flux
+        - 1 = transmitted flux
+        - 2 = scattered flux
+        - 3 = emitted flux
+        - 4 = pol. *Q* flux
+        - 5 = pol. *U* flux
+        - 6 = pol. *V* flux
+
+    INPUT = mfile, imap, obslist, lbdc, Ra, xmax
+
+        - `imap` = image matrix
+        - `obslist` = [observers info] (array of (*i*, :math:`\phi`))
+        - `lbdc` = central :math:`\lambda`
+        - `Ra` = ?
+        - `xmax` = [image size in Rsun untis] (length of nimgs)
+        - `logspaced` = is `lbdc` log-spaced (base 10)?
+
+    | imap(nimgs,nobs,nlbd,ny,nx,dfact)
+    | .map, dfact = 6
+    | .maps, dfact = 1
+    """
+    Lratio, Rstar = (1., 1.)
+    nimgs, nobs, nlbd, ny, nx = _np.shape(imap)[:5]
+
+    if len(_np.shape(imap)) == 6:
+        dfact = 6
+    else:
+        dfact = 1
+
+    outname = _os.path.split(_phc.output_rename(mfile, new_pref))
+    suf = outname[1][:outname[1].find('.')]+'.maps'
+    if dfact == 6:
+        suf = outname[1][:outname[1].find('.')]+'.map'
+    outname = _os.path.join(outname[0], suf)
+    f = open(outname, 'wb')
+    ixdr = 0
+    #
+    stfmt = '>{0}l'.format(4)
+    f.write(_struct.pack(stfmt, nobs, nlbd, nx, ny))
+    ixdr += 4 * 4
+    #
+    stfmt = '>{0}f'.format(3)
+    f.write(_struct.pack(stfmt, Ra, Rstar, Lratio))
+    ixdr += 4 * 4
+
+    # old HDUST versions, len(xmax)==1.... (<=2.01)
+    stfmt = '>{0}f'.format(2)
+    f.write(_struct.pack(stfmt, 0.1, 0.1))
+    ixdr += 4 * 4    
+
+    stfmt = '>{0}l'.format(1)
+    f.write(_struct.pack(stfmt, nimgs))
+    ixdr += 4 * 4        
+
+    nxm = len(xmax)
+    stfmt = '>{0}f'.format(nxm)
+    f.write(_struct.pack(stfmt, *xmax))
+    ixdr += nxm * 4
+
+    npxs = nimgs*nobs*nlbd*ny*nx*dfact
+    stfmt = '>{}f'.format(npxs)
+    f.write(_struct.pack(stfmt, *imap.flatten()))
+    ixdr += npxs * 4
+
+    npxs = 2 * nobs
+    stfmt = '>{}f'.format(npxs)
+    f.write(_struct.pack(stfmt, *obslist))
+    ixdr += npxs * 4
+
+    npxs = nlbd + 1
+    stfmt = '>{}f'.format(npxs)
+    f.write(_struct.pack(stfmt, *lbdc))
+    ixdr += npxs * 4
+
+    f.close()
+    print("# {} created!".format(outname))
+    return 
+
+
+def bin_map(mfile, nbins, new_pref='BIN_'):
+    """ Bin SED each `n` bins (lambda). 
+
+    It AUTOMATICALLY removes the `NaN` entries.
+    """
+    nbins = int(nbins)
+    imap, obslist, lbdc, Ra, xmax = readmap(mfile)
+    nimgs, nobs, nlbd, ny, nx = _np.shape(imap)[:5]
+
+    if len(_np.shape(imap)) == 6:
+        dfact = 6
+        outmap = _np.zeros((nimgs, nobs, nbins, ny, nx, dfact))
+    else:
+        dfact = 1
+        outmap = _np.zeros((nimgs, nobs, nbins, ny, nx))
+
+    for ii, io, iy, ix, ic in _iprod(range(nimgs), range(nobs), range(ny), 
+        range(nx), range(dfact)):
+
+        if dfact == 6:
+            outmap[ii, io, :, iy, ix, ic] = _phc.bindata(range(int(nlbd)), 
+                imap[ii, io, :, iy, ix, ic], nbins=nbins, interp=True)[1]
+        if dfact == 1:
+            outmap[ii, io, :, iy, ix] = _phc.bindata(range(int(nlbd)), 
+                imap[ii, io, :, iy, ix], nbins=nbins, interp=True)[1]
+
+    lbdc = _np.linspace(_np.min(lbdc), _np.max(lbdc), nbins+1)
+
+    savemap(mfile, outmap, obslist, lbdc, Ra, xmax, new_pref=new_pref)
+    return 
+
+
 def img2fits(img, lbd, xmax, dist, outname='model', rot=0., lum=0.,
     orient=0., coordsinf=None, deg=False, ulbd=''):
     r""" Export an image (e.g., data[0,0,0,:,:]) to the fits format.
@@ -267,7 +386,7 @@ def img2fits(img, lbd, xmax, dist, outname='model', rot=0., lum=0.,
     #
     hdu = _pyfits.PrimaryHDU(img[::-1, :])
     hdulist = _pyfits.HDUList([hdu])
-    pixsize = 2 * xmax[0] / len(img)
+    pixsize = 2 * xmax / len(img)
     ang_per_pixel = _np.double(pixsize * _phc.Rsun.cgs / (dist * _phc.pc.cgs))
     # *60.*60.*1000.*180./_np.pi)
     if deg:
@@ -2546,7 +2665,10 @@ def plot_pionier_res(oidata, model, outname=None, fmt=['png'], legend=True,
         for mod in model:
             k = model.index(mod)
             data, obslist, lbdc, Ra, xmax = readmap(mod, quiet=quiet)
-            pixsize = 2 * xmax[0] / len(data[0, 0, 0, :, :, 0])
+            try:
+                pixsize = 2 * xmax[0] / len(data[0, 0, 0, :, :, 0])
+            except:
+                pixsize = 2 * xmax[0] / len(data[0, 0, 0, :, :])
             # *60.*60.*1000.*180./_np.pi)
             rad_per_pixel = _np.double(
                 pixsize * _phc.Rsun.cgs / (dist * _phc.pc.cgs))
@@ -2559,8 +2681,12 @@ def plot_pionier_res(oidata, model, outname=None, fmt=['png'], legend=True,
                         lbdc * 1e-6).index(_phc.find_nearest(lbdc * 1e-6, lbd))
                     # lbcalc = lbdc[j]*1e-6
                     lbcalc = lbd
-                    tmp, V, phvar = fastnumvis(data[0, ob, j, :, :, 0], lbcalc, 
-                        B, PA, rad_per_pixel, PAdisk=(216.9 + 90.))
+                    try:
+                        tmp, V, phvar = fastnumvis(data[0, ob, j, :, :, 0], 
+                            lbcalc, B, PA, rad_per_pixel, PAdisk=(216.9 + 90.))
+                    except: 
+                        tmp, V, phvar = fastnumvis(data[0, ob, j, :, :], 
+                            lbcalc, B, PA, rad_per_pixel, PAdisk=(216.9 + 90.))
                     V2 += [V**2]
                     lbds += [lbcalc]
             lbds = _np.array(lbds)
@@ -2661,7 +2787,10 @@ def plot_pionier_res(oidata, model, outname=None, fmt=['png'], legend=True,
         for mod in model:
             k = model.index(mod)
             data, obslist, lbdc, Ra, xmax = readmap(mod, quiet=True)
-            pixsize = 2 * xmax[0] / len(data[0, 0, 0, :, :, 0])
+            try:
+                pixsize = 2 * xmax[0] / len(data[0, 0, 0, :, :, 0])
+            except:
+                pixsize = 2 * xmax[0] / len(data[0, 0, 0, :, :])
             # *60.*60.*1000.*180./_np.pi)
             rad_per_pixel = _np.double(
                 pixsize * _phc.Rsun.cgs / (dist * _phc.pc.cgs))
@@ -2679,8 +2808,12 @@ def plot_pionier_res(oidata, model, outname=None, fmt=['png'], legend=True,
                         lbdc * 1e-6).index(_phc.find_nearest(lbdc * 1e-6, lbd))
                     lcalc = lbdc[j] * 1e-6
                     lcalc = lbd
-                    tmp, V, phvar = fastnumvis3(data[0, ob, j, :, :, 0], lcalc, 
-                        B, PA, rad_per_pixel, PAdisk=(216.9 + 90.))
+                    try:
+                        tmp, V, phvar = fastnumvis3(data[0, ob, j, :, :, 0], 
+                            lcalc, B, PA, rad_per_pixel, PAdisk=(216.9 + 90.))
+                    except:
+                        tmp, V, phvar = fastnumvis3(data[0, ob, j, :, :], 
+                            lcalc, B, PA, rad_per_pixel, PAdisk=(216.9 + 90.))
                     t3m += [phvar]
                     Bmax += [_np.max(B)]
                     if _np.max(B) == B[0]:
@@ -2702,7 +2835,8 @@ def plot_pionier_res(oidata, model, outname=None, fmt=['png'], legend=True,
                 else:
                     binned = _phc.bindata(Bmax / lbds, t3m, bindata, xlim=xlim)
                     ax5.plot(binned[0], binned[1], color=mcolors[k], alpha=.9)
-                    binned = _phc.bindata(Bmax / lbds, (y - t3m) / yerr, bindata)
+                    binned = _phc.bindata(Bmax / lbds, (y - t3m) / yerr, 
+                        bindata)
                     ax6.plot(binned[0], binned[1],
                         color=mcolors[k], markersize=ms, marker='o', ls='')  
                         # alpha=.6,                

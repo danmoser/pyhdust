@@ -37,7 +37,7 @@ try:
 except ImportError:
     _warn.warn('# matplotlib, pyfits, six and/or scipy module not installed!!')
 
-__version__ = '1.2.7'
+__version__ = '1.2.8'
 __release__ = "Stable"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -929,7 +929,7 @@ def printN0(modn):
     return
 
 
-def fs2rm_nan(fsed2, cols=[3], refcol=None):
+def fs2rm_nan(fsed2, cols=[3], refcol=None, skiprows=5):
     """ Remove ``nan`` values present in columns of a matrix file.
     In a *fullsed2* file, ``cols=[3]`` and ``refcol=[2]``.
 
@@ -939,12 +939,12 @@ def fs2rm_nan(fsed2, cols=[3], refcol=None):
 
     TDB: refcol apparently is not working...
     """
-    f2mtx = _np.loadtxt(fsed2, skiprows=5)
+    f2mtx = _np.loadtxt(fsed2, skiprows=skiprows)
     for col in cols:
         nans, x = _phc.nan_helper(f2mtx[:, col])
         if refcol is None:
-            f2mtx[:, col][nans] = _np.interp(
-                x(nans), x(~nans), f2mtx[:, col][~nans])
+            f2mtx[:, col][nans] = _np.interp(x(nans), 
+                x(~nans), f2mtx[:, col][~nans])
         else:
             _warn.warn('# The output must be checked!')
             f2mtx[:, col][nans] = _np.interp(f2mtx[:, refcol][nans], 
@@ -1314,6 +1314,33 @@ def plotdens2d(tfile, figname=None, fmt=['png'], icphi=0, itype='linear',
     ax.set_aspect(abs(xmax-_np.min(x))/abs(ymax-(-ymax)))
     _phc.savefig(fig, figname=figname, fmt=fmt)
     return
+
+
+def bin_sed2(sfile, nbins=25, new_pref='BIN_'):
+    """ Bin SED each `n` bins (lambda). 
+
+    It AUTOMATICALLY removes the `NaN` entries.
+    """
+    n = int(nbins)
+    sed2data = readsed2(sfile)
+    nlbd, nobs, Rstar, Rwind = sed2info(sfile)
+    sed2data = sed2data.reshape((int(nobs), int(nlbd), -1))
+
+    ncols = len(sed2data[0, 0])
+    outsed2 = _np.zeros((int(nobs), n, ncols))
+
+    for j in range(int(nobs)):
+        for i in range(ncols):
+            outsed2[j, :, i] = _phc.bindata(range(int(nlbd)), 
+                sed2data[j, :, i], nbins=nbins, interp=True)[1]
+    outsed2 = outsed2.reshape((int(nobs*n), -1))
+    hd = "    {0}    {1}    {2}    {3}\n".format(n, nobs, Rstar, Rwind)
+    outfile = hd + _tab(outsed2, tablefmt="plain")
+    f0 = open(new_pref+sfile[sfile.find('_')+1:], 'w')
+    f0.writelines(outfile + sfile[sfile.find('_'):])
+    f0.close()
+    print('# {} saved!!'.format(new_pref+sfile[sfile.find('_')+1:]))
+    return 
 
 
 # Be quantities convertions
