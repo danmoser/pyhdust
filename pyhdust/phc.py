@@ -1126,7 +1126,7 @@ def trimpathname(file):
     INPUT: full file path
 
     OUTPUT: folder path, filename (strings)"""
-    _warn('# This is Deprecated! Use `os.path.split` instead!')
+    _warn.warn('# This is Deprecated! Use `os.path.split` instead!')
     return _os.path.split(file)
 
 
