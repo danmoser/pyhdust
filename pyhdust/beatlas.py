@@ -67,7 +67,7 @@ class BAmod(BAstar):
         self.param = False
         if f0.find('_PL') > -1:
             self.param = True
-            self.n = _phc.keys_values(['PLn'], f0)
+            self.n = _phc.keys_values(['PLn'], f0)[0]
         self.sig, self.h, self.Rd = _phc.keys_values(['sig', 'h', 'Rd'], f0)
 
     def build(self, ctrlarr, listpars):
