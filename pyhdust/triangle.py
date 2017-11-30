@@ -363,6 +363,8 @@ def corner(xs, bins=20, range=None, weights=None, color="k",
 
             # Add in the column name if it's given.
             if labels is not None:
+                if len(labels) <= i:
+                    labels = list(labels)+['']
                 j = labels[i].find(' ')
                 if j == -1:
                     j = len(labels[i])

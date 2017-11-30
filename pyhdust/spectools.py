@@ -528,6 +528,12 @@ def ECcalc(vels, flux, ssize=.05, gaussfit=False, doublegf=True):
     """
     Supoe que o fluxo jah estah normalizado, e vetores ordenados.
 
+    If `gaussfit=False`, the single maximum value is taken.
+
+    If `gaussfit=True`, then a single (`doublegf=False`) ou a double 
+    (`doublegf=True`) Gaussian fit is performed over the line profile do 
+    determine the maximum. 
+
     Calcula o topo da emissao da linha, e retorna em que velocidade ela
     ocorre.
     """
@@ -710,7 +716,12 @@ def DCcalc(vels, flux, vmax=None, vc=0., ssize=0.05):
     """
     Calculo, na presenca de emissao, da profundidade do reverso central.
 
+    Se fluxo máximo < 1.01*contínuo, retorna 
+
     TODO: gauss fit
+
+    Return flux at `vmax` (maximum considered velocity), and flux at `v0`. 
+    Depth of the central reversal is `flux[ivmax] - flux[ivc]`.
     """
     vels += vc
     ivc = _np.abs(vels - 0).argmin()
