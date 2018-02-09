@@ -705,6 +705,43 @@ def interpolBA(params, ctrlarr, lparams, minfo, models, param=True):
     return _phc.interLinND(params, X0, X1, outmodels)
 
 
+def check_xdr_limits(xdrlistpar, xdrminfo, xdrmodels, todel=[]):
+    """ Check if the XDR file contains models for all parameters within their
+    given interval.
+
+    `todel`: list for dimensions to be skipped in the test. 
+    `-1` is the observer's inclination angle.
+    """
+    todel = list(todel)
+    notdel = []               
+    for i in range(len(xdrlistpar)):
+        lvals = _np.unique(xdrminfo[:, i])
+        if len(lvals) == 1 or i == len(xdrlistpar)-1:
+            print('# Skipping dimension {} of the models!!'.format(i))
+            todel.append(i)
+        else:
+            notdel.append(i)
+
+    minfo = _np.delete(xdrminfo, todel, axis=1)
+
+    # Atualiza lista de parametros e intervalos
+    listpar = []
+    for i in range(len(minfo[0])):
+        arr = _np.unique(minfo[:, i])
+        listpar.append(arr)
+
+    lim_chk = [ [_np.min(i), _np.max(i)] for i in listpar]
+    i = 0
+    for pars in _product(*lim_chk):
+        tidx = _np.where( (_np.array(pars) == minfo).all(axis=1) )
+        if _np.size(tidx) == 0:
+            print('# IMPORTANT MODEL NOT FOUND:')
+            print(pars)
+            i += 1
+    print("# TOTAL OF {} MODELS WEREN'T FOUND!!".format(i))
+    return 
+
+
 # MAIN ###
 if __name__ == "__main__":
     pass

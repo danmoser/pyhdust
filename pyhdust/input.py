@@ -473,7 +473,7 @@ class HdustMod(object):
         if self.fname is None:
             return 'None'
         return '_'+'_'.join(it[0]+it[1].format(getattr(self, it[0])) for it in 
-            self.vfmt.items())
+            self.vdict.items())
 
 
 class AeriMod(HdustMod):    

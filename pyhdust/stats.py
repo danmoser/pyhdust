@@ -81,6 +81,8 @@ def cdf(x, xlim=None, savefig=False):
 def means(inarr, wtharr=None, quiet=False):
     """ Calculate many "means" for a given input array `inarr`.
 
+    `wtharr` is the weights array (e.g., inverse of the uncertainty).
+
     Return simple, geom, harm, rms, median, mode
     """
     inarr = _np.array(inarr).astype(float)
@@ -88,7 +90,7 @@ def means(inarr, wtharr=None, quiet=False):
         wtharr = _np.ones(len(inarr))
     simp = _np.sum(wtharr*inarr)/_np.sum(wtharr)
     geom = _np.exp(_np.sum(wtharr*_np.log(inarr))/_np.sum(wtharr))
-    harm = _np.sum(wtharr)/_np.sum(wtharr*1/inarr)
+    harm = _np.sum(wtharr)/_np.sum(wtharr/inarr)
     rms = _np.sqrt(_np.sum(wtharr*inarr**2)/_np.sum(wtharr))
     medi = _np.median(inarr)
     mode = _mode(inarr)[0][0]

@@ -848,8 +848,8 @@ def nan_helper(y):
 
 # Angular coordinates and dates manipulation
 def dtflag(ms=False):
-    """ Return a "datetime" flag, i.e., a string the the current date and time
-    formated as yyyymmdd-hhMM."""
+    """ It returns the current "datetime" flag, i.e., a string of the current 
+    date and time formated as yyyymmdd-hhMM."""
     now = _dt.datetime.now()
     if not ms:
         return '{0}{1:02d}{2:02d}-{3:02d}{4:02d}{5:02d}'.format(now.year, 
@@ -858,6 +858,14 @@ def dtflag(ms=False):
         return '{0}{1:02d}{2:02d}-{3:02d}{4:02d}{5:02d}{6:02.0f}'.format(
             now.year, now.month, now.day, now.hour, now.minute, now.second, 
             now.microsecond/1e4)
+
+
+def greg2MJD(yr, mon, day, fracday):
+    """ It returns the MJD of a given YYYY,MM,DD (integers) and fraction of the
+    day (float) as a float.
+    """
+    MJD = _jdcal.gcal2jd(yr, mon, day)[1]
+    return MJD+fracday
 
 
 def longdate2MJD(ldate):
@@ -1408,7 +1416,7 @@ def normGScale(val, vmin=None, vmax=None, log=False):
         >>> phc.normGScale(np.logspace(0,1,10))
         array([  0,   8,  19,  33,  51,  73, 103, 142, 191, 255])
     """
-    if len(val) == 1 and (min is None or vmax is None):
+    if len(val) == 1 and (vmin is None or vmax is None):
         _warn.warn('Wrong normGScale call!!')
         return 127
     #
@@ -1419,7 +1427,7 @@ def normGScale(val, vmin=None, vmax=None, log=False):
         vmax = _np.max(val)
     # 
     if not log:
-        val = (val - vmin) / (max - vmin) * 255
+        val = (val - vmin) / (vmax - vmin) * 255
     else:
         if vmin <= 0:
             vmin = _np.min(val[_np.where(val > 0)])
