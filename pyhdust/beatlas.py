@@ -515,7 +515,16 @@ def create_custom_sed(xdrpath, listpar, lbdarr, minfo, models):
 
 
 def readXDRsed(xdrpath, quiet=False):
-    """ Doc
+    """  Read a XDR with a set of models.
+
+    The models' parameters (as well as their units) are defined at XDR 
+    creation.
+
+    INPUT: xdrpath
+
+    OUTPUT: ninfo, intervals, lbdarr, minfo, models
+
+    (xdr dimensions, params limits, lambda array (um), mods params, mods flux)
     """
     ixdr = 0
     f = open(xdrpath, 'rb').read()
@@ -538,7 +547,7 @@ def readXDRsed(xdrpath, quiet=False):
 
 
 def readBAsed(xdrpath, quiet=False):
-    """ Read the BeAtlas SED release.
+    """ Read **only** the BeAtlas SED release.
 
     | Definitions:
     | -photospheric models: sig0 (and other quantities) == 0.00
@@ -705,18 +714,20 @@ def interpolBA(params, ctrlarr, lparams, minfo, models, param=True):
     return _phc.interLinND(params, X0, X1, outmodels)
 
 
-def check_xdr_limits(xdrlistpar, xdrminfo, xdrmodels, todel=[]):
+def check_xdr_limits(xdrminfo, todel=[]):
     """ Check if the XDR file contains models for all parameters within their
-    given interval.
+    **maximum** interval.
 
     `todel`: list for dimensions to be skipped in the test. 
-    `-1` is the observer's inclination angle.
+    `-1` is usually the cossine of the observer's inclination angle. 
+    If `dim=-1` has values from 0 to 1, it is automatically skipped.
     """
     todel = list(todel)
     notdel = []               
-    for i in range(len(xdrlistpar)):
+    for i in range(len(xdrminfo[0])):
         lvals = _np.unique(xdrminfo[:, i])
-        if len(lvals) == 1 or i == len(xdrlistpar)-1:
+        if len(lvals) == 1 or (i == len(xdrminfo[0])-1 and 
+                _np.min(lvals) >= 0 and _np.max(lvals) <= 1):
             print('# Skipping dimension {} of the models!!'.format(i))
             todel.append(i)
         else:
