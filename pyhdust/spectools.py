@@ -507,9 +507,9 @@ def linfit(x, y, ssize=0.05, yerr=_np.empty(0)):
 
 def EWcalc(vels, flux, vw=1000):
     """
-    Supoe que o fluxo jah estah normalizado, e vetores ordenad_os.
+    Supoe que o fluxo jah estah normalizado, e vetores ordenados.
 
-    Devolve o valor EW, alem dos vetores cortados em vw.
+    Devolve o valor EW.
     """
     idx = _np.where(_np.abs(vels) <= vw)
     outvels = vels[idx]
@@ -530,9 +530,9 @@ def ECcalc(vels, flux, ssize=.05, gaussfit=False, doublegf=True):
 
     If `gaussfit=False`, the single maximum value is taken.
 
-    If `gaussfit=True`, then a single (`doublegf=False`) ou a double 
-    (`doublegf=True`) Gaussian fit is performed over the line profile do 
-    determine the maximum. 
+    If `gaussfit=True`, then a single (`doublegf=False`) or a double 
+    (`doublegf=True`) Gaussian fit is performed over the line profile to 
+    determine its maximum. 
 
     Calcula o topo da emissao da linha, e retorna em que velocidade ela
     ocorre.
@@ -543,6 +543,8 @@ def ECcalc(vels, flux, ssize=.05, gaussfit=False, doublegf=True):
     #     idx = _np.where(_np.abs(vels) < lncore)
     #     vels = vels[idx]
     #     flux = flux[idx]
+    if len(flux) < 5:
+        return _np.NaN, 0.
     if not gaussfit:
         idx = _np.where(_np.max(flux) == flux)
         if flux[idx][0] < 1:
@@ -558,7 +560,7 @@ def ECcalc(vels, flux, ssize=.05, gaussfit=False, doublegf=True):
         contmax = _np.max(_np.append(flux[:ssize], flux[-ssize:]))
         fluxmax = _np.max(flux)
         if fluxmax < 1.01 * contmax:
-            return _np.NaN, vels[-1]
+            return _np.NaN, 0.
 
         # Define model function to be used to fit to the data above
         def gauss(x, *p):
@@ -574,19 +576,25 @@ def ECcalc(vels, flux, ssize=.05, gaussfit=False, doublegf=True):
                 coeff0, tmp = _curve_fit(gauss, vels[:ivc], flux[:ivc], p0=p0)
                 p1 = [1., vels[i1], 40.]
                 coeff1, tmp = _curve_fit(gauss, vels[ivc:], flux[ivc:], p0=p1)
-                EC = _np.max([coeff0[0] + 1., coeff1[0] + 1.])
-                vel = _np.abs(coeff0[1] / 2) + _np.abs(coeff1[1] / 2)
+                ECs = _np.array([coeff0[0] + 1., coeff1[0] + 1.])
+                EC = _np.max(ECs)
+                idx = _np.where(ECs == EC)[0]
+                # vel = _np.abs(coeff0[1] / 2) + _np.abs(coeff1[1] / 2)
+                if idx == 0:
+                    vel = coeff0[1]
+                else:
+                    vel = coeff1[1]
                 return EC, vel
-            except:
-                return 1., vels[-1]
+            except ValueError:
+                return _np.NaN, 0.
         else:
             try:
                 p0 = [1., 0, 40.]
-                coeff0, tmp = _curve_fit(gauss, vels[:ivc], flux[:ivc], p0=p0)
+                coeff0, tmp = _curve_fit(gauss, vels, flux, p0=p0)
                 EC = coeff0[0] + 1.
                 return EC, coeff0[1]
-            except:
-                return 1., vels[-1]
+            except ValueError:
+                return _np.NaN, 0.
 
 
 def VRcalc(vels, flux, vw=1000, gaussfit=False, ssize=0.05):
@@ -597,16 +605,15 @@ def VRcalc(vels, flux, vw=1000, gaussfit=False, ssize=0.05):
     # calcula e aplica correcao de vel. repousp
     vc = 0.
     vels += vc
-    # corta em vw, e faz o teste de tamanho
+    # faz o teste de tamanho
     if len(vels) < 5:
         vw = 0
-    if vw > 0:
-        idx = _np.where(_np.abs(vels) <= vw)
-        outvels = vels[idx]
-        normflux = flux[idx]
-    else:
-        ew0, ew1 = 0.
+        ew0, ew1 = (_np.NaN, _np.NaN)
         return ew0, ew1, vc
+    # corta em vw
+    idx = _np.where(_np.abs(vels) <= vw)
+    outvels = vels[idx]
+    normflux = flux[idx]
     #
     ivc = _np.abs(outvels - 0).argmin()
     if not gaussfit:
@@ -638,7 +645,7 @@ def VRcalc(vels, flux, vw=1000, gaussfit=False, ssize=0.05):
             coeff1, tmp = _curve_fit(gauss, vels[ivc:], flux[ivc:], p0=p1)
             V = coeff0[0] + 1.
             R = coeff1[0] + 1.
-        except:
+        except ValueError:
             return 1., 1., vc
     return V, R, vc
 
@@ -676,7 +683,7 @@ def PScalc(vels, flux, vc=0., ssize=.05, gaussfit=False):
             p1 = [1., vels[i1], 20.]
             coeff1, tmp = _curve_fit(gauss, vels[ivc:], flux[ivc:], p0=p1)
             return coeff0[1], coeff1[1]
-        except:
+        except ValueError:
             # print vels[i0], flux[i0], vels[i1], flux[i1]
             return 0, 0
 
@@ -686,6 +693,9 @@ def FWHM(vels, flux, halfmax, vmax=350., flxincr=.01):
     Half Maximum
 
     TODO: Gaussfit"""
+    if len(vels) < 5 or len(flux) < 5:
+        _warn.warn('# No valid line profile for FHWM')
+        return _np.NaN
     vels = _np.array(vels)
     flux = _np.array(flux)
     # remove vels bigger than maxvel
@@ -723,6 +733,8 @@ def DCcalc(vels, flux, vmax=None, vc=0., ssize=0.05):
     Return flux at `vmax` (maximum considered velocity), and flux at `v0`. 
     Depth of the central reversal is `flux[ivmax] - flux[ivc]`.
     """
+    if len(flux) < 5:
+        return _np.NaN, _np.NaN
     vels += vc
     ivc = _np.abs(vels - 0).argmin()
     # check if there is a peak
@@ -799,7 +811,9 @@ def analline(lbd, flux, lbdc, hwidth=1000, verb=True, gaussfit=False,
     # depthcent = EC2 - F0
     if EC2 < 1:
         EC2 = 1.
-    fwhm = FWHM(vels, flux, (EC2 + F0) / 2., vmax=_np.abs(velEC))
+        fwhm = FWHM(vels, flux, (EC2 + F0) / 2., vmax=_np.abs(velEC))
+    else:
+        fwhm = FWHM(vels, flux, EC/2, vmax=hwidth)
     return EW, EC, VR, peaksep, fwhm, F0
 
 
