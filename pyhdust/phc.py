@@ -269,7 +269,8 @@ def bindata(x, y, nbins=20, yerr=None, xlim=None, perc=0, interp=False):
     if yerr is None:
         yerr = _np.ones(shape=_np.shape(x))
 
-    `interp` linearly interpolates `y` alone (no change on `x` and `yerr`).
+    `interp` linearly interpolates NaN values in `y` (no changes on `x` and 
+    `yerr` arrays).
 
     INPUT: x, y, err - arrays with the same shape (they don't need to be
     sorted); nbins=int, xlim=[xmin, xmax]
@@ -282,7 +283,7 @@ def bindata(x, y, nbins=20, yerr=None, xlim=None, perc=0, interp=False):
         yerr = _np.ones(len(x))
     else:
         yerr = _np.array(yerr)
-    nans, tmp = nan_helper(y)
+    nans = _np.isnan(y)
     if interp and _np.sum(nans) > 0:
         y = _np.interp(x, x[~nans], y[~nans])
     else:

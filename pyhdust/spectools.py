@@ -299,7 +299,7 @@ def checkshiftfits(fitslist, lbc=6562.8):
             if ri != 'y':
                 try:
                     shift = float(_phc.user_input('Type shift: '))
-                except:
+                except ValueError:
                     shift = 0.
             else:
                 good = True
@@ -469,12 +469,12 @@ def linfit(x, y, ssize=0.05, yerr=_np.empty(0)):
         import pyhdust.phc as phc
         import pyhdust.spectools as spt
 
-        wv = _np.linspace(6500, 6600, 101)
+        wv = np.linspace(6500, 6600, 101)
         flx = (np.arange(101)[::-1])/100.+1+phc.normgauss(4, x=wv, 
         xc=6562.79)*5
 
         plt.plot(wv, flx)
-        normflx = linfit(wv, flx)
+        normflx = spt.linfit(wv, flx)
         plt.plot(wv, normflx, ls='--')
 
         plt.xlabel(r'$\lambda$ ($\AA$)')
@@ -484,6 +484,7 @@ def linfit(x, y, ssize=0.05, yerr=_np.empty(0)):
         :align: center
         :width: 500
     '''
+    ny = _np.array(y)[:]
     if ssize < 0 or ssize > .5:
         _warn.warn('Invalid ssize value...', stacklevel=2)
         ssize = 0
@@ -492,17 +493,17 @@ def linfit(x, y, ssize=0.05, yerr=_np.empty(0)):
         ssize = 1
     medx0, medx1 = _np.average(x[:ssize]), _np.average(x[-ssize:])
     if ssize > 9:
-        medy0, medy1 = _np.median(y[:ssize]), _np.median(y[-ssize:])
+        medy0, medy1 = _np.median(ny[:ssize]), _np.median(ny[-ssize:])
     else:
-        medy0, medy1 = _np.average(y[:ssize]), _np.average(y[-ssize:])
+        medy0, medy1 = _np.average(ny[:ssize]), _np.average(ny[-ssize:])
     new_y = medy0 + (medy1 - medy0) * (x - medx0) / (medx1 - medx0)
     idx = _np.where(new_y != 0)
-    y[idx] = y[idx] / new_y[idx]
+    ny[idx] = ny[idx] / new_y[idx]
     if len(yerr) == 0.:
-        return y
+        return ny
     else:
         yerr = yerr / _np.average(new_y)
-        return y, yerr
+        return ny, yerr
 
 
 def EWcalc(vels, flux, vw=1000):
@@ -522,6 +523,41 @@ def EWcalc(vels, flux, vw=1000):
         dl = outvels[i + 1] - outvels[i]
         ew += (1. - (normflux[i + 1] + normflux[i]) / 2.) * dl
     return ew
+
+
+def absLineCalc(vels, flux, vw=1000, ssize=0.05):
+    """
+    Calculate the line flux (input velocity vector). The `flux` is 
+    NON-normalized.
+
+    ``ssize`` parameter controns the size of flux that will be evaluated at the 
+    extreme of the input flux array to determine the continuum level.
+
+    ``vels = (wv - lbc) / lbc * phc.c.cgs * 1e-5  # km/s``
+
+    Output in the same flux units times :math:`\Delta v` (both flux and *v* 
+    input units).
+    """
+    idx = _np.where(_np.abs(vels) <= vw)
+    vels = vels[idx]
+    flux = flux[idx]
+
+    if ssize < 0 or ssize > .5:
+        _warn.warn('Invalid ssize value...', stacklevel=2)
+        ssize = 0
+    ssize = int(ssize * len(flux))
+    if ssize == 0:
+        ssize = 1
+
+    medx0, medx1 = _np.average(vels[:ssize]), _np.average(vels[-ssize:])
+    if ssize > 9:
+        medy0, medy1 = _np.median(flux[:ssize]), _np.median(flux[-ssize:])
+    else:
+        medy0, medy1 = _np.average(flux[:ssize]), _np.average(flux[-ssize:])
+    new_y = medy0 + (medy1 - medy0) * (vels - medx0) / (medx1 - medx0)
+    base = _np.trapz(new_y, vels)
+    line = _np.trapz(flux, vels)
+    return line - base
 
 
 def ECcalc(vels, flux, ssize=.05, gaussfit=False, doublegf=True):
