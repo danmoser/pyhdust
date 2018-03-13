@@ -5,19 +5,8 @@ import os
 import sys
 
 
-def check_py_ver():
-    if (sys.version_info[0] > 2):
-        return
-    elif (sys.version_info[1] >= 7):
-        return
-    else: 
-        _ = raw_input('Press Ctlr+Z to abort or ENTER to continue... ')
-        return
-
-
-print('# Warning! PyHdust in only supported for Python 2.7+\n'
-    'Press Ctlr+Z to abort or ENTER to continue... ')
-check_py_ver()
+if sys.version_info[:2] < (2, 7) or (3, 0) <= sys.version_info[:2] < (3, 4):
+    raise RuntimeError("Python version 2.7 or >= 3.4 required.")
 
 try:
     from setuptools import setup, find_packages
@@ -72,7 +61,7 @@ if sys.argv[-1] == "publish":
     sys.exit()
 
 setup(name='pyhdust',
-    version='1.3.5',
+    version='1.3.6',
     description=('Analysis tools for multi-technique astronomical data and '
         'hdust models'),
     url='http://pyhdust.readthedocs.io',

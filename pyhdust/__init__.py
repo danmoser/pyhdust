@@ -37,7 +37,7 @@ try:
 except ImportError:
     _warn.warn('# matplotlib, pyfits, six and/or scipy module not installed!!')
 
-__version__ = '1.3.5'
+__version__ = '1.3.6'
 __release__ = "Stable"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -2023,21 +2023,16 @@ def plot_gal(ra, dec, addsuf=None, fmt=['png']):
 
 
 # Filters tools
-def doFilterConvPol(x0, intens, polQ, filt):
-    r""" Return the convolved filter total flux for a given flux profile y0,
-    at wavelengths x0.
+def doFilterConvPol(x0, intens, pol, filt):
+    r""" Return the convolved filter total flux for a given flux profile 
+    `intens`, with polarized intensities `pol`, at wavelengths `x0`.
 
-    .. math::
-
-        \text{zero}_{\rm pt} = \frac{\int F(\lambda) Sp(\lambda) p(\lamdda)
-        \,d\lambda} {\int F(\lambda) Sp(\lambda) \,d\lambda} 
-
-    where :math:`F(\lambda)` is the filter curve response.
+    where `filt` is the filter curve response (usually in Angstroms).
 
     Following Ramos (2016), ``intens`` should be multipled by the detector QE 
     curve.
 
-    INPUT: x0 lambda array (**Angstroms**), y0 flux array, filter (string, 
+    INPUT: x0 lambda array (**Angstroms**), intens flux array, filter (string, 
     uppercase for standard filters)
 
     OUTPUT: *zero point level* (**polarimetry**)
@@ -2046,7 +2041,7 @@ def doFilterConvPol(x0, intens, polQ, filt):
     fdat = _np.loadtxt(fpath, skiprows=1)
     #
     fdintp = _np.interp(x0, fdat[:, 0], fdat[:, 1], left=0, right=0)
-    return _np.trapz(fdintp*intens*polQ, x0)/_np.trapz(fdintp*intens, x0)
+    return _np.trapz(fdintp*intens*pol, x0)/_np.trapz(fdintp*intens, x0)
 
 
 def doFilterConv(x0, y0, filt, zeropt=False):
@@ -2060,8 +2055,8 @@ def doFilterConv(x0, y0, filt, zeropt=False):
 
     where :math:`F(\lambda)` is the filter curve response.
 
-    Following Ramos (2016), ``intens`` should be multipled by the detector QE 
-    curve.
+    The difference from this function to `doFilterConvPol` is that the later
+    accepts a intensity curve of the CCD response.
 
     INPUT: x0 lambda array (**Angstroms**), y0 flux array, filter (string, 
     uppercase for standard filters)
@@ -2076,6 +2071,35 @@ def doFilterConv(x0, y0, filt, zeropt=False):
         return _np.trapz(fdintp * y0, x0)
     else:
         return _np.trapz(fdintp * y0, x0)/_np.trapz(fdintp, x0)
+
+
+def doFilterConvLb(x0, y0, filt, zeropt=False):
+    r""" Return the convolved filter total flux for a given flux profile y0,
+    at wavelengths x0.
+
+    .. math::
+
+        \text{zero}_{\rm pt} = \frac{\int F(\lambda) Sp(\lambda)\,d\lambda}
+        {\int F(\lambda)\,d\lambda} 
+
+    where :math:`F(\lambda)` is the filter curve response.
+
+    The difference from this function to `doFilterConvPol` is that the later
+    accepts a intensity curve of the CCD response.
+
+    INPUT: x0 lambda array (**Angstroms**), y0 flux array, filter (string, 
+    uppercase for standard filters)
+
+    OUTPUT: summed flux (y0 units; default) or *zero point level* 
+    """
+    fpath = _os.path.join(hdtpath(), 'refs', 'filters', filt+'.dat')
+    fdat = _np.loadtxt(fpath, skiprows=1)
+    #
+    fdintp = _np.interp(x0, fdat[:, 0], fdat[:, 1], left=0, right=0)
+    if not zeropt:
+        return _np.trapz(x0 * fdintp * y0, x0)
+    else:
+        return _np.trapz(x0 *fdintp * y0, x0)/_np.trapz(x0 * fdintp, x0)
 
 
 def doPlotFilter(obs, filter, fsed2data, pol=False, addsuf=None, fmt=['png']):
