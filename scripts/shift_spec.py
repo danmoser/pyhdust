@@ -12,10 +12,12 @@ import pyhdust.spectools as spt
 import pyhdust.phc as phc
 from argparse import ArgumentParser
 import pyfits as pf
-from scipy.optimize import curve_fit
+# from scipy.optimize import curve_fit
+from matplotlib import pyplot as plt
 from warnings import warn
+from lmfit import Model
 
-__version__ = "0.92"
+__version__ = "1.0"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
 
@@ -35,6 +37,9 @@ parser.add_argument("INPUT", help=("String to retrive the spectrum(a) "
 parser.add_argument("-l", "--line", action="store", dest="line", 
     help=("Wavelength of the reference line [default: %(default)s]"), 
     type=float, default=6562.79)
+parser.add_argument("-w", "--half-width", action="store", dest="hw", 
+    help=("Half-width in km/s of the reference line [default: %(default)s]"), 
+    type=float, default=6562.79)
 
 group2 = parser.add_argument_group('other arguments (overwrite power)')
 group2.add_argument("-r", "--remove", action="store_true", dest="rm", 
@@ -47,7 +52,8 @@ group2.add_argument("-f", "--force-dv", action="store", dest="vs",
 args = parser.parse_args()
 
 
-def gauss(x, a, x0, sigma, y0=1.):
+def gauss(x, a, x0, sigma):
+    y0=1.
     return a*np.exp(-(x-x0)**2/(2*sigma**2))+y0
 
 
@@ -63,36 +69,55 @@ def find_max_peak(vl, nflx, idx=-1):
     return nfV, vlV, nfR, vlR
 
 
-def has_central_absorp(nf0, vlV, vlR):
+def has_central_absorp(nf0, vlV, vlR, hw):
     """ Return ``True`` or ``False`` if the line has a central absorption 
     (i.e., it is an absorption line or it is an double peak emission line).
     """
     if nf0 < 1:
         # print('# F(lb=0) < 1: A double-peak emission line was found!')
         return True
-    if vlR-vlV > 100:
+    if vlR-vlV > hw/10:
         return True
     else:
         return False
 
 
-def gauss_fit(x, y, a0=None, x0=None, sig0=None, y0=None, emission=True):
+def gauss_fit(x, y, a0=None, x0=None, sig0=None, emission=True):
     """ Return ``curve_fit``, i.e., ``popt, pcov``.
     """
-    q = 5
+    q = 95
     func = np.max
     if not emission:
         func = np.min
-        q = 95
+        q = 5
     if a0 is None:
-        a0 = np.percentile(y, q) - np.median(y)
+        a0 = np.abs(np.percentile(y, q)) - np.median(y)
     if x0 is None:
         x0 = x[np.where(y == func(y))]
     if sig0 is None:
-        sig0 = (np.max(x[-1])-np.min(x[0]))/30.
-    if y0 is None:
-        y0 = np.percentile(y, q)
-    return curve_fit(gauss, x, y, p0=[a0, x0, sig0, y0])
+        sig0 = (np.max(x)-np.min(x))/10.
+    # if y0 is None:
+    #     y0 = np.median(y)
+    gmodel = Model(gauss)
+    gmodel.set_param_hint('a0', min=0.2, max=20)
+    if not emission:
+        gmodel.set_param_hint('sigma', min=-0.2, max=-4)
+    gmodel.set_param_hint('sigma', min=50, max=1000)
+    result = gmodel.fit(y, x=x, a=a0, x0=x0, sigma=sig0)
+
+    fig, (ax0, ax1) = plt.subplots(2, 1)
+    ax0.plot(x, y, 'bo')
+    ax0.plot(x, result.init_fit, 'k--')
+    ax0.plot(x, result.best_fit, 'r-')
+    ax0.set_title(fitsfile)
+    idx = np.where((wl > 120000) & (wl < 150000))
+    ax1.plot(wl[idx], flux[idx], 'o')
+    plt.show(block=False)
+    cmd = phc.user_input('# Problem (y/other)? ')
+    if cmd.lower().startswith('y'):
+        raise ValueError
+    # phc.savefig(fig, figname=fitsfile)
+    return result.params['x0']
 
 
 def apply_shift(imfits, vshift, wl=None):
@@ -131,7 +156,7 @@ if __name__ == '__main__':
                 vshift = -imfits[0].header['VELSHIFT']
                 apply_shift(imfits, vshift)
             else: 
-                warn.warn('No VELSHIFT for {0}'.format(fitsfile))
+                warn('No VELSHIFT for {0}'.format(fitsfile))
 
         elif args.vs != 0:
             v0 = 0
@@ -146,32 +171,28 @@ if __name__ == '__main__':
                 wl = np.arange(len(flux)) * imfits[0].header['CDELT1'] + \
                     imfits[0].header['CRVAL1']
 
-                vl, nflx = spt.lineProf(wl, flux, lbc=lbc)
-                v0 = np.median( vl[nflx > np.percentile(nflx, 80)] )
-                idx0 = phc.find_nearest(vl, v0, idx=True)
-                nf0 = nflx[idx0]
-                nfV, vlV, nfR, vlR = find_max_peak(vl, nflx, idx=idx0)
+                vl, nflx = spt.lineProf(wl, flux, lbc=lbc, hwidth=args.hw)
+                nfxsig = np.std(nflx)
+                emission = True
+                if np.percentile(nflx, 5) + nfxsig < 1:
+                    emission = False
+                    if np.percentile(nflx, 95) - 1.5*nfxsig > 1:
+                        emission = True
 
-                if has_central_absorp(nf0, vlV, vlR):
-                    idxV = phc.find_nearest(vl, vlV, idx=True)
-                    idxR = phc.find_nearest(vl, vlR, idx=True)
-                    popt, pcov = gauss_fit(vl[idxV:idxR], nflx[idxV:idxR], 
-                        emission=False)
-                else:
-                    popt, pcov = gauss_fit(vl, nflx)
-
-                vshift = -popt[1]
+                vshift = -gauss_fit(vl, nflx, emission=emission)
+                if np.abs(vshift) > args.hw:
+                    raise ValueError('VelShift out of bounds!')
                 apply_shift(imfits, vshift, wl)
-            except RuntimeError:
-                warn.warn('Gaussian fit did not work for {0}'.format(fitsfile))
+            except:
+                warn('Gaussian fit did not work for {0}'.format(fitsfile))
                 vshift = phc.user_input('Enter a vshift value (km/s): ')
                 try:
                     vshift = float(vshift)
                     apply_shift(imfits, vshift, wl)
                 except ValueError:
-                    warn.warn("You entered a invalid value! File unchanged.")
+                    warn("You entered a invalid value! File unchanged.")
 
         imfits.close()
 
     if len(glob(linput)) == 0:
-        warn.warn('{0} files were not found!'.format(linput))
+        warn('{0} files were not found!'.format(linput))
