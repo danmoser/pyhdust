@@ -11,5 +11,5 @@
 #@ bg_size = 128
 #@ queue
  
-/bgsys/drivers/ppcfloor/bin/mpirun -exe ./hdustparv2.02.bc -mode VN \
+/bgsys/drivers/ppcfloor/bin/mpirun -exe ./hdustparv2.10.bc -mode VN \
 -np 512 -args " = hdust_bestar2.02.inp"

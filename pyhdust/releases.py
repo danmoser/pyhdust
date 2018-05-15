@@ -1,13 +1,48 @@
 # -*- coding:utf-8 -*-
 
-"""
-PyHdust auxiliary module: PyHdust releases control.
+"""PyHdust auxiliary module: PyHdust releases control.
 
 History
 ============
-..
-    v0.958 @ 2015-0
-    ----------------------
+v1.007 @ 2016-09-16
+---------------------
+- New ploting 2d routines
+
+v1.005 @ 2016-08-17
+---------------------
+- New working generic interpolation sed2/XDR
+
+v1.002 @ 2016-06-26
+----------------------
+- New folder structure
+
+v0.999 @ 2016-06-14
+----------------------
+- Corrections on setup.py
+
+v0.998 @ 2016-06-13
+----------------------
+- Corrections on setup.py
+
+v0.997 @ 2016-06-06
+----------------------
+- Corrections on the documentation
+
+v0.996 @ 2016-06-06
+----------------------
+- Setup.py and minor corrections
+
+v0.995 @ 2016-04-30
+----------------------
+- Corrections on intt
+
+v0.994 @ 2016-04-2x
+----------------------
+- New intt functions!
+
+v0.993 @ 2016-04-30
+----------------------
+- New inp.makeCSGrid_bistabWind1Dust()
 
 v.0970 @ 2016-01-xx
 -----------------------
@@ -94,89 +129,56 @@ Previously
 
 :license: GNU GPL v3.0 https://github.com/danmoser/pyhdust/blob/master/LICENSE
 """
+from __future__ import print_function
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
-
-
-def listFunctions():
-    """ List all *PyHdust* functions. """ 
-    import pyhdust as hdt
-    print("# pyhdust")
-    print("\n".join([x for x in dir(hdt) if x[0] != "_"]))
-
-    import pyhdust.beatlas as bat
-    print("# pyhdust.beatlas")
-    print("\n".join([x for x in dir(bat) if x[0] != "_"]))
-
-    import pyhdust.input as inp
-    print("# pyhdust.input")
-    print("\n".join([x for x in dir(inp) if x[0] != "_"]))
-
-    import pyhdust.interftools as intt
-    print("# pyhdust.interftools")
-    print("\n".join([x for x in dir(intt) if x[0] != "_"]))
-
-    import pyhdust.poltools as polt
-    print("# pyhdust.poltools")
-    print("\n".join([x for x in dir(polt) if x[0] != "_"]))
-
-    import pyhdust.phc as phc
-    print("# pyhdust.phc")
-    print("\n".join([x for x in dir(phc) if x[0] != "_"]))
-
-    import pyhdust.singscat as sst
-    print("# pyhdust.singscat")
-    print("\n".join([x for x in dir(sst) if x[0] != "_"]))
-
-    import pyhdust.spectools as spt
-    print("# pyhdust.spectools")
-    print("\n".join([x for x in dir(spt) if x[0] != "_"]))
-
-    return
 
 
 def setRelease():
     """ Read the version values from __init__.py and write it to the setup.py
     and doc files. """
     import os
-    import pyhdust.phc as phc
+    import re
     from pyhdust import __version__, hdtpath
     #  
-    f0 = open('{0}setup.py'.format(hdtpath()))
+    f0 = open(os.path.join(os.path.split(hdtpath()[:-1])[0], 'setup.py'))
     lines = f0.readlines()
     f0.close()
-    i = [lines.index(x) for x in lines if x.find('version') > -1]
-    i = i[0]
-    oldver = phc.fltTxtOccur('version', [lines[i]], asstr=True)
+    i = [lines.index(x) for x in lines if x.find('version=') > -1][0]
+    verline = lines[i]
+    if len(verline.split("'")) == 3:
+        oldver = verline.split("'")[1]
+    else:
+        oldver = verline.split('"')[1]
     lines[i] = lines[i].replace(oldver, str(__version__))
-    f0 = open('{0}setup.py'.format(hdtpath()), 'w')
+    f0 = open(os.path.join(os.path.split(hdtpath()[:-1])[0], 'setup.py'), 'w')
     f0.writelines(lines)
     f0.close()
     print('# ../setup.py file updated!')
     #
-    f0 = open('{0}docs/index.rst'.format(hdtpath()))
+    f0 = open(os.path.join(os.path.split(hdtpath()[:-1])[0], 'docs', 
+        'index.rst'))
     lines = f0.readlines()
     f0.close()
-    i = [lines.index(x) for x in lines if x.find('at **version') > -1]
-    i = i[0]
-    oldver = phc.fltTxtOccur('version', [lines[i]], asstr=True)
-    for i in range(len(lines)):
-        if lines[i].find(oldver):
-            lines[i] = lines[i].replace(oldver, str(__version__))
-    f0 = open('{0}docs/index.rst'.format(hdtpath()), 'w')
+    i = [lines.index(x) for x in lines if x.find('at **version') > -1][0]
+    verline = lines[i]
+    oldver = re.findall('[-+]?[0-9]*\.?[0-9]*\.?[0-9]+', verline)[0]
+    lines[i] = lines[i].replace(oldver, str(__version__))
+    f0 = open(os.path.join(os.path.split(hdtpath()[:-1])[0], 'docs', 
+        'index.rst'), 'w')
     f0.writelines(lines)
     f0.close()    
     print('# docs/index.rst file updated!')
-    os.chdir('{0}docs'.format(hdtpath()))
+    os.chdir(os.path.join(os.path.split(hdtpath()[:-1])[0], 'docs'))
     os.system('make html')
     # os.system('rsync -rP _build/html/ astroweb:/www/moser/www/doc')
-    os.system('rsync -rP _build/html/ /data/Dropbox/Public/doc')
-    print('# From version {0} to {1}'.format(oldver, __version__))
-    os.system(
-        'firefox https://dl.dropboxusercontent.com/u/6569986/doc/index.html &')
-    os.chdir('../..')
-    os.system('git push')
+    # os.system('rsync -rP _build/html/ /data/Dropbox/Public/doc')
+    # print('# From version {0} to {1}'.format(oldver, __version__))
+    # os.system(
+    # 'firefox https://dl.dropboxusercontent.com/u/6569986/doc/index.html &')
+    # os.chdir('../..')
+    # os.system('git push')
     #  os.system('disown')
     return
 

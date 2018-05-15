@@ -1,7 +1,6 @@
 # -*- coding:utf-8 -*-
 
-"""
-PyHdust auxiliary module: PyHdust HDRPIL module.
+"""PyHdust *hdrpil* module: third-part functions for HDR process of images
 
 import pyhdust.hdrpil asd hdr
 proj = hdr.hdr(case='img04', img_type='png', cur_dir='./')
@@ -9,18 +8,18 @@ proj.get_hdr(strength=[1.],naturalness=[1.0,1.1,1.2,1.5])
 
 :license: ?
 """
+from __future__ import print_function
 import os
-import os.path
-import sys
 from copy import copy
+import warnings as _warn
+
 try:
     from PIL import Image
     import pylab
     pylab_loaded = 1
-except:
+except ImportError:
     pylab_loaded = 0
-    print(
-        '# Warning! matplotlib with pylab and/or PIL/Pillow not installed!!!')
+    _warn.warn('matplotlib+pylab and/or PIL/Pillow not installed!!!')
 
 __author__ = "bpowah"
 __email__ = "bpowah@gmail.com"
@@ -62,7 +61,7 @@ class hdr:
         self.drks = drks
         self.idxs = idxs
 
-        print 'got', len(imgs), 'images'
+        print('got', len(imgs), 'images')
         return imgs
 
     def __init__(
@@ -77,8 +76,7 @@ class hdr:
         and resized by a factor [resize]
         """
         if not case:
-            print 'case is required'
-            sys.exit(1)
+            raise ValueError('case is required')
         self.resize = resize
         self.ext = img_type.strip('.')
         self.case = case
@@ -106,7 +104,7 @@ class hdr:
             m = Image.blend(imgs[i], imgs[i + 1], blend_fraction)
             masks.append(m)
             # print blend_fraction
-        print 'blending using', mask_ct, 'masks'
+        print('blending using', mask_ct, 'masks')
         return masks
 
     def lev(self, im):
@@ -141,7 +139,7 @@ class hdr:
         """
         save an image
         """
-        print 'saving', name
+        print('saving', name)
         im.save(os.path.join(self.outdir, name + '.jpg'), format='JPEG')
 
         if pylab_loaded:
@@ -195,11 +193,11 @@ class hdr:
 
         for s in self.str:
             self.cur_str = s
-            print 'getting saturation image, strength', str(s)
+            print('getting saturation image, strength', str(s))
             imgs = copy(self.imgs)
             sat_img = self.merge_all(imgs)
 
-            print 'getting contrast image'
+            print('getting contrast image')
             imgs.reverse()
             con_img = self.merge_all(imgs)
 
@@ -209,7 +207,7 @@ class hdr:
         ori_set = dict(
             ('orig_' + str(i), self.imgs[i]) for i in range(len(self.imgs)))
         self.print_set(ori_set)
-        print self.indir
+        print(self.indir)
 
     def final_blend(self, im1, im2):
         """

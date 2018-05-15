@@ -1,9 +1,9 @@
 # -*- coding:utf-8 -*-
 
-"""
-PyHdust *phc* module: physical constants and general use functions
+"""PyHdust *phc* module: physical constants and general use functions
 
 Includes functions for:
+- Geometrical functions in deg
 - Data manipulation (average, bin, fitting)
 - Manipulation of 3D coordinates 
 - Convolution functions
@@ -13,37 +13,188 @@ Includes functions for:
 - Plotting 
 - Physical functions
 - `List of constants`_
+- Python-version issues
 
 .. _`List of constants`: phc_list.html
 
 
 :license: GNU GPL v3.0 https://github.com/danmoser/pyhdust/blob/master/LICENSE
 """
+from __future__ import print_function
+import sys as _sys
 import os as _os
 import re as _re
 import numpy as _np
 import datetime as _dt
+from dateutil.relativedelta import relativedelta as _dtdelta
+import gzip as _gzip
+from bz2 import BZ2File as _BZ2File
 from glob import glob as _glob
 from itertools import product as _product
+from collections import Iterable as _It
 import pyhdust.jdcal as _jdcal
+from pyhdust.tabulate import tabulate as _tab
+from six import string_types as _strtypes
+from functools import reduce as _ftreduce
+import warnings as _warn
+import struct as _struct
+import unicodedata as _unicdata
 
 try:
+    import csv as _csv
     import matplotlib.pyplot as _plt
+    from matplotlib.ticker import AutoMinorLocator as _AutoMinorLocator
     from scipy import optimize as _optimize
-except:
-    print('# Warning! matplotlib and/or scipy module not installed!!!')
+except ImportError:
+    ('matplotlib, csv and/or scipy module not installed!!!')
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
 
 
-# Data manipulation (includes fitting)
-def wg_avg_and_std(values, sigma):
-    """
-    Return the weighted average and standard deviation.
+# Trigonometric functions in deg
+def cos(ang):
+    """ Ang in DEGREES """
+    return _np.cos(ang*_np.pi/180)
 
-    This IS NOT the problem of Wikipedia > Weighted_arithmetic_mean >
-        Weighted_sample_variance.
+
+def sin(ang):
+    """ Ang in DEGREES """
+    return _np.sin(ang*_np.pi/180)
+
+
+def arcsin(arg):
+    """ Output in DEGREES """
+    return _np.arcsin(arg)*180/_np.pi
+
+
+def arccos(arg):
+    """ Output in DEGREES """
+    return _np.arccos(arg)*180/_np.pi
+
+
+def tan(ang):
+    """ Ang in DEGREES """
+    return _np.tan(ang*_np.pi/180)
+
+
+def arctan(arg):
+    """ Output in DEGREES """
+    return _np.arctan(arg)*180/_np.pi
+
+
+def arctan2(y, x):
+    """ Output in DEGREES """
+    return _np.arctan2(y, x)*180/_np.pi
+
+
+# Data manipulation (includes fitting)
+def find_nearest_pt(x0, y0, x, y, z, case=1):
+    dx = _np.max(x) - _np.min(x)
+    dy = _np.max(y) - _np.min(y)
+    if case == 1:
+        idx = _np.where( (x < x0) & (y < y0))
+    elif case == 2:
+        idx = _np.where( (x > x0) & (y < y0))
+    elif case == 3:
+        idx = _np.where( (x < x0) & (y > y0))
+    elif case == 4:
+        idx = _np.where( (x > x0) & (y > y0))
+    else:
+        idx = _np.argsort(x)
+    z = z[idx]
+    if len(z) > 0:
+        x = x[idx]
+        y = y[idx]
+        d = _np.sqrt( ((x0-x)/dx)**2 + ((y0-y)/dy)**2 )
+        idx = _np.where(d == _np.min(d))
+        return _np.average(x[idx]), _np.average(y[idx]), _np.average(z[idx]), \
+            _np.average(d[idx])
+    else:
+        return _np.NaN, _np.NaN, _np.NaN, _np.NaN
+
+
+def baricent_calc(x0, y0, x, y, z, fullrange=False):
+    x1, y1, z1, d1 = find_nearest_pt(x0, y0, x, y, z, case=1)
+    x2, y2, z2, d2 = find_nearest_pt(x0, y0, x, y, z, case=2)
+    x3, y3, z3, d3 = find_nearest_pt(x0, y0, x, y, z, case=3)
+    x4, y4, z4, d4 = find_nearest_pt(x0, y0, x, y, z, case=4)
+    if _np.sum(_np.isnan([x1, x2, x3, x4])) == 0:
+        # DO THE BARICENTER CALCULATIONS HERE
+        idx = _np.argsort([d1, d2, d3, d4])
+        xs = _np.array([x1, x2, x3, x4])[idx]
+        ys = _np.array([y1, y2, y3, y4])[idx]
+        zs = _np.array([z1, z2, z3, z4])[idx]
+        inside = False
+        seq = _np.array([[0, 1, 2], [0, 1, 3], [0, 2, 3], [1, 2, 3]])
+        for i in seq:
+            # http://mathworld.wolfram.com/TriangleInterior.html    
+            # http://stackoverflow.com/questions/13300904/
+            # determine-whether-point-lies-inside-triangle
+            if not inside:
+                X, Y = (xs[i], ys[i])
+                alpha = ((Y[1] - Y[2])*(x0 - X[2]) + (X[2] - X[1])*(y0 - 
+                    Y[2])) / ((Y[1] - Y[2])*(X[0] - X[2]) + (X[2] - 
+                    X[1])*(Y[0] - Y[2]))
+                beta = ((Y[2] - Y[0])*(x0 - X[2]) + (X[0] - X[2])*(y0 - 
+                    Y[2])) / ((Y[1] - Y[2])*(X[0] - X[2]) + (X[2] - 
+                    X[1])*(Y[0] - Y[2]))
+                gamma = 1.0 - alpha - beta
+                if alpha > 0 and beta > 0 and gamma > 0:
+                    Z = zs[i]
+                    inside = True
+        # http://www.mathopenref.com/coordtrianglearea.html
+        a = _np.zeros(3)
+        a[2] = _np.abs(0.5 * (X[0]*(Y[1]-y0) + X[1]*(y0-Y[0]) + 
+            x0*(Y[0]-Y[1])))
+        a[1] = _np.abs(0.5 * (X[0]*(Y[2]-y0) + X[2]*(y0-Y[0]) + 
+            x0*(Y[0]-Y[2])))
+        a[0] = _np.abs(0.5 * (X[1]*(Y[2]-y0) + X[2]*(y0-Y[1]) + 
+            x0*(Y[1]-Y[2])))
+        return _np.sum(Z*a)/_np.sum(a)
+    elif _np.sum(_np.isnan([x1, x2, x3, x4])) == 1 and fullrange:
+        idx = _np.argsort([d1, d2, d3, d4])
+        zs = _np.array([z1, z2, z3, z4])[idx][:3]
+        ds = _np.array([d1, d2, d3, d4])[idx][:3]
+        return _np.sum(zs/ds) / _np.sum(1/ds)
+    else:
+        return _np.NaN
+
+
+def baricent_map(x, y, z, res=100, fullrange=False, xfact=1., yfact=1.):
+    """ _fact = apply an factor in the input values **in the interpolation**
+    """
+    X = _np.linspace(_np.min(x), _np.max(x), res)
+    Y = _np.linspace(_np.min(y), _np.max(y), res)
+    # Must be [::-1] to match the img std
+    X, Y = _np.meshgrid(X, Y[::-1])  
+    img = _np.zeros((res, res))
+    for i, j in _product(range(res), range(res)):
+        img[i, j] = baricent_calc(X[i, j], Y[i, j], _np.array(x)*xfact, 
+            _np.array(y)*yfact, z, fullrange=fullrange)
+    return img
+
+
+def flatten(list_, outlist=None):
+    """ Return a flatten list. 
+
+    If ``outlist`` is provided, the output is extended to it.
+    """
+    if outlist is None:
+        outlist = []
+    for item in list_:
+        if isinstance(item, _It) and not isinstance(item, _strtypes):
+            flatten(item, outlist)
+        else:
+            outlist.append(item)
+    return outlist
+
+
+def wg_avg_and_std(values, sigma):
+    """ Return the weighted average and standard deviation.
+
+    This IS NOT the problem of Wikipedia > Weighted_arithmetic_mean +
+        Weighted_sample_variance!
 
     average = _np.average(values, weights=weights)
     #Fast and numerically precise:
@@ -58,15 +209,71 @@ def wg_avg_and_std(values, sigma):
     return (avg, _np.sqrt(_np.sum(sigma**2)) / len(values) )
 
 
-def bindata(x, y, nbins=20, yerr=None, xrange=None):
+def wg_avg_t(t, y, yerr=None):
+    """ average weighted on ``t`` with optional ``yerr`` array.
+
+    Warning: If there is two (or more) ``y`` points for the same value of 
+    ``t``, all these points will be ignored.
+
+    INPUT: ``t``, ``y`` -- arrays with the same shape.
+
+    OUTPUT: average
+    """
+    idx = _np.argsort(t)
+    t = _np.array(t)[idx]
+    y = _np.array(y)[idx]
+    n = len(t)
+    if yerr is None:
+        yerr = _np.ones(n).astype(float)
+
+    dx = _np.diff(t)
+    avg = 0.
+    for i in range(n-1):
+        avg += dx[i]*(y[i+1]/yerr[i+1] + y[i]/yerr[i]) / \
+            (1./yerr[i] + 1./yerr[i+1])
+
+    return avg/_np.sum(dx)
+
+
+def fill_points(in_arr, dx, n=1):
+    """ Return a list of points to be filled in an array.
+
+    If the distance of two sucessive points is bigger than ``dx``, then ``n`` 
+        new points will be generated.
+
+    :param in_arr: Input array.
+    """ 
+    size = len(in_arr)
+    new_x = []
+    idx_extra = []
+    j = 0
+    for i in range(size-1):
+        new_x += [in_arr[i]]
+        j += 1
+        if abs(in_arr[i+1]-in_arr[i]) > dx:
+            npts = int(round(abs(in_arr[i+1]-in_arr[i])/dx))
+            tmp = list(_np.linspace(in_arr[i], in_arr[i+1], npts+n)[1:-1])
+            new_x += tmp
+            idx_extra += [k+j for k in range(len(tmp))]
+            j += len(tmp)
+    new_x += [in_arr[-1]]
+    return new_x, idx_extra
+
+
+def bindata(x, y, nbins=20, yerr=None, xlim=None, perc=0, interp=False):
     """
     Return the weighted binned data.
+
+    if ``perc > 0``, then it returns the percentile value of the interval.
 
     if yerr is None:
         yerr = _np.ones(shape=_np.shape(x))
 
+    `interp` linearly interpolates NaN values in `y` (no changes on `x` and 
+    `yerr` arrays).
+
     INPUT: x, y, err - arrays with the same shape (they don't need to be
-    sorted); nbins=int, xrange=[xmin, xmax]
+    sorted); nbins=int, xlim=[xmin, xmax]
 
     OUTPUT: xvals, yvals, new_yerr (arrays)
     """
@@ -76,25 +283,34 @@ def bindata(x, y, nbins=20, yerr=None, xrange=None):
         yerr = _np.ones(len(x))
     else:
         yerr = _np.array(yerr)
-    nans, tmp = nan_helper(y)
-    x = x[~nans]
-    y = y[~nans]
-    yerr = yerr[~nans]
-    if xrange is None:
+    nans = _np.isnan(y)
+    if interp and _np.sum(nans) > 0:
+        y = _np.interp(x, x[~nans], y[~nans])
+    else:
+        x = x[~nans]
+        y = y[~nans]
+        yerr = yerr[~nans]
+    if xlim is None:
         xmax = _np.max(x)
         xmin = _np.min(x)
     else:
-        xmin, xmax = xrange
-    shift = (xmax - xmin) / (nbins - 1)
+        xmin, xmax = xlim
+    shift = (xmax - xmin) / (nbins - 1.)
     tmpx = _np.arange(nbins) * shift + xmin
     tmpy = _np.zeros(nbins)
     tmpyerr = _np.zeros(nbins)
     idx = _np.zeros(nbins, dtype=bool)
     for i in range(nbins):
-        selx = _np.where( abs(x - tmpx[i]) <= shift / 2. )
+        selx = _np.where( abs(x - tmpx[i]) <= shift / 2.+1e-6 )
         if len(selx[0]) >= 1:
-            tmpx[i] = _np.average(x[selx])
-            tmpy[i], tmpyerr[i] = wg_avg_and_std(y[selx], yerr[selx])
+            if perc <= 0:
+                tmpx[i] = _np.average(x[selx])
+                tmpy[i], tmpyerr[i] = wg_avg_and_std(y[selx], yerr[selx])
+            else:
+                tmpy[i] = _np.percentile(y[selx], perc)
+                pid = find_nearest(y[selx], tmpy[i], idx=True)
+                tmpx[i] = x[selx][pid]
+                _, tmpyerr[i] = wg_avg_and_std(y[selx], yerr[selx])
             idx[i] = True
     if _np.sum(yerr) / len(x) == 1:
         return tmpx[idx], tmpy[idx]
@@ -102,14 +318,16 @@ def bindata(x, y, nbins=20, yerr=None, xrange=None):
         return tmpx[idx], tmpy[idx], tmpyerr[idx]
 
 
-def chi2calc(mod, obs, sig_obs=None, npar=1):
-    """ Calculate the chi2 """
-    nans, tmp = nan_helper(obs)
-    obs = _np.array(obs)[~nans]
-    mod = _np.array(mod)[~nans]
+def chi2calc(mod, obs, sig_obs=None, npar=1, fast=False):
+    """ Calculate the chi2.
+
+    If `fast=False`, the function skips a NaN test in the arrays."""
     if sig_obs is None:
         sig_obs = _np.ones(len(obs))
-    else:
+    if not fast:
+        nans, tmp = nan_helper(obs)
+        obs = _np.array(obs)[~nans]
+        mod = _np.array(mod)[~nans]
         sig_obs = _np.array(sig_obs)[~nans]
     return _np.sum( (mod - obs)**2 / sig_obs**2 ) / (len(sig_obs) - npar - 1)
 
@@ -131,13 +349,6 @@ def splitequal(n, N):
     return idx
 
 
-def interBarND(point, grid, Zgrid):
-    """ TODO """
-    d = _np.sqrt( (point[0] - grid[:, 0])**2 + (point[1] - grid[:, 1])**2)
-    print(d)
-    return
-
-
 def interLinND(X, X0, X1, Fx, disablelog=False):
     """
     N-dimensional linear interpolation in LOG space!!
@@ -152,7 +363,7 @@ def interLinND(X, X0, X1, Fx, disablelog=False):
     | INPUT:
     | X = position in with the interpolation is desired;
     | X0 = minimal values of the interval;
-    | X1 = maximum values of the inveral
+    | X1 = vmaximum values of the inveral
     | Fx = function values along the interval, ORDERED BY DIMENSTION.
     | Example: Fx = [F00, F01, F10, F11]
 
@@ -192,7 +403,7 @@ def optim(p0, x, y, yerr, func, errfunc=None):
     if errfunc is None:
         def errfunc(p, x, y, yerr, func):
             """ error function """
-            # return np.sum( ((y-func(p,x))/yerr)**2 )
+            # return _np.sum( ((y-func(p,x))/yerr)**2 )
             return ((y - func(p, x)) / yerr)**2
     bestp, tmp = _optimize.leastsq(errfunc, p0, args=(x, y, yerr, func))
     c2red = chi2calc(func(bestp, x), y, yerr, npar=len(p0))
@@ -211,7 +422,7 @@ def optim2(p0, x, y, yerr, func):
         best params (p), params errors (perr), chi2_red value
      """
     bestp, cov = _optimize.curve_fit(func, x, y, p0=p0, sigma=yerr)
-    c2red = chi2calc(func(x, bestp), y, yerr, npar=len(p0))
+    c2red = chi2calc(func(x, *bestp), y, yerr, npar=len(p0))
     return bestp, _np.sqrt(_np.diag(cov)), c2red
 
 
@@ -220,9 +431,10 @@ def bin_ndarray(ndarray, new_shape, operation='avg'):
     Bins an ndarray in all axes based on the target shape, by summing or
         averaging.
     Number of output dimensions must match number of input dimensions.
+
     Example
     -------
-    >>> m = np.arange(0,100,1).reshape((10,10))
+    >>> m = _np.arange(0,100,1).reshape((10,10))
     >>> n = bin_ndarray(m, new_shape=(5,5), operation='sum')
     >>> print(n)
     [[ 22  30  38  46  54]
@@ -239,7 +451,7 @@ def bin_ndarray(ndarray, new_shape, operation='avg'):
     compression_pairs = [(d, c//d) for d, c in zip(new_shape,
                                                    ndarray.shape)]
     flattened = [l for p in compression_pairs for l in p]
-    print flattened
+    # print flattened
     ndarray = ndarray.reshape(flattened)
     for i in range(len(new_shape)):
         if operation.lower() == "sum":
@@ -259,7 +471,7 @@ def normgauss(sig, x=None, xc=0.):
     """
     if x is None:
         x = _np.linspace(-5 * sig, 5 * sig, 101)
-    return 1. / (2 * _np.pi)**.5 / sig * _np.exp(-(x - xc)**2. / (2 * sig**2.))
+    return 1. / (2*_np.pi*sig**2)**.5 * _np.exp(-(x - xc)**2. / (2 * sig**2.))
 
 
 def normbox(hwidth, x=None, xc=0.):
@@ -285,44 +497,53 @@ def convnorm(x, arr, pattern):
 
     OUTPUT: array
     """
-    if (len(x) % 2 == 0) or (len(x) != len(pattern)):
-        print('# Wrong format of x and/or pattern arrays!')
+    if (len(x) != len(pattern)):
+        _warn.warn('Wrong format of x and/or pattern arrays!')
         return None
+    if (len(x) % 2 == 0):
+        _warn.warn('Even length of arrays. Interpolating n-1 '
+            'dimension!')
+        idx = _np.argsort(x)
+        x0 = x[idx]
+        pattern0 = pattern[idx]
+        x = _np.linspace(x0[0], x0[-1], len(x0)-1)
+        pattern = _np.interp(x, x0, pattern0)
     dx = (x[-1] - x[0]) / (len(x) - 1.)
     cut = len(x) / 2
     return _np.convolve(pattern, arr)[cut:-cut] * dx
 
 
 # 3D Coordinates manipulation (rotation)
-def cart2sph(x, y, z):
-    """ Cartesian to spherical coordinates.
+def cart2sph(x, y, z=None):
+    """ Cartesian to spherical coordinates. Output in **rad**.
+    **Warning**: :math:`z=0\rightarrow \theta=\pi`.
+
+    TODO: check is len(x)==len(y) 
 
     INPUT: arrays of same length
 
-    OUTPUT: arrays """
-    r = _np.sqrt(x**2 + y**2 + z**2)
-    idx = _np.where(r == 0)
-    r[idx] = 1e-9
-    th = _np.arccos(z / r)
+    OUTPUT: arrays 
+    """
+    if z is None:
+        z = _np.zeros(len(x))
+    r = _np.sqrt(x**2+y**2+z**2)
+    th = _np.arccos(z/r)
     phi = _np.arctan2(y, x)
-    # ind = (y<0) & (x<0)
-    # phi[ind] = phi+_np.pi
-    return r, th, phi
+    return r, phi, th
 
 
-def sph2cart(r, th, phi):
-    """  Spherical to Cartesian coordinates.
-
-    INPUT: arrays of same length
-
-    OUTPUT: arrays """
-    x = r * _np.sin(th) * _np.cos(phi)
-    y = r * _np.sin(th) * _np.sin(phi)
-    z = r * _np.cos(th)
+def sph2cart(r, phi, th=None):
+    """ **Warning**: the sequence is :math:`(r, \phi, \theta)`.
+    """
+    if th is None:
+        th = _np.zeros(len(r))
+    x = r*_np.sin(th)*_np.cos(phi)
+    y = r*_np.sin(th)*_np.sin(phi)
+    z = r*_np.cos(th)
     return x, y, z
 
 
-def cart_rot(x, y, z, ang_xy, ang_yz, ang_zx):
+def cart_rot(x, y, z, ang_xy=0., ang_yz=0., ang_zx=0.):
     """ Apply rotation in Cartesian coordinates.
 
     INPUT: 3 arrays of same length, 3 angles (float, in radians).
@@ -341,67 +562,120 @@ def cart_rot(x, y, z, ang_xy, ang_yz, ang_zx):
     return _np.dot(rotmtx, vec)
 
 
-def rotate_coords(x, y, theta, ox, oy):
-    """Rotate arrays of coordinates x and y by theta radians about the
-    point (ox, oy).
-
-    This routine was inspired on a http://codereview.stackexchange.com post.
-    """
-    s, c = _np.sin(theta), _np.cos(theta)
-    x, y = _np.asarray(x) - ox, _np.asarray(y) - oy
-    return x * c - y * s + ox, x * s + y * c + oy
-
-
-def rotate_image(src, theta, ox=None, oy=None, fill=0):
-    """Rotate the image src by theta radians about (ox, oy).
-    Pixels in the result that don't correspond to pixels in src are
-    replaced by the value fill.
-
-    This routine was inspired on a http://codereview.stackexchange.com post.
-    """
-    # Images have origin at the top left, so negate the angle.
-    theta = -theta
-
-    # Dimensions of source image. Note that scipy.misc.imread loads
-    # images in row-major order, so src.shape gives (height, width).
-    sh, sw = src.shape
-    if ox is None:
-        ox = sw/2
-    if oy is None:
-        oy = sh/2
-
-    # Rotated positions of the corners of the source image.
-    cx, cy = rotate_coords([0, sw, sw, 0], [0, 0, sh, sh], theta, ox, oy)
-
-    # Determine dimensions of destination image.
-    dw, dh = (int(_np.ceil(c.max() - c.min())) for c in (cx, cy))
-
-    # Coordinates of pixels in destination image.
-    dx, dy = _np.meshgrid(_np.arange(dw), _np.arange(dh))
-
-    # Corresponding coordinates in source image. Since we are
-    # transforming dest-to-src here, the rotation is negated.
-    sx, sy = rotate_coords(dx + cx.min(), dy + cy.min(), -theta, ox, oy)
-
-    # Select nearest neighbour.
-    sx, sy = sx.round().astype(int), sy.round().astype(int)
-
-    # Mask for valid coordinates.
-    mask = (0 <= sx) & (sx < sw) & (0 <= sy) & (sy < sh)
-
-    # Create destination image.
-    dest = _np.empty(shape=(dh, dw), dtype=src.dtype)
-
-    # Copy valid coordinates from source image.
-    dest[dy[mask], dx[mask]] = src[sy[mask], sx[mask]]
-
-    # Fill invalid coordinates.
-    dest[dy[~mask], dx[~mask]] = fill
-
-    return dest
-
-
 # Lists and strings manipulation
+def closest_idx(arr, mtx):
+    """ Return the closest index of `mtx` corresponding to the values of `arr`.
+    """
+    lidx = []
+    for i in range(len(arr)):
+        lidx.append( _np.where(mtx[:, i] == find_nearest(mtx[:, i], arr[i])
+            )[0] )
+    return _ftreduce(_np.intersect1d, lidx)[0]
+
+
+def unic2ascii(string):
+    return _unicdata.normalize('NFKD', unicode(string)).encode('ascii', 
+        'ignore')
+
+
+def readpck(n, tp, ixdr, f):
+    """ Read XDR 
+
+    - n: length
+    - tp: type ('i', 'l', 'f', 'd')
+    - ixdr: counter
+    - f: file-object
+
+    :returns: ixdr (counter), _np.array
+    """    
+    sz = dict(zip(['i', 'l', 'f', 'd'], [4, 4, 4, 8]))
+    s = sz[tp]
+    upck = '>{0}{1}'.format(n, tp)
+    return ixdr+n*s, _np.array(_struct.unpack(upck, f[ixdr:ixdr+n*s]))
+
+
+def reshapeltx(ltxtb, ncols=2, latexfmt=True):
+    """ Reshape a latex table. 
+
+    :param ltxtb: latex table (only contents)
+    :type ltxtb: string, or list of strings
+    :rtype: string, or _np.array (str)
+    :returns: latex formatted table, or matrix
+    """
+    t = ltxtb
+    if not isinstance(t, _strtypes):
+        t = ''.join(flatten(t))
+    t = t.replace(' ', '').replace(r'\\', '&').replace('\n', '')
+    t = t.split('&')
+    t = _np.array(t)
+    t = _np.delete(t, _np.where(t == ''))
+    nadd = ncols - len(t) % ncols
+    if nadd > 0:
+        t = _np.append(t, _np.tile('', nadd))
+    if latexfmt:
+        return _tab(t.reshape((-1, ncols)), tablefmt='latex')
+    else:
+        return t.reshape((-1, ncols))
+
+
+# def find_after(id, ref):
+#     """ Returns the line where `id` if found after `ref`.
+#     """
+#     return 
+
+
+def log_norm(x, vmax=1., vmin=0.01, autoscale=True, clip=True):
+    """ Renormalize ``x`` (value or vector) making a correspondance of [0-1] 
+    to [vmin, vmax] in log scale.
+
+    If ``autoscale`` and x is a vector, ``vmax`` and ``vmin`` are automatically 
+    set (``x`` must have at least a positive value).
+
+    ``clip`` force the range to be between 0 and 1.
+    """
+    x = _np.array(x)
+    if autoscale:
+        (vmin, vmax) = (_np.min(x[_np.where(x > 0)]), _np.max(x))
+    if vmin <= 0:
+        _warn.warn('vmin <= 0 at phc.log_norm!')
+        return x
+    if vmax <= vmin:
+        _warn.warn('vmax <= vmin at phc.log_norm!')
+        return x
+    if clip:
+        x = x.clip(vmin, vmax)
+    return _np.log10(x/vmin)/_np.log10(vmax/vmin)
+
+
+def renormvals(xlist, xlims, ylims):
+    """ Renormalize ``xlist`` according to ``_lims`` values.
+
+    len(xlims)=len(ylims)=2
+    """
+    a = _np.diff(ylims)/_np.diff(xlims)
+    b = ylims[0] - a*xlims[0]
+    return a*_np.array(xlist)+b
+
+
+def expand_list(xlist, logspaced=False):
+    """ Expand ``xlist`` centered values to interval limits.
+
+    `logspaced` assumed to be in base 10.
+
+    OUTPUT: array[len(xlist)+1]
+    """
+    if logspaced:
+        xlist = _np.log10(xlist)
+    d = _np.diff(xlist)
+    out = _np.zeros(len(xlist)+1)
+    out[0] = xlist[0]-d[0]/2
+    out[1:-1] = xlist[:-1]+d/2
+    out[-1] = xlist[-1]+d[-1]/2
+    if logspaced:
+        out = 10**out
+    return out
+
+
 def keys_values(keys, text, delimiter='_'):
     """ Return the values in a string coded as *KeyValueDelimiter*. The keys 
     do not need to be in order in the text. 
@@ -420,23 +694,28 @@ def keys_values(keys, text, delimiter='_'):
         text = 'Be_M04.20_ob1.30_H0.30_Z0.014_bE_Ell.txt'
 
         print( phc.keys_values(keys, text) )
-        # 
     """
-    d = delimiter
     vals = []
     for k in keys:
-        afterk = text[text.find(d+k)+len(d+k):]
-        vals.append( afterk[:afterk.find(d)] )
+        rule = ".*{0}{1}([0-9.e+-]+)[{0}\.].*".format(delimiter, k)
+        out = _re.findall(rule, text, flags=_re.DOTALL)
+        if len(out) == 1:
+            vals += [out[0]]
+        else:
+            vals += [""]
+            _warn.warn("# Invalid key {0} for {1}".format(k, text))
     return vals
 
 
-def fltTxtOccur(s, lines, n=1, seq=1, after=False, asstr=False):
+def fltTxtOccur(s, lines, n=1, seq=1, after=True, asstr=False):
     """ Return the seq-th float of the line after the n-th
     occurrence of `s` in the array `lines`.
 
     INPUT: s=string, lines=array of strings, n/seq=int (starting at 1)
 
     OUTPUT: float"""
+    if isinstance(lines, _strtypes):
+        lines = [lines]
     fltregex = r'[-+]?[0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?'
     if after:
         occur = [x[x.find(s) + len(s):] for x in lines if x.find(s) > -1]
@@ -464,7 +743,7 @@ def strrep(seq, n, newseq):
 
 
 def find_nearest(array, value, bigger=None, idx=False):
-    """ Find nearest VALUE in the array and return it.
+    """ Find nearest VALUE in the array and return it. 
 
     INPUT: array, value
 
@@ -472,21 +751,82 @@ def find_nearest(array, value, bigger=None, idx=False):
     """
     if bigger is None:
         array = _np.array(array)
-        idx = (_np.abs(array - value)).argmin()
-        found = array[idx]
+        i = (_np.abs(array - value)).argmin()
+        found = array[i]
     elif bigger:
         found = _np.min([x for x in array if x > value])
-        idx = _np.where(array == found)
+        i = _np.where(array == found)
     elif not bigger:
         found = _np.max([x for x in array if x < value])
-        idx = _np.where(array == found)
+        i = _np.where(array == found)
     else:
-        print('# ERROR at bigger!!')
+        _warn.warn('# ERROR at bigger!!')
     # return
     if not idx:
         return found
     else:
-        return idx[0]
+        return i
+
+
+def find_nearND(matrix, array, idx=False, bigger=None, outlen=1):
+    """ Find nearest array values in a MATRIX.
+
+    INPUT: array, value
+
+    OUTPUT: closest value (array dtype)
+    """
+    if len(array) == 1:
+        array = array[0]
+    if _np.shape(matrix)[1] != len(array):
+        raise ValueError('shape(matrix)[1] must be == len(array)') 
+    dists = []
+    for i in range(len(array)):
+        nfact = _np.max(matrix[:, i]) - _np.min(matrix[:, i])
+        if nfact <= 0:
+            continue
+        dists.append(_np.abs(matrix[:, i] - array[i])/nfact)
+
+    dists = _np.sum(dists, axis=0)
+    idsort = _np.argsort(dists)
+    if bigger:
+        valid = []
+        for nid in idsort:
+            chk = [True for i in range(len(array)) if (
+                matrix[nid, i] > array[i])]
+            if len(chk) == len(array):
+                valid.extend([nid])
+            if len(valid) == outlen:
+                idsort = valid
+                break
+        if valid == []:
+            _warn.warn('# Invalid values for bigger == {0}'.format(bigger))
+    elif bigger is False:
+        valid = []
+        for nid in idsort:
+            chk = [True for i in range(len(array)) if (
+                matrix[nid, i] < array[i])]
+            if len(chk) == len(array):
+                valid.extend([nid])
+            if len(valid) == outlen:
+                idsort = valid
+                break
+        if valid == []:
+            _warn.warn('# Invalid values for bigger == {0}'.format(bigger))
+    # return
+    if 'valid' in locals():
+        if len(valid) == 0:
+            print(idsort)
+            raise ValueError('Invalid values for bigger == {0}'.format(bigger))
+    if not idx:
+        if outlen <= 1:
+            return matrix[idsort[0]]
+        else:
+            return matrix[idsort[:outlen]]
+    else:
+        if outlen <= 1:
+            return idsort[0]
+        else:
+            return idsort[:outlen]
 
 
 def nan_helper(y):
@@ -500,19 +840,33 @@ def nan_helper(y):
           to convert logical indices of NaNs to 'equivalent' indices
     Example:
         >>> # linear interpolation of NaNs
-        >>> nans, x= nan_helper(y)
-        >>> y[nans]= np.interp(x(nans), x(~nans), y[~nans])
+        >>> nans, x = nan_helper(y)
+        >>> # x is a lambda "sequence" function to interpolation purposes
+        >>> y[nans]= _np.interp(x(nans), x(~nans), y[~nans])
     """
     return _np.isnan(y), lambda z: z.nonzero()[0]
 
 
 # Angular coordinates and dates manipulation
-def dtflag():
-    """ Return a "datetime" flag, i.e., a string the the current date and time
-    formated as yyyymmdd-hhMM."""
+def dtflag(ms=False):
+    """ It returns the current "datetime" flag, i.e., a string of the current 
+    date and time formated as yyyymmdd-hhMM."""
     now = _dt.datetime.now()
-    return '{0}{1:02d}{2:02d}-{3:02d}{4:02d}{5:02d}'.format(now.year, 
-        now.month, now.day, now.hour, now.minute, now.second)
+    if not ms:
+        return '{0}{1:02d}{2:02d}-{3:02d}{4:02d}{5:02d}'.format(now.year, 
+            now.month, now.day, now.hour, now.minute, now.second)
+    else:
+        return '{0}{1:02d}{2:02d}-{3:02d}{4:02d}{5:02d}{6:02.0f}'.format(
+            now.year, now.month, now.day, now.hour, now.minute, now.second, 
+            now.microsecond/1e4)
+
+
+def greg2MJD(yr, mon, day, fracday):
+    """ It returns the MJD of a given YYYY,MM,DD (integers) and fraction of the
+    day (float) as a float.
+    """
+    MJD = _jdcal.gcal2jd(yr, mon, day)[1]
+    return MJD+fracday
 
 
 def longdate2MJD(ldate):
@@ -527,6 +881,19 @@ def hms2fracday(hms):
     """ Enter hour:min:sec (string) and return fraction of a day (float) """
     hms = _np.array(hms.split(':'), dtype='float')
     return (hms[0] + hms[1]/60. + hms[2]/3600) / 24.
+
+
+def hms2sec(hms):
+    """ Enter hour:min:sec (string) and return it in seconds (float) """
+    hms = _np.array(hms.split(':'), dtype='float')
+    if len(hms) == 3:
+        return (hms[0]*3600. + hms[1]*60. + hms[2])
+    elif len(hms) == 2:
+        return (hms[0]*60. + hms[1])
+    else:
+        _warn.warn("# WRONG hms FORMAT!")
+        print(hms)
+        return 0.
 
 
 def fracday2hms(frac):
@@ -572,17 +939,18 @@ def dec2degf(decstr, delimiter=":"):
 
 
 def gentkdates(mjd0, mjd1, fact, step, dtstart=None):
-    """ Generates round dates between > mjd0 and < mjd1 in a given step.
-    Valid steps are:
+    """ Generates round dates between ``mjd0`` and ``mjd1`` in a given step.
+    Valid ``steps`` are:
 
         'd/D/dd/DD' for days;
+        'w/W/ww/WW' for weeks;
         'm/M/mm/MM' for months;
         'y/Y/yy/YY/yyyy/YYYY' for years.
 
     dtstart (optional) is expected to be in _datetime._datetime.date() format
-    [i.e., _datetime.date(yyyy, m, d)].
+    [i.e., datetime.date(yyyy, m, d)].
 
-    fact must be an integer.
+    ``fact`` must be an integer.
 
     INPUT: float, float, float, int, step (see above), dtstart (see above)
 
@@ -595,116 +963,144 @@ def gentkdates(mjd0, mjd1, fact, step, dtstart=None):
     else:
         mjdst = _jdcal.gcal2jd(dtstart.year, dtstart.month, dtstart.day)[1]
         if mjdst < mjd0 - 1 or mjdst > mjd1:
-            print('# Warning! Invalid "dtstart". Using mjd0.')
+            _warn.warn('Invalid "dtstart". Using mjd0.')
             dtstart = _dt.datetime(
                 *_jdcal.jd2gcal(_jdcal.MJD_0, mjd0)[:3]).date()
     # define step 'position' and vector:
-    if dtstart.day > 28:
-        dtstart = dtstart.replace(day=28)
-    basedata = [dtstart.year, dtstart.month, dtstart.day]
+    # if dtstart.day > 28:
+    #     dtstart = dtstart.replace(day=28)
+    basedata = dtstart
     dates = []
     mjd = mjdst
-    if step.upper() in ['Y', 'YY', 'YYYY']:
-        i = 0
-        while mjd < mjd1 + 1:
-            dates += [_dt.datetime(*basedata).date()]
-            basedata[i] += fact
-            mjd = _jdcal.gcal2jd(*basedata)[1]
-    elif step.upper() in ['M', 'MM']:
-        i = 1
-        while mjd < mjd1 + 1:
-            dates += [_dt.datetime(*basedata).date()]
-            basedata[i] += fact
-            while basedata[i] > 12:
-                basedata[0] += 1
-                basedata[1] -= 12
-            mjd = _jdcal.gcal2jd(*basedata)[1]
-    elif step.upper() in ['D', 'DD']:
-        i = 2
-        # daysvec = _np.arange(1, 29, fact)
-        # if basedata[i] not in daysvec:
-        #     j = 0
-        #     while daysvec[j + 1] < basedata[i]:
-        #         j += 1
-        #     daysvec += basedata[i] - daysvec[j]
-        #     idx = _np.where(daysvec < 29)
-        #     daysvec = daysvec[idx]
-        # else:
-        #     j = _np.where(daysvec == basedata[i])[0]
-        j = 0
-        daysvec = _np.arange(1, 29)[j::fact]
-        while basedata[i] not in daysvec:
-            j += 1
-            daysvec = _np.arange(1, 29)[j::fact]
-        j = 0
-        while mjd < mjd1 + 1:
-            dates += [_dt.datetime(*basedata).date()]
-            j += 1
-            if j == len(daysvec):
-                j = 0
-                basedata[1] += 1
-                if basedata[1] == 13:
-                    basedata[1] = 1
-                    basedata[0] += 1
-            basedata[i] = daysvec[j]
-            mjd = _jdcal.gcal2jd(*basedata)[1]
-    else:
-        print('# ERROR! Invalid step')
-        raise SystemExit(1)
+    while mjd < mjd1 + 1:
+        dates += [basedata]
+        if step.upper() in ['Y', 'YY', 'YYYY']:
+            basedata += _dtdelta(years=fact)
+        elif step.upper() in ['M', 'MM']:
+            basedata += _dtdelta(months=fact)
+        elif step.upper() in ['W', 'WW']:
+            basedata += _dtdelta(weeks=fact)
+        elif step.upper() in ['D', 'DD']:
+            basedata += _dtdelta(days=fact)
+        else:
+            _warn.warn('# ERROR! Invalid step')
+            raise SystemExit(1)
+        mjd = _jdcal.gcal2jd(basedata.year, basedata.month, basedata.day)[1]
     return dates
 
 
 def deg2rad(deg=1.):
-    """ :math:`1^\circ=\frac{pi}{180}` """
+    r""" :math:`1^\circ=\frac{\pi}{180}` rad."""
     return deg*_np.pi/180.
 
 
 def rad2deg(rad=1.):
-    """ :math:`1^\circ=\frac{pi}{180}` """
+    r""" :math:`1^\circ=\frac{\pi}{180}` rad."""
     return rad*180./_np.pi
 
 
 def arcmin2rad(arm=1.):
-    """ :math:`1'=\frac{pi}{10800}` """
+    r""" :math:`1'=\frac{\pi}{10800}` rad."""
     return arm*_np.pi/10800.
 
 
 def rad2arcmin(rad=1.):
-    """ :math:`1^\circ=\frac{pi}{10800}` """
+    r""" :math:`1'=\frac{\pi}{10800}` rad."""
     return rad*10800./_np.pi
 
 
 def arcsec2rad(ars=1.):
-    """ :math:`1'=\frac{pi}{648000}` """
+    r""" :math:`1"=\frac{\pi}{648000}` rad."""
     return ars*_np.pi/648000.
 
 
 def rad2arcsec(rad=1.):
-    """ :math:`1^\circ=\frac{pi}{648000}` """
+    r""" :math:`1"=\frac{\pi}{648000}` rad. """
     return rad*648000./_np.pi
 
 
 def mas2rad(mas=1.):
-    """ :math:`1^\circ=\frac{pi}{648000000}` """
+    r""" 1 mas :math:`=\frac{\pi}{648000000}` rad."""
     return mas*_np.pi/648000000.
 
 
 def rad2mas(rad=1.):
-    """ :math:`1^\circ=\frac{pi}{648000000}` """
+    r""" 1 mas :math:`=\frac{\pi}{648000000}` rad."""
     return rad*648000000./_np.pi
 
 
 def deg2mas(deg=1.):
-    """ :math:`1^\circ = 3600000` """
+    r""" :math:`1^\circ = 3600000` mas."""
     return deg*3600000.
 
 
 def mas2deg(mas=1.):
-    """ :math:`1^\circ = 3600000` """
+    r""" :math:`1^\circ = 3600000` mas."""
     return mas/3600000.
 
 
 # Files manipulation
+def csvread(fname):
+    """ Read a CSV file and return it as a list (table).
+    """
+    out = []
+    with open(fname, 'rb') as f:
+        reader = _csv.reader(f)
+        for row in reader:
+            out += [row]
+    return out
+
+
+def fileread(fname, bin=False):
+    rmode = 'r'
+    if bin:
+        rmode = 'rb'
+    ext = _os.path.splitext(fname)[1]
+    if ext == '.gz':
+        return _gzip.open(fname, rmode).read()
+    elif ext == '.bz2':
+        return _BZ2File(fname, rmode).read()
+    else:
+        return open(fname, rmode).read()
+
+
+def readfixwd(fname, wlims, chklims=True):
+    """ ``chklims`` : read line from beginning until the end
+    """
+    lines = fileread(fname).split('\n')
+    lsz = [len(l) for l in lines]
+    if wlims[-1] is None or wlims[-1] < 0:
+        chklims = True
+    wlims = [int(i-1) for i in wlims if (i is not None and i >= 0)]
+    if wlims[0] < 0:
+        wlims[0] = 0
+    if chklims and wlims[0] != 0:
+        wlims = [0] + wlims
+    if chklims and wlims[-1] < vmax(lsz)-1:
+        wlims += [max(lsz)]
+    out = _np.chararray( (len(lines), len(wlims)-1), 
+        itemsize=_np.max([ _np.max(_np.diff(wlims)), wlims[0] ]) )
+    for j in range(len(lines)):
+        out[j] = [ lines[j][wlims[i-1]:wlims[i]].strip().replace(',', '^') 
+            for i in range(1, len(wlims))]
+    return out
+
+
+def readtextable(fname, commentchars='#', splitchars=r'&|\pm', 
+    delchars=r'\$'+'\r '):
+    lines = fileread(fname).split('\n')
+    out = []
+    for il in lines:
+        if len(il) == 0:
+            continue
+        if il[0] in commentchars:
+            continue
+        for c in delchars:
+            il = il.replace(c, '')
+        out.append( _re.split('|'.join(splitchars.split('|')), il) )
+    return out
+
+
 def sortfile(file, quiet=False):
     """ Sort the file. """
     f0 = open(file, 'r')
@@ -727,6 +1123,7 @@ def outfld(fold='hdt'):
 
     OUTPUT: *system [folder creation]
     """
+    _warn.warn('# Deprecated! Use `os` tools directly')
     if not _os.path.exists(fold):
         _os.system('mkdir {0}'.format(fold))
     return
@@ -738,7 +1135,8 @@ def trimpathname(file):
     INPUT: full file path
 
     OUTPUT: folder path, filename (strings)"""
-    return [ file[:file.rfind('/') + 1], file[file.rfind('/') + 1:] ]
+    _warn.warn('# This is Deprecated! Use `os.path.split` instead!')
+    return _os.path.split(file)
 
 
 def rmext(name):
@@ -762,6 +1160,7 @@ def readrange(file, i0, ie):
     INPUT: string, int, int
 
     OUTPUT: list of strings """
+    _warn.warn('Update this with linecache')
     lines = []
     fp = open(file)
     for i, line in enumerate(fp):
@@ -792,7 +1191,7 @@ def splitfilelines(n, file):
     return
 
 
-def recsearch(root='./', fstr=[''], allfstr=True):
+def recsearch(root='./', fstr=[''], allfstr=True, fullpath=False):
     """
     Do a recursive search in `root` looking for files containg `fstr`.
 
@@ -810,11 +1209,14 @@ def recsearch(root='./', fstr=[''], allfstr=True):
         fstr[i] = fstr[i].replace('*', '')
     for root, subfolders, files in _os.walk(root):
         for f in files:
+            fcomp = f
+            if fullpath:
+                fcomp = _os.path.join(root, f)
             if allfstr:
-                if all(x in f for x in fstr):
+                if all(x in fcomp for x in fstr):
                     outflist.append(root+'/'+f)
             else:
-                if any(x in f for x in fstr):
+                if any(x in fcomp for x in fstr):
                     outflist.append(root+'/'+f)
     return outflist
 
@@ -832,9 +1234,132 @@ def renlist(root, newr):
     return
 
 
+def repl_fline_val(f, iline, oldval, newval):
+    """ Replace `oldval` by `newval` in `f[iline]`
+
+    return `f` replaced.
+    """
+    f[iline] = f[iline].replace(str(oldval), str(newval))
+    return f
+
+
+def output_rename(fullpath, prefix):
+    """ Replace FILENAME prefix to the one set here. 
+
+    The routine is based on the '_' character.
+
+    Example:
+    folder/SED_mod1a.sed2 > folder/bin_mod1a.sed2 
+    """
+    path, fname = _os.path.split(fullpath)
+    return _os.path.join(path, prefix+fname[fname.find('_')+1:])
+
+
+# Python-version stuff
+def user_input(arg):
+    if _sys.version_info[0] > 2:
+        return input(arg)
+    else: 
+        return raw_input(arg)
+
+
 # Plot-related
-def civil_ticks(ax, civcfg=[1, 'm'], civdt=None, tklab=True):
-    """ Add the civil ticks in the axis.  """
+def add_subplot_axes(ax, rect, axisbg='w'):
+    """ Generate a subplot in the current axis. **Warning**: the labels with 
+    be proportionally smaller. 
+
+    Originally in http://stackoverflow.com/questions/17458580/
+
+    :Example:
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)]
+        rect = [0.2,0.2,0.7,0.7]
+        ax1 = add_subplot_axes(ax,rect)
+
+    :Alternative solution:
+
+        # Here the labels have the same size
+        from mpl_toolkits.axes_grid.inset_locator import inset_axes
+        inset_axes = inset_axes(parent_axes,
+            width="30%", # width = 30% of parent_bbox
+            height=1., # height : 1 inch
+            loc=3)
+        # "bbox_to_anchor" gives VERY strange results...
+    """
+    fig = _plt.gcf()
+    box = ax.get_position()
+    width = box.width
+    height = box.height
+    inax_position = ax.transAxes.transform(rect[0:2])
+    transFigure = fig.transFigure.inverted()
+    infig_position = transFigure.transform(inax_position)    
+    x = infig_position[0]
+    y = infig_position[1]
+    width *= rect[2]
+    height *= rect[3]  # <= Typo was here
+    subax = fig.add_axes([x, y, width, height], axisbg=axisbg)
+    x_labelsize = subax.get_xticklabels()[0].get_size()
+    y_labelsize = subax.get_yticklabels()[0].get_size()
+    x_labelsize *= rect[2]**0.5
+    y_labelsize *= rect[3]**0.5
+    subax.xaxis.set_tick_params(labelsize=x_labelsize)
+    subax.yaxis.set_tick_params(labelsize=y_labelsize)
+    return subax
+
+
+def mag_plot(ax, ylabel=r'mag$_V$', civcfg=[1, 'y'], 
+    civdt=[1996, 1, 1], civlabel='%Y'):
+    """ TODO 
+    """
+    # ax.legend()
+    # ax.locator_params(axis='x', nbins=6)
+    # fig.subplots_adjust(left=0.125, right=0.9, bottom=0.1, wspace=0.2)
+    ax2 = civil_ticks(ax, civcfg=civcfg, civdt=civdt, label=civlabel)
+    # minorLocator = AutoMinorLocator(2)
+    # ax.xaxis.set_minor_locator(minorLocator)
+    ax = enable_minorticks(ax, auto=4, axis='b')
+    ax2 = enable_minorticks(ax2, auto=4, axis='x')
+    ax.invert_yaxis()
+    ax.set_title('Epoch', y=1.05)
+    ax.set_xlabel('MJD')
+    ax.set_ylabel(ylabel)
+    return ax, ax2
+
+
+def enable_minorticks(ax, auto=None, axis='x'):
+    """ Enable minor ticks
+
+    :param auto: argument to AutoMinorLocator, to specify a fixed number of 
+    minor intervals per major interval. 
+    :param axis: ['x', 'y', 'both']
+    """
+    minorLocator = _AutoMinorLocator(auto)
+    if axis[0].lower() in ['x', 'b']:
+        ax.xaxis.set_minor_locator(minorLocator)
+    minorLocator = _AutoMinorLocator(auto)
+    if axis[0].lower() in ['y', 'b']:
+        ax.yaxis.set_minor_locator(minorLocator)
+    return ax
+
+
+def civil_ticks(ax, civcfg=[1, 'm'], civdt=None, tklab=True, label="%y %b %d",
+    **kwargs):
+    """ Add the civil ticks in the axis.
+
+    :param civcfg: forces a given timestep between the ticks [`n`, interval].
+    Interval can be day (`d`), month (`m`) or year (`y`). 
+    :param civdt: sets the initial tick date. Format: [Y, M, D]
+    :param tklab: if False, the civil date labels are not written.
+    :param label: define the label for the ``date.strftime`` to be displayed in 
+    the tick labels.
+
+    :EXAMPLE:
+
+        fig, ax = plt.subplots()
+        ax.plot(x, y)
+        ax = phc.civil_ticks(ax)
+    """
     if civdt is not None:
         civdt = _dt.datetime(civdt[0], civdt[1], civdt[2]).date()
     mjd0, mjd1 = ax.get_xlim()
@@ -845,28 +1370,30 @@ def civil_ticks(ax, civcfg=[1, 'm'], civdt=None, tklab=True):
     ax2.set_xlim( ax.get_xlim() )
     ax2.set_xticks(mjdticks)
     if tklab:
-        ax2.set_xticklabels([date.strftime("%d %b %y") for date in dtticks])
+        ax2.set_xticklabels([date.strftime(label) for date in dtticks], 
+            **kwargs)
     else:
         ax2.set_xticklabels([])
-    return ax
+    return ax2
 
 
-def savefig(fig, figname=None, fmt=['png'], keeppt=False):
+def savefig(fig, figname=None, fmt=['png'], keeppt=False, dpi=80, transp=True):
     """ Standard way of saving a figure in PyHdust. """
     if figname is None or figname == "":
-        figname = dtflag()
+        figname = dtflag(ms=True)
     elif not keeppt:
         figname = figname.replace('.', 'p')
     if _os.path.basename(figname) == figname:
         figname = _os.getcwd() + '/' + figname
     for f in fmt:
+        fig.savefig(figname+'.{0}'.format(f), transparent=transp, 
+            bbox_inches='tight', dpi=dpi)
         print('# Saved {1}.{0}'.format(f, figname))
-        fig.savefig(figname+'.{0}'.format(f), transparent=True)
     _plt.close(fig)
     return
 
 
-def normGScale(val, min=None, max=None, log=False):
+def normGScale(val, vmin=None, vmax=None, log=False):
     """ Return the normalized values of a given array to 0 and 255 (gray 
     scale).
 
@@ -890,32 +1417,32 @@ def normGScale(val, min=None, max=None, log=False):
         >>> phc.normGScale(np.logspace(0,1,10))
         array([  0,   8,  19,  33,  51,  73, 103, 142, 191, 255])
     """
-    if len(val) == 1 and (min is None or max is None):
-        print('# Warning! Wrong normGScale call!!')
+    if len(val) == 1 and (vmin is None or vmax is None):
+        _warn.warn('Wrong normGScale call!!')
         return 127
     #
     val = _np.array(val).astype(float)
-    if min is None:
-        min = _np.min(val)
-    if max is None:
-        max = _np.max(val)
+    if vmin is None:
+        vmin = _np.min(val)
+    if vmax is None:
+        vmax = _np.max(val)
     # 
     if not log:
-        val = (val - min) / (max - min) * 255
+        val = (val - vmin) / (vmax - vmin) * 255
     else:
-        if min <= 0:
-            min = _np.min(val[_np.where(val > 0)])
-            val[_np.where(val <= 0)] = min
-        val = (_np.log(_np.array(val).astype(float)) - _np.log(min)) / \
-            (_np.log(max) - _np.log(min)) * 255
+        if vmin <= 0:
+            vmin = _np.min(val[_np.where(val > 0)])
+            val[_np.where(val <= 0)] = vmin
+        val = (_np.log(_np.array(val).astype(float)) - _np.log(vmin)) / \
+            (_np.log(vmax) - _np.log(vmin)) * 255
     return _np.round(val).astype(int)
 
 
-def gradColor(val, cmapn='jet', min=None, max=None, log=False):
+def gradColor(val, cmapn='jet', vmin=None, vmax=None, log=False):
     """ Return the corresponding value(s) color of a given colormap.
 
     Good options, specially for lines, are 'jet', 'gnuplot', 'brg', 
-    'cool' and 'gist_heat' (attention! Here max is white!). 
+    'cool' and 'gist_heat' (attention! Here vmax is white!). 
 
     .. code-block:: python
 
@@ -933,7 +1460,7 @@ def gradColor(val, cmapn='jet', min=None, max=None, log=False):
         :align: center
         :alt: phc.gradColor example
     """
-    val = normGScale(val, min=min, max=max, log=log)
+    val = normGScale(val, vmin=vmin, vmax=vmax, log=log)
     cmap = _plt.get_cmap(cmapn)
     return cmap(val)
 
@@ -946,7 +1473,7 @@ def cycles(i=0, ctype='cor'):
 
     OUTPUT: the corresponding value of the list. """
     if ctype not in ['cor', 'ls', 'mk']:
-        print('# Warning! Invalid ctype calling phc.cycles!')
+        _warn.warn('Invalid ctype calling phc.cycles!')
         return
     elif ctype == 'cor':
         return colors[_np.mod(i, len(colors))]
@@ -956,6 +1483,18 @@ def cycles(i=0, ctype='cor'):
         return filled_markers[_np.mod(i, len(filled_markers))]
 
 
+def dashes(i=0):
+    """ Dashes scheme for plot 
+    """
+    i = int(_np.mod(i, 7))
+    if i == 0:
+        return []
+    if i < 4:
+        return (32/2**i, 4, 4, 4)
+    if i < 7:
+        return (32/2**(i-2), 4, 2, 4)
+
+
 colors = ['Black', 'Blue', 'Green', 'red', 'orange', 'brown', 'purple', 'gray',
     'dodgerblue', 'lightgreen', 'tomato', 'yellow', 'peru', 'MediumVioletRed',
     'LightSteelBlue', 'cyan', 'darkred', 'olive']
@@ -963,23 +1502,97 @@ colors = ['Black', 'Blue', 'Green', 'red', 'orange', 'brown', 'purple', 'gray',
 filled_markers = ['o', 'v', '^', '<', '>', '8', 's', 'p', '*', 'h', 'H', 'D', 
     'd']
 
-line_styles = ['-', '--', ':', '-.']
+line_styles = ['-', '--', '-.', ':']
 
 
 # Physical functions
+def n_air(lbd=.55, T=300.15, P=1013.25, wp=6.113):
+    """ Air refraction index.
+
+    :param lbd: wavelength in microms
+    :param T: temperature in K
+    :param P: atmospheric pressure in mbar
+    :param wp: water vapor pressure in mbar
+
+    For all practical purposes, the refractive index is affected only by air
+    temperature. 
+    """
+    return 1+77.6e-6/T*(1+7.52e-3*lbd**-2)*(P+4810*wp/T)
+
+
 def BBlbd(T, lbd=None):
     """ Black body radiation as function of lambda. CGS units (erg s-1 sr−1 cm−3).
 
     INPUT: lambda vector in cm. If None, lbd = _np.arange(1000, 10000, 100) *
     1e-8 #Angs -> cm"""
     if lbd is None:
-        lbd = _np.arange(1000, 10000, 100) * 1e-8  # Angs -> cm
+        lbd = _np.arange(1000, 10000., 100) * 1e-8  # Angs -> cm
     ft = h.cgs * c.cgs / (lbd * kB.cgs * T)
     return 2 * h.cgs * c.cgs**2 / (lbd**5 * (_np.exp(ft) - 1))
 
 
+def fBBcor(T):
+    """ Correction as appendix B Vieira+2015. Stellar atmospheric models
+    systematically have a LOWER flux than a BB of a given Teff temperature in 
+    IR (at least for Early-type stars).
+
+    fBBcor(T)*BBlbd(Teff) == Kurucz(Teff) 
+
+    INPUT: Teff (Kurucz). log g = 4.0
+
+    OUTPUT: fBBcor(T) < 1.0 """
+    return 1.015 - 0.301 * (T / 1e4) + 0.064 * (T / 1e4)**2.
+
+
+def gbf(T, lbd):
+    r""" Gaunt factors from Vieira+2015. 
+
+    INPUT: T (K) and lbd (:math:`\mu`m, array)
+
+    log(T /K) G0 G1 G2 B0 B1 B2
+    """
+    vals = _np.array([
+        3.70, 0.0952, 0.0215, 0.0145, 2.2125, -1.5290, 0.0563,
+        3.82, 0.1001, 0.0421, 0.0130, 1.6304, -1.3884, 0.0413,
+        3.94, 0.1097, 0.0639, 0.0111, 1.1316, -1.2866, 0.0305,
+        4.06, 0.1250, 0.0858, 0.0090, 0.6927, -1.2128, 0.0226,
+        4.18, 0.1470, 0.1071, 0.0068, 0.2964, -1.1585, 0.0169,
+        4.30, 0.1761, 0.1269, 0.0046, -0.0690, -1.1185, 0.0126,
+    ]).reshape((6, -1))
+    if T < 5000 or T > 22500:
+        _warn.warn('# ERROR! Invalid temperature for Gaunt factors '
+            'calculation!')
+        return _np.zeros(len(lbd)), _np.zeros(len(lbd))
+    elif T >= 5000 and T < 10**vals[0, 0]:
+        _warn.warn('Extrapolated Gaunt factors!!')
+        g0, g1, g2, b0, b1, b2 = vals[0, 1:]
+    elif T <= 22500 and T > 10**vals[-1, 0]:
+        _warn.warn('Extrapolated Gaunt factors!!')
+        g0, g1, g2, b0, b1, b2 = vals[-1, 1:]
+    else:
+        i = _np.where(vals[:, 0] == find_nearest(
+            vals[:, 0], _np.log10(T), bigger=False))[0]
+        # print i, vals[i,0]
+        g0 = interLinND(
+            [_np.log10(T)], [vals[i, 0]], [vals[i + 1, 0]], vals[i:i + 2, 1])
+        g1 = interLinND(
+            [_np.log10(T)], [vals[i, 0]], [vals[i + 1, 0]], vals[i:i + 2, 2])
+        g2 = interLinND(
+            [_np.log10(T)], [vals[i, 0]], [vals[i + 1, 0]], vals[i:i + 2, 3])
+        b0 = interLinND(
+            [_np.log10(T)], [vals[i, 0]], [vals[i + 1, 0]], vals[i:i + 2, 4], 
+            disablelog=True)
+        b1 = interLinND(
+            [_np.log10(T)], [vals[i, 0]], [vals[i + 1, 0]], vals[i:i + 2, 5], 
+            disablelog=True) 
+        b2 = interLinND(
+            [_np.log10(T)], [vals[i, 0]], [vals[i + 1, 0]], vals[i:i + 2, 6]) 
+    return _np.exp(g0 + g1 * _np.log(lbd) + g2 * _np.log(lbd)**2), _np.exp(b0 + 
+        b1 * _np.log(lbd) + b2 * _np.log(lbd)**2)
+
+
 def lawkep(M=None, m=None, P=None, a=None):
-    """ Kepler law calc. But `None` on what you what to calc.
+    """ Kepler law calc. Kepp `None` on what you what to calc.
 
     Units are in *Solar System* one, what is, masses in Msun and `P` in years.
 
@@ -988,28 +1601,30 @@ def lawkep(M=None, m=None, P=None, a=None):
     One can also use the Centre-of-Mass equation a1*M1 = a2*M2 to relate the 
     two masses. 
     """
+    Gc = G.cgs
+    pi2_4 = 4*_np.pi**2
     if M is None:
         m *= Msun.cgs
         P *= yr.cgs
         a *= au.cgs
-        return 4*_np.pi**2*a**3/P**2/G.cgs-m
+        return (pi2_4*a**3/P**2/Gc-m)/Msun.cgs
     elif m is None:
         M *= Msun.cgs
         P *= yr.cgs
         a *= au.cgs
-        return 4*_np.pi**2*a**3/P**2/G.cgs-M
+        return (pi2_4*a**3/P**2/Gc-M)/Msun.cgs
     elif P is None:
         M *= Msun.cgs
         m *= Msun.cgs
         a *= au.cgs
-        return _np.sqrt( 4*_np.pi**2*a**3/(M+m)/G.cgs )
+        return _np.sqrt( pi2_4*a**3/(M+m)/Gc )/yr.cgs
     elif a is None:
         M *= Msun.cgs
         m *= Msun.cgs
         P *= yr.cgs
-        return ( P**2*G.cgs*(M+m)/4/_np.pi**2 )**(1./3)
+        return ( P**2*Gc*(M+m)/pi2_4 )**(1./3)/au.cgs
     else:
-        print('# Wrong call of phc.lawkep! Put `None` calc that qtt.')
+        print('# Wrong call of phc.lawkep! Keep `None` to calc that qtt.')
         return None
 
 
@@ -1028,59 +1643,57 @@ class Constant(object):
         return str('{0:.7e} in {1} (cgs)'.format(self.cgs, self.unitscgs))
 
 
-# Constants
-c = Constant(2.99792458e10, 299792458., 'cm s-1', 'speed of light in vacuum')
-h = Constant(6.6260755e-27, 6.62606957e-34, 'erg s-1', 'Planck constant')
-hbar = Constant(
-    1.05457266e-27, 1.05457172534e-34, 'erg s', 'Planck constant/(2*pi)')
-G = Constant(
-    6.674253e-8, 6.674253e-11, 'cm3 g-1 s-2', 'Gravitational constant')
-e = Constant(4.8032068e-10, 1.60217657e-19, 'esu', 'Elementary charge')
-ep0 = Constant(1., 8.8542e-12, '', 'Permittivity of Free Space')
-me = Constant(9.1093897e-28, 9.10938291e-31, 'g', 'Mass of electron')
-mp = Constant(1.6726231e-24, 1.67262178e-27, 'g', 'Mass of proton')
-mn = Constant(1.6749286e-24, 1.674927351e-27, 'g', 'Mass of neutron')
-mH = Constant(1.6733e-24, 1.6737236e-27, 'g', 'Mass of hydrogen')
-amu = Constant(1.6605402e-24, 1.66053892e-27, 'g', 'Atomic mass unit')
-nA = Constant(6.0221367e23, 6.0221413e23, '', "Avagadro's number")
-kB = Constant(1.3806504e-16, 1.3806488e-23, 'erg K-1', 'Boltzmann constant')
-eV = Constant(1.6021764871e-12, 1.602176565e-19, 'erg', 'Electron volt')
-a = Constant(
-    7.5646e-15, 7.5646e-16, 'erg cm-3 K-4', 'Radiation density constant')
-sigma = Constant(
-    5.67051e-5, 5.670373e-8, 'erg cm-2 K-4 s-1', 'Stefan-Boltzmann constant')
-alpha = Constant(7.29735308e-3, 7.2973525698e-3, '', 'Fine structure constant')
-Rinf = Constant(109737.316, 10973731.6, 'cm', 'Rydberg constant')
-sigT = Constant(
-    6.65245854533e-25, 6.65245854533e-29, 'cm2', 'Thomson cross section')
-
-au = Constant(1.49597870691e13, 1.49597870691e11, 'cm', 'Astronomical unit')
-pc = Constant(3.08567758e18, 3.08567758e16, 'cm', 'Parsec')
-ly = Constant(9.4605284e17, 9.4605284e15, 'cm', 'Light year')
-Mea = Constant(5.9722e27, 5.9722e24, 'g', 'Earth mass')
+# From CODATA/NIST in May/2016 (related to Mohr+2015)
+#  http://arxiv.org/abs/1507.07956
+nA = Constant(6.022140857e23, 6.022140857e23, '', "Avogadro's constant")
+amu = Constant(1.66053904e-24, 1.66053904e-27, 'g', 'Unified atomic mass unit')
+me = Constant(9.10938356e-28, 9.10938356e-31, 'g', 'Mass of electron')
+mp = Constant(1.672621898e-24, 1.672621898e-27, 'g', 'Mass of proton')
+mn = Constant(1.00137841898*mp.cgs, 1.00137841898*mp.SI, 'g', 
+    'Mass of neutron')
+h = Constant(6.62607004e-27, 6.62607004e-34, 'erg s', 'Planck constant')
+eV = Constant(1.6021766208e-12, 1.6021766208e-19, 'erg', 'Electron volt')
+kB = Constant(1.38064852e-16, 1.38064852e-23, 'erg K-1', 'Boltzmann constant')
+alpha = Constant(7.2973525664e-3, 7.2973525664e-3, '', 
+    'Fine structure constant')
+Rinf = Constant(109737.31568, 10973731.568, 'cm-1', 'Rydberg constant')
+sigT = Constant(6.6524587158e-25, 6.6524587158e-29, 'cm2', 
+    'Thomson cross section')
+# From Luzum et al., 2011
+au = Constant(1.49597870700e13, 1.49597870700e11, 'cm', 'Astronomical unit')
+# From Prsa & Harmanec, 2012
+G = Constant(6.67384e-8, 6.67384e-11, 'cm3 g-1 s-2', 
+    'Gravitational constant')
+Mea = Constant(398600.4418e15/G.cgs, 398600.4418e9/G.SI, 'g', 'Earth mass')
 Rea = Constant(6371.e5, 6371.e3, 'cm', 'Earth radius')
-Msun = Constant(1.9891e33, 1.9891e30, 'g', 'Solar mass')
-Rsun = Constant(6.961e10, 696100e3, 'cm', 'Solar radius')
+Mju = Constant(126686535e15/G.cgs, 126686535e9/G.SI, 'g', 'Jupiter mass')
+Rju = Constant(71492.e5, 71492.e3, 'cm', 'Jupiter radius')
+c = Constant(2.99792458e10, 299792458., 'cm s-1', 'speed of light in vacuum')
+sigma = Constant(5.670400e-5, 5.670400e-8, 'erg cm-2 K-4 s-1', 
+    'Stefan-Boltzmann constant')
+Msun = Constant(1.988547e33, 1.988547e30, 'g', 'Solar mass')
+Rsun = Constant(6.95508e10, 695508e3, 'cm', 'Solar radius')
 Lsun = Constant(3.846e33, 3.846e26, 'erg s-1', 'Solar luminosity')
-Tsun = Constant(5778., 5778., 'K', 'Solar Temperature')
-
-yr = Constant(3.15569e7, 3.15569e7, 'sec', 'year')
-
-bestars = [
-    # The numbers below are based on Harmanec 1988
-    # SpType     Tpole    Mass    Rp      Lum     Rp2
-    ['B0',   29854, 14.57, 05.80, 27290, 6.19],
-    ['B0.5', 28510, 13.19, 05.46, 19953, 5.80],
-    ['B1',   26182, 11.03, 04.91, 11588, 5.24],
-    ['B2',   23121, 08.62, 04.28,  5297, 4.55],
-    ['B3',   19055, 06.07, 03.56,  1690, 3.78],
-    ['B4',   17179, 05.12, 03.26,   946, 3.48],
-    ['B5',   15488, 04.36, 03.01,   530, 3.21],
-    ['B6',   14093, 03.80, 02.81,   316, 2.99],
-    ['B7',   12942, 03.38, 02.65,   200, 2.82],
-    ['B8',   11561, 02.91, 02.44,   109, 2.61],
-    ['B9',   10351, 02.52, 02.25,   591, 2.39],
-    ['B9.5',  9886, 02.38, 02.17,    46, 2.32]]
+Tsun = Constant(5779.57, 5779.57, 'K', 'Solar Temperature')
+# Derived quantities
+# In astronomy, the Julian year is defined as 365.25 days of exactly 86400 SI 
+#  seconds each, totalling exactly 31557600 SI (IAU style manual, 1989, 
+#  Wilkins)
+yr = Constant(60*60*24*365.25, 60*60*24*365.25, 'sec', 'year')
+# For the Gregorian calendar the average length of the calendar year (the mean 
+#  year) across the complete leap cycle of 400 years is 365.2425 days!
+gyr = Constant(60*60*24*365.2425, 60*60*24*365.2425, 'sec', 'year')
+ly = Constant(yr.cgs*c.cgs, yr.SI*c.SI, 'cm', 'Light year')
+pc = Constant(au.cgs*60*60*180/_np.pi, au.SI*60*60*180/_np.pi, 'cm', 'Parsec')
+e = Constant(10*c.cgs*1.6021766208e-19, 1.6021766208e-19, 'esu', 
+    'Elementary charge')
+a = Constant(4*sigma.cgs/c.cgs, 4*sigma.SI/c.SI, 'erg cm-3 K-4', 
+    'Radiation density constant')
+hbar = Constant(h.cgs/2/_np.pi, h.SI/2/_np.pi, 'erg s', 
+    'Planck constant/(2*pi)')
+# From Wikipedia
+ep0 = Constant(1., 8.854187187e-12, '', 'Permittivity of Free Space')
+mH = Constant(1.00794*amu.cgs, 1.00794*amu.SI, 'g', 'Mass of hydrogen')
 
 
 # MAIN ###

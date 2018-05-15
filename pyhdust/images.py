@@ -1,7 +1,6 @@
 # -*- coding:utf-8 -*-
 
-"""
-PyHdust *images* module: auxiliary images module
+"""PyHdust *images* module: auxiliary images module
 
 # ramp yellow
 sz = 100
@@ -26,17 +25,19 @@ img.save('CMYK2rgb.jpg')
 
 :license: GNU GPL v3.0 https://github.com/danmoser/pyhdust/blob/master/LICENSE
 """
+from __future__ import print_function
 import os as _os
 import numpy as _np
 import time as _time
 import pyhdust as _hdt
 from pyhdust.hdrpil import hdr as _hdr
 import pyhdust.phc as _phc
+import warnings as _warn
 
 try:
     import PIL as _PIL
-except:
-    print('# Warning! PIL (Pillow) module not installed!!!')
+except ImportError:
+    _warn.warn('PIL (Pillow) module not installed!!!')
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -92,7 +93,7 @@ def doColorConv(lbd, flx, fdat=None):
     """
     if fdat is None:
         fdat = _np.loadtxt(
-            _hdt.hdtpath() + '/pyhdust/refs/rgb_eff.txt', unpack=True)
+            _hdt.hdtpath() + 'refs/rgb_eff.txt', unpack=True)
     idx = _np.where((lbd >= fdat[0, 0]) & (lbd <= fdat[0, -1]))
     lbd = lbd[idx]
     flx = flx[idx]
@@ -118,7 +119,7 @@ def doColorConvMaps(data, lbdc, fdat=None, di=0, oi=0, ii=0, outflt=False):
     """
     if fdat is None:
         fdat = _np.loadtxt(
-            _hdt.hdtpath() + '/pyhdust/refs/rgb_eff.txt', unpack=True)
+            _hdt.hdtpath() + 'refs/rgb_eff.txt', unpack=True)
     # 
     lbd = lbdc * 1e3
     idx = _np.where((lbd >= fdat[0, 0]) & (lbd <= fdat[0, -1]))
@@ -236,7 +237,8 @@ def do_background(foreimg, backimg, savename=None, pos=[.1, .9], cut=0.5,
         minbd = _np.min(aB.size)
         minfd = _np.min(aF.size)
         f = minbd*fsize/minfd
-        fsize = ( _np.int(_np.round(f*aF.size[0])), _np.int(_np.round(f*aF.size[1])) )
+        fsize = ( _np.int(_np.round(f*aF.size[0])), _np.int(_np.round(
+            f*aF.size[1])) )
         aF = aF.resize(fsize, _PIL.Image.ANTIALIAS)
     aB = _np.asarray(aB, dtype=float)
     aF = _np.asarray(aF, dtype=float)
@@ -306,11 +308,71 @@ def align_backfore(bkimg, frimg, pos=[.1, .9]):
     else:
         frtmp = _np.zeros((bkh+addx, bkv+addy))
 
-    print bkh, bkv, f0h, f0v, x0, y0, addx, addy, pos
+    print(bkh, bkv, f0h, f0v, x0, y0, addx, addy, pos)
     frtmp[x0:x0+f0h, y0:y0+f0v] = frimg
     frnew = frtmp[:bkh, :bkv]
     # print frnew.shape, bkimg.shape
     return frnew
+
+
+def rotate_coords(x, y, theta, ox, oy):
+    """Rotate arrays of coordinates x and y by theta radians about the
+    point (ox, oy).
+
+    This routine was inspired on a http://codereview.stackexchange.com post.
+    """
+    s, c = _np.sin(theta), _np.cos(theta)
+    x, y = _np.asarray(x) - ox, _np.asarray(y) - oy
+    return x * c - y * s + ox, x * s + y * c + oy
+
+
+def rotate_image(src, theta, ox=None, oy=None, fill=0):
+    """Rotate the image src by theta radians about (ox, oy).
+    Pixels in the result that don't correspond to pixels in src are
+    replaced by the value fill.
+
+    This routine was inspired on a http://codereview.stackexchange.com post.
+    """
+    # Images have origin at the top left, so negate the angle.
+    theta = -theta
+
+    # Dimensions of source image. Note that scipy.misc.imread loads
+    # images in row-major order, so src.shape gives (height, width).
+    sh, sw = src.shape
+    if ox is None:
+        ox = sw/2
+    if oy is None:
+        oy = sh/2
+
+    # Rotated positions of the corners of the source image.
+    cx, cy = rotate_coords([0, sw, sw, 0], [0, 0, sh, sh], theta, ox, oy)
+
+    # Determine dimensions of destination image.
+    dw, dh = (int(_np.ceil(c.max() - c.min())) for c in (cx, cy))
+
+    # Coordinates of pixels in destination image.
+    dx, dy = _np.meshgrid(_np.arange(dw), _np.arange(dh))
+
+    # Corresponding coordinates in source image. Since we are
+    # transforming dest-to-src here, the rotation is negated.
+    sx, sy = rotate_coords(dx + cx.min(), dy + cy.min(), -theta, ox, oy)
+
+    # Select nearest neighbour.
+    sx, sy = sx.round().astype(int), sy.round().astype(int)
+
+    # Mask for valid coordinates.
+    mask = (0 <= sx) & (sx < sw) & (0 <= sy) & (sy < sh)
+
+    # Create destination image.
+    dest = _np.empty(shape=(dh, dw), dtype=src.dtype)
+
+    # Copy valid coordinates from source image.
+    dest[dy[mask], dx[mask]] = src[sy[mask], sx[mask]]
+
+    # Fill invalid coordinates.
+    dest[dy[~mask], dx[~mask]] = fill
+
+    return dest
 
 
 def rotate_cube(src, theta, ox=None, oy=None, fill=0):
@@ -318,15 +380,62 @@ def rotate_cube(src, theta, ox=None, oy=None, fill=0):
     dims = src.shape
     if len(dims) == 2:
         print('# Warning! It is a image, not a cube!')
-        return _phc.rotate_image(src, theta, ox, oy, fill)
+        return rotate_image(src, theta, ox, oy, fill)
 
-    tmp = _phc.rotate_image(src[:, :, 0], theta, ox, oy, fill)
+    tmp = rotate_image(src[:, :, 0], theta, ox, oy, fill)
     dimsr = tmp.shape
     rot = _np.zeros((dimsr[0], dimsr[1], dims[2]))
     rot[:, :, 0] = tmp
     for i in range(1, dims[2]):
-        rot[:, :, i] = _phc.rotate_image(src[:, :, i], theta, ox, oy, fill)
+        rot[:, :, i] = rotate_image(src[:, :, i], theta, ox, oy, fill)
     return rot
+
+
+def genSquare(size=64, halfside=16, center=(0, 0)):
+    """
+    Generate a square inside a square.
+
+    If size is not even, the unit square will not be centered.
+
+    center is the relative position
+    """
+    x = _np.zeros(size)
+    y = x[:, _np.newaxis]
+    # ABSOLUTE Center:
+    # if center is None:
+    #    x0 = y0 = size // 2
+    # else:
+    #    x0 = center[0]
+    #    y0 = center[1]
+    # Relative Center:
+    x0 = size // 2 + center[0]
+    y0 = size // 2 + center[1]
+    img = x * y
+    img[x0 - halfside:x0 + halfside, y0 - halfside:y0 + halfside] = 1
+    return img
+
+
+def genGaussian(size=64, sig=64 / 8, center=(0, 0)):
+    """
+    Generate a square gaussian kernel (non-normalized).
+
+    `size` is the length of a side of the square (pixels)
+
+    center is the relative position
+    """
+    x = _np.arange(0, size, 1, float)
+    y = x[:, _np.newaxis]
+    # ABSOLUTE Center:
+    # if center is None:
+    #    x0 = y0 = size // 2
+    # else:
+    #    x0 = center[0]
+    #    y0 = center[1]
+    # Relative Center:
+    x0 = size // 2 + center[0]
+    y0 = size // 2 + center[1]
+    #
+    return _np.exp(-0.5 * ((x - x0)**2 + (y - y0)**2) / sig**2)
 
 
 # MAIN ###

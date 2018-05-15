@@ -9,4 +9,4 @@
 
 source  /etc/profile.d/openmpi.sh
 
-mpiexec -n $NSLOTS  ./hdustparv2.02.bc file= hdust_bestar2.02.inp
+mpiexec -n $NSLOTS  ./hdustparv2.10.bc file= hdust_bestar2.02.inp
