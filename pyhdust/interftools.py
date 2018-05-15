@@ -550,7 +550,7 @@ def setspacecoords(nx, ny, rad_per_pixel, xc=0., yc=0.):
     return xx, yy
 
 
-def fastnumvis(img, lbd, Bproj, PA, rad_per_pixel, PAdisk=90.):
+def fastnumvis(img, lbd, Bproj, PA, rad_per_pixel, PAdisk=90., silent=False):
     """
     For a given image (in phys.units = `rad_per_pixel`) and a interf. setup,
         it returns the visibility and phase.
@@ -561,7 +561,7 @@ def fastnumvis(img, lbd, Bproj, PA, rad_per_pixel, PAdisk=90.):
 
     output: complexVis, VisAmp, VisPhase
     """
-    if lbd < 1e-6 or lbd > 4e-6:
+    if (lbd < 1e-6 or lbd > 4e-6) and not silent:
         print('# Warning! *fastnumvis*(lbd) is {0:.1e} m!'.format(lbd))
     PA = PA - PAdisk + 90.
     idx = _np.where(img > 0)
