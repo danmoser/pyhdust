@@ -828,6 +828,72 @@ def find_nearND(matrix, array, idx=False, bigger=None, outlen=1):
         else:
             return idsort[:outlen]
 
+def is_inside_ranges(par, ranges):
+    '''
+    Checks if par os inside ranges, returns boolean value.
+
+    Usage:
+    inside_ranges = is_inside_ranges(par, ranges)
+    '''
+    ranges = _np.array(ranges)
+    if len(ranges.flatten()) == 2:
+        inside_ranges = (par >= ranges[0]) and (par <= ranges[1])
+    else:
+        count = 0
+        inside_ranges = True
+        while (inside_ranges == True) and (count < len(par)):
+            inside_ranges = (par[count] >= ranges[count, 0]) and (par[count] <= ranges[count, 1])
+            count += 1
+
+    return inside_ranges
+
+def find_neighbours(par, par_grid, ranges, silent=True):
+    '''
+    Finds neighbours' positions of par in par_grid.
+
+    Usage:
+    keep, out, inside_ranges, par_new, par_grid_new = find_neighbours(par, par_grid, ranges, silent=True):
+
+    where redundant columns in 'new' values are excluded, but length is preserved (i.e.,
+    par_grid[keep] in griddata call).
+    '''
+    # check if inside ranges
+    inside_ranges = is_inside_ranges(par, ranges)
+
+    # find neighbours
+    keep = _np.array(len(par_grid) * [True])
+    out = []
+
+    for i in xrange(len(par)):
+        # out of ranges
+        if not is_inside_ranges(par[i], ranges[i]):
+            if not silent:
+                print('[find_neighbours] Warning: parameter entry out of allowed range, taking closest value')
+            keep *= _np.abs(par[i]-par_grid[:, i]) == _np.min(_np.abs(par[i]-par_grid[:, i]))
+            out.append(i)
+        # coincidence
+        elif (par[i] == par_grid[:, i]).any():
+            keep *= par[i] == par_grid[:, i]
+            out.append(i)
+        # is inside
+        else:
+            # list of values
+            par_list = _np.array(list(set(par_grid[:, i])))
+            # nearest value at left
+            par_left = par_list[par_list < par[i]]
+            par_left = par_left[_np.abs(par_left - par[i]).argmin()]
+            # nearest value at right
+            par_right = par_list[par_list > par[i]]
+            par_right = par_right[_np.abs(par_right - par[i]).argmin()]
+            # select rows
+            kl = par_grid[:, i] == par_left
+            kr = par_grid[:, i] == par_right
+            keep *= (kl + kr)
+    # delete coincidences
+    par_new = _np.delete(par, out)
+    par_grid_new = _np.delete(par_grid, out, axis=1)
+
+    return keep, out, inside_ranges, par_new, par_grid_new
 
 def nan_helper(y):
     """Helper to handle indices and logical indices of NaNs.
