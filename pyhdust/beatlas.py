@@ -713,6 +713,59 @@ def interpolBA(params, ctrlarr, lparams, minfo, models, param=True):
     X1 = parlims[:, 1]
     return _phc.interLinND(params, X0, X1, outmodels)
 
+def griddataBA(minfo, models, params, isig, silent=True):
+    '''
+    Interpolates model grid
+
+    Usage:
+    model_interp = griddata(minfo, models, params, isig, silent=True)
+
+    where
+    minfo = grid of parameters
+    models = grid of models
+    params = parameters,
+    isig = (normalized) sigma0 index
+
+    Ex:
+    # read grid
+    xdrpath = 'beatlas/disk_flx.xdr'
+    listpar, lbdarr, minfo, models = bat.readBAsed(xdrpath, quiet=True)
+    # find isig
+    dims = ['M', 'ob', 'sig0', 'nr', 'cosi']
+    dims = dict(zip(dims, range(len(dims))))
+    isig = dims["sig0"]
+    # interpolation
+    params = [12.4, 1.44, 0.9, 4.4, 0.1]
+    model_interp = np.exp(griddataBA(minfo, np.log(models), params, isig))
+
+    If photospheric models are interpolated, let isig=None. For spectra,
+    it is recommended to enter the log of the grid of spectra as input,
+    as shown in the example above.
+    '''
+    # ranges
+    ranges = _np.array([[parr.min(), parr.max()] for parr in minfo.T])
+
+    # find neighbours, delete coincidences
+    if _phc.is_inside_ranges(isig, [0, len(params)-1]):
+        # exclude sig0 dimension, to take all their entries for interpolation
+        keep, out, inside_ranges, params1, minfo1 = _phc.find_neighbours(_np.delete(params, isig), \
+                                                                    _np.delete(minfo, isig, axis=1), \
+                                                                    _np.delete(ranges.T, isig, axis=1).T, \
+                                                                    silent=silent)
+        params = _np.hstack([params1, params[isig]])
+        minfo = _np.vstack([minfo1.T, minfo[:, isig]]).T
+    else:
+        keep, out, inside_ranges, params, minfo = _phc.find_neighbours(params, minfo, ranges, silent=silent)
+
+    # interpolation
+    model_interp = _griddata(minfo[keep], models[keep], params, method='linear')[0]
+
+    if _np.isnan(model_interp).any() or _np.sum(model_interp) == 0.:
+        if not silent:
+            print('[griddataBA] Warning: linear interpolation didnt work, taking closest model')
+        model_interp = _griddata(minfo[keep], models[keep], params, method='nearest')[0]
+
+    return model_interp
 
 def check_xdr_limits(xdrminfo, todel=[]):
     """ Check if the XDR file contains models for all parameters within their
