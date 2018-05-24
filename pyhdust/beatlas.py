@@ -808,6 +808,30 @@ def check_xdr_limits(xdrminfo, todel=[]):
         print('# THE MODELS IN XDR ARE OKAY!!')
     return 
 
+def hfrac2tms(Hfrac, inverse=False):
+    '''
+    Converts nuclear hydrogen fraction into fractional time in the main-sequence,
+    (and vice-versa) based on the polynomial fit of the average of this relation
+    for all B spectral types and rotational velocities.
+
+    Usage:
+    t = hfrac2tms(Hfrac, inverse=False)
+    or
+    Hfrac = hfrac2tms(t, inverse=True)
+    '''
+    if not inverse:
+        coef = np.array([-0.57245754, -0.8041484 , -0.51897195,  1.00130795])
+        tms = coef.dot(np.array([Hfrac**3, Hfrac**2, Hfrac**1, Hfrac**0]))
+    else:
+        # interchanged parameter names
+        coef = np.array([-0.74740597,  0.98208541, -0.64318363, -0.29771094,  0.71507214])
+        tms = coef.dot(np.array([Hfrac**4, Hfrac**3, Hfrac**2, Hfrac**1, Hfrac**0]))
+
+    # solving problem at lower extreme
+    if tms < 0.:
+        tms = 0.
+
+    return tms
 
 # MAIN ###
 if __name__ == "__main__":
