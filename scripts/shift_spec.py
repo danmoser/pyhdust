@@ -84,6 +84,49 @@ def has_central_absorp(nf0, vlV, vlR, hw):
 
 def gauss_fit(x, y, a0=None, x0=None, sig0=None, emission=True):
     """ Return ``curve_fit``, i.e., ``popt, pcov``.
+
+    def gauss_fit(x, y, a0=None, x0=None, sig0=None, emission=True, ssize=0.05):
+    
+    # def gauss(x, a, x0, sigma):
+    #     y0=1.
+    #     return a*_np.exp(-(x-x0)**2/(2*sigma**2))+y0
+    if ssize < 0 or ssize > .5:
+        _warn.warn('Invalid ssize value...', stacklevel=2)
+        ssize = 0
+    ssize = int(ssize * len(y))
+    if ssize == 0:
+        ssize = 1
+
+    q = 95
+    func = _np.max
+    if not emission:
+        func = _np.min
+        q = 5
+    if a0 is None:
+        a0 = _np.abs(_np.percentile(y, q)) - _np.median(y)
+    if x0 is None:
+        x0 = x[_np.where(y == func(y))]
+    if sig0 is None:
+        sig0 = (_np.max(x)-_np.min(x))/10.
+    # if y0 is None:
+    #     y0 = np.median(y)
+    # gmodel = _Model(gauss)
+    # gmodel.set_param_hint('a', min=0.2, max=20)
+    # if not emission:
+    #     gmodel.set_param_hint('a', min=-0.2, max=-4)
+    # gmodel.set_param_hint('sigma', min=50, max=1000)
+    # result = gmodel.fit(y, x=x, a=a0, x0=x0, sigma=sig0)
+    # print(result.params['a'], result.params['sigma'], result.params['x0'])
+    # return result.params['a']*_np.sqrt(_np.pi*2)*result.params['sigma']
+    medx0, medx1 = _np.average(x[:ssize]), _np.average(x[-ssize:])
+    if ssize > 9:
+        medy0, medy1 = _np.median(y[:ssize]), _np.median(y[-ssize:])
+    else:
+        medy0, medy1 = _np.average(y[:ssize]), _np.average(y[-ssize:])
+    new_y = medy0 + (medy1 - medy0) * (x - medx0) / (medx1 - medx0)
+    g_init = _models.Gaussian1D(amplitude=a0, mean=x0, stddev=sig0)
+    fit_g = _fitting.LevMarLSQFitter()
+    g = fit_g(g_init, x, y-new_y)
     """
     q = 95
     func = np.max
@@ -99,9 +142,9 @@ def gauss_fit(x, y, a0=None, x0=None, sig0=None, emission=True):
     # if y0 is None:
     #     y0 = np.median(y)
     gmodel = Model(gauss)
-    gmodel.set_param_hint('a0', min=0.2, max=20)
+    gmodel.set_param_hint('a', min=0.2, max=20)
     if not emission:
-        gmodel.set_param_hint('sigma', min=-0.2, max=-4)
+        gmodel.set_param_hint('a', min=-0.2, max=-4)
     gmodel.set_param_hint('sigma', min=50, max=1000)
     result = gmodel.fit(y, x=x, a=a0, x0=x0, sigma=sig0)
 
