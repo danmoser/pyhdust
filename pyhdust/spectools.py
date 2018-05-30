@@ -593,10 +593,13 @@ def gauss_fit(x, y, a0=None, x0=None, sig0=None, emission=True, ssize=0.05):
         sig0 = (_np.max(x)-_np.min(x))/10.
 
     g_init = _models.Gaussian1D(amplitude=a0, mean=x0, stddev=sig0)
+    g_init.bounding_box.amplitude = (0, 2*a0)
+    # g_init.verblevel = 0
     fit_g = _fitting.LevMarLSQFitter()
-    print(a0, x0, sig0, _np.shape(a0), _np.shape(x0), _np.shape(sig0), 
-        _np.shape(x), _np.shape(y))
+    # print(a0, x0, sig0, _np.shape(a0), _np.shape(x0), _np.shape(sig0), 
+        # _np.shape(x), _np.shape(y))
     g = fit_g(g_init, x, y-new_y)
+    # print(g.parameters[0])
     return g, new_y
 
 
@@ -639,11 +642,15 @@ def absLineDeb(wv, flux, lb0, lb1, vw=1000, ssize=0.05, a0=None, sig0=None,
     if sig0 is None:
         sig0 = (_np.max(x)-_np.min(x))/10.
 
-    gg_init = ( _models.Gaussian1D(a0, lb0, sig0) + 
-        _models.Gaussian1D(a0, lb1, sig0) )
+    g1 = _models.Gaussian1D(a0, lb0, sig0)
+    g1.bounding_box.amplitude = (0, 2*a0)
+    g2 = _models.Gaussian1D(a0, lb1, sig0)
+    g2.bounding_box.amplitude = (0, 2*a0)
+    gg_init = ( g1 + g2 )
+    # gg_init.verblevel = 0
     fitter = _fitting.SLSQPLSQFitter()
-    gg = fitter(gg_init, x, y-new_y)
-
+    gg = fitter(gg_init, x, y-new_y, verblevel=0)
+    # print(gg.parameters[0], gg.parameters[0+3])
     if not allout:
         return ( gg.parameters[0]*gg.parameters[2]*_np.sqrt(2*_np.pi), 
             gg.parameters[0+3]*gg.parameters[2+3]*_np.sqrt(2*_np.pi) )
