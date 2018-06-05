@@ -142,7 +142,7 @@ def gauss_fit(x, y, a0=None, x0=None, sig0=None, emission=True):
     # if y0 is None:
     #     y0 = np.median(y)
     gmodel = Model(gauss)
-    gmodel.set_param_hint('a', min=0.2, max=20)
+    gmodel.set_param_hint('a', min=0.2, max=4)
     if not emission:
         gmodel.set_param_hint('a', min=-0.2, max=-4)
     gmodel.set_param_hint('sigma', min=50, max=1000)
@@ -153,7 +153,8 @@ def gauss_fit(x, y, a0=None, x0=None, sig0=None, emission=True):
     ax0.plot(x, result.init_fit, 'k--')
     ax0.plot(x, result.best_fit, 'r-')
     ax0.set_title(fitsfile)
-    idx = np.where((wl > 120000) & (wl < 150000))
+    print(lbc, np.min(x))
+    idx = np.where((wl > lbc*0.98) & (wl < lbc*1.03))
     ax1.plot(wl[idx], flux[idx], 'o')
     plt.show(block=False)
     cmd = phc.user_input('# Problem (y/other)? ')

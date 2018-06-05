@@ -593,7 +593,7 @@ def gauss_fit(x, y, a0=None, x0=None, sig0=None, emission=True, ssize=0.05):
         sig0 = (_np.max(x)-_np.min(x))/10.
 
     g_init = _models.Gaussian1D(amplitude=a0, mean=x0, stddev=sig0)
-    g_init.bounding_box.amplitude = (0, 2*a0)
+    g_init.bounds['amplitude'] = (0, 2*a0)
     # g_init.verblevel = 0
     fit_g = _fitting.LevMarLSQFitter()
     # print(a0, x0, sig0, _np.shape(a0), _np.shape(x0), _np.shape(sig0), 
@@ -643,9 +643,11 @@ def absLineDeb(wv, flux, lb0, lb1, vw=1000, ssize=0.05, a0=None, sig0=None,
         sig0 = (_np.max(x)-_np.min(x))/10.
 
     g1 = _models.Gaussian1D(a0, lb0, sig0)
-    g1.bounding_box.amplitude = (0, 2*a0)
+    g1.bounds['amplitude'] = (0, 2*a0)
+    g1.bounds['mean'] = (lb0*0.9, lb1*0.99)
     g2 = _models.Gaussian1D(a0, lb1, sig0)
-    g2.bounding_box.amplitude = (0, 2*a0)
+    g1.bounds['amplitude'] = (0, a0)
+    g2.bounds['mean'] = (lb0*1.01, lb1*1.1)
     gg_init = ( g1 + g2 )
     # gg_init.verblevel = 0
     fitter = _fitting.SLSQPLSQFitter()
@@ -659,7 +661,7 @@ def absLineDeb(wv, flux, lb0, lb1, vw=1000, ssize=0.05, a0=None, sig0=None,
 
 
 def absLineCalcWave(wv, flux, lbc, vw=1000, ssize=0.05, gauss=False, 
-    allout=False):
+    allout=False, spcas=None):
     r"""
     Calculate the line flux (input velocity vector). The `flux` is 
     NON-normalized.
@@ -691,6 +693,16 @@ def absLineCalcWave(wv, flux, lbc, vw=1000, ssize=0.05, gauss=False,
             medy0, medy1 = ( _np.average(flux[:ssize]), 
                 _np.average(flux[-ssize:]) )
         new_y = medy0 + (medy1 - medy0) * (wv - medx0) / (medx1 - medx0)
+
+        if spcas is not None:
+            if spcas == 0:
+                idx = _np.where(wv > 25.95*1e4)
+                flux[idx] = new_y[idx]
+            elif spcas == 1:
+                idx = _np.where(wv < 25.95*1e4)
+                print(len(idx[0]))
+                flux[idx] = new_y[idx]
+
         base = _np.trapz(new_y, wv)
         line = _np.trapz(flux, wv)
         if not allout:
