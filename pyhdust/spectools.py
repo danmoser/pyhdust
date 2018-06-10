@@ -30,7 +30,9 @@ import pyhdust.input as _inp
 import pyhdust as _hdt
 from six import string_types as _strtypes
 import warnings as _warn
-
+# from lmfit import Model as _Model
+from astropy.modeling import models as _models
+from astropy.modeling import fitting as _fitting
 
 try:    
     import pyfits as _pyfits
@@ -521,6 +523,7 @@ def EWcalc(vels, flux, vw=1000):
         return ew
     for i in range(len(outvels) - 1):
         dl = outvels[i + 1] - outvels[i]
+        print(dl)
         ew += (1. - (normflux[i + 1] + normflux[i]) / 2.) * dl
     return ew
 
@@ -560,7 +563,105 @@ def absLineCalc(vels, flux, vw=1000, ssize=0.05):
     return line - base
 
 
-def absLineCalcWave(wv, flux, lbc, vw=1000, ssize=0.05):
+def gauss_fit(x, y, a0=None, x0=None, sig0=None, emission=True, ssize=0.05):
+    """ Return the area of a fitting Gaussian.
+    """
+    if ssize <= 0 or ssize >= .5:
+        _warn.warn('Invalid ssize value...', stacklevel=2)
+        ssize = 0
+    ssize = int(ssize * len(y))
+    if ssize == 0:
+        ssize = 1
+
+    medx0, medx1 = _np.average(x[:ssize]), _np.average(x[-ssize:])
+    if ssize > 6:
+        medy0, medy1 = _np.median(y[:ssize]), _np.median(y[-ssize:])
+    else:
+        medy0, medy1 = _np.average(y[:ssize]), _np.average(y[-ssize:])
+    new_y = medy0 + (medy1 - medy0) * (x - medx0) / (medx1 - medx0)
+
+    q = 95
+    func = _np.max
+    if not emission:
+        func = _np.min
+        q = 5
+    if a0 is None:
+        a0 = _np.abs(_np.percentile(y-new_y, q)) - _np.median(y-new_y)
+    if x0 is None:
+        x0 = x[_np.where(y-new_y == func(y-new_y))]
+    if sig0 is None:
+        sig0 = (_np.max(x)-_np.min(x))/10.
+
+    g_init = _models.Gaussian1D(amplitude=a0, mean=x0, stddev=sig0)
+    g_init.bounds['amplitude'] = (0, 2*a0)
+    # g_init.verblevel = 0
+    fit_g = _fitting.LevMarLSQFitter()
+    # print(a0, x0, sig0, _np.shape(a0), _np.shape(x0), _np.shape(sig0), 
+        # _np.shape(x), _np.shape(y))
+    g = fit_g(g_init, x, y-new_y)
+    # print(g.parameters[0])
+    return g, new_y
+
+
+def absLineDeb(wv, flux, lb0, lb1, vw=1000, ssize=0.05, a0=None, sig0=None,
+    allout=False):
+    """ Return the area of a fitting Gaussian with debblending.
+    """
+    lbc = _np.average([lb0, lb1])
+    vels = (wv - lbc) / lbc * _phc.c.cgs * 1e-5
+    idx = _np.where(_np.abs(vels) <= vw*(1+ssize))
+    x = wv[idx]
+    y = flux[idx]
+
+    if ssize <= 0 or ssize >= .5:
+        _warn.warn('Invalid ssize value...', stacklevel=2)
+        ssize = 0
+    ssize = int(ssize * len(y))
+    if ssize == 0:
+        ssize = 1
+
+    nfxsig = _np.std(y)
+    emission = True
+    if _np.percentile(y, 5) + nfxsig < 1:
+        emission = False
+        if _np.percentile(y, 95) - 1.5*nfxsig > 1:
+            emission = True
+
+    medx0, medx1 = _np.average(x[:ssize]), _np.average(x[-ssize:])
+    if ssize > 6:
+        medy0, medy1 = _np.median(y[:ssize]), _np.median(y[-ssize:])
+    else:
+        medy0, medy1 = _np.average(y[:ssize]), _np.average(y[-ssize:])
+    new_y = medy0 + (medy1 - medy0) * (x - medx0) / (medx1 - medx0)
+
+    q = 95
+    if not emission:
+        q = 5
+    if a0 is None:
+        a0 = _np.abs(_np.percentile(y-new_y, q)) - _np.median(y-new_y)
+    if sig0 is None:
+        sig0 = (_np.max(x)-_np.min(x))/10.
+
+    g1 = _models.Gaussian1D(a0, lb0, sig0)
+    g1.bounds['amplitude'] = (0, 2*a0)
+    g1.bounds['mean'] = (lb0*0.9, lb1*0.99)
+    g2 = _models.Gaussian1D(a0, lb1, sig0)
+    g1.bounds['amplitude'] = (0, a0)
+    g2.bounds['mean'] = (lb0*1.01, lb1*1.1)
+    gg_init = ( g1 + g2 )
+    # gg_init.verblevel = 0
+    fitter = _fitting.SLSQPLSQFitter()
+    gg = fitter(gg_init, x, y-new_y, verblevel=0)
+    # print(gg.parameters[0], gg.parameters[0+3])
+    if not allout:
+        return ( gg.parameters[0]*gg.parameters[2]*_np.sqrt(2*_np.pi), 
+            gg.parameters[0+3]*gg.parameters[2+3]*_np.sqrt(2*_np.pi) )
+    else:
+        return gg, new_y, idx
+
+
+def absLineCalcWave(wv, flux, lbc, vw=1000, ssize=0.05, gauss=False, 
+    allout=False, spcas=None):
     r"""
     Calculate the line flux (input velocity vector). The `flux` is 
     NON-normalized.
@@ -578,22 +679,51 @@ def absLineCalcWave(wv, flux, lbc, vw=1000, ssize=0.05):
     wv = wv[idx]
     flux = flux[idx]
 
-    if ssize < 0 or ssize > .5:
-        _warn.warn('Invalid ssize value...', stacklevel=2)
-        ssize = 0
-    ssize = int(ssize * len(flux))
-    if ssize == 0:
-        ssize = 1
+    if not gauss:
+        if ssize <= 0 or ssize >= .5:
+            _warn.warn('Invalid ssize value...', stacklevel=2)
+            ssize = 0
+        ssize = int(ssize * len(flux))
+        if ssize == 0:
+            ssize = 1
+        medx0, medx1 = _np.average(wv[:ssize]), _np.average(wv[-ssize:])
+        if ssize > 6:
+            medy0, medy1 = _np.median(flux[:ssize]), _np.median(flux[-ssize:])
+        else:
+            medy0, medy1 = ( _np.average(flux[:ssize]), 
+                _np.average(flux[-ssize:]) )
+        new_y = medy0 + (medy1 - medy0) * (wv - medx0) / (medx1 - medx0)
 
-    medx0, medx1 = _np.average(wv[:ssize]), _np.average(wv[-ssize:])
-    if ssize > 9:
-        medy0, medy1 = _np.median(flux[:ssize]), _np.median(flux[-ssize:])
+        if spcas is not None:
+            if spcas == 0:
+                idx = _np.where(wv > 25.95*1e4)
+                flux[idx] = new_y[idx]
+            elif spcas == 1:
+                idx = _np.where(wv < 25.95*1e4)
+                print(len(idx[0]))
+                flux[idx] = new_y[idx]
+
+        base = _np.trapz(new_y, wv)
+        line = _np.trapz(flux, wv)
+        if not allout:
+            return line - base
+        else:
+            return line, base, idx
+
     else:
-        medy0, medy1 = _np.average(flux[:ssize]), _np.average(flux[-ssize:])
-    new_y = medy0 + (medy1 - medy0) * (wv - medx0) / (medx1 - medx0)
-    base = _np.trapz(new_y, wv)
-    line = _np.trapz(flux, wv)
-    return line - base
+        # nflx = linfit(wv, flux)
+        nflx = flux
+        nfxsig = _np.std(nflx)
+        emission = True
+        if _np.percentile(nflx, 5) + nfxsig < 1:
+            emission = False
+            if _np.percentile(nflx, 95) - 1.5*nfxsig > 1:
+                emission = True
+        g, newy = gauss_fit(wv, nflx, emission=emission, ssize=ssize)
+        if not allout:
+            return g.parameters[0]*g.parameters[2]*_np.sqrt(2*_np.pi) 
+        else:
+            return g, newy, idx
 
 
 def ECcalc(vels, flux, ssize=.05, gaussfit=False, doublegf=True):
