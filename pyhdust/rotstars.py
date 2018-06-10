@@ -449,6 +449,21 @@ def oblat2w(oblat):
 
     return w
 
+def oblat2wbig(par, inverse=False):
+    '''
+    Converts oblateness into W=vrot/vorb
+    Rimulo+2018, Sect. 3.2
+
+    Usage:
+    W = oblat2wbig(oblat, inverse=False)
+    or
+    oblat = oblat2wbig(W, inverse=True)
+    '''
+    if not inverse:
+        return _np.sqrt(2. *(par - 1.))
+    else:
+        return 1. + .5 * par**2
+
 def geneva_closest(Mstar, oblat, t, Zstr='014', tar=None, silent=True):
     '''
     Interpolate models between rotation rates, at closest Mstar.
