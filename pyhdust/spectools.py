@@ -526,7 +526,7 @@ def EWcalc(vels, flux, vw=1000):
 
 
 def absLineCalc(vels, flux, vw=1000, ssize=0.05):
-    """
+    r"""
     Calculate the line flux (input velocity vector). The `flux` is 
     NON-normalized.
 
@@ -557,6 +557,42 @@ def absLineCalc(vels, flux, vw=1000, ssize=0.05):
     new_y = medy0 + (medy1 - medy0) * (vels - medx0) / (medx1 - medx0)
     base = _np.trapz(new_y, vels)
     line = _np.trapz(flux, vels)
+    return line - base
+
+
+def absLineCalcWave(wv, flux, lbc, vw=1000, ssize=0.05):
+    r"""
+    Calculate the line flux (input velocity vector). The `flux` is 
+    NON-normalized.
+
+    ``ssize`` parameter controns the size of flux that will be evaluated at the 
+    extreme of the input flux array to determine the continuum level.
+
+    ``vels = (wv - lbc) / lbc * phc.c.cgs * 1e-5  # km/s``
+
+    Output in the same flux units times :math:`\Delta v` (both flux and *v* 
+    input units).
+    """
+    vels = (wv - lbc) / lbc * _phc.c.cgs * 1e-5
+    idx = _np.where(_np.abs(vels) <= vw)
+    wv = wv[idx]
+    flux = flux[idx]
+
+    if ssize < 0 or ssize > .5:
+        _warn.warn('Invalid ssize value...', stacklevel=2)
+        ssize = 0
+    ssize = int(ssize * len(flux))
+    if ssize == 0:
+        ssize = 1
+
+    medx0, medx1 = _np.average(wv[:ssize]), _np.average(wv[-ssize:])
+    if ssize > 9:
+        medy0, medy1 = _np.median(flux[:ssize]), _np.median(flux[-ssize:])
+    else:
+        medy0, medy1 = _np.average(flux[:ssize]), _np.average(flux[-ssize:])
+    new_y = medy0 + (medy1 - medy0) * (wv - medx0) / (medx1 - medx0)
+    base = _np.trapz(new_y, wv)
+    line = _np.trapz(flux, wv)
     return line - base
 
 

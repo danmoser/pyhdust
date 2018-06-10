@@ -828,6 +828,7 @@ def find_nearND(matrix, array, idx=False, bigger=None, outlen=1):
         else:
             return idsort[:outlen]
 
+
 def is_inside_ranges(par, ranges):
     '''
     Checks if par os inside ranges, returns boolean value.
@@ -841,20 +842,23 @@ def is_inside_ranges(par, ranges):
     else:
         count = 0
         inside_ranges = True
-        while (inside_ranges == True) and (count < len(par)):
-            inside_ranges = (par[count] >= ranges[count, 0]) and (par[count] <= ranges[count, 1])
+        while (inside_ranges is True) and (count < len(par)):
+            inside_ranges = (par[count] >= ranges[count, 0]) and (
+                par[count] <= ranges[count, 1])
             count += 1
-
     return inside_ranges
+
 
 def find_neighbours(par, par_grid, ranges, silent=True):
     '''
     Finds neighbours' positions of par in par_grid.
 
     Usage:
-    keep, out, inside_ranges, par_new, par_grid_new = find_neighbours(par, par_grid, ranges, silent=True):
+    keep, out, inside_ranges, par_new, par_grid_new = find_neighbours(
+    par, par_grid, ranges, silent=True):
 
-    where redundant columns in 'new' values are excluded, but length is preserved (i.e.,
+    where redundant columns in 'new' values are excluded, but length is 
+    preserved (i.e.,
     par_grid[keep] in griddata call).
     '''
     # check if inside ranges
@@ -894,6 +898,7 @@ def find_neighbours(par, par_grid, ranges, silent=True):
     par_grid_new = _np.delete(par_grid, out, axis=1)
 
     return keep, out, inside_ranges, par_new, par_grid_new
+
 
 def nan_helper(y):
     """Helper to handle indices and logical indices of NaNs.
@@ -1142,8 +1147,8 @@ def readfixwd(fname, wlims, chklims=True):
         wlims[0] = 0
     if chklims and wlims[0] != 0:
         wlims = [0] + wlims
-    if chklims and wlims[-1] < vmax(lsz)-1:
-        wlims += [max(lsz)]
+    if chklims and wlims[-1] < _np.max(lsz)-1:
+        wlims += [_np.max(lsz)]
     out = _np.chararray( (len(lines), len(wlims)-1), 
         itemsize=_np.max([ _np.max(_np.diff(wlims)), wlims[0] ]) )
     for j in range(len(lines)):
@@ -1202,7 +1207,7 @@ def trimpathname(file):
 
     OUTPUT: folder path, filename (strings)"""
     _warn.warn('# This is Deprecated! Use `os.path.split` instead!')
-    return _os.path.split(file)
+    return list(_os.path.split(file))
 
 
 def rmext(name):
