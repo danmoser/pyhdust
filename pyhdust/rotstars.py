@@ -616,7 +616,7 @@ def geneva_interp_fast(Mstar, oblat, t, Zstr='014', silent=True):
     ranges = _np.array([[par_grid[:, i].min(), par_grid[:, i].max()] for i in xrange(len(par))])
 
     # find neighbours
-    keep, out, inside_ranges, par, par_grid = find_neighbours(par, par_grid, ranges)
+    keep, out, inside_ranges, par, par_grid = _phc.find_neighbours(par, par_grid, ranges)
 
     # interpolation method
     if inside_ranges:
