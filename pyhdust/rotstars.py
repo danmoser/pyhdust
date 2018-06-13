@@ -454,28 +454,27 @@ def geneva_closest(Mstar, oblat, t, Zstr='014', tar=None, silent=True):
     Interpolate models between rotation rates, at closest Mstar.
 
     Usage:
-    Rpole, logL = geneva_closest(Mstar, oblat, t, tar=None)
+    Rpole, logL = geneva_closest(Mstar, oblat, t, Zstr='014', tar=None, silent=True)
 
     where t is given in tMS, and tar is the open tar file. The chosen
     metallicity is according to the input tar file. If tar=None, the
     code will take Zstr='014' by default.
     '''
-
     # oblat to Omega/Omega_c
     w = oblat2w(oblat)
 
     # grid
-    if Mstar <= 15.:
-        Mlist = _np.array([1.7, 2., 2.5, 3., 4., 5., 7., 9., 12., 15.])
+    if Mstar <= 20.:
+        Mlist = _np.array([1.7, 2., 2.5, 3., 4., 5., 7., 9., 12., 15., 20.])
         Mstr = _np.array(['1p700', '2p000', '2p500', '3p000', '4p000', '5p000', \
-                         '7p000', '9p000', '12p00', '15p00'])
+                         '7p000', '9p000', '12p00', '15p00', '20p00'])
         Vlist = _np.array([0., 0.1, 0.3, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95])
         Vstr = _np.array(['00000', '10000', '30000', '50000', '60000', '70000', \
                          '80000', '90000', '95000'])
     else:
-        Mlist = np.array([15., 20., 25., 32., 40., 60., 85., 120.])
-        Mstr = np.array(['15p00', '20p00', '25p00', '32p00', '40p00', '60p00', \
-                         '85p00', '120p0'])
+        Mlist = _np.array([20., 25., 32., 40., 60., 85., 120.])
+        Mstr = _np.array(['20p00', '25p00', '32p00', '40p00', '60p00', '85p00', \
+                         '120p0'])
         Vlist = _np.array([0., 0.568])
         Vstr = _np.array(['00000', '56800'])
 
@@ -488,7 +487,7 @@ def geneva_closest(Mstar, oblat, t, Zstr='014', tar=None, silent=True):
         Zstr = tar.getnames()[0][7:10]
 
     # find closest Mstar
-    iM = _np.where(np.abs(Mstar-Mlist) == _np.min(np.abs(Mstar-Mlist)))[0][0]
+    iM = _np.where(_np.abs(Mstar-Mlist) == _np.min(_np.abs(Mstar-Mlist)))[0][0]
 
     # find values at selected age
     nw = len(Vlist)
@@ -499,10 +498,10 @@ def geneva_closest(Mstar, oblat, t, Zstr='014', tar=None, silent=True):
     for iw, vs in enumerate(Vstr):
         fname = 'M{:}Z{:}00V{:}.dat'.format(Mstr[iM], Zstr, vs)
         age1, _, logL1, _, Hfrac1, _, _, w1, Rpole1 = geneva_read(fname, tar=tar)
-        t1 = age1 / age1[np.where(Hfrac1 == 0.)[0][0]-1]
+        t1 = age1 / age1[_np.where(Hfrac1 == 0.)[0][0]-1]
         if t > t1.max() and not silent:
             print('[geneva_closest] Warning: requested age not available, taking t/tMS={:.2f} instead.'.format(t1.max()))
-        it = _np.where(np.abs(t-t1) == _np.min(np.abs(t-t1)))[0][0]
+        it = _np.where(_np.abs(t-t1) == _np.min(_np.abs(t-t1)))[0][0]
         wlist[iw] = w1[it]
         Rplist[iw] = Rpole1[it]
         logLlist[iw] = logL1[it]
@@ -527,7 +526,7 @@ def geneva_interp(Mstar, oblat, t, Zstr='014', tar=None, silent=True):
     Interpolates Geneva stellar models.
 
     Usage:
-    Rpole, logL, age = geneva_interp(Mstar, oblat, t, tar=None)
+    Rpole, logL, age = geneva_interp(Mstar, oblat, t, tar=None, silent=True)
 
     where t is given in tMS, and tar is the open tar file. The chosen
     metallicity is according to the input tar file. If tar=None, the
@@ -537,10 +536,10 @@ def geneva_interp(Mstar, oblat, t, Zstr='014', tar=None, silent=True):
     w = oblat2w(oblat)
 
     # grid
-    if Mstar <= 15.:
-        Mlist = _np.array([1.7, 2., 2.5, 3., 4., 5., 7., 9., 12., 15.])
+    if Mstar <= 20.:
+        Mlist = _np.array([1.7, 2., 2.5, 3., 4., 5., 7., 9., 12., 15., 20.])
     else:
-        Mlist = _np.array([15., 20., 25., 32., 40., 60., 85., 120.])
+        Mlist = _np.array([20., 25., 32., 40., 60., 85., 120.])
 
     # read tar file
     if tar == None:
@@ -553,27 +552,27 @@ def geneva_interp(Mstar, oblat, t, Zstr='014', tar=None, silent=True):
     # interpolation
     if (Mstar >= Mlist.min()) * (Mstar <= Mlist.max()):
         if (Mstar == Mlist).any():
-            Rpole, logL, age = geneva_closest(Mstar, oblat, t, tar=tar)
+            Rpole, logL, age = geneva_closest(Mstar, oblat, t, tar=tar, Zstr=Zstr, silent=silent)
         else:
             # nearest value at left
             Mleft = Mlist[Mlist < Mstar]
-            Mleft = Mleft[np.abs(Mleft - Mstar).argmin()]
+            Mleft = Mleft[_np.abs(Mleft - Mstar).argmin()]
             iMleft = _np.where(Mlist == Mleft)[0][0]
-            Rpolel, logLl, agel = geneva_closest(Mlist[iMleft], oblat, t, tar=tar)
+            Rpolel, logLl, agel = geneva_closest(Mlist[iMleft], oblat, t, tar=tar, Zstr=Zstr, silent=silent)
             # nearest value at right
             Mright = Mlist[Mlist > Mstar]
-            Mright = Mright[np.abs(Mright - Mstar).argmin()]
+            Mright = Mright[_np.abs(Mright - Mstar).argmin()]
             iMright = _np.where(Mlist == Mright)[0][0]
-            Rpoler, logLr, ager = geneva_closest(Mlist[iMright], oblat, t, tar=tar)
+            Rpoler, logLr, ager = geneva_closest(Mlist[iMright], oblat, t, tar=tar, Zstr=Zstr, silent=silent)
             # interpolate between masses
             weight = _np.array([Mright-Mstar, Mstar-Mleft]) / (Mright-Mleft)
-            Rpole = weight.dot(np.array([Rpolel, Rpoler]))
-            logL = weight.dot(np.array([logLl, logLr]))
-            age = weight.dot(np.array([agel, ager]))
+            Rpole = weight.dot(_np.array([Rpolel, Rpoler]))
+            logL = weight.dot(_np.array([logLl, logLr]))
+            age = weight.dot(_np.array([agel, ager]))
     else:
         if not silent:
             print('[geneva_interp] Warning: Mstar out of available range, taking the closest value.')
-        Rpole, logL, age = geneva_closest(Mstar, oblat, t, tar=tar)
+        Rpole, logL, age = geneva_closest(Mstar, oblat, t, tar=tar, Zstr=Zstr, silent=silent)
 
     return Rpole, logL, age
 
@@ -590,7 +589,7 @@ def geneva_interp_fast(Mstar, oblat, t, Zstr='014', silent=True):
     '''
     # read grid
     dir0 = '{0}/refs/geneva_models/'.format(_hdtpath())
-    if Mstar <= 15.:
+    if Mstar <= 20.:
         fname = 'geneva_interp_Z{:}.npz'.format(Zstr)
     else:
         fname = 'geneva_interp_Z{:}_highM.npz'.format(Zstr)
@@ -640,7 +639,7 @@ def geneva_interp_fast(Mstar, oblat, t, Zstr='014', silent=True):
 
     return Rpole, logL, age
 
-def geneva_pre_computed(Zstr='014'):
+def geneva_pre_computed(Zstr='014', silent=False):
     '''
     Create geneva pre-computed grid
     '''
@@ -650,55 +649,58 @@ def geneva_pre_computed(Zstr='014'):
         data = _np.load(dir0 + 'geneva_interp_Z{:}.npz'.format(Zstr))
     except:
         # par grid
-        Mstar_arr = _np.array([1.7, 2., 2.5, 3., 4., 5., 7., 9., 12., 15.])
+        Mstar_arr = _np.array([1.7, 2., 2.5, 3., 4., 5., 7., 9., 12., 15., 20.])
         oblat_arr = _np.linspace(1., 1.5, 6)
-        t_arr = _np.hstack([np.linspace(0., .9, 10), _np.linspace(1., 1.1, 21)])
+        t_arr = _np.hstack([_np.linspace(0., .9, 10), _np.linspace(1., 1.1, 21)])
         
         Rpole_grid = _np.zeros([len(Mstar_arr), len(oblat_arr), len(t_arr)])
         logL_grid = _np.zeros([len(Mstar_arr), len(oblat_arr), len(t_arr)])
         age_grid = _np.zeros([len(Mstar_arr), len(oblat_arr), len(t_arr)])
     
         # read tar file
-        tar = _tarfile.open(dir0 + 'geneva_models/Z{:}.tar.gz'.format(Zstr), 'r:gz')
+        tar = _tarfile.open(dir0 + 'Z{:}.tar.gz'.format(Zstr), 'r:gz')
     
         for iM, Mstar in enumerate(Mstar_arr):
             for iob, oblat in enumerate(oblat_arr):
                 for it, t in enumerate(t_arr):
-                    print(Mstar, oblat, t)
-                    Rp, lL, age = geneva_interp(Mstar, oblat, t, tar=tar)
+                    if not silent:
+                        print(Mstar, oblat, t)
+                    Rp, lL, age = geneva_interp(Mstar, oblat, t, tar=tar, Zstr=Zstr, silent=silent)
                     Rpole_grid[iM, iob, it] = Rp
                     logL_grid[iM, iob, it] = lL
                     age_grid[iM, iob, it] = age
         _np.savez(dir0 + 'geneva_interp_Z{:}'.format(Zstr), Mstar_arr=Mstar_arr, oblat_arr=oblat_arr, t_arr=t_arr, \
-                 Rpole_grid=Rpole_grid, logL_grid=logL_grid, age_grid=age_grid)
+                  Rpole_grid=Rpole_grid, logL_grid=logL_grid, age_grid=age_grid)
 
     # high M    
     try:
         data = _np.load(dir0 + 'geneva_interp_Z{:}_highM.npz'.format(Zstr))
     except:
         # par grid
-        Mstar_arr = _np.array([15., 20., 25., 32., 40., 60., 85., 120.])
+        Mstar_arr = _np.array([20., 25., 32., 40., 60., 85., 120.])
         oblat_arr = _np.linspace(1., 1.05633802817, 2)
-        t_arr = _np.hstack([np.linspace(0., .9, 10), _np.linspace(1., 1.1, 21)])
+        t_arr = _np.hstack([_np.linspace(0., .9, 10), _np.linspace(1., 1.1, 21)])
         
         Rpole_grid = _np.zeros([len(Mstar_arr), len(oblat_arr), len(t_arr)])
         logL_grid = _np.zeros([len(Mstar_arr), len(oblat_arr), len(t_arr)])
         age_grid = _np.zeros([len(Mstar_arr), len(oblat_arr), len(t_arr)])
     
         # read tar file
-        tar = _tarfile.open(dir0 + 'geneva_models/Z{:}.tar.gz'.format(Zstr), 'r:gz')
+        tar = _tarfile.open(dir0 + 'Z{:}.tar.gz'.format(Zstr), 'r:gz')
     
         for iM, Mstar in enumerate(Mstar_arr):
             for iob, oblat in enumerate(oblat_arr):
                 for it, t in enumerate(t_arr):
-                    print(Mstar, oblat, t)
-                    Rp, lL, age = geneva_interp(Mstar, oblat, t, tar=tar)
+                    if not silent:
+                        print(Mstar, oblat, t)
+                    Rp, lL, age = geneva_interp(Mstar, oblat, t, tar=tar, Zstr=Zstr, silent=silent)
                     Rpole_grid[iM, iob, it] = Rp
                     logL_grid[iM, iob, it] = lL
                     age_grid[iM, iob, it] = age
         _np.savez(dir0 + 'geneva_interp_Z{:}_highM'.format(Zstr), Mstar_arr=Mstar_arr, oblat_arr=oblat_arr, t_arr=t_arr, \
-                 Rpole_grid=Rpole_grid, logL_grid=logL_grid, age_grid=age_grid)
+                  Rpole_grid=Rpole_grid, logL_grid=logL_grid, age_grid=age_grid)
 
+    return
 
 def geneva_read(fname, Zstr='014', tar=None):
     '''
