@@ -854,12 +854,11 @@ def find_neighbours(par, par_grid, ranges, silent=True):
     Finds neighbours' positions of par in par_grid.
 
     Usage:
-    keep, out, inside_ranges, par_new, par_grid_new = find_neighbours(
-    par, par_grid, ranges, silent=True):
+    keep, out, inside_ranges, par_new, par_grid_new = find_neighbours(par,
+    par_grid, ranges, silent=True)
 
     where redundant columns in 'new' values are excluded, but length is 
-    preserved (i.e.,
-    par_grid[keep] in griddata call).
+    preserved (i.e., par_grid[keep] in griddata call).
     '''
     # check if inside ranges
     inside_ranges = is_inside_ranges(par, ranges)
