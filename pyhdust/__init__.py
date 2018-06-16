@@ -424,7 +424,7 @@ def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
 
     It will check if all sed2info are the same (i.e., nobs, Rstar, Rwind). 
     That's the reason why SED was the first band in previous versions.
-    If not, it ask if you want to continue (and receive and error).
+    If not, it asks if you want to continue (and receive and error).
 
     The presence of the SED file is not required anymore.
     The structure is set by the first broadband sed2 found.
@@ -451,29 +451,29 @@ def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
         models[i] = models[i].replace('.inp', '.txt')
 
     for model in models:
-        modfld, modelname = _phc.trimpathname(model)
-        path = _phc.trimpathname(modfld[:-1])[0]
-        if not _os.path.exists('{0}fullsed'.format(path)):
-            _os.system('mkdir {0}fullsed'.format(path))
+        modfld, modelname = list(_os.path.split(model))
+        path = list(_os.path.split(modfld[:-1]))[0]
+        if not _os.path.exists('{0}/fullsed'.format(path)):
+            _os.system('mkdir {0}/fullsed'.format(path))
         sed2data = _np.empty(0)
         sfound = []
         # Get all *.sed2 and choose if it is a broad-band or a line
         if onlyfilters is None:
-            lsed2 = _glob('{0}*{1}.sed2'.format(modfld, modelname[:-4]))
-            lsed2.extend(_glob('{0}*{1}_SEI.sed2'.format(modfld, 
+            lsed2 = _glob('{0}/*{1}.sed2'.format(modfld, modelname[:-4]))
+            lsed2.extend(_glob('{0}/*{1}_SEI.sed2'.format(modfld, 
                 modelname[:-4])))
         else:
             lsed2 = []
             for f in onlyfilters:
-                pattern = _os.path.join(modfld, '{0}*{1}.sed2'.format(f, 
+                pattern = _os.path.join(modfld, '{0}/*{1}.sed2'.format(f, 
                     modelname[:-4]))
                 lsed2.extend(_glob(pattern))
-                pattern = _os.path.join(modfld, '{0}*{1}_SEI.sed2'.format(f, 
+                pattern = _os.path.join(modfld, '{0}/*{1}_SEI.sed2'.format(f, 
                     modelname[:-4]))
                 lsed2.extend(_glob(pattern))
         # print lsed2, '{0}*{1}*.sed2'.format(modfld, modelname[:-4])
         for file in lsed2:
-            suf = _phc.trimpathname(file)[-1].split('_')[0]
+            suf = list(_os.path.split(file))[-1].split('_')[0]
             sfound += [suf]
             newdata = readsed2(file)
             if file.find('_SEI.') == -1 or file.find('SED_') > -1:
@@ -589,7 +589,7 @@ def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
                 'SigEMITFLX', 'SigTRANSFLX', 'Sig Q', 'Sig U']
             outfile = hd + _tab(fullsed2, headers=header, tablefmt="plain")
             f0 = open(
-                path + 'fullsed/fullsed_' + modelname.replace('.txt', '.sed2'),
+                path + '/fullsed/fullsed_' + modelname.replace('.txt', '.sed2'),
                 'w')
             f0.writelines(outfile)
             f0.close()
