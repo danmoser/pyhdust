@@ -37,7 +37,7 @@ try:
 except ImportError:
     _warn.warn('# matplotlib, pyfits, six and/or scipy module not installed!!')
 
-__version__ = '1.3.11'
+__version__ = '1.3.12'
 __release__ = "Stable"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -453,23 +453,24 @@ def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
     for model in models:
         modfld, modelname = list(_os.path.split(model))
         path = list(_os.path.split(modfld[:-1]))[0]
-        if not _os.path.exists('{0}/fullsed'.format(path)):
-            _os.system('mkdir {0}/fullsed'.format(path))
+        if not _os.path.exists(_os.path.join('{0}'.format(path), 'fullsed')):
+            _os.system(_os.path.join('mkdir {0}'.format(path), 'fullsed'))
         sed2data = _np.empty(0)
         sfound = []
         # Get all *.sed2 and choose if it is a broad-band or a line
         if onlyfilters is None:
-            lsed2 = _glob('{0}/*{1}.sed2'.format(modfld, modelname[:-4]))
-            lsed2.extend(_glob('{0}/*{1}_SEI.sed2'.format(modfld, 
-                modelname[:-4])))
+            lsed2 = _glob(_os.path.join('{0}'.format(modfld), 
+                '*{1}.sed2'.format(modelname[:-4])))
+            lsed2.extend( _glob(_os.path.join('{0}'.format(modfld), 
+                '*{1}_SEI.sed2'.format(modelname[:-4]))) )
         else:
             lsed2 = []
             for f in onlyfilters:
-                pattern = _os.path.join(modfld, '{0}/*{1}.sed2'.format(f, 
-                    modelname[:-4]))
+                pattern = _os.path.join(modfld, '{0}'.format(f), 
+                    '*{1}.sed2'.format(modelname[:-4]))
                 lsed2.extend(_glob(pattern))
-                pattern = _os.path.join(modfld, '{0}/*{1}_SEI.sed2'.format(f, 
-                    modelname[:-4]))
+                pattern = _os.path.join(modfld, '{0}'.format(f), 
+                    '*{1}_SEI.sed2'.format(modelname[:-4]))
                 lsed2.extend(_glob(pattern))
         # print lsed2, '{0}*{1}*.sed2'.format(modfld, modelname[:-4])
         for file in lsed2:
