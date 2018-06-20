@@ -28,6 +28,7 @@ import pyhdust.jdcal as _jdcal
 from pyhdust.tabulate import tabulate as _tab
 from six import string_types as _strtypes
 import warnings as _warn
+from scipy.interpolate import griddata as _griddata
 
 try:
     import matplotlib.pyplot as _plt
@@ -417,6 +418,45 @@ def readdust(dfile):
     return ncr, ncmu, ncphi, ntip, na, Rstar, Ra, NdustShells, Rdust,\
         Tdestruction, Tdust, pcrc, pcmuc, pcphic, pcr, pcmu, pcphi, lacentro
 
+def temp_interp(tempfile, theta, pos=[0, 1]):
+    '''
+    Returns temp file properties interpolated at a given line-of-sight
+
+    Usage:
+    r, interp = temp_interp(tempfile, theta, pos=[0, 1])
+
+    theta = line of sight from midplane, in degrees
+    pos = 0: T [K]
+          1-25: energy levels population fraction
+          26: ionization fraction
+          27: number density [cm-3]
+    '''
+    # read data
+    icphi = 0
+    ncr, ncmu, ncphi, nLTE, nNLTE, Rstar, Ra, beta, data, pcr, pcmu, pcphi = readtemp(tempfile, quiet=True)
+    r = data[0, :, 0, icphi]
+    r = r / Rstar
+    muarr = data[1, :, :, icphi] # muarr[ir, imu]
+    # build grid
+    xy = []
+    count = 0
+    xy = _np.zeros([ncr*ncmu/2, 2])
+    grid = _np.zeros([len(pos), ncr*ncmu/2])
+    for ir in xrange(ncr):
+        for imu in _np.arange(0, ncmu/2, 1):
+            xy[count] = _np.array([r[ir] * _np.sqrt(1. - muarr[ir, ncmu-1-imu]**2), r[ir] * muarr[ir, ncmu-1-imu]])
+            for ip in xrange(len(pos)):
+                # average based on z-symmetry
+                grid[ip, count] = .5 * (data[pos[ip]+3, ir, imu, icphi] + data[pos[ip]+3, ir, ncmu-1-imu, icphi])
+            count += 1
+    xy = _np.array(xy)
+    # interpolate
+    xyinterp = _np.vstack([r*_np.cos(theta*_np.pi/180.), r*np.sin(theta*_np.pi/180.)]).T
+    interp = _griddata(xy, grid.T, xyinterp, method='linear')
+    if _np.isnan(interp).any():
+        interp = _griddata(xy, grid.T, xyinterp, method='nearest')
+
+    return r, out
 
 def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
     """
