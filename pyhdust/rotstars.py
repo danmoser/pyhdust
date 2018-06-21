@@ -582,7 +582,7 @@ def geneva_interp_fast(Mstar, oblat, t, Zstr='014', silent=True):
     pre-computed interpolations.
 
     Usage:
-    Rpole, logL = geneva_interp_fast(Mstar, oblat, t, Zstr='014')
+    Rpole, logL, age = geneva_interp_fast(Mstar, oblat, t, Zstr='014')
 
     where t is given in tMS, and tar is the open tar file. For now, only
     Zstr='014' is available.
