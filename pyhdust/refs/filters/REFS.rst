@@ -1,9 +1,9 @@
 PyHdust filters
 =================
+**Wavelength in Angstroms!**
+
 - ESO SkyCalc filters ("Johnson", from *U* to *Q*, uppercase, no instrument ID)
 - `filter_instrument` (otherwise)
-
-**Wavelength in Angstroms!**
 
 Zero point levels
 ===================
