@@ -1,0 +1,74 @@
+VEGA.README
+VEGA TEST SPECTRUM VEGA GRID   MODAM05T9550G395K2.DAT   
+TITLE SDSC GRID  [-0.5]   VTURB 2.0 KM/S   
+TEFF  9550.
+GRAV  3.95
+ABUND [-0.3]
+VTURB 2.km/s
+HE 0.089
+VROTATION  25.0 km/s 
+Wavelength, flux, continuum triplets
+  in vacuum nm and in ergs/cm**2/s/ster/nm
+(WL(I)=FIRSTWL*(1.D0+1.D0/RESOLUTION)**(I-1),I=1,NWL)
+FIRSTWL  90.00016470
+LASTWL   300009.49066160
+RESOLUTION        500000  (actually resolving power)
+NWL              4055884 
+ 
+VEGALLPR25.500000
+      90.00016470 2.117E-01 2.117E-01
+      90.00034470 2.117E-01 2.117E-01
+      90.00052470 2.117E-01 2.117E-01
+
+  300008.29062724 9.074E-04 1.686E-03
+  300008.89064382 8.811E-04 1.686E-03
+  300009.49066160 8.548E-04 1.686E-03
+ 
+The 500000 resolving power spectrum was instrumentally broadened with a
+gaussian to smaller resolving powers at the same wavelengths using program
+BROADEN. The broadened spectra were then resampled at the center of an odd
+number of points using program RESAMPLE.  The new points are uniformly
+spaced in doppler space.
+ 
+
+     wl interval nm end
+     |    rotation velocity
+     |    |   resolving power
+     |    |   |       resampling
+     |    |   |       |             blocks =512B
+VEG0300PR25.500000                   31192
+VEG0300PR25.500000                   15839
+VEG0500PR25.500000                   19955
+VEG0ENDPR25.500000                  159937
+VEG1000PR25.500000                   27077
+VEG2000PR25.500000                   27077
+VEG3000PR25.500000                   15839
+VEG5000PR25.500000                   19955
+VEGALLPR25.100                      301023
+VEGALLPR25.1000                     301023
+VEGALLPR25.10000                    301023
+VEGALLPR25.100000                   301023
+VEGALLPR25.100000RESAM3             100341
+VEGALLPR25.10000RESAM25              12041
+VEGALLPR25.1000RESAM251               1200
+VEGALLPR25.100RESAM2501                121
+VEGALLPR25.200                      301023
+VEGALLPR25.2000                     301023
+VEGALLPR25.20000                    301023
+VEGALLPR25.20000RESAM13              23156
+VEGALLPR25.2000RESAM125               2409
+VEGALLPR25.200RESAM1251                241
+VEGALLPR25.300                      301023
+VEGALLPR25.3000                     301023
+VEGALLPR25.30000                    301023
+VEGALLPR25.30000RESAM9               33447
+VEGALLPR25.3000RESAM83                3627
+VEGALLPR25.300RESAM833                9122
+VEGALLPR25.500                      301023
+VEGALLPR25.5000                     301023
+VEGALLPR25.50000                    301023
+VEGALLPR25.500000                   301023
+VEGALLPR25.50000RESAM5               60205
+VEGALLPR25.5000RESAM51                5903
+VEGALLPR25.500RESAM501                 601
+ 

@@ -523,7 +523,7 @@ def EWcalc(vels, flux, vw=1000):
         return ew
     for i in range(len(outvels) - 1):
         dl = outvels[i + 1] - outvels[i]
-        print(dl)
+        # print(dl)
         ew += (1. - (normflux[i + 1] + normflux[i]) / 2.) * dl
     return ew
 
@@ -700,7 +700,7 @@ def absLineCalcWave(wv, flux, lbc, vw=1000, ssize=0.05, gauss=False,
                 flux[idx] = new_y[idx]
             elif spcas == 1:
                 idx = _np.where(wv < 25.95*1e4)
-                print(len(idx[0]))
+                # print(len(idx[0]))
                 flux[idx] = new_y[idx]
 
         base = _np.trapz(new_y, wv)
@@ -1040,7 +1040,16 @@ def kuruczflux(teff, logg, wavrange=None):
     """ Return fluxes from a Kurucz model.
 
     Fluxes are in ergs/cm**2/s/hz/ster and wavelength in nm (wavrange must be 
-    in nm).
+    in nm). 
+
+    As tabelas do Kurucz sao erg/s/sr/cm2/Hz. Entao, tem q multiplicar 4pi para 
+    ter o fluxo observado. Abaixo, a conversao das unidades Kurucz para 
+    erg/s/cm2/A usuais.
+
+    # erg/s/sr/cm2/Hz: 
+    lK15k, K15k, info = spt.kuruczflux(5777, 3., range=[100,1000])  
+    lK15k*= 1e1 #Ang
+    K15k = 2.99792458E+18*K15k*(lK15k)**-2*4*np.pi #erg/s/cm2/A
 
     OUTPUT: wv, flux, info"""
     kurfile = _os.path.join(_hdt.hdtpath(), 'refs', 'fp00k0.pck')

@@ -28,17 +28,17 @@ import pyhdust.jdcal as _jdcal
 from pyhdust.tabulate import tabulate as _tab
 from six import string_types as _strtypes
 import warnings as _warn
-from scipy.interpolate import griddata as _griddata
 
 try:
     import matplotlib.pyplot as _plt
     import matplotlib.patches as _mpatches
     from scipy import interpolate as _interpolate
+    from scipy.interpolate import griddata as _griddata
     import pyfits as _pf
 except ImportError:
     _warn.warn('# matplotlib, pyfits, six and/or scipy module not installed!!')
 
-__version__ = '1.3.11'
+__version__ = '1.3.12'
 __release__ = "Stable"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -407,7 +407,7 @@ def readdust(dfile):
     for icr in range(ncr):
         pcmu[0, icr] = -1.
         for icmu in range(1, ncmu + 1):
-            pcmu[icmu, icr] = pcmu[icmu - 1, icr] + 2. * (pcmuc[icmu - 1, icr] -
+            pcmu[icmu, icr] = pcmu[icmu - 1, icr] + 2.*(pcmuc[icmu - 1, icr] -
                 pcmu[icmu - 1, icr])
     # 
     pcphi = _np.zeros(ncphi + 1)
@@ -417,6 +417,7 @@ def readdust(dfile):
             (pcphic[icphi - 1] - pcphi[icphi - 1])
     return ncr, ncmu, ncphi, ntip, na, Rstar, Ra, NdustShells, Rdust,\
         Tdestruction, Tdust, pcrc, pcmuc, pcphic, pcr, pcmu, pcphi, lacentro
+
 
 def temp_interp(tempfile, theta, pos=[0, 1]):
     '''
@@ -433,10 +434,11 @@ def temp_interp(tempfile, theta, pos=[0, 1]):
     '''
     # read data
     icphi = 0
-    ncr, ncmu, ncphi, nLTE, nNLTE, Rstar, Ra, beta, data, pcr, pcmu, pcphi = readtemp(tempfile, quiet=True)
+    ncr, ncmu, ncphi, nLTE, nNLTE, Rstar, Ra, beta, data, pcr, pcmu, pcphi = \
+        readtemp(tempfile, quiet=True)
     r = data[0, :, 0, icphi]
     r = r / Rstar
-    muarr = data[1, :, :, icphi] # muarr[ir, imu]
+    muarr = data[1, :, :, icphi]  # muarr[ir, imu]
     # build grid
     xy = []
     count = 0
@@ -444,18 +446,22 @@ def temp_interp(tempfile, theta, pos=[0, 1]):
     grid = _np.zeros([len(pos), ncr*ncmu/2])
     for ir in xrange(ncr):
         for imu in _np.arange(0, ncmu/2, 1):
-            xy[count] = _np.array([r[ir] * _np.sqrt(1. - muarr[ir, ncmu-1-imu]**2), r[ir] * muarr[ir, ncmu-1-imu]])
+            xy[count] = _np.array([r[ir] * _np.sqrt(1. - 
+                muarr[ir, ncmu-1-imu]**2), r[ir] * muarr[ir, ncmu-1-imu]])
             for ip in xrange(len(pos)):
                 # average based on z-symmetry
-                grid[ip, count] = .5 * (data[pos[ip]+3, ir, imu, icphi] + data[pos[ip]+3, ir, ncmu-1-imu, icphi])
+                grid[ip, count] = .5 * (data[pos[ip]+3, ir, imu, icphi] + 
+                    data[pos[ip]+3, ir, ncmu-1-imu, icphi])
             count += 1
     # interpolate
-    xyinterp = _np.vstack([r*_np.cos(theta*_np.pi/180.), r*_np.sin(theta*_np.pi/180.)]).T
+    xyinterp = _np.vstack([r*_np.cos(theta*_np.pi/180.), r*_np.sin(
+        theta*_np.pi/180.)]).T
     interp = _griddata(xy, grid.T, xyinterp, method='linear')
     if _np.isnan(interp).any():
         interp = _griddata(xy, grid.T, xyinterp, method='nearest')
 
     return r, interp
+
 
 def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
     """
@@ -492,23 +498,24 @@ def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
     for model in models:
         modfld, modelname = list(_os.path.split(model))
         path = list(_os.path.split(modfld[:-1]))[0]
-        if not _os.path.exists('{0}/fullsed'.format(path)):
-            _os.system('mkdir {0}/fullsed'.format(path))
+        if not _os.path.exists(_os.path.join('{0}'.format(path), 'fullsed')):
+            _os.system(_os.path.join('mkdir {0}'.format(path), 'fullsed'))
         sed2data = _np.empty(0)
         sfound = []
         # Get all *.sed2 and choose if it is a broad-band or a line
         if onlyfilters is None:
-            lsed2 = _glob('{0}/*{1}.sed2'.format(modfld, modelname[:-4]))
-            lsed2.extend(_glob('{0}/*{1}_SEI.sed2'.format(modfld, 
-                modelname[:-4])))
+            lsed2 = _glob(_os.path.join('{0}'.format(modfld), 
+                '*{1}.sed2'.format(modelname[:-4])))
+            lsed2.extend( _glob(_os.path.join('{0}'.format(modfld), 
+                '*{1}_SEI.sed2'.format(modelname[:-4]))) )
         else:
             lsed2 = []
             for f in onlyfilters:
-                pattern = _os.path.join(modfld, '{0}/*{1}.sed2'.format(f, 
-                    modelname[:-4]))
+                pattern = _os.path.join(modfld, '{0}'.format(f), 
+                    '*{1}.sed2'.format(modelname[:-4]))
                 lsed2.extend(_glob(pattern))
-                pattern = _os.path.join(modfld, '{0}/*{1}_SEI.sed2'.format(f, 
-                    modelname[:-4]))
+                pattern = _os.path.join(modfld, '{0}'.format(f), 
+                    '*{1}_SEI.sed2'.format(modelname[:-4]))
                 lsed2.extend(_glob(pattern))
         # print lsed2, '{0}*{1}*.sed2'.format(modfld, modelname[:-4])
         for file in lsed2:
@@ -2378,6 +2385,7 @@ def masslum_OB(logL, classL='V'):
     elif classL.upper() != 'V':
         _warn.warn('# Invalid "classL". Assuming "V" for masslum_OB...')
     return cs[0] + cs[1]*logL + cs[2]*logL**2
+
 
 # MAIN ###
 if __name__ == "__main__":
