@@ -453,7 +453,6 @@ def temp_interp(tempfile, theta, pos=[0, 1]):
                 grid[ip, count] = .5 * (data[pos[ip]+3, ir, imu, icphi] + 
                     data[pos[ip]+3, ir, ncmu-1-imu, icphi])
             count += 1
-    xy = _np.array(xy)
     # interpolate
     xyinterp = _np.vstack([r*_np.cos(theta*_np.pi/180.), r*_np.sin(
         theta*_np.pi/180.)]).T
