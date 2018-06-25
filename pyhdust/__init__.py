@@ -38,7 +38,7 @@ try:
 except ImportError:
     _warn.warn('# matplotlib, pyfits, six and/or scipy module not installed!!')
 
-__version__ = '1.3.12'
+__version__ = '1.3.13'
 __release__ = "Stable"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -55,7 +55,7 @@ def hdtpath():
     >>> hdt.hdtpath()
     /home/user/Scripts/pyhdust/
     """
-    fulldir = _os.path.split(__file__)[0] + _os.path.sep
+    fulldir = list(_os.path.split(__file__))[0] + _os.path.sep
     # fulldir = _os.path.split(fulldir)[0] + _os.path.sep
     end = 'pyhdust' + _os.path.sep
     if not fulldir.endswith(end):
@@ -487,7 +487,7 @@ def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
     """
     if isinstance(models, _strtypes):
         models = [models]
-    if isinstance(Vrots, (int, long, float)):
+    if isinstance(Vrots, (int, float)):
         Vrots = [Vrots]
         if len(Vrots) < len(models):
             Vrots = list(Vrots)+(len(models)-len(Vrots))*Vrots[-1:]
@@ -505,17 +505,17 @@ def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
         # Get all *.sed2 and choose if it is a broad-band or a line
         if onlyfilters is None:
             lsed2 = _glob(_os.path.join('{0}'.format(modfld), 
-                '*{1}.sed2'.format(modelname[:-4])))
+                '*{0}.sed2'.format(modelname[:-4])))
             lsed2.extend( _glob(_os.path.join('{0}'.format(modfld), 
-                '*{1}_SEI.sed2'.format(modelname[:-4]))) )
+                '*{0}_SEI.sed2'.format(modelname[:-4]))) )
         else:
             lsed2 = []
             for f in onlyfilters:
                 pattern = _os.path.join(modfld, '{0}'.format(f), 
-                    '*{1}.sed2'.format(modelname[:-4]))
+                    '*{0}.sed2'.format(modelname[:-4]))
                 lsed2.extend(_glob(pattern))
                 pattern = _os.path.join(modfld, '{0}'.format(f), 
-                    '*{1}_SEI.sed2'.format(modelname[:-4]))
+                    '*{0}_SEI.sed2'.format(modelname[:-4]))
                 lsed2.extend(_glob(pattern))
         # print lsed2, '{0}*{1}*.sed2'.format(modfld, modelname[:-4])
         for file in lsed2:
@@ -634,9 +634,10 @@ def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
                 'TRANS FLUX', 'Q', 'U', 'Sig FLUX', 'Sig FLUX', 'SigSCTFLX', 
                 'SigEMITFLX', 'SigTRANSFLX', 'Sig Q', 'Sig U']
             outfile = hd + _tab(fullsed2, headers=header, tablefmt="plain")
-            f0 = open(
-                path + '/fullsed/fullsed_' + modelname.replace('.txt', '.sed2'),
-                'w')
+            if len(path) > 0:
+                path += _os.path.sep
+            f0 = open(path + 'fullsed' + _os.path.sep + 
+                'fullsed_' + modelname.replace('.txt', '.sed2'), 'w')
             f0.writelines(outfile)
             f0.close()
         else:
@@ -867,11 +868,11 @@ def genlog(proj=None, mods=None):
         modn_list = _glob(modn+'*.txt')
         allmods[0].extend(modn_list)
         for imodn in modn_list:
-            suf = _os.path.splitext(imodn)[0]
+            suf = list(_os.path.splitext(imodn))[0]
             #
             tmp = sorted(_glob(suf+'[0-9][0-9].temp'))
             if len(tmp) > 0:
-                allmods[1].append( _os.path.splitext(tmp[-1])[0][-2:] )
+                allmods[1].append( list(_os.path.splitext(tmp[-1]))[0][-2:] )
             else:
                 allmods[1].append( '' )
             #
@@ -2206,7 +2207,7 @@ def plot_hdt_filters(outname=None):
             i = 1
         else:
             i = 2
-        axs[i].plot(data[:, 0], data[:, 1], label=_os.path.split(f)[1].
+        axs[i].plot(data[:, 0], data[:, 1], label=list(_os.path.split(f))[1].
             replace('.dat', ''))
     for i in range(len(axs)):
         axs[i].legend(fontsize=6)
@@ -2348,7 +2349,7 @@ def tefflum_dJN(s, b):
         [+0.02755]]
 
     def Tk(k, x):
-        if not isinstance( k, ( int, long ) ):
+        if not isinstance( k, ( int ) ):
             _warn.warn('# Wrong Tk call! Invalid k')
             return
         if k == 0:
