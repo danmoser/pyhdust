@@ -238,7 +238,7 @@ def makeSINGLEBEGrid(modn, ts_relativos, rdvals, sfile,sfile_add, doFVDD, \
         if srcname2 == 'Be_M07.00_ob1.33_H0.50_Z0.002_bE_Ell': srcname='src1'; wmod[40]=wmod[40].replace('18000.','13347.')
         if srcname2 == 'Be_M11.00_ob1.33_H0.50_Z0.002_bE_Ell': srcname='src2'; wmod[40]=wmod[40].replace('18000.','16623.')
         if srcname2 == 'Be_M15.00_ob1.33_H0.50_Z0.002_bE_Ell': srcname='src3'; wmod[40]=wmod[40].replace('18000.','18715.')
-        suffix = '_'+nome.replace(sfile_add,'')+'_trel'+ "%.2f" % (t_yr*yr/float(''.join([x for x in nome.replace(sfile_add,'')[25:34]]))/24./3600.)+'_'+srcname
+        suffix = '_'+nome.replace(sfile_add,'')+'_trel'+ "%.2f" % (t_yr*yr/float(''.join([x for x in nome.replace(sfile_add,'')[25:34]]))/24./3600.)+'_'+srcname2
               
         f0=open('mod'+modn+'/mod'+modn+suffix+'.txt', 'w')
         f0.writelines(wmod)
@@ -1839,11 +1839,12 @@ def makeStarGrid2016(oblats, Hfs, path=None):
     prog='geneve_par_ProjectLC2'
     #prog='geneve_par_videosAlex'
     #prog='geneve_par_lrr2'
-    prog='geneve_par_Steadystate_2017_Z0007'
+    #prog='geneve_par_Steadystate_2017_Z0007'
     if runIDL:
         import pidly
         idl = pidly.IDL()
         propath = _hdt.hdtpath()+'/refs/'
+        propath = '/home/lrrimulo/Dropbox/Main_programs/pyhdust_18.06.20/refs'
         idl('cd,"{0}"'.format(propath))
         idl('.r '+prog)
         for ob in oblats:
@@ -1962,6 +1963,7 @@ def makeStarGrid2018(oblats, Hfs, path=None):
         import pidly
         idl = pidly.IDL()
         propath = _hdt.hdtpath()+'/refs/'
+        propath = '/home/lrrimulo/Dropbox/Main_programs/pyhdust_18.06.20/refs'
         idl('cd,"{0}"'.format(propath))
         idl('.r '+prog)
         for ob in oblats:
@@ -1984,6 +1986,8 @@ def makeStarGrid2018(oblats, Hfs, path=None):
         for H in Hfs:  
             f0 = open('stmodels/oblat{}_h{}.txt'.format(ob,H))                     
             matriz = f0.readlines() 
+            #print matriz
+            #import sys; sys.exit()
             f0.close()
             Omega,W,Beta = map(float, matriz[1].split())
             
