@@ -722,10 +722,10 @@ def makeDiskGrid(modn='01', mhvals=[1.5], hvals=[60.], rdvals=[18.6],
     return
 
 
-def makeInpJob(modn='01', nodes=512, simulations=['SED'],
+def makeInpJob(modn='01', nodes=512, simulations=['SED'], oldstp1=True,
     docases=[1, 3], sim1='step1', sim2='step1_ref', composition='pureH',
     controls='controls', gridcells='grid', observers='observers',
-    images=[''], perturbations=None, clusters=['job'], srcid='',
+    images=[''], baseimgs=[''], perturbations=None, clusters=['job'], srcid='',
     walltime='24:00:00', wcheck=False, email='$USER@localhost', chkout=False,
     st1max=20, st1refmax=24, ctrM=False, touch=False, srcNf=None, path=None):
     """
@@ -789,7 +789,7 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'],
         else:
             return True
 
-    def doCase1(inp, cases):
+    def doCase1(inp, cases, oldstp1=True):
         case1 = inp[:]
         case1[0] = case1[0].replace('suffix', suf)
         case1[1] = case1[1].replace('pureH', composition)
@@ -802,6 +802,8 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'],
         case1[3] = case1[3].replace('grid', gridcells)
         case1[4] = case1[4].replace('step1', sim1)
         case1[5] = case1[5].replace('source', src)
+        if not oldstp1:
+            case1.append("OBSERVERS   = '{}'\n".format(observers))
         if perturbations is not None:
             case1.append("PERTURBATIONS = '{0}'\n".format(perturbations))
         if 1 not in cases:
@@ -809,7 +811,7 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'],
                 case1[i] = '! ' + case1[i]
         return case1
 
-    def doCase2(inp, cases):
+    def doCase2(inp, cases, oldstp1=True):
         case1 = inp[:]
         case1[0] = case1[0].replace('suffix', suf)
         case1[1] = case1[1].replace('pureH', composition)
@@ -822,6 +824,8 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'],
         case1[3] = case1[3].replace('grid', gridcells)
         case1[4] = case1[4].replace('step1', sim2)
         case1[5] = case1[5].replace('source', src)
+        if not oldstp1:
+            case1.append("OBSERVERS   = '{}'\n".format(observers))
         if perturbations is not None:
             case1.append("PERTURBATIONS = '{0}'\n".format(perturbations))
         if 2 not in cases:
@@ -857,7 +861,11 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'],
                 case1[4] = case1[4].replace('step1', simulations[i])
             case1.append("OBSERVERS   = '{0}'\n".format(observers))
             if images[i] != '':
-                case1.append("IMAGES      = '{0}'\n".format(images[i]))
+                if _np.array([b.split('/')[-1][:-4]==images[i] for b in baseimgs]).any():
+                    image_tmp = '{0}_{1}'.format(images[i], suf[suf.find('Be_'):])
+                else:
+                    image_tmp = images[i]
+                case1.append("IMAGES      = '{0}'\n".format(image_tmp))
             if perturbations is not None:
                 case1.append("PERTURBATIONS = '{0}'\n".format(perturbations))
             case1.append('\n')
@@ -879,6 +887,8 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'],
         if sel == 'job':
             wout[4] = wout[4].replace('128', '{0}'.format(nodes))
             wout[4] = wout[4].replace('36:00:00', '{0}'.format(walltime))
+            wout[5] = wout[5].replace('output', 'log/output')
+            wout[6] = wout[6].replace('error', 'log/error')
             wout[8] = wout[8].replace(
                 'alexcarciofi@gmail.com', '{0}'.format(email))
             wout[11] = wout[11].replace('hdust_bestar2.02.inp', '{0}/{1}'.
@@ -942,7 +952,7 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'],
     else:
         path = ''
     # obtain the actual directory
-    proj = _os.getcwd() 
+    proj = _os.getcwd()
     proj = proj[proj.rfind('/') + 1:]
 
     # Folder's checks
@@ -986,10 +996,10 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'],
                                                  mod.replace('.txt', '.log'))
         if touch and 3 in cases:
             for sim in simulations:
-                addtouch += 'touch {0}/{1}\n'.format(proj, mod.replace('.txt', 
+                addtouch += 'touch {0}/{1}\n'.format(proj, mod.replace('.txt',
                     '.chk')).replace('mod{0}/mod{0}'.format(modn), 
                     'mod{0}/{1}_mod{0}'.format(modn, sim))
-                addtouch += 'touch {0}/{1}\n'.format(proj, mod.replace('.txt', 
+                addtouch += 'touch {0}/{1}\n'.format(proj, mod.replace('.txt',
                     '.err')).replace('mod{0}/mod{0}'.format(modn), 
                     'mod{0}/{1}_mod{0}'.format(modn, sim))
                 addtouch += 'touch {0}/{1}\n'.format(proj, mod.replace('.txt',
@@ -1001,7 +1011,7 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'],
                 addtouch += 'touch {0}/{1}\n'.format(proj, mod.replace('.txt',
                     '_SEI.err')).replace('mod{0}/mod{0}'.format(modn), 
                     'mod{0}/{1}_mod{0}'.format(modn, sim))
-                addtouch += 'touch {0}/{1}\n'.format(proj, mod.replace('.txt', 
+                addtouch += 'touch {0}/{1}\n'.format(proj, mod.replace('.txt',
                     '_SEI.log')).replace('mod{0}/mod{0}'.format(modn), 
                     'mod{0}/{1}_mod{0}'.format(modn, sim))
                 err90a = '{0}/{1}'.format(proj, mod.replace('.txt', '.err').
@@ -1212,6 +1222,86 @@ def makeSimulLine(basesims, Rs, hwidth, Ms, Obs, lsuffix, path='source/'):
     return
 
 
+def makeImageLine(baseimgs, Rs, vorb_factor, Ms, Ws, ts, lsuffix, path='source/'):
+    """
+    | basesims = ['simulation/Brg.txt','simulation/Ha.txt']
+    | Rs = [12000, 20000]
+    | 
+    | Ms = [3., 4., 5., 7., 9., 12., 15., 20.]
+    | Ws = [0.5, 0.75, 0.85, 0.92, 0.99]
+    | suffix = 'Z0.014_bE_Ell'
+    """
+    c = _phc.c.cgs
+    G = _phc.G.cgs
+    Msun = _phc.Msun.cgs
+    Rsun = _phc.Rsun.cgs
+
+    for prodI in _product(Ms, Ws, ts, baseimgs, lsuffix):
+        M, W, t, baseimg, suffix = prodI
+
+        f0 = open(baseimg)
+        mod = f0.readlines()
+        f0.close()
+
+        srcid = 'Be_M{0:05.2f}_W{1:.2f}_t{2:.2f}_{3}.txt'.format(M, W, t, suffix)
+
+        k = baseimgs.index(baseimg)
+        R = Rs[k]
+        nmod = mod[:]
+        _, Req, _ = _rot.readscr(path + srcid)
+        vorb = 1e-5 * _np.sqrt(G * M*Msun / (Req*Rsun))
+        vel = '{0:.1f}'.format(vorb_factor * vorb)
+        nmod[35] = nmod[35].replace('1500.', vel)
+        
+        print(M, W, t, srcid)
+        n = str(int(round(2 * (vorb_factor * vorb) * R / c * 1e5)))
+        nmod[32] = nmod[32].replace('100', n)
+
+        f0 = open(
+            baseimg.replace('.txt', '_{0}'.format(srcid)), 'w')
+        f0.writelines(nmod)
+        f0.close()
+    return
+
+
+def makeSimulLine2(basesims, Rs, hwidth, Ms, Ws, ts, lsuffix, path='source/'):
+    """
+    | basesims = ['simulation/Brg.txt','simulation/Ha.txt']
+    | Rs = [12000, 20000]
+    | 
+    | Ms = [3., 4., 5., 7., 9., 12., 15., 20.]
+    | Ws = [0.5, 0.75, 0.85, 0.92, 0.99]
+    | suffix = 'Z0.014_bE_Ell'
+    """
+    c = _phc.c.cgs
+
+    for prodI in _product(Ms, Ws, ts, basesims, lsuffix):
+        M, W, t, basesim, suffix = prodI
+
+        f0 = open(basesim)
+        mod = f0.readlines()
+        f0.close()
+
+        srcid = 'Be_M{0:05.2f}_W{1:.2f}_t{2:.2f}_{3}.txt'.format(M, W, t, suffix)
+
+        k = basesims.index(basesim)
+        R = Rs[k]
+        nmod = mod[:]
+        vrot = _rot.vrot_scr(path+srcid, old=False)
+        vel = '{0:.1f}'.format(hwidth + vrot)
+        nmod[93] = nmod[93].replace('1020.', vel)
+        
+        print(M, W, t, srcid)
+        n = str(int(round(2 * (hwidth + vrot) * R / c * 1e5)))
+        nmod[90] = nmod[90].replace('100', n)
+
+        f0 = open(
+            basesim.replace('.txt', '_{0}'.format(srcid)), 'w')
+        f0.writelines(nmod)
+        f0.close()
+    return
+
+
 def makeSourceGrid(masses, rps, lums, Ws, betas, path=None):
     """ Arbitrary values (no stellar model info), for the SELF-CONSISTENT RIGID 
     ROTATOR setup.
@@ -1241,7 +1331,7 @@ def makeSourceGrid(masses, rps, lums, Ws, betas, path=None):
         wmod = mod[:]        
         wmod[3] = wmod[3].replace('10.3065', ('%.2f' % MI))
         wmod[4] = wmod[4].replace('5.38462', ('%.2f' % Raio))
-        wmod[5] = wmod[5].replace('0.775', ('%.4f' % W))            
+        wmod[5] = wmod[5].replace('0.775', ('%.4f' % W))
         wmod[6] = wmod[6].replace('7500.', ('%.2f' % Lum))
         wmod[7] = wmod[7].replace('0.25', ('%.5f' % Beta))
         # 
@@ -1311,9 +1401,9 @@ def makeStarGrid(oblats, Hfs, path=None):
     if not _os.path.exists('source'):
         _os.system('mkdir source')
 
-    for ob in oblats:                        
-        for H in Hfs:  
-            f0 = open('stmodels/oblat{0}_h{1}.txt'.format(ob, H))                     
+    for ob in oblats:
+        for H in Hfs:
+            f0 = open('stmodels/oblat{0}_h{1}.txt'.format(ob, H))
             matriz = f0.readlines() 
             f0.close()
             Omega, W, Beta = map(float, matriz[1].split())
@@ -1353,7 +1443,7 @@ def makeStarGrid(oblats, Hfs, path=None):
                 wmod = mod[:]        
                 wmod[3] = wmod[3].replace('10.3065', ('%.2f' % MI))
                 wmod[4] = wmod[4].replace('5.38462', ('%.2f' % Raio))
-                wmod[5] = wmod[5].replace('0.775', ('%.4f' % W))            
+                wmod[5] = wmod[5].replace('0.775', ('%.4f' % W))
                 wmod[6] = wmod[6].replace('7500.', ('%.2f' % Lum))
                 wmod[7] = wmod[7].replace('0.25', ('%.5f' % Beta))
 
@@ -1366,9 +1456,76 @@ def makeStarGrid(oblats, Hfs, path=None):
     return
 
 
-def makeSimulDens(dbase, basesim):
+def makeStarGrid2(Ms, Ws, ts, Zs=[0.014], path=None):
     """
-    Sets the SED simulations number of photos so that the signal/noise level
+    Based on GENEVA models.
+
+    INPUT:
+    | Ms = [3, 4, 5, 7, 9, 12, 15, 20] (example)
+    | Ws = [0.5, 0.75, 0.85, 0.92, 0.99] (example)
+    | ts = [0.0, 0.5, 1.0, 1.02] (example)
+
+    For while, only Z=0.014 (solar) is available
+    """
+    path0 = _os.getcwd()
+    if path is not None:
+        _os.chdir(path)
+        if path[-1] != '/':
+            path += '/'
+    else:
+        path = ''
+
+    f0 = open(_os.path.join(_hdt.hdtpath(), 'refs', 'REF_estrela.txt'))
+    mod = f0.readlines()
+    f0.close()
+
+    if not _os.path.exists('source'):
+        _os.system('mkdir source')
+
+    for prodI in _product(Ms, Ws, ts, Zs):
+        M, W, t, Z = prodI
+
+        # DERIVED PARAMETERS
+        ob = 1. + .5 * W**2
+        Omega = _rot.oblat2w(ob)
+        Beta = _rot.beta(Omega)
+        Rp, logL, _ = _rot.geneva_interp_fast(M, ob, t, silent=False)
+        Lum = 10.**logL
+
+        print('M     = ', M)
+        print('W     = ', W)
+        print('t     = ', t)
+        print('Z     = ', Z)
+        print('Omega = ', Omega)
+        print('oblat = ', ob)
+        print('beta  = ', Beta)
+        print('Rp    = ', Rp)
+        print('Lum   = ', Lum)
+
+        suffix = '_M{0:05.2f}_W{1:.2f}_t{2:.2f}_Z{3}_bE_Ell'. \
+            format(M, W, t, Z, Beta, Rp, Lum)
+
+        # REGISTRA VALORES
+        wmod = mod[:]        
+        wmod[3] = wmod[3].replace('10.3065', ('%.2f' % M))
+        wmod[4] = wmod[4].replace('5.38462', ('%.2f' % Rp))
+        wmod[5] = wmod[5].replace('0.775', ('%.4f' % W))
+        wmod[6] = wmod[6].replace('7500.', ('%.2f' % Lum))
+        wmod[7] = wmod[7].replace('0.25', ('%.5f' % Beta))
+
+        f0 = open('source/Be' + suffix + '.txt', 'w')
+        f0.writelines(wmod)
+        f0.close()
+    print("%.0f arquivos gerados\n" % (len(Ms) * len(Ws) * len(ts) * len(Zs)))
+    #
+    if path is not "":
+        _os.chdir(path0)
+    return
+
+
+def makeSimulDens(dbase, basesim, factor=1.):
+    """
+    Sets the SED simulations number of photons so that the signal/noise level
     is approximately constant at visible polarization.
 
     |dbase = _np.logspace(_np.log10(0.02),_np.log10(4.0),7)
@@ -1385,7 +1542,7 @@ def makeSimulDens(dbase, basesim):
         # beta =  13.87219
         alpha = 0.34588
         beta = 8.50927
-        newd = int(10**(-alpha * _np.log10(d) + beta))
+        newd = int(factor * 10**(-alpha * _np.log10(d) + beta))
         print('{0}, N_f = {1:.2f}e+9'.format(srcid, newd / 1e9))
         nmod = mod[:]
         nmod[9] = nmod[9].replace('500000000', '{0}'.format(newd))

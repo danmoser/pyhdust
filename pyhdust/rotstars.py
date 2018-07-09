@@ -49,14 +49,19 @@ def readscr(scrfile):
     return M, Rp * ob, Tp
 
 
-def vrot_scr(scrfile):
+def vrot_scr(scrfile, old=True):
     """ Returns the ``vrot`` value of a given source star.
 
     OUTPUT: vrot in km/s. """
     M, Req, Tp = readscr(scrfile)
     # Be_M04.80_ob1.40_H0.30_Z0.014_bE_Ell
-    rule = '(?<=_ob)(.+)(?=_H)'
-    ob = float(_re.findall(rule, scrfile)[0])
+    if old:
+        rule = '(?<=_ob)(.+)(?=_H)'
+        ob = float(_re.findall(rule, scrfile)[0])
+    else:
+        rule = '(?<=_W)(.+)(?=_t)'
+        W = float(_re.findall(rule, scrfile)[0])
+        ob = 1. + .5 * W**2
     vrot = wrot(ob, is_ob=True) * \
         _np.sqrt(_phc.G.cgs * _phc.Msun.cgs * M / Req / _phc.Rsun.cgs)
     return vrot*1e-5
@@ -73,8 +78,11 @@ def wrot(par, is_ob=False):
     else: 
         wfrac = par
 
-    gam = 2. * _np.cos((_np.pi + _np.arccos(wfrac)) / 3.)
-    W = _np.sqrt(gam ** 3 / wfrac)
+    if wfrac != 0.:
+        gam = 2. * _np.cos((_np.pi + _np.arccos(wfrac)) / 3.)
+        W = _np.sqrt(gam ** 3 / wfrac)
+    else:
+        W = 0.
 
     return W
 
@@ -214,7 +222,8 @@ def rotStar(Tp=20000., M=10.3065, rp=5.38462, star='B', beta=0.25, wfrac=0.8,
     if wfrac == 0.:
         wfrac = 1e-9
     if LnotTp:
-        Tp = (Tp * Lsun / 4. / _np.pi / rp**2 / sigma)**.25
+        #Tp = (Tp * Lsun / 4. / _np.pi / rp**2 / sigma)**.25
+        Tp = (Tp*Lsun / sigma / sigma4b_cranmer(M/Msun, wfrac))**0.25 * (G*M / rp**2)**beta
 
     # DEFS ###
     # rh = outside
@@ -322,6 +331,20 @@ def rochearea(wfrac, isW=False):
         w = wfrac
     return 4*_np.pi*(1+.19444*w**2+0.28053*w**2-1.9014*w**6+6.8298*w**8-
         9.502*w**10+4.6631*w**12)
+
+
+def sigma4b_cranmer(M, w):
+    '''Computes sigma4b defined in Cranmer 1996 (Eq. 4.22)
+    
+    Usage:
+    s4b = sigma4b_cranmer(M, w)
+
+    where w=Omega/Omega_c, M=stellar mass in Msun (from 1.7 to 20.)
+    '''
+    dir0 = '{0}/refs/tables/'.format(_hdtpath())
+    tab = _np.load(dir0 + 'sigma4b_cranmer.npz')
+    s4b = _griddata(tab['parlist'], tab['sigma4b'], _np.array([M, w]), method='linear')[0]
+    return s4b
 
 
 bestarsHarm1988 = [

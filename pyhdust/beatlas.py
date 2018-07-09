@@ -713,6 +713,7 @@ def interpolBA(params, ctrlarr, lparams, minfo, models, param=True):
     X1 = parlims[:, 1]
     return _phc.interLinND(params, X0, X1, outmodels)
 
+
 def griddataBA(minfo, models, params, isig, silent=True):
     '''
     Interpolates model grid
@@ -767,6 +768,7 @@ def griddataBA(minfo, models, params, isig, silent=True):
 
     return model_interp
 
+
 def check_xdr_limits(xdrminfo, todel=[]):
     """ Check if the XDR file contains models for all parameters within their
     **maximum** interval.
@@ -808,6 +810,7 @@ def check_xdr_limits(xdrminfo, todel=[]):
         print('# THE MODELS IN XDR ARE OKAY!!')
     return 
 
+
 def hfrac2tms(Hfrac, inverse=False):
     '''
     Converts nuclear hydrogen fraction into fractional time in the main-sequence,
@@ -832,6 +835,7 @@ def hfrac2tms(Hfrac, inverse=False):
         tms = 0.
 
     return tms
+
 
 # MAIN ###
 if __name__ == "__main__":

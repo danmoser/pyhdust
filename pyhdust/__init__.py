@@ -463,6 +463,71 @@ def temp_interp(tempfile, theta, pos=[0, 1]):
     return r, interp
 
 
+def mergesed1(models, iterations=[21, 22, 23, 24]):
+    '''
+    Convert mod#/*.sed1 files into the fullsed file.
+
+    INPUT: models lists (*.txt or *.inp), step 1 iterations (array).
+
+    OUTPUT: *files written (status printed).
+    '''
+    for i in range(len(models)):
+        models[i] = models[i].replace('.inp', '.txt')
+    
+    for model in models:
+        modfld, modelname = list(_os.path.split(model))
+        path = list(_os.path.split(modfld[:-1]))[0]
+        if not _os.path.exists(_os.path.join('{0}'.format(path), 'fullsed')):
+            _os.system(_os.path.join('mkdir {0}'.format(path), 'fullsed'))
+        for it in iterations:
+            lsed1 = _os.path.join(modfld, '{0}{1}.sed1'.format(modelname[:-4], it))
+            try:
+                f = open(lsed1)
+            except:
+                _warn.warn('# No SED1 found for {0} iteration {1}'.format(modelname[:-4], it))
+                continue
+            row = f.readline()
+            f.close()
+            nlbd, nobs = _np.array(row.split()[:2], dtype=_np.int)
+            Rstar, Rwind = _np.array(row.split()[-2:], dtype=_np.float)
+            sed1data = _np.loadtxt(lsed1, skiprows=1)
+            extra = len(sed1data.T) - 28
+    
+            print('# PROCESSED: {0} ITERATION {1}'.format(modelname[:-4], it))
+            fullsed1 = _np.zeros((len(sed1data), 16))
+            fullsed1[:, 0:3+extra] = sed1data[:, 0:3+extra]
+            fullsed1[:, 4] = sed1data[:, 11]
+            fullsed1[:, 5] = sed1data[:, 19]
+            fullsed1[:, 6] = sed1data[:, 27]
+            fullsed1[:, 7:8+extra] = sed1data[:, 4:5+extra]
+            
+            fullsed1 = _np.core.records.fromarrays(fullsed1.transpose(), 
+                names='MU,PHI,LAMBDA,FLUX,SCT FLUX,EMIT FLUX,TRANS FLUX,Q,U,' +
+                'Sig FLUX,Sig SCT FLUX,Sig EMIT FLUX,Sig TRANS FLU,Sig Q,' +
+                'Sig U', formats='f8,f8,f8,f8,f8,f8,f8,f8,f8,f8,f8,f8,f8,f8,' +
+                'f8,f8')
+            idx = _np.argsort(fullsed1, order=('MU', 'PHI', 'LAMBDA'))
+            fullsed1 = fullsed1[idx]
+            hd = '%CONTAINS: SED1 ITERATION {:}\n'.format(it)
+            hd += '%CREATED: {0}\n'.format(
+                _time.asctime(_time.localtime(_time.time())))
+            hd += '%{0:>7s}{1:>8s}{2:>13s}{3:>13s}\n'.format(
+                'nlbd', 'nobs', 'Rstar', 'Rwind')
+            hd += '{0:8d}{1:8d}{2:13.4f}{3:13.2f}\n'.format(
+                int(nlbd), int(nobs), Rstar, Rwind)
+            header = ['% PHI', 'LAMBDA', 'FLUX', 'SCT FLUX', 'EMIT FLUX', 
+                'TRANS FLUX', 'Q', 'U', 'Sig FLUX', 'Sig FLUX', 'SigSCTFLX', 
+                'SigEMITFLX', 'SigTRANSFLX', 'Sig Q', 'Sig U']
+            outfile = hd + _tab(fullsed1, headers=header, tablefmt="plain")
+            if len(path) > 0:
+                path += _os.path.sep
+            f0 = open(path + 'fullsed' + _os.path.sep + 
+                'fullsed_' + modelname.replace('.txt', '{:}.sed1'.format(it)), 'w')
+            f0.writelines(outfile)
+            f0.close()
+    return
+
+
 def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
     """
     Merge all mod#/*.sed2 files into the fullsed file.
