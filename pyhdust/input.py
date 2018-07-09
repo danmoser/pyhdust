@@ -962,8 +962,6 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'], oldstp1=True,
         elif _os.path.exists('{0}s/{0}s_{1}_mod{2}.sh'.format(sel, proj, 
             modn)):
             _os.system('rm {0}s/{0}s_{1}_mod{2}.sh'.format(sel, proj, modn))
-    if not _os.path.exists('log'):
-        _os.system('mkdir log')
 
     # list of mods
     mods = _glob('mod{0}/mod{0}*.txt'.format(modn))
@@ -1224,7 +1222,7 @@ def makeSimulLine(basesims, Rs, hwidth, Ms, Obs, lsuffix, path='source/'):
     return
 
 
-def makeImageLine(baseimgs, Rs, hwidth, Ms, Ws, ts, lsuffix, path='source/'):
+def makeImageLine(baseimgs, Rs, vorb_factor, Ms, Ws, ts, lsuffix, path='source/'):
     """
     | basesims = ['simulation/Brg.txt','simulation/Ha.txt']
     | Rs = [12000, 20000]
@@ -1234,6 +1232,9 @@ def makeImageLine(baseimgs, Rs, hwidth, Ms, Ws, ts, lsuffix, path='source/'):
     | suffix = 'Z0.014_bE_Ell'
     """
     c = _phc.c.cgs
+    G = _phc.G.cgs
+    Msun = _phc.Msun.cgs
+    Rsun = _phc.Rsun.cgs
 
     for prodI in _product(Ms, Ws, ts, baseimgs, lsuffix):
         M, W, t, baseimg, suffix = prodI
@@ -1247,13 +1248,13 @@ def makeImageLine(baseimgs, Rs, hwidth, Ms, Ws, ts, lsuffix, path='source/'):
         k = baseimgs.index(baseimg)
         R = Rs[k]
         nmod = mod[:]
-        vrot = _rot.vrot_scr(path+srcid, old=False)
-        vorb = vrot / W
-        vel = '{0:.1f}'.format(1.2 * vorb)
+        _, Req, _ = _rot.readscr(path + srcid)
+        vorb = 1e-5 * _np.sqrt(G * M*Msun / (Req*Rsun))
+        vel = '{0:.1f}'.format(vorb_factor * vorb)
         nmod[35] = nmod[35].replace('1500.', vel)
         
         print(M, W, t, srcid)
-        n = str(int(round(2 * (1.2 * vorb) * R / c * 1e5)))
+        n = str(int(round(2 * (vorb_factor * vorb) * R / c * 1e5)))
         nmod[32] = nmod[32].replace('100', n)
 
         f0 = open(
