@@ -1136,7 +1136,7 @@ def plottemp(tfiles, philist=[0], interpol=False, xax=0, fmt=['png'],
             elif (xax == 2):
                 x = 1. - Rstar / x
                 xtitle = r'$1-R_*/r$'
-            y = data[3 + lev, :, ncmu / 2 + np + rplus, icphi]
+            y = data[3 + lev, :, ncmu // 2 + np + rplus, icphi]
             y = y / 1000.
             mk = 'o:'
             if rtfile.find('avg') > 0:
