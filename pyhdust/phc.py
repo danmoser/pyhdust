@@ -842,7 +842,8 @@ def is_inside_ranges(par, ranges):
     else:
         count = 0
         inside_ranges = True
-        while (inside_ranges is True) and (count < len(par)):
+        while inside_ranges * (count < len(par)):
+            print(ranges[count, 0], par[count], ranges[count, 1])
             inside_ranges = (par[count] >= ranges[count, 0]) and (
                 par[count] <= ranges[count, 1])
             count += 1
