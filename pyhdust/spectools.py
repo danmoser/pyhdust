@@ -31,8 +31,6 @@ import pyhdust as _hdt
 from six import string_types as _strtypes
 import warnings as _warn
 # from lmfit import Model as _Model
-from astropy.modeling import models as _models
-from astropy.modeling import fitting as _fitting
 
 try:    
     import pyfits as _pyfits
@@ -43,8 +41,10 @@ try:
     import matplotlib.gridspec as _gridspec
     import scipy.interpolate as _interpolate 
     from scipy.optimize import curve_fit as _curve_fit
+    from astropy.modeling import models as _models
+    from astropy.modeling import fitting as _fitting
 except ImportError:
-    _warn.warn('matplotlib, scipy, and/or pyfits module not installed!!!')
+    _warn.warn('matplotlib, scipy, and/or astropy module not installed!!!')
 
 try:
     import pyqt_fit.nonparam_regression as _smooth

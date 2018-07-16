@@ -17,7 +17,7 @@ from __future__ import print_function
 import os as os
 import numpy as _np
 import warnings as _warn
-import pyhdust.spectools as _spt
+# import pyhdust.spectools as _spt
 import pyhdust.phc as _phc
 
 try:
