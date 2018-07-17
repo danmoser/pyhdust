@@ -523,7 +523,7 @@ def geneva_closest(Mstar, oblat, t, Zstr='014', tar=None, silent=True):
         age1, _, logL1, _, Hfrac1, _, _, w1, Rpole1 = geneva_read(fname, tar=tar)
         t1 = age1 / age1[_np.where(Hfrac1 == 0.)[0][0]-1]
         if t > t1.max() and not silent:
-            print('[geneva_closest] Warning: requested age not available, taking t/tMS={:.2f} instead.'.format(t1.max()))
+            print('[geneva_closest] Warning: requested age not available, taking t/tMS={:.2f} instead of t/tMS={:.2f}.'.format(t1.max(),t))
         it = _np.where(_np.abs(t-t1) == _np.min(_np.abs(t-t1)))[0][0]
         wlist[iw] = w1[it]
         Rplist[iw] = Rpole1[it]
@@ -536,7 +536,7 @@ def geneva_closest(Mstar, oblat, t, Zstr='014', tar=None, silent=True):
         age = _griddata(wlist, agelist, [w], method='linear')[0]
     else:
         if not silent:
-            print('[geneva_closest] Warning: no model rotating this fast at this age, taking closest model instead.')
+            print('[geneva_closest] Warning: no model rotating this fast at this age, taking closest model instead. (omega={:.2f} instead of omega={:.2f})'.format(wlist.max(),w))
         iwmax = _np.where(wlist == wlist.max())[0][0]
         Rpole = Rplist[iwmax]
         logL = logLlist[iwmax]
