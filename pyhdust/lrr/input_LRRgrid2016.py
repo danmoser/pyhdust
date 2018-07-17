@@ -1180,7 +1180,7 @@ srcid=''):
 
 def makeInpJob_ProjectLC_v2(sedfile, modn, clusters, nodes, walltime, wcheck, email, chkout, st1max,\
 st1refmax, docases, sim1, sim2, simulations, images, composition,\
-controls, gridcells, observers, modsourcepertime = False, ctrM=False, touch=False, srcNf=None, path=None,
+controls, gridcells, observers, modsourcepertime, ctrM=False, touch=False, srcNf=None, path=None,
 srcid=''):
     """
     Create INP+JOB files to run Hdust.
@@ -1320,7 +1320,10 @@ srcid=''):
         wout = f0.readlines()
         f0.close()
         
-        outname = mod[mod.find('/')+1:].replace('txt',sel)
+        if modsourcepertime == False:
+            outname = mod[mod.find('/')+1:].replace('txt',sel)
+        else:
+            outname = mod[mod.find('/')+1:].replace('inp',sel)
             
         f0 = open('{0}s/{0}s_{1}_mod{2}.sh'.format(sel,proj,modn),'a')
         if sel == 'job':
@@ -1389,96 +1392,133 @@ srcid=''):
     f0.close()
     
     
-    for mod in mods:
-        #Write inps
-        f0 = open(mod.replace('.txt','.inp'),'w')
-        f0.writelines('PROJECT = {0}\nMODEL = {1}\n\n'.format(proj,modn))
     
-        suf = mod[mod.find('_'):-4]
-        src = mod[mod.find('Be_'):-4]
-        #if mod[-8:-4] == 'src1': src='Be_M07.00_ob1.33_H0.50_Z0.002_bE_Ell'
-        #if mod[-8:-4] == 'src2': src='Be_M11.00_ob1.33_H0.50_Z0.002_bE_Ell'
-        #if mod[-8:-4] == 'src3': src='Be_M15.00_ob1.33_H0.50_Z0.002_bE_Ell'
-        #if src.find(srcid) == -1:
-        #    continue
+    
+    
+    
+    sourcess=_glob('source/*')
+    for esrc in sourcess:
+        if modsourcepertime == True:
+            inpfile=mods[0].replace('.txt','.inp').replace('_bE_Ell','_bE_Ell'+'_'+str(sourcess.index(esrc)))
+            f2 = open(inpfile,'w')
+            f2.writelines('PROJECT = {0}\nMODEL = {1}\n\n'.format(proj,modn))
+        
+        for mod in mods:
+            if esrc.replace('.txt','').replace('source/','') in mod:
+			
+			
+                #Write inps
+                if modsourcepertime == False:
+                    f0 = open(mod.replace('.txt','.inp'),'w')
+                    f0.writelines('PROJECT = {0}\nMODEL = {1}\n\n'.format(proj,modn))
+            
+                suf = mod[mod.find('_'):-4]
+                src = mod[mod.find('Be_'):-4]
+                #if mod[-8:-4] == 'src1': src='Be_M07.00_ob1.33_H0.50_Z0.002_bE_Ell'
+                #if mod[-8:-4] == 'src2': src='Be_M11.00_ob1.33_H0.50_Z0.002_bE_Ell'
+                #if mod[-8:-4] == 'src3': src='Be_M15.00_ob1.33_H0.50_Z0.002_bE_Ell'
+                #if src.find(srcid) == -1:
+                #    continue
+        
+                cases = docases[:]
+                #Do the touch thing
+                addtouch = '\n'
+                addtouch += 'chmod 664 ../../tmp/*\nchmod 664 {0}/mod{1}/*\n'.format(proj,modn)
+                if touch and ( (1 in cases) or (2 in cases) ):
+                    addtouch += 'touch {0}/{1}\n'.format(proj, mod.replace('.txt','.log'))
+                if touch and 3 in cases:
+                    for sim in simulations:
+                        addtouch += 'touch {0}/{1}\n'.format(proj,mod.replace('.txt','.chk')).replace('mod{0}/mod{0}'.format(modn), 'mod{0}/{1}_mod{0}'.format(modn, sim))
+                        addtouch += 'touch {0}/{1}\n'.format(proj,mod.replace('.txt','.err')).replace('mod{0}/mod{0}'.format(modn), 'mod{0}/{1}_mod{0}'.format(modn, sim))
+                        addtouch += 'touch {0}/{1}\n'.format(proj,mod.replace('.txt','.log')).replace('mod{0}/mod{0}'.format(modn), 'mod{0}/{1}_mod{0}'.format(modn, sim))
+                        addtouch += 'touch {0}/{1}\n'.format(proj,mod.replace('.txt','_SEI.chk')).replace('mod{0}/mod{0}'.format(modn), 'mod{0}/{1}_mod{0}'.format(modn, sim))
+                        addtouch += 'touch {0}/{1}\n'.format(proj,mod.replace('.txt','_SEI.err')).replace('mod{0}/mod{0}'.format(modn), 'mod{0}/{1}_mod{0}'.format(modn, sim))
+                        addtouch += 'touch {0}/{1}\n'.format(proj,mod.replace('.txt','_SEI.log')).replace('mod{0}/mod{0}'.format(modn), 'mod{0}/{1}_mod{0}'.format(modn, sim))
+                        err90a = '{0}/{1}'.format(proj,mod.replace('.txt','.err').replace('mod{0}/mod{0}'.format(modn), 'mod{0}/{1}_mod{0}'.format(modn, sim)))
+                        err90b = '{0}/{1}'.format(proj,mod.replace('.txt','_SEI.err').replace('mod{0}/mod{0}'.format(modn), 'mod{0}/{1}_mod{0}'.format(modn, sim)))
+                        addtouch += 'touch {0}\n'.format(err90a[:90])
+                        addtouch += 'touch {0}\n'.format(err90b[:90])
+                        addtouch += 'touch {0}\n'.format(err90a[:90].replace(".err",".chk").replace(".er",".ch").replace(".e",".c"))
+                        addtouch += 'touch {0}\n'.format(err90b[:90].replace(".err",".chk").replace(".er",".ch").replace(".e",".c"))
+                modchmod = _phc.trimpathname(mod)
+                modchmod[1] = modchmod[1].replace('.txt','*')
+                #~ addtouch += 'chmod 664 {0}/{1}/*{2}\n'.format(proj, *modchmod)
+        
+                #Set simulation check variable
+                if 3 in cases:
+                    simchk = _np.ones(len(simulations), dtype=bool)
+                else:    
+                    simchk = _np.zeros(len(simulations), dtype=bool)
+            
+                if _os.path.exists(mod.replace('.txt','{0:02d}.temp'.format(st1max))) \
+                and chkout and 1 in cases:
+                    cases.remove(1)
+                case1 = doCase1(inp,cases)
+                if modsourcepertime == False:
+                    f0.writelines(case1+['\n'])
+                else:
+                    f2.writelines(case1+['\n'])
+            
+                if _os.path.exists(mod.replace('.txt','{0:02d}.temp'.format(st1refmax)))\
+                 and chkout and 2 in cases:
+                    cases.remove(2)    
+                case2 = doCase2(inp,cases)
+                if modsourcepertime == False:
+                    f0.writelines(case2+['\n'])
+                else:
+                    f2.writelines(case2+['\n'])
+                
+                if chkout and 3 in cases:
+                    for i in range(len(simulations)):
+                        outs2a = 'mod{0}/{1}_mod{0}{2}.sed2'.format(modn,simulations[i],suf)
+                        outs2b = 'mod{0}/{1}_mod{0}{2}_SEI.sed2'.format(modn,simulations[i],suf)
+                        if _os.path.exists(outs2a) or _os.path.exists(outs2b):
+                            simchk[i] = False
+                    if True not in simchk:
+                        cases.remove(3)
+                case3 = doCase3(inp,simchk)
+                if modsourcepertime == False:
+                    f0.writelines(case3)
+                    f0.close()
+                else:
+                    f2.writelines(case3)
+                
+                
+                #Def automatic walltime:
+                if wcheck:
+                    h = 0 
+                    if 1 in cases:
+                        h+=1
+                    if 2 in cases:
+                        h+=1
+                    idx = _np.where(simchk==True)
+                    if len(idx[0])>0:
+                        extra = 4+len(idx[0])
+                        h = h+extra*48/nodes
+                    walltime = '{0}:0:0'.format(h)
+                
+                #Del old jobs
+                for sel in clusters:
+                    if modsourcepertime == False:
+                        outname = mod[mod.find('/')+1:].replace('txt',sel)
+                    else:
+                        outname = inpfile[inpfile.find('/')+1:].replace('inp',sel)
+                    if _os.path.exists('{0}s/{1}'.format(sel,outname)):
+                        _os.system('rm {0}s/{1}'.format(sel,outname))
+                
+                #Write jobs (if necessary)
+                if len(cases)>0:
+                    for sel in clusters:
+                        if modsourcepertime == False:
+                            doJobs(mod,sel,addtouch)
+                        else:
+                            doJobs(inpfile,sel,addtouch)
 
-        cases = docases[:]
-        #Do the touch thing
-        addtouch = '\n'
-        addtouch += 'chmod 664 ../../tmp/*\nchmod 664 {0}/mod{1}/*\n'.format(proj,modn)
-        if touch and ( (1 in cases) or (2 in cases) ):
-            addtouch += 'touch {0}/{1}\n'.format(proj, mod.replace('.txt','.log'))
-        if touch and 3 in cases:
-            for sim in simulations:
-                addtouch += 'touch {0}/{1}\n'.format(proj,mod.replace('.txt','.chk')).replace('mod{0}/mod{0}'.format(modn), 'mod{0}/{1}_mod{0}'.format(modn, sim))
-                addtouch += 'touch {0}/{1}\n'.format(proj,mod.replace('.txt','.err')).replace('mod{0}/mod{0}'.format(modn), 'mod{0}/{1}_mod{0}'.format(modn, sim))
-                addtouch += 'touch {0}/{1}\n'.format(proj,mod.replace('.txt','.log')).replace('mod{0}/mod{0}'.format(modn), 'mod{0}/{1}_mod{0}'.format(modn, sim))
-                addtouch += 'touch {0}/{1}\n'.format(proj,mod.replace('.txt','_SEI.chk')).replace('mod{0}/mod{0}'.format(modn), 'mod{0}/{1}_mod{0}'.format(modn, sim))
-                addtouch += 'touch {0}/{1}\n'.format(proj,mod.replace('.txt','_SEI.err')).replace('mod{0}/mod{0}'.format(modn), 'mod{0}/{1}_mod{0}'.format(modn, sim))
-                addtouch += 'touch {0}/{1}\n'.format(proj,mod.replace('.txt','_SEI.log')).replace('mod{0}/mod{0}'.format(modn), 'mod{0}/{1}_mod{0}'.format(modn, sim))
-                err90a = '{0}/{1}'.format(proj,mod.replace('.txt','.err').replace('mod{0}/mod{0}'.format(modn), 'mod{0}/{1}_mod{0}'.format(modn, sim)))
-                err90b = '{0}/{1}'.format(proj,mod.replace('.txt','_SEI.err').replace('mod{0}/mod{0}'.format(modn), 'mod{0}/{1}_mod{0}'.format(modn, sim)))
-                addtouch += 'touch {0}\n'.format(err90a[:90])
-                addtouch += 'touch {0}\n'.format(err90b[:90])
-                addtouch += 'touch {0}\n'.format(err90a[:90].replace(".err",".chk").replace(".er",".ch").replace(".e",".c"))
-                addtouch += 'touch {0}\n'.format(err90b[:90].replace(".err",".chk").replace(".er",".ch").replace(".e",".c"))
-        modchmod = _phc.trimpathname(mod)
-        modchmod[1] = modchmod[1].replace('.txt','*')
-        #~ addtouch += 'chmod 664 {0}/{1}/*{2}\n'.format(proj, *modchmod)
+        if modsourcepertime == True:
+            f2.close()
 
-        #Set simulation check variable
-        if 3 in cases:
-            simchk = _np.ones(len(simulations), dtype=bool)
-        else:    
-            simchk = _np.zeros(len(simulations), dtype=bool)
-    
-        if _os.path.exists(mod.replace('.txt','{0:02d}.temp'.format(st1max))) \
-        and chkout and 1 in cases:
-            cases.remove(1)
-        case1 = doCase1(inp,cases)
-        f0.writelines(case1+['\n'])
-    
-        if _os.path.exists(mod.replace('.txt','{0:02d}.temp'.format(st1refmax)))\
-         and chkout and 2 in cases:
-            cases.remove(2)    
-        case2 = doCase2(inp,cases)
-        f0.writelines(case2+['\n'])
-        
-        if chkout and 3 in cases:
-            for i in range(len(simulations)):
-                outs2a = 'mod{0}/{1}_mod{0}{2}.sed2'.format(modn,simulations[i],suf)
-                outs2b = 'mod{0}/{1}_mod{0}{2}_SEI.sed2'.format(modn,simulations[i],suf)
-                if _os.path.exists(outs2a) or _os.path.exists(outs2b):
-                    simchk[i] = False
-            if True not in simchk:
-                cases.remove(3)
-        case3 = doCase3(inp,simchk)
-        f0.writelines(case3)
-        f0.close()
-        
-        #Def automatic walltime:
-        if wcheck:
-            h = 0 
-            if 1 in cases:
-                h+=1
-            if 2 in cases:
-                h+=1
-            idx = _np.where(simchk==True)
-            if len(idx[0])>0:
-                extra = 4+len(idx[0])
-                h = h+extra*48/nodes
-            walltime = '{0}:0:0'.format(h)
-        
-        #Del old jobs
-        for sel in clusters:
-            outname = mod[mod.find('/')+1:].replace('txt',sel)
-            if _os.path.exists('{0}s/{1}'.format(sel,outname)):
-                _os.system('rm {0}s/{1}'.format(sel,outname))
-        
-        #Write jobs (if necessary)
-        if len(cases)>0:
-            for sel in clusters:
-                doJobs(mod,sel,addtouch)
+
+
 
     if path is not '':
         _os.chdir(path0)
