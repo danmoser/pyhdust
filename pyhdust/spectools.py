@@ -255,15 +255,17 @@ class Spec(object):
         return
 
 
-def shiftfits(fitsfile, newsh=None):
+def shiftfits(fitsfile, newsh=None, verbose=False):
     """ Update FITS spec header for a given shift value. """
     imfits = _pyfits.open(fitsfile, mode='update')
     if 'WLSHIFT' in imfits[0].header:
-        print('# WLSHIFT = {0} for {1}'.format(imfits[0].header['WLSHIFT'],
+        if verbose:
+            print('# WLSHIFT = {0} for {1}'.format(imfits[0].header['WLSHIFT'],
         _phc.trimpathname(fitsfile)[1]))
     else:
-        print('# No WLSHIFT available for {0}'.format(
-            _phc.trimpathname(fitsfile)[1]))
+        if verbose:
+            print('# No WLSHIFT available for {0}'.format(
+                _phc.trimpathname(fitsfile)[1]))
     if newsh is None:
         newsh = _phc.user_input('Type the new shift: ')
     if newsh != '':
@@ -281,7 +283,6 @@ def checkshiftfits(fitslist, lbc=6562.8):
     """
     fig, ax = _plt.subplots()
     for f in fitslist:
-        print(f)
         data = loadfits(f)
         vel, flx = lineProf(data[0], data[1], lbc=lbc)
         good = False
@@ -886,6 +887,7 @@ def PScalc(vels, flux, vc=0., ssize=.05, gaussfit=False):
             coeff1, tmp = _curve_fit(gauss, vels[ivc:], flux[ivc:], p0=p1)
             return coeff0[1], coeff1[1]
         except ValueError:
+            print('# PScalc error...')
             # print vels[i0], flux[i0], vels[i1], flux[i1]
             return 0, 0
 
@@ -1240,8 +1242,8 @@ def splitKurucz(filen, path=None):
     return
 
 
-def writeFits(flx, lbd, extrahead=None, savename=None, quiet=False, path=None,
-    lbdc=None, externhd=None):
+def writeFits(flx, lbd, extrahead=None, savename=None, verbose=False, 
+    path=None, lbdc=None, externhd=None):
     """ Write a 1D spectra FITS.
 
     | INPUT: flux array, lbd array, extrahead flag+info, save name.
@@ -1283,7 +1285,7 @@ def writeFits(flx, lbd, extrahead=None, savename=None, quiet=False, path=None,
     if savename.find('.fit') == -1:
         savename += '.fits'
     hdu.writeto(path + savename, clobber=True)
-    if not quiet:
+    if verbose:
         print('# FITS file {0}{1} saved!'.format(path, savename))
     return
 
@@ -2152,7 +2154,7 @@ def spec_time(speclist, lbc=6562.8, ref_spec=("/data/Dropbox/work/"
             extrem[1] = _np.max(flux+(MJD-MJDs[0])*ysh)
         if _np.min(flux+(MJD-MJDs[0])*ysh) < extrem[0]:
             extrem[0] = _np.min(flux+(MJD-MJDs[0])*ysh)
-    print(extrem)
+    # print(extrem)
     if _os.path.exists(ref_spec):
         wl, flux, MJD, dateobs, datereduc, fitsfile = loadfits(ref_spec)
         vel, flux = lineProf(wl, flux, lbc, hwidth=hwidth)
@@ -2249,7 +2251,7 @@ def spec_time_Achernar(speclist, lbc=6562.8, fmt=['png', 'pdf'], outname=None,
                 0.1*(MJDs[1]-MJDs[0])), cmapn=cmapn)[0]
         else:
             cor = 'k'
-        print(MJD, MJDs, extrem, ysh, (MJD-MJDs[0])*ysh, flux, sp)
+        # print(MJD, MJDs, extrem, ysh, (MJD-MJDs[0])*ysh, flux, sp)
         ax.plot(vel, flux+(MJD-MJDs[0])*ysh, color=cor)
         if _np.max(flux+(MJD-MJDs[0])*ysh) > extrem[1]:
             extrem[1] = _np.max(flux+(MJD-MJDs[0])*ysh)
@@ -2547,7 +2549,7 @@ def diffplotsubdirs(path, star, limits=(6540, 6600)):
                             a1 = _np.where(abs(lbda - ref1) == min_dif)[0][0]
                             spec = normalize_range(lbda, spec, a0, a1) + \
                                 (0.1 * i)
-                            print (0.1 * i)
+                            # print (0.1 * i)
                             try:
                                 leg = imfits[0].header['DATE-OBS']
                             except:
@@ -2655,7 +2657,7 @@ def refplotsubdirs(path, star, limits=(6540, 6600)):
                             min_dif = min(abs(lbda - ref1))
                             a1 = _np.where(abs(lbda - ref1) == min_dif)[0][0]
                             spec = normalize_range(lbda, spec, a0, a1)
-                            print (0.1 * i)
+                            # print (0.1 * i)
                             leg = imfits[0].header['DATE-OBS']
                             refleg = '2012-11-20T23:51:37.392'
                             refleg = '2008-06-13'
@@ -2712,7 +2714,7 @@ def refplotsubdirs(path, star, limits=(6540, 6600)):
                             # print imfits[0].header['CDELT1'], 
                             # imfits[0].header['CRVAL1'], cal
                             spec = func(lbdaref)
-                            print (0.1 * i)
+                            # print (0.1 * i)
                             try:
                                 leg = imfits[0].header['DATE-OBS']
                             except:
@@ -2824,7 +2826,7 @@ def overplotsubdirs2(path, star, limits=(6540, 6600)):
                             min_dif = min(abs(lbda - ref1))
                             a1 = _np.where(abs(lbda - ref1) == min_dif)[0][0]
                             spec = normalize_range(lbda, spec, a0, a1)
-                            print (0.1 * i), night
+                            # print (0.1 * i), night
                             prtcolor = _phc.colors[i]
                             try:
                                 leg = imfits[0].header['DATE-OBS']
