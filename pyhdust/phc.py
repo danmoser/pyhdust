@@ -831,7 +831,7 @@ def find_nearND(matrix, array, idx=False, bigger=None, outlen=1):
 
 def is_inside_ranges(par, ranges):
     '''
-    Checks if par os inside ranges, returns boolean value.
+    Checks if par is inside ranges, returns boolean value.
 
     Usage:
     inside_ranges = is_inside_ranges(par, ranges)

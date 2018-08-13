@@ -29,6 +29,7 @@ import pyhdust.jdcal as _jdcal
 import pyhdust.input as _inp
 import pyhdust as _hdt
 from six import string_types as _strtypes
+from shutil import copyfile as _copyfile
 import warnings as _warn
 # from lmfit import Model as _Model
 
@@ -323,21 +324,33 @@ def loadfits(fitsfile):
     wl = _np.arange(len(flux)) * imfits[0].header['CDELT1'] +\
         imfits[0].header['CRVAL1']
     (MJD, dateobs, datereduc) = (0., '', '')
-    if 'MJD-OBS' in imfits[0].header:
+    dtinfo = False
+    if not dtinfo and 'MJD-OBS' in imfits[0].header:
         MJD = float(imfits[0].header['MJD-OBS'])
-    elif 'MJD' in imfits[0].header:
+        dtinfo = True
+    if not dtinfo and 'MJD' in imfits[0].header:
         MJD = float(imfits[0].header['MJD'])
-    elif 'JD' in imfits[0].header:
-        MJD = float(imfits[0].header['JD']) - 2400000.5
-    elif 'DATE-OBS' in imfits[0].header:
-        dtobs = imfits[0].header['DATE-OBS']
-        dtobs, tobs = check_dtobs(dtobs)
-        MJD = _jdcal.gcal2jd(*dtobs)[1] + tobs
-    elif 'FRAME' in imfits[0].header:
+        dtinfo = True
+    if not dtinfo and 'JD' in imfits[0].header:
+        if isinstance(imfits[0].header['JD'], _strtypes):
+            if len(imfits[0].header['JD']) > 0:
+                MJD = float(imfits[0].header['JD']) - 2400000.5
+                dtinfo = True
+        else:
+            MJD = imfits[0].header['JD'] - 2400000.5
+            dtinfo = True
+    if not dtinfo and 'DATE-OBS' in imfits[0].header:
+        if len(imfits[0].header['DATE-OBS']) > 0:
+            dtobs = imfits[0].header['DATE-OBS']
+            dtobs, tobs = check_dtobs(dtobs)
+            MJD = _jdcal.gcal2jd(*dtobs)[1] + tobs
+            dtinfo = True
+    if not dtinfo and 'FRAME' in imfits[0].header:
         dtobs = imfits[0].header['FRAME']
         dtobs, tobs = check_dtobs(dtobs)
         MJD = _jdcal.gcal2jd(*dtobs)[1] + tobs
-    else:
+        dtinfo = True
+    if not dtinfo:
         MJD = _jdcal.MJD_JD2000
         _warn.warn('No DATE-OBS information is available! {0}\nAssuming '
             'MJD_JD2000'.format(fitsfile))
@@ -1614,7 +1627,7 @@ def load_specs_fits(speclist, ref, lbc, lncore=None, hwidth=None,
     `lncore`: cut and paste hwidth of the line center. It can be None, and 
     must be < hwidth. If hwidth is None, it is assumed to be 1000 km/s. 
 
-    `speclist` : [ ['path+file.fits', 'INSTRUMENT'], ... ]
+    `speclist` : ['path+file.fits', ...]
 
     `ref`: reference spectra to do the cut & paste 
 
@@ -1635,7 +1648,8 @@ def load_specs_fits(speclist, ref, lbc, lncore=None, hwidth=None,
     # load specs
     dtb_obs = Spec(lbc=lbc, hwidth=hwidth, gaussfit=gaussfit)
     for i in range(_np.shape(speclist)[0]):
-        dtb_obs.loadspec(speclist[i][0])
+        print(speclist[i])
+        dtb_obs.loadspec(speclist[i])
         vl, flx = lineProf(dtb_obs.wl, dtb_obs.flux, lbc=lbc)
         if docore:
             cuted = cutpastrefspec(vl, flx, refvl, reflx, lncore)
@@ -1655,7 +1669,7 @@ def load_specs_fits(speclist, ref, lbc, lncore=None, hwidth=None,
     if plotcut > 0 and docore:
         fig0, ax = _plt.subplots()
         for i in range(_np.shape(speclist)[0]):
-            dtb_obs.loadspec(speclist[i][0])
+            dtb_obs.loadspec(speclist[i])
             vl, flx = lineProf(dtb_obs.wl, dtb_obs.flux, lbc=lbc)
             cuted = cutpastrefspec(vl, flx, refvl, reflx, lncore)
             if i % plotcut == 0:
@@ -2067,6 +2081,7 @@ def din_spec(metadata, lbc=6562.86, hwidth=1500., res=50, interv=None,
     # fig.tight_layout()
     ax.xaxis.set_tick_params(color='gray', width=1.1)
     ax.yaxis.set_tick_params(color='gray', width=1.1)
+    fig.gca().invert_yaxis()
     _phc.savefig(fig, fmt=fmt, figname=outname)
     return
 
@@ -2158,12 +2173,20 @@ def spec_time(speclist, lbc=6562.8, ref_spec=("/data/Dropbox/work/"
     if _os.path.exists(ref_spec):
         wl, flux, MJD, dateobs, datereduc, fitsfile = loadfits(ref_spec)
         vel, flux = lineProf(wl, flux, lbc, hwidth=hwidth)
-        ax.text(650., 0.8, 'refenrence', horizontalalignment='center', 
+        # ax.text(650., 0.8, 'Reference', horizontalalignment='center', 
+        ax.text(800., 0.8, 'Reference', horizontalalignment='center', 
             verticalalignment='center')  # , transform=ax.transAxes)
         ax.plot(vel, flux+(MJDref-MJDs[0])*ysh, color='k', ls=':')
         # print(MJDref, MJDs, ysh, extrem, _np.min(flux), _np.max(flux))
         if _np.min(flux+(MJDref-MJDs[0])*ysh) < extrem[0]:
             extrem[0] = _np.min(flux+(MJDref-MJDs[0])*ysh)
+        ax.plot(vel+5, flux+(57655-MJDs[0])*ysh, color='k', ls='--')
+        ax.text(800, 1.06+(57655-MJDs[0])*ysh, 'Reference', 
+        horizontalalignment='center', verticalalignment='center')
+        print('A!')
+        if _np.max(flux+(57655-MJDs[0])*ysh) > extrem[1]:
+            print('B!')
+            extrem[1] = _np.max(flux+(57655-MJDs[0])*ysh)
     if _os.path.exists(mod_ref):
         s2d = _hdt.readfullsed2(mod_ref)
         vel, flux = lineProf(s2d[4, :, 2], s2d[4, :, 3], mod_lbc, 
@@ -3275,6 +3298,55 @@ def lbdc2range(lbdc):
     """
     dl = lbdc[1] - lbdc[0]
     return _np.linspace(lbdc[0] - dl / 2, lbdc[-1] + dl / 2, len(lbdc) + 1)
+
+
+def classify_specs(list_of_specs, starid, instrument, calib, comment=''):
+    """Do useful things with a list of FITS specs to classify them.
+
+    It will (1) generate figures of the specs, with line info; (2) classify 
+    the band of observation; (3) copy the file with a standard name.
+    """
+    lines = [6562.79, 4861.35, 4340.472, 4101.734, 21655.2488]
+    lnames = ['Ha', 'Hb', 'Hc', 'Hd', "Brg"]
+    list_of_specs = list(list_of_specs)
+    list_of_specs.sort()
+
+    for s in list_of_specs:
+        print(s)
+        wl, flux, MJD, dateobs, datereduc, fitsfiles = loadfits(s)
+        fig, ax = _plt.subplots()
+        ax.plot(wl, flux, label=dateobs)
+        wlrange = [_np.min(wl), _np.max(wl)]
+        flxrange = [_np.min(flux), _np.max(flux)]
+        band = 'unknown'
+        # print(wlrange)
+        for l in lines:
+            if _phc.is_inside_ranges(l, wlrange):
+                ax.plot([l, l], flxrange, '--', color='gray')
+            if wlrange[0] > l*0.91 and wlrange[1] < l*1.09:
+                band = lnames[lines.index(l)]
+        if band == 'unknown':
+            if wlrange[1] > 9000 and wlrange[1] < 25000:
+                band = 'nIR'   
+            if wlrange[0] > 5300 and wlrange[1] < 11000:
+                band = 'RI'
+            if wlrange[0] < 4100 and wlrange[1] < 6000:
+                band = 'BV'    
+            if wlrange[0] < 3700 and wlrange[1] < 6000:
+                band = 'UV'
+            if wlrange[0] < 4700 and wlrange[1] > 6700:
+                band = 'Vis' 
+        ax.set_title(s)
+        ax.legend()
+        figname = _os.path.splitext(s)
+        _phc.savefig(fig, figname=list(figname)[0])
+        expname = '{}_{}_{}'.format(starid, instrument, band)
+        if len(comment) > 0:
+            expname += '_' + comment
+        expname += "_{}_{:04d}".format( int(MJD), int(round(1e4*(MJD % 1))) )
+        expname += ".{}.fits".format(calib)
+        _copyfile(s, expname)
+
 
 # MAIN ###
 if __name__ == "__main__":
