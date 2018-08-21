@@ -85,9 +85,9 @@ import numbers as _numbers
 import warnings as _warn
 
 try:
-    import pyfits as _pyfits
+    import astropy.io.fits as _pyfits
 except ImportError:
-    _warn.warn('pyfits module not installed!!!')
+    _warn.warn('astropy module not installed!!!')
 
 __author__ = "Paul Boley"
 __email__ = "boley@mpia-hd.mpg.de"

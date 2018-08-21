@@ -34,7 +34,7 @@ import warnings as _warn
 # from lmfit import Model as _Model
 
 try:    
-    import pyfits as _pyfits
+    import astropy.io.fits as _pyfits
     import matplotlib as _mpl
     import matplotlib.pyplot as _plt
     import matplotlib.patches as _mpatches
@@ -45,7 +45,7 @@ try:
     from astropy.modeling import models as _models
     from astropy.modeling import fitting as _fitting
 except ImportError:
-    _warn.warn('matplotlib, scipy, and/or astropy module not installed!!!')
+    _warn.warn('matplotlib and/or scipy and/or astropy module not installed!!!')
 
 try:
     import pyqt_fit.nonparam_regression as _smooth

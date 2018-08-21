@@ -46,9 +46,9 @@ try:
     import matplotlib.gridspec as _gridspec
     import matplotlib.ticker as _mtick
     from matplotlib.lines import Line2D as _Line2D
-    import pyfits as _pyfits
+    import astropy.io.fits as _pyfits
 except ImportError:
-    _warn.warn('matplotlib, six and/or pyfits module not installed!!!')
+    _warn.warn('matplotlib, six and/or astropy module not installed!!!')
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
