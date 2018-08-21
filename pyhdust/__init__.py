@@ -444,11 +444,11 @@ def temp_interp(tempfile, theta, pos=[0, 1]):
     count = 0
     xy = _np.zeros([ncr*ncmu/2, 2])
     grid = _np.zeros([len(pos), ncr*ncmu/2])
-    for ir in xrange(ncr):
+    for ir in range(ncr):
         for imu in _np.arange(0, ncmu/2, 1):
             xy[count] = _np.array([r[ir] * _np.sqrt(1. - 
                 muarr[ir, ncmu-1-imu]**2), r[ir] * muarr[ir, ncmu-1-imu]])
-            for ip in xrange(len(pos)):
+            for ip in range(len(pos)):
                 # average based on z-symmetry
                 grid[ip, count] = .5 * (data[pos[ip]+3, ir, imu, icphi] + 
                     data[pos[ip]+3, ir, ncmu-1-imu, icphi])

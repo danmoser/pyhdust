@@ -867,7 +867,7 @@ def find_neighbours(par, par_grid, ranges, silent=True):
     keep = _np.array(len(par_grid) * [True])
     out = []
 
-    for i in xrange(len(par)):
+    for i in range(len(par)):
         # out of ranges
         if not is_inside_ranges(par[i], ranges[i]):
             if not silent:

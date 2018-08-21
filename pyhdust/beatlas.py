@@ -33,7 +33,7 @@ class BAstar(object):
     """ BeAtlas source star filename structure.
 
     The filename must follow this structure (the sequence in filename is not 
-    importante):
+    important):
     - keys: ['M', 'ob', 'H', 'Z', 'b']
     - last-key (no identifier): 'Ell'
 
@@ -827,8 +827,8 @@ def hfrac2tms(Hfrac, inverse=False):
         tms = coef.dot(np.array([Hfrac**3, Hfrac**2, Hfrac**1, Hfrac**0]))
     else:
         # interchanged parameter names
-        coef = np.array([-0.74740597,  0.98208541, -0.64318363, -0.29771094,  0.71507214])
-        tms = coef.dot(np.array([Hfrac**4, Hfrac**3, Hfrac**2, Hfrac**1, Hfrac**0]))
+        coef = _np.array([-0.74740597,  0.98208541, -0.64318363, -0.29771094,  0.71507214])
+        tms = coef.dot(_np.array([Hfrac**4, Hfrac**3, Hfrac**2, Hfrac**1, Hfrac**0]))
 
     # solving problem at lower extreme
     if tms < 0.:
