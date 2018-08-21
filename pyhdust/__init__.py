@@ -34,7 +34,7 @@ try:
     import matplotlib.patches as _mpatches
     from scipy import interpolate as _interpolate
     from scipy.interpolate import griddata as _griddata
-    import pyfits as _pf
+    import astropy.io.fits as _pf
 except ImportError:
     _warn.warn('# matplotlib, pyfits, six and/or scipy module not installed!!')
 
