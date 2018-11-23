@@ -722,7 +722,7 @@ def makeDiskGrid(modn='01', mhvals=[1.5], hvals=[60.], rdvals=[18.6],
     return
 
 
-def makeInpJob(modn='01', nodes=512, simulations=['SED'], sim_add_suf=None,
+def makeInpJob(modn='01', nodes=512, simulations=['SED'], basesims=[''],
     docases=[1, 3], sim1='step1', sim2='step1_ref', composition='pureH',
     controls='controls', gridcells='grid', observers='observers', oldstp1=True,
     images=[''], baseimgs=[''], perturbations=None, clusters=['job'], srcid='',
@@ -858,10 +858,11 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'], sim_add_suf=None,
                 case1[4] = case1[4].replace('step1', '{0}_{1}'.format(
                     simulations[i], src))
             else:
-                if sim_add_suf[i]:
-                    case1[4] = case1[4].replace('step1', simulations[i] + suf[suf.find('_Be'):])
+                if _np.array([b.split('/')[-1][:-4]==simulations[i] for b in basesims]).any():
+                    sim_tmp = '{0}_{1}'.format(simulations[i], suf[suf.find('Be_'):])
                 else:
-                    case1[4] = case1[4].replace('step1', simulations[i])
+                    sim_tmp = simulations[i]
+                case1[4] = case1[4].replace('step1', sim_tmp)
             case1.append("OBSERVERS   = '{0}'\n".format(observers))
             if images[i] != '':
                 if _np.array([b.split('/')[-1][:-4]==images[i] for b in baseimgs]).any():
@@ -1038,10 +1039,6 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'], sim_add_suf=None,
         # Set simulation check variable
         if 3 in cases:
             simchk = _np.ones(len(simulations), dtype=bool)
-            if sim_add_suf is None:
-                sim_add_suf = simchk
-            elif len(sim_add_suf) != len(simulations):
-                sim_add_suf = _np.zeros(len(simulations), dtype=bool)
         else:    
             simchk = _np.zeros(len(simulations), dtype=bool)
 
