@@ -1041,7 +1041,7 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'], sim_add_suf=None,
             if sim_add_suf is None:
                 sim_add_suf = simchk
             elif len(sim_add_suf) != len(simulations):
-                sim_add_suf = simchk
+                sim_add_suf = _np.zeros(len(simulations), dtype=bool)
         else:    
             simchk = _np.zeros(len(simulations), dtype=bool)
 
