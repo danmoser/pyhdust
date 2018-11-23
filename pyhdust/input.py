@@ -722,9 +722,9 @@ def makeDiskGrid(modn='01', mhvals=[1.5], hvals=[60.], rdvals=[18.6],
     return
 
 
-def makeInpJob(modn='01', nodes=512, simulations=['SED'], oldstp1=True,
+def makeInpJob(modn='01', nodes=512, simulations=['SED'], sim_add_suf=None,
     docases=[1, 3], sim1='step1', sim2='step1_ref', composition='pureH',
-    controls='controls', gridcells='grid', observers='observers',
+    controls='controls', gridcells='grid', observers='observers', oldstp1=True,
     images=[''], baseimgs=[''], perturbations=None, clusters=['job'], srcid='',
     walltime='24:00:00', wcheck=False, email='$USER@localhost', chkout=False,
     st1max=20, st1refmax=24, ctrM=False, touch=False, srcNf=None, path=None):
@@ -858,7 +858,10 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'], oldstp1=True,
                 case1[4] = case1[4].replace('step1', '{0}_{1}'.format(
                     simulations[i], src))
             else:
-                case1[4] = case1[4].replace('step1', simulations[i])
+                if sim_add_suf[i]:
+                    case1[4] = case1[4].replace('step1', simulations[i] + suf[suf.find('_Be'):])
+                else:
+                    case1[4] = case1[4].replace('step1', simulations[i])
             case1.append("OBSERVERS   = '{0}'\n".format(observers))
             if images[i] != '':
                 if _np.array([b.split('/')[-1][:-4]==images[i] for b in baseimgs]).any():
@@ -1028,13 +1031,17 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'], oldstp1=True,
                 addtouch += 'touch {0}\n'.format(
                     err90b[:90].replace(".err", ".chk").replace(".er", ".ch").
                     replace(".e", ".c"))
-        modchmod = _phc.trimpathname(mod)
+        modchmod = list(_os.path.split(mod))
         modchmod[1] = modchmod[1].replace('.txt', '*')
         # addtouch += 'chmod 664 {0}/{1}/*{2}\n'.format(proj, *modchmod)
 
         # Set simulation check variable
         if 3 in cases:
             simchk = _np.ones(len(simulations), dtype=bool)
+            if sim_add_suf is None:
+                sim_add_suf = simchk
+            elif len(sim_add_suf) != len(simulations):
+                sim_add_suf = simchk
         else:    
             simchk = _np.zeros(len(simulations), dtype=bool)
 
