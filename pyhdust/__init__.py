@@ -576,10 +576,10 @@ def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
         else:
             lsed2 = []
             for f in onlyfilters:
-                pattern = _os.path.join(modfld, '{0}'.format(f) +
+                pattern = _os.path.join(modfld, '{0}_'.format(f) +
                     '*{0}.sed2'.format(modelname[:-4]))
                 lsed2.extend(_glob(pattern))
-                pattern = _os.path.join(modfld, '{0}'.format(f) +
+                pattern = _os.path.join(modfld, '{0}_'.format(f) +
                     '*{0}_SEI.sed2'.format(modelname[:-4]))
                 lsed2.extend(_glob(pattern))
         # print lsed2, '{0}*{1}*.sed2'.format(modfld, modelname[:-4])
