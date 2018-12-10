@@ -1756,6 +1756,7 @@ def open(filename, quiet=False):
 
     return newobj
 
+
 # MAIN ###
 if __name__ == "__main__":
     pass
