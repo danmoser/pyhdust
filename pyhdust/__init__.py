@@ -38,7 +38,7 @@ try:
 except ImportError:
     _warn.warn('# matplotlib, astropy and/or scipy module not installed!!')
 
-__version__ = '1.3.18'
+__version__ = '1.3.20'
 __release__ = "Stable"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -367,7 +367,7 @@ def readdust(dfile):
     (r,phi,mu)
     - lacentro = controla os tipos e tamanhos das poeiras
     """
-    f0 = open(dfile).read()
+    f0 = open(dfile, 'rb').read()
     f0 = f0.split('\n')
     # Header
     tmp = f0[0].split()
@@ -637,6 +637,7 @@ def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
                 if len(sed2data) == 0:
                     sed2data = newdata.copy()
                     nlbd, nobs, Rstar, Rwind = sed2info(file)
+                    nlbd = sed2info(file)[0] - ncut / sed2info(file)[1]
                 else:
                     # Check if the SED2 file has the info as the first file
                     if _np.product((nobs, Rstar, Rwind) == sed2info(file)[1:])\
@@ -701,6 +702,8 @@ def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
             outfile = hd + _tab(fullsed2, headers=header, tablefmt="plain")
             if len(path) > 0:
                 path += _os.path.sep
+            if not _os.path.exists(path + 'fullsed' + _os.path.sep):
+                _os.makedirs(path + 'fullsed' + _os.path.sep)
             f0 = open(path + 'fullsed' + _os.path.sep + 
                 'fullsed_' + modelname.replace('.txt', '.sed2'), 'w')
             f0.writelines(outfile)
