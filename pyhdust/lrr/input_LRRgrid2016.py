@@ -1414,6 +1414,10 @@ srcid=''):
             
                 suf = mod[mod.find('_'):-4]
                 src = mod[mod.find('Be_'):-4]
+                #print suf
+                #print src
+                #import sys; sys.exit()
+                
                 #if mod[-8:-4] == 'src1': src='Be_M07.00_ob1.33_H0.50_Z0.002_bE_Ell'
                 #if mod[-8:-4] == 'src2': src='Be_M11.00_ob1.33_H0.50_Z0.002_bE_Ell'
                 #if mod[-8:-4] == 'src3': src='Be_M15.00_ob1.33_H0.50_Z0.002_bE_Ell'
@@ -1470,8 +1474,11 @@ srcid=''):
                 
                 if chkout and 3 in cases:
                     for i in range(len(simulations)):
-                        outs2a = 'mod{0}/{1}_mod{0}{2}.sed2'.format(modn,simulations[i],suf)
-                        outs2b = 'mod{0}/{1}_mod{0}{2}_SEI.sed2'.format(modn,simulations[i],suf)
+						# WARNING!! Acoxambrei aqui!
+                        #outs2a = 'mod{0}/{1}_mod{0}{2}.sed2'.format(modn,simulations[i],suf)
+                        #outs2b = 'mod{0}/{1}_mod{0}{2}_SEI.sed2'.format(modn,simulations[i],suf)
+                        outs2a = 'mod{0}/{1}_mod{0}{2}.sed2'.format(modn,'SED',suf)
+                        outs2b = 'mod{0}/{1}_mod{0}{2}_SEI.sed2'.format(modn,'SED',suf)
                         if _os.path.exists(outs2a) or _os.path.exists(outs2b):
                             simchk[i] = False
                     if True not in simchk:

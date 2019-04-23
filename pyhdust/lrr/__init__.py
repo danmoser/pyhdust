@@ -9,16 +9,18 @@ import pyhdust.phc as phc
 __author__ = "Leandro Rimulo"
 __email__ = "lrrimulo@gmail.com"
 
-cwd='/home/lrrimulo/Dropbox/Main_programs/pyhdust/pyhdust/lrr'
+cwd='/home/lrrimulo/Dropbox/Main_programs/pyhdust/pyhdust/lrr/'
 #cwd = os.getcwd() # TODO: obtain cwd without the above line
 
+
 def integrate_trapezia(f,dg):
-    """Integration by trapezia, with differentials of possibly different size:
+    """Integration by trapezia, with differentials of possibly 
+    different size:
              ____
              \
     Returns: /___ f dg
     
-    INPUT: lists/arrays of values of f and dg (len(f)=len(dg)+1)"""
+    INPUT: lists/arrays of values of f and dg (Obs: len(f)=len(dg)+1)"""
     if len(f) < 2 or len(dg) != len(f)-1:
         func_name = sys._getframe().f_code.co_name
         print '<<',func_name,'>>'
@@ -50,7 +52,8 @@ def dec_2_binary(number,dim=None):
 
     addreverse=[]; res=number%2; quo=number/2
     addreverse.append(res)
-    while quo != 0: res=quo%2; quo=quo/2; addreverse.append(res)
+    while quo != 0: 
+        res=quo%2; quo=quo/2; addreverse.append(res)
     
     if dim != None and dim < len(addreverse):
         func_name = sys._getframe().f_code.co_name
@@ -58,15 +61,19 @@ def dec_2_binary(number,dim=None):
         print 'I need more dimensions to write this binary number!'
         print ''
         return np.nan
-    elif dim != None and dim >= len(addreverse): addn=np.array([0 for k in xrange(0,dim)])
-    else: addn=np.array([0 for k in xrange(0,len(addreverse))])
+    elif dim != None and dim >= len(addreverse): 
+        addn=np.array([0 for k in xrange(0,dim)])
+    else: 
+        addn=np.array([0 for k in xrange(0,len(addreverse))])
     
-    for j in xrange(0,len(addreverse)): addn[len(addn)-1-j]=addreverse[j]
+    for j in xrange(0,len(addreverse)): 
+        addn[len(addn)-1-j]=addreverse[j]
 
     return addn
     
 def dice(minx=None,maxx=None,p='yes'):
-    """Returns a random integer number between two boundaries (inclusive)."""
+    """Returns a random integer number between 
+    two boundaries (inclusive)."""
     
     between=[np.nan,np.nan]
 
@@ -98,7 +105,8 @@ def dice(minx=None,maxx=None,p='yes'):
         return x      
         
 def find_interval(X,a,interval,ind):
-    """ Finds the interval, among the elements of a, in which X is located.
+    """ Finds the interval, among the elements of a, 
+    in which X is located.
     X is a number. a is a list of numbers.
     >>> Please, insert a in ascending order! <<<
     Returns: "X belongs to [ a[ind],a[ind+1] )" & ind
@@ -139,7 +147,8 @@ def find_interval(X,a,interval,ind):
 
 def logsumexp_trick(expon):
     """
-    Returns the exponent of the single exponential that corresponds to the sum of exponentials:
+    Returns the exponent of the single exponential that corresponds 
+    to the sum of exponentials:
     logexpsum = log( sum( e^expon[i] ) ) 
     
     ...using the log-sum-exp trick, to avoid rounding problems.
@@ -190,11 +199,11 @@ def scale_two_propto(x,up1,down1,m="normal"):
 def scale_two_arcsinh(x,up1,up2,down1,down2,m="normal"):
     
     if m != "inverse":
-        if x >= 0: return up1*arcsinh(x*up2)
-        if x < 0: return down1*arcsinh(x*down2)
+        if x >= 0: return up1*np.arcsinh(x*up2)
+        if x < 0: return down1*np.arcsinh(x*down2)
     else:
-        if x >= 0: return 1./up2*sinh(x/up1)
-        if x < 0: return 1./down2*sinh(x/down1)
+        if x >= 0: return 1./up2*np.sinh(x/up1)
+        if x < 0: return 1./down2*np.sinh(x/down1)
 
 def scale_arctan(x,k1,k2,m="normal"):
     
@@ -223,30 +232,39 @@ def scale_powerlaw(x,up1,up2,down1,down2,m="normal"):
 
 def interLinND(X, X0, X1, Fx, tp="linear"):
     """
-    N-dimensional linear interpolation.
+    N-dimensional linear interpolation. (Based on Moser's function
+    with the same name.)
 
     | INPUT:
-    | X = list containing the position in with the interpolation is desired;
+    | X = list containing the position in with the interpolation 
+    |     is desired;
     | X0 = list containing minimal values of the interval;
     | X1 = list containing maximum values of the inveral
-    | Fx = list containing function values along the interval, ORDERED BY DIMENSTION.
+    | Fx = list containing function values along the interval, 
+    |     ORDERED BY DIMENSTION.
     |   Example: Fx = [F00, F01, F10, F11]
 
     OUTPUT: interpolated value (float)"""
-    X = np.array(X)     # an array of N positions
-    X0 = np.array(X0)   # an array of N backward positions
-    X1 = np.array(X1)   # an array of N forward positions
-    Xd = (X-X0)/(X1-X0) # an array of N normalized positions
-    DX = np.array([ [(1-x),x] for x in Xd ]) # an array containing N "2-arrays" 
-                                             # of backward and forward normalized intervals
-    # OBS: Fx is an array of 2**N elements correctly arranged
+    X = np.array(X)     ### an array of N positions
+    X0 = np.array(X0)   ### an array of N backward positions
+    X1 = np.array(X1)   ### an array of N forward positions
+    Xd = (X-X0)/(X1-X0) ### an array of N normalized positions
+    DX = np.array([ [(1-x),x] for x in Xd ]) ### an array containing N 
+                                             ### "2-arrays" 
+                                             ### of backward and forward 
+                                             ### normalized intervals
+    ### OBS: Fx is an array of 2**N elements correctly arranged
     i = 0
     F = 0
-    for prod in it.product(*DX):    # itertools.product(*DX) creates 2**N tuples of 
-                                    # N elements => the set of tuples encompass all the 
-                                    # possibilities of combinations of normalized intervals.
-                                    # np.product returns the product of the N elements of each
-                                    # of the 2**N tuples
+    for prod in it.product(*DX):    ### itertools.product(*DX) creates 
+                                    ### 2**N tuples of 
+                                    ### N elements => the set of tuples 
+                                    ### encompasses all the 
+                                    ### possibilities of combinations 
+                                    ### of normalized intervals.
+                                    ### np.product returns the product 
+                                    ### of the N elements of each
+                                    ### of the 2**N tuples
         if tp == "linear":
             F+= Fx[i]*np.product(prod) 
         elif tp == "ln":
@@ -269,20 +287,22 @@ def low_high(mmodel,mmodelaxis):
     low=[]; high=[]; ind=[]
     for j in range(0,len(mmodelaxis)):
         chave=0
-        # If it is to extrapolate to a value before a minimum
+        ### If it is to extrapolate to a value before a minimum
         if mmodel[j]<mmodelaxis[j][0]:
             low.append(mmodelaxis[j][0]); ind.append(0)
             high.append(mmodelaxis[j][1])
             chave+=1
-        # If it is to extrapolate to a value after a maximum
+        ### If it is to extrapolate to a value after a maximum
         if mmodel[j]>mmodelaxis[j][len(mmodelaxis[j])-1]:
-            low.append(mmodelaxis[j][len(mmodelaxis[j])-2]); ind.append(len(mmodelaxis[j])-2)
+            low.append(mmodelaxis[j][len(mmodelaxis[j])-2])
+            ind.append(len(mmodelaxis[j])-2)
             high.append(mmodelaxis[j][len(mmodelaxis[j])-1])
             chave+=1
-        # If it is to interpolate
+        ### If it is to interpolate
         i=0
         while chave==0:
-            if mmodel[j]>=mmodelaxis[j][i] and mmodel[j]<=mmodelaxis[j][i+1] \
+            if mmodel[j]>=mmodelaxis[j][i] \
+                    and mmodel[j]<=mmodelaxis[j][i+1] \
                     and i<len(mmodelaxis[j][:])-1:
                 low.append(mmodelaxis[j][i]); ind.append(i)
                 high.append(mmodelaxis[j][i+1])
@@ -321,7 +341,8 @@ def interpLinND(X,axis,values,tp="linear"):
     | INPUT:
     | X = the position in with the interpolation is desired
     | axis = list of vectors that create the basis of the space
-    | values = vector with all the values of the function to be interpolated
+    | values = vector with all the values of the function to be 
+    |          interpolated
     """
     
     if len(X) != len(axis):
@@ -335,79 +356,112 @@ def interpLinND(X,axis,values,tp="linear"):
     interp=interLinND(X, low, high, Fx, tp)
     return interp
 
-    # EXAMPLE ..............................................................
-    #
-    # x=[1.,2.]
-    # y=[3.,4.,5.]
-    # z=[6.,7.,8.,9.]
-    #
-    # axis=[x,y,z]
-    #
-    # values=[]
-    # for i in xrange(0,len(x)):
-    #     for j in xrange(0,len(y)):
-    #         for k in xrange(0,len(z)):
-    #             values.append(x[i]*y[j]*z[k])
-    #             print np.array([i,j,k]),np.array([x[i],y[j],z[k]]),x[i]*y[j]*z[k]
-    #
-    # vector=[axis,values]
-    #
-    #
-    #
-    #    
-    #
-    # print ''; teste=np.array([1.6,4.8,8.8])
-    # interp=interpLinND(teste,axis,values)
-    # print teste,interp
-    #
-    # print ''; teste=np.array([1.0,3.0,6.0])
-    # interp=interpLinND(teste,axis,values)
-    # print teste,interp
-    #
-    # print ''; teste=np.array([1.0,4.0,9.0])
-    # interp=interpLinND(teste,axis,values)
-    # print teste,interp
-    #
-    # print ''; teste=np.array([3.0,4.0,8.0])
-    # interp=interpLinND(teste,axis,values)
-    # print teste,interp
-    #
-    # print ''; teste=np.array([0.0,0.0,0.0])
-    # interp=interpLinND(teste,axis,values)
-    # print teste,interp
-    #
-    #....................................................................
-####################################################################
+### EXAMPLE OF USING lrr.interpLinND
+### (Uncomment the columns with one '#'.)
+#
+#
+### Creating a 3D grid:
+#x=[1.,2.]
+#y=[3.,4.,5.]
+#z=[6.,7.,8.,9.]
+#
+### Atributing values to every point in the grid.
+### The chosen function is f = x^2*y^3*z.
+#values=[]
+#for i in xrange(0,len(x)):
+#    for j in xrange(0,len(y)):
+#        for k in xrange(0,len(z)):
+#            function_example=x[i]**2.*y[j]**3.*z[k]
+#            values.append(function_example)
+#            print(np.array([i,j,k]),\
+#                np.array([x[i],y[j],z[k]]),function_example)
+#
+#
+#
+#
+### The list 'axis', which enters the routine:
+#axis=[x,y,z]
+#
+#print(""); test=np.array([1.6,4.8,8.8]) ### Point in 3D space 
+#                                        ### inside the grid.
+#interp=lrr.interpLinND(test,axis,values)
+#print("The interpolated value in the point ",test," is ",interp)
+#f_example=test[0]**2.*test[1]**3.*test[2]
+#print("The real value in the point ",test," is ",f_example)
+#
+#print(""); test=np.array([1.0,3.0,6.0]) ### Point in 3D space 
+#                                        ### coinciding with one of 
+#                                        ### the points of the grid. 
+#interp=lrr.interpLinND(test,axis,values)
+#print("The interpolated value in the point ",test," is ",interp)
+#f_example=test[0]**2.*test[1]**3.*test[2]
+#print("The real value in the point ",test," is ",f_example)
+#    
+#
+#print(""); test=np.array([3.0,4.0,8.0]) ### Point in 3D space that 
+#                                        ### requires extrapolation.
+#interp=lrr.interpLinND(test,axis,values)
+#print("The interpolated value in the point ",test," is ",interp)
+#f_example=test[0]**2.*test[1]**3.*test[2]
+#print("The real value in the point ",test," is ",f_example)
+#
+#print(""); test=np.array([0.0,0.0,0.0]) ### Point in 3D space that 
+#                                        ### requires extrapolation.
+#interp=lrr.interpLinND(test,axis,values)
+#print("The interpolated value in the point ",test," is ",interp)
+#f_example=test[0]**2.*test[1]**3.*test[2]
+#print("The real value in the point ",test," is ",f_example)
 
 
 
 
 
 
+
+
+#######################################################################
 
 
 
 def photosystem_k(filtername):
     if filtername == 'STMAG': return 0.00
     elif filtername == 'white': return 0.00
-    elif filtername == 'bess-u': return 0.03 # Reference: 1998A&A...333..231B
-    elif filtername == 'bess-b': return 0.03 # Reference: 1998A&A...333..231B
-    elif filtername == 'bess-v': return 0.03 # Reference: 1998A&A...333..231B
-    elif filtername == 'bess-r': return 0.03 # Reference: 1998A&A...333..231B
-    elif filtername == 'bess-i': return 0.03 # Reference: 1998A&A...333..231B
-    elif filtername == 'bess-j': return 0.03 # Reference: 1998A&A...333..231B
-    elif filtername == 'bess-h': return 0.03 # Reference: 1998A&A...333..231B
-    elif filtername == 'bess-k': return 0.03 # Reference: 1998A&A...333..231B
-    elif filtername == 'bess-l': return 0.03 # Reference: 1998A&A...333..231B
-    elif filtername == 'bess-ll': return 0.03 # Reference: 1998A&A...333..231B
-    elif filtername == 'bess-m': return 0.03 # Reference: 1998A&A...333..231B
-    elif filtername == 'cohen-j': return 0.00 # Reference: 2003AJ....126.1090C
-    elif filtername == 'cohen-h': return 0.00 # Reference: 2003AJ....126.1090C
-    elif filtername == 'cohen-k': return 0.00 # Reference: 2003AJ....126.1090C
-    elif filtername == 'crawford-stromgren-u': return 1.445 # Reference: 1998AJ....116..482G
-    elif filtername == 'crawford-stromgren-v': return 0.195 # Reference: 1998AJ....116..482G
-    elif filtername == 'crawford-stromgren-b': return 0.034 # Reference: 1998AJ....116..482G
-    elif filtername == 'crawford-stromgren-y': return 0.030 # Reference: 1998AJ....116..482G
+    ### Reference: 1998A&A...333..231B
+    elif filtername == 'bess-u': return 0.03 
+    ### Reference: 1998A&A...333..231B
+    elif filtername == 'bess-b': return 0.03 
+    ### Reference: 1998A&A...333..231B
+    elif filtername == 'bess-v': return 0.03 
+    ### Reference: 1998A&A...333..231B
+    elif filtername == 'bess-r': return 0.03 
+    ### Reference: 1998A&A...333..231B
+    elif filtername == 'bess-i': return 0.03 
+    ### Reference: 1998A&A...333..231B
+    elif filtername == 'bess-j': return 0.03 
+    ### Reference: 1998A&A...333..231B
+    elif filtername == 'bess-h': return 0.03 
+    ### Reference: 1998A&A...333..231B
+    elif filtername == 'bess-k': return 0.03 
+    ### Reference: 1998A&A...333..231B
+    elif filtername == 'bess-l': return 0.03 
+    ### Reference: 1998A&A...333..231B
+    elif filtername == 'bess-ll': return 0.03 
+    ### Reference: 1998A&A...333..231B
+    elif filtername == 'bess-m': return 0.03 
+    ### Reference: 2003AJ....126.1090C
+    elif filtername == 'cohen-j': return 0.00 
+    ### Reference: 2003AJ....126.1090C
+    elif filtername == 'cohen-h': return 0.00 
+    ### Reference: 2003AJ....126.1090C
+    elif filtername == 'cohen-k': return 0.00 
+    ### Reference: 1998AJ....116..482G
+    elif filtername == 'crawford-stromgren-u': return 1.445 
+    ### Reference: 1998AJ....116..482G
+    elif filtername == 'crawford-stromgren-v': return 0.195 
+    ### Reference: 1998AJ....116..482G
+    elif filtername == 'crawford-stromgren-b': return 0.034 
+    ### Reference: 1998AJ....116..482G
+    elif filtername == 'crawford-stromgren-y': return 0.030 
     elif filtername == 'int_wfc-hbetan': return 9999.
     elif filtername == 'int_wfc-hbetaw': return 9999.
     elif filtername == 'int_wfc-halpha': return 9999.
@@ -429,8 +483,8 @@ def filter_passband(filtername):
         return np.nan,np.nan
     elif filtername == 'white':
         return np.array([0.,10.**99.]),np.array([1.,1.])
-    elif filtername == 'bess-u': # Reference: 1990PASP..102.1181B (Table 2)
-        f0 = open(cwd+'/filters_spectra/bess-u.pass','r')
+    elif filtername == 'bess-u': ### Reference: 1990PASP..102.1181B (Table 2)
+        f0 = open(cwd+'../refs/filters/Bessell_U.dat','r')
         lines = f0.readlines()
         f0.close()
         lines=[lines[i].split() for i in xrange(1,len(lines))]  # Eliminating text and separating columns
@@ -438,7 +492,7 @@ def filter_passband(filtername):
         R=np.array([float(lines[i][1]) for i in xrange(0,len(lines))]) # Reponse function
         return lamb,R
     elif filtername == 'bess-b': # Reference: 1990PASP..102.1181B (Table 2)
-        f0 = open(cwd+'/filters_spectra/bess-b.pass','r')
+        f0 = open(cwd+'../refs/filters/Bessell_B.dat','r')
         lines = f0.readlines()
         f0.close()
         lines=[lines[i].split() for i in xrange(1,len(lines))]  # Eliminating text and separating columns
@@ -446,7 +500,7 @@ def filter_passband(filtername):
         R=np.array([float(lines[i][1]) for i in xrange(0,len(lines))]) # Reponse function
         return lamb,R
     elif filtername == 'bess-v': # Reference: 1990PASP..102.1181B (Table 2)
-        f0 = open(cwd+'/filters_spectra/bess-v.pass','r')
+        f0 = open(cwd+'../refs/filters/Bessell_V.dat','r')
         lines = f0.readlines()
         f0.close()
         lines=[lines[i].split() for i in xrange(1,len(lines))]  # Eliminating text and separating columns
@@ -454,7 +508,7 @@ def filter_passband(filtername):
         R=np.array([float(lines[i][1]) for i in xrange(0,len(lines))]) # Reponse function
         return lamb,R
     elif filtername == 'bess-r': # Reference: 1990PASP..102.1181B (Table 2)
-        f0 = open(cwd+'/filters_spectra/bess-r.pass','r')
+        f0 = open(cwd+'../refs/filters/Bessell_R.dat','r')
         lines = f0.readlines()
         f0.close()
         lines=[lines[i].split() for i in xrange(1,len(lines))]  # Eliminating text and separating columns
@@ -462,7 +516,7 @@ def filter_passband(filtername):
         R=np.array([float(lines[i][1]) for i in xrange(0,len(lines))]) # Reponse function
         return lamb,R
     elif filtername == 'bess-i': # Reference: 1990PASP..102.1181B (Table 2)
-        f0 = open(cwd+'/filters_spectra/bess-i.pass','r')
+        f0 = open(cwd+'../refs/filters/Bessell_I.dat','r')
         lines = f0.readlines()
         f0.close()
         lines=[lines[i].split() for i in xrange(1,len(lines))]  # Eliminating text and separating columns
@@ -470,7 +524,7 @@ def filter_passband(filtername):
         R=np.array([float(lines[i][1]) for i in xrange(0,len(lines))]) # Reponse function
         return lamb,R
     elif filtername == 'bess-j': # Reference: 1988PASP..100.1134B (Table IV)
-        f0 = open(cwd+'/filters_spectra/bess-j.pass','r')
+        f0 = open(cwd+'../refs/filters/Bessell_J.dat','r')
         lines = f0.readlines()
         f0.close()
         lines=[lines[i].split() for i in xrange(1,len(lines))]  # Eliminating text and separating columns
@@ -478,7 +532,7 @@ def filter_passband(filtername):
         R=np.array([float(lines[i][1]) for i in xrange(0,len(lines))]) # Reponse function
         return lamb,R
     elif filtername == 'bess-h': # Reference: 1988PASP..100.1134B (Table IV)
-        f0 = open(cwd+'/filters_spectra/bess-h.pass','r')
+        f0 = open(cwd+'../refs/filters/Bessell_H.dat','r')
         lines = f0.readlines()
         f0.close()
         lines=[lines[i].split() for i in xrange(1,len(lines))]  # Eliminating text and separating columns
@@ -486,7 +540,7 @@ def filter_passband(filtername):
         R=np.array([float(lines[i][1]) for i in xrange(0,len(lines))]) # Reponse function
         return lamb,R
     elif filtername == 'bess-k': # Reference: 1988PASP..100.1134B (Table IV)
-        f0 = open(cwd+'/filters_spectra/bess-k.pass','r')
+        f0 = open(cwd+'../refs/filters/Bessell_K.dat','r')
         lines = f0.readlines()
         f0.close()
         lines=[lines[i].split() for i in xrange(1,len(lines))]  # Eliminating text and separating columns
@@ -494,7 +548,7 @@ def filter_passband(filtername):
         R=np.array([float(lines[i][1]) for i in xrange(0,len(lines))]) # Reponse function
         return lamb,R
     elif filtername == 'bess-l': # Reference: 1988PASP..100.1134B (Table IV)
-        f0 = open(cwd+'/filters_spectra/bess-l.pass','r')
+        f0 = open(cwd+'../refs/filters/Bessell_L.dat','r')
         lines = f0.readlines()
         f0.close()
         lines=[lines[i].split() for i in xrange(1,len(lines))]  # Eliminating text and separating columns
@@ -502,7 +556,7 @@ def filter_passband(filtername):
         R=np.array([float(lines[i][1]) for i in xrange(0,len(lines))]) # Reponse function
         return lamb,R
     elif filtername == 'bess-ll': # Reference: 1988PASP..100.1134B (Table IV)
-        f0 = open(cwd+'/filters_spectra/bess-ll.pass','r')
+        f0 = open(cwd+'../refs/filters/Bessell_LL.dat','r')
         lines = f0.readlines()
         f0.close()
         lines=[lines[i].split() for i in xrange(1,len(lines))]  # Eliminating text and separating columns
@@ -510,7 +564,7 @@ def filter_passband(filtername):
         R=np.array([float(lines[i][1]) for i in xrange(0,len(lines))]) # Reponse function
         return lamb,R
     elif filtername == 'bess-m': # Reference: 1988PASP..100.1134B (Table IV)
-        f0 = open(cwd+'/filters_spectra/bess-m.pass','r')
+        f0 = open(cwd+'../refs/filters/Bessell_M.dat','r')
         lines = f0.readlines()
         f0.close()
         lines=[lines[i].split() for i in xrange(1,len(lines))]  # Eliminating text and separating columns
@@ -518,84 +572,84 @@ def filter_passband(filtername):
         R=np.array([float(lines[i][1]) for i in xrange(0,len(lines))]) # Reponse function
         return lamb,R
     elif filtername == 'cohen-j': # Reference: 2003AJ....126.1090C
-        f0 = open(cwd+'/filters_spectra/cohen-j.pass','r')
+        f0 = open(cwd+'../refs/filters/Cohen-J.pass','r')
         lines = f0.readlines()
         f0.close()
         lines=[lines[i].split() for i in xrange(1,len(lines))]  # Eliminating text and separating columns
-        lamb=np.array([float(lines[i][0])*10000. for i in xrange(0,len(lines))]) # lambda (Angstroms)
+        lamb=np.array([float(lines[i][0]) for i in xrange(0,len(lines))]) # lambda (Angstroms)
         R=np.array([float(lines[i][1]) for i in xrange(0,len(lines))]) # Reponse function
         return lamb,R
     elif filtername == 'cohen-h': # Reference: 2003AJ....126.1090C
-        f0 = open(cwd+'/filters_spectra/cohen-h.pass','r')
+        f0 = open(cwd+'../refs/filters/Cohen-H.pass','r')
         lines = f0.readlines()
         f0.close()
         lines=[lines[i].split() for i in xrange(1,len(lines))]  # Eliminating text and separating columns
-        lamb=np.array([float(lines[i][0])*10000. for i in xrange(0,len(lines))]) # lambda (Angstroms)
+        lamb=np.array([float(lines[i][0]) for i in xrange(0,len(lines))]) # lambda (Angstroms)
         R=np.array([float(lines[i][1]) for i in xrange(0,len(lines))]) # Reponse function
         return lamb,R
     elif filtername == 'cohen-k': # Reference: 2003AJ....126.1090C
-        f0 = open(cwd+'/filters_spectra/cohen-k.pass','r')
+        f0 = open(cwd+'../refs/filters/Cohen-K.pass','r')
         lines = f0.readlines()
         f0.close()
         lines=[lines[i].split() for i in xrange(1,len(lines))]  # Eliminating text and separating columns
-        lamb=np.array([float(lines[i][0])*10000. for i in xrange(0,len(lines))]) # lambda (Angstroms)
+        lamb=np.array([float(lines[i][0]) for i in xrange(0,len(lines))]) # lambda (Angstroms)
         R=np.array([float(lines[i][1]) for i in xrange(0,len(lines))]) # Reponse function
         return lamb,R
     elif filtername == 'crawford-stromgren-u': # Reference: 1970AJ.....75..978C
-        f0 = open(cwd+'/filters_spectra/crawford-stromgren-u.filter','r')
+        f0 = open(cwd+'../refs/filters/Crawford-Stromgren-U.dat','r')
         lines = f0.readlines()
         f0.close()
         lines=[lines[i].split() for i in xrange(2,len(lines))]  # Eliminating text and separating columns
         lamb=np.array([float(lines[i][0]) for i in xrange(0,len(lines))]) # lambda (Angstroms)
-        R=np.array([float(lines[i][1])/100. for i in xrange(0,len(lines))]) # Reponse function
+        R=np.array([float(lines[i][1]) for i in xrange(0,len(lines))]) # Reponse function
         return lamb,R
     elif filtername == 'crawford-stromgren-v': # Reference: 1970AJ.....75..978C
-        f0 = open(cwd+'/filters_spectra/crawford-stromgren-v.filter','r')
+        f0 = open(cwd+'../refs/filters/Crawford-Stromgren-V.dat','r')
         lines = f0.readlines()
         f0.close()
         lines=[lines[i].split() for i in xrange(2,len(lines))]  # Eliminating text and separating columns
         lamb=np.array([float(lines[i][0]) for i in xrange(0,len(lines))]) # lambda (Angstroms)
-        R=np.array([float(lines[i][1])/100. for i in xrange(0,len(lines))]) # Reponse function
+        R=np.array([float(lines[i][1]) for i in xrange(0,len(lines))]) # Reponse function
         return lamb,R
     elif filtername == 'crawford-stromgren-b': # Reference: 1970AJ.....75..978C
-        f0 = open(cwd+'/filters_spectra/crawford-stromgren-b.filter','r')
+        f0 = open(cwd+'../refs/filters/Crawford-Stromgren-B.dat','r')
         lines = f0.readlines()
         f0.close()
         lines=[lines[i].split() for i in xrange(2,len(lines))]  # Eliminating text and separating columns
         lamb=np.array([float(lines[i][0]) for i in xrange(0,len(lines))]) # lambda (Angstroms)
-        R=np.array([float(lines[i][1])/100. for i in xrange(0,len(lines))]) # Reponse function
+        R=np.array([float(lines[i][1]) for i in xrange(0,len(lines))]) # Reponse function
         return lamb,R
     elif filtername == 'crawford-stromgren-y': # Reference: 1970AJ.....75..978C
-        f0 = open(cwd+'/filters_spectra/crawford-stromgren-y.filter','r')
+        f0 = open(cwd+'../refs/filters/Crawford-Stromgren-Y.dat','r')
         lines = f0.readlines()
         f0.close()
         lines=[lines[i].split() for i in xrange(2,len(lines))]  # Eliminating text and separating columns
         lamb=np.array([float(lines[i][0]) for i in xrange(0,len(lines))]) # lambda (Angstroms)
-        R=np.array([float(lines[i][1])/100. for i in xrange(0,len(lines))]) # Reponse function
+        R=np.array([float(lines[i][1]) for i in xrange(0,len(lines))]) # Reponse function
         return lamb,R
     elif filtername == 'int_wfc-hbetan':
-        f0 = open(cwd+'/filters_spectra/int_wfc-hbetan.filter','r')
+        f0 = open(cwd+'../refs/filters/INT_WFC-Hbetan.dat','r')
         lines = f0.readlines()
         f0.close()
-        lines=[lines[i].split() for i in xrange(12,len(lines))]  # Eliminating text and separating columns
-        lamb=np.array([float(lines[i][0])*10. for i in xrange(0,len(lines))]) # lambda (Angstroms)
-        R=np.array([float(lines[i][1])/100. for i in xrange(0,len(lines))]) # Reponse function
+        lines=[lines[i].split() for i in xrange(0,len(lines))]  # Eliminating text and separating columns
+        lamb=np.array([float(lines[i][0]) for i in xrange(0,len(lines))]) # lambda (Angstroms)
+        R=np.array([float(lines[i][1]) for i in xrange(0,len(lines))]) # Reponse function
         return lamb,R
     elif filtername == 'int_wfc-hbetaw':
-        f0 = open(cwd+'/filters_spectra/int_wfc-hbetaw.filter','r')
+        f0 = open(cwd+'../refs/filters/INT_WFC-Hbetaw.dat','r')
         lines = f0.readlines()
         f0.close()
-        lines=[lines[i].split() for i in xrange(12,len(lines))]  # Eliminating text and separating columns
-        lamb=np.array([float(lines[i][0])*10. for i in xrange(0,len(lines))]) # lambda (Angstroms)
-        R=np.array([float(lines[i][1])/100. for i in xrange(0,len(lines))]) # Reponse function
+        lines=[lines[i].split() for i in xrange(0,len(lines))]  # Eliminating text and separating columns
+        lamb=np.array([float(lines[i][0]) for i in xrange(0,len(lines))]) # lambda (Angstroms)
+        R=np.array([float(lines[i][1]) for i in xrange(0,len(lines))]) # Reponse function
         return lamb,R
     elif filtername == 'int_wfc-halpha':
-        f0 = open(cwd+'/filters_spectra/int_wfc-halpha.filter','r')
+        f0 = open(cwd+'../refs/filters/INT_WFC-Halpha.dat','r')
         lines = f0.readlines()
         f0.close()
-        lines=[lines[i].split() for i in xrange(12,len(lines))]  # Eliminating text and separating columns
-        lamb=np.array([float(lines[i][0])*10. for i in xrange(0,len(lines))]) # lambda (Angstroms)
-        R=np.array([float(lines[i][1])/100. for i in xrange(0,len(lines))]) # Reponse function
+        lines=[lines[i].split() for i in xrange(0,len(lines))]  # Eliminating text and separating columns
+        lamb=np.array([float(lines[i][0]) for i in xrange(0,len(lines))]) # lambda (Angstroms)
+        R=np.array([float(lines[i][1]) for i in xrange(0,len(lines))]) # Reponse function
         return lamb,R
     else: 
         func_name = sys._getframe().f_code.co_name
@@ -616,22 +670,31 @@ def filter_passband(filtername):
 
 
 
-def photonflux(lamb,flambda,filtername,npts=200):
+def photonflux(lamb,flambda,filtername,npts=50):
     
     lamb_r,R=filter_passband(filtername)
     if filtername == 'white':
-        dens=np.array(lamb)*10.**-8.*np.array(flambda)/phc.h.cgs/phc.c.cgs
-        l=np.array([np.nanmin(lamb)+(np.nanmax(lamb)-np.nanmin(lamb))/float(npts-1)*float(i) for i in xrange(0,npts)])
+        dens=np.array(lamb)*10.**-8.*np.array(flambda)/\
+            (phc.h.cgs*phc.c.cgs)
+        l=np.array([np.nanmin(lamb)+(np.nanmax(lamb)-np.nanmin(lamb))/\
+            float(npts-1)*float(i) for i in xrange(0,npts)])
         dl=np.array([l[i+1]-l[i] for i in xrange(0,npts-1)])
-        d=np.array([interpLinND([l[i]],[lamb],dens) for i in xrange(0,npts)])
+        d=np.array([interpLinND([l[i]],[lamb],dens) \
+            for i in xrange(0,npts)])
         photflux=integrate_trapezia(d,dl)
         return photflux
-    elif np.nanmin(lamb_r) >= np.nanmin(lamb) and np.nanmax(lamb_r) <= np.nanmax(lamb):
-        dens=np.array(lamb)*10.**-8.*np.array(flambda)/phc.h.cgs/phc.c.cgs
-        l=np.array([np.nanmin(lamb_r)+(np.nanmax(lamb_r)-np.nanmin(lamb_r))/float(npts-1)*float(i) for i in xrange(0,npts)])
+    elif np.nanmin(lamb_r) >= np.nanmin(lamb) and \
+            np.nanmax(lamb_r) <= np.nanmax(lamb):
+        dens=np.array(lamb)*10.**-8.*np.array(flambda)/\
+            (phc.h.cgs*phc.c.cgs)
+        l=np.array([np.nanmin(lamb_r)+(np.nanmax(lamb_r)-\
+            np.nanmin(lamb_r))/float(npts-1)*float(i) \
+            for i in xrange(0,npts)])
         dl=np.array([l[i+1]-l[i] for i in xrange(0,npts-1)])
-        d=np.array([interpLinND([l[i]],[lamb],dens) for i in xrange(0,npts)])
-        r=np.array([interpLinND([l[i]],[lamb_r],R) for i in xrange(0,npts)])
+        d=np.array([interpLinND([l[i]],[lamb],dens) \
+            for i in xrange(0,npts)])
+        r=np.array([interpLinND([l[i]],[lamb_r],R) \
+            for i in xrange(0,npts)])
         photflux=integrate_trapezia(d*r,dl)
         return photflux
     else: return np.nan
@@ -660,22 +723,25 @@ def pogson(X,zp):
 def VEGA_spct(spct_name):
 
     if spct_name == 'spct1': # Reference: 1994A&A...281..817C
-        spct1=cwd+'/filters_spectra/fm05t9550g395k2odfnew.dat'
+        spct1=cwd+'../refs/stars/fm05t9550g395k2odfnew.dat'
         f0 = open(spct1,'r')
         lines = f0.readlines()
         f0.close()
-        lines=[lines[i].split() for i in xrange(12,len(lines))] # Eliminating text and separating columns
+        ### Eliminating text and separating columns
+        lines=[lines[i].split() for i in xrange(12,len(lines))]
 
-        dist_fac=1./(1.62*10.**16.) # Reference: 1994A&A...281..817C
+        dist_fac=1./(1.62*10.**16.) ### Reference: 1994A&A...281..817C
         lamb=np.array([float(lines[i][2])*10. for i in xrange(0,len(lines))]) # lambda [angstroms]
-        flambda=np.array([10.**(np.log10(4.*np.pi)+np.log10(phc.c.cgs)+np.log10(float(lines[i][4]))\
+        flambda=np.array([10.**(np.log10(4.*np.pi)+np.log10(phc.c.cgs)+\
+                            np.log10(float(lines[i][4]))\
                             -2.*np.log10(float(lines[i][2])*10.**-7.)) \
-                            for i in xrange(0,len(lines))])/10.**8.*dist_fac # flambda [erg cm^-2 s^-1 A^-1]
+                            for i in xrange(0,len(lines))])/10.**8.*\
+                            dist_fac ### flambda [erg cm^-2 s^-1 A^-1]
         return lamb,flambda
 
 
 
-def obtain_pogson_zp(spct_name,filtername,npts=200):
+def obtain_pogson_zp(spct_name,filtername,npts=50):
 
     lamb,flambda=VEGA_spct(spct_name)
     if filtername == 'STMAG':
@@ -695,9 +761,11 @@ def obtain_pogson_zp(spct_name,filtername,npts=200):
 
 #####
 
-def fullsed2photonflux(fullsed,source,filtername,npts=200,dist=10.):
-    # only the total flux (dont care about polarization)
-    # I am not taking phi into account. Currently, this function is only usable for axisymmetric simulations.
+def fullsed2photonflux(fullsed,source,filtername,npts=50,dist=10.):
+    ### only the total flux (dont care about polarization)
+    ### I am not taking phi into account. 
+    ### Currently, this function is only usable for axisymmetric 
+    ### simulations.
     f0 = open(fullsed,'r')
     lines = f0.readlines()
     f0.close()
@@ -712,11 +780,17 @@ def fullsed2photonflux(fullsed,source,filtername,npts=200,dist=10.):
     normflx=(lum*phc.Lsun.cgs)/(4.*np.pi*(dist*phc.pc.cgs)**2.)
 
     for iob in xrange(0,nobs):
-        mu_aux=float(lines[0+nlbd*iob][0]) # cosi
-        lamb_aux=np.array([float(lines[ilamb+nlbd*iob][2])*10000. for ilamb in xrange(0,nlbd)]) # lambda (Angstroms)
-        flambda_aux=np.array([float(lines[ilamb+nlbd*iob][3])*normflx/10000. for ilamb in xrange(0,nlbd)]) # flambda [erg cm^-2 s^-1 A^-1]
+        mu_aux=float(lines[0+nlbd*iob][0]) ### cosi
+        lamb_aux=np.array([float(lines[ilamb+nlbd*iob][2])*10000. \
+            for ilamb in xrange(0,nlbd)]) ### lambda (Angstroms)
+        flambda_aux=np.array([float(lines[ilamb+nlbd*iob][3])*\
+            normflx/10000. \
+            for ilamb in xrange(0,nlbd)]) ### flambda [erg/cm^2 s A]
         photflux_aux=photonflux(lamb_aux,flambda_aux,filtername,npts)
-        mu.append(mu_aux);lamb.append(lamb_aux);flambda.append(flambda_aux);photflux.append(photflux_aux)
+        mu.append(mu_aux)
+        lamb.append(lamb_aux)
+        flambda.append(flambda_aux)
+        photflux.append(photflux_aux)
     return mu,lamb,flambda,photflux
 
 

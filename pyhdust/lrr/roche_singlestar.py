@@ -99,7 +99,22 @@ def rocheparams(param,tipo):
 ###########################################
 
 def f_ctes1(r0,M,par,tp):
-	
+    """
+    Returns the value of the parameters A0 [cm2], Psi0 [erg/g], 
+    Omega0 [1/s], g0 [cm/s2], F0 [erg/s cm2], T0 [K] and L0 [Lsun], 
+    in this order. 
+
+    Input:
+    . r0 [Rsun]
+    . M [Msun]
+    . par (should receive any of three parameters: F0 [erg/s cm2], T0 [K] and L0 [Lsun]) 
+    . tp (should receive any of the corresponding labes: 'flux', 'temp' and 'lum')
+
+    NOTE: If not all of the input parameters are available, the NaN 
+    should be provided instead. This will result in some NaNs being 
+    returned, because some of the parameters hadn't the necessary input 
+    parameters to be calculated.
+    """
 	
     if np.isnan(r0) == False:
         A0=4.*np.pi*(r0*phc.Rsun.cgs)**2.
@@ -112,7 +127,6 @@ def f_ctes1(r0,M,par,tp):
 
     else:
         A0=np.nan; Psi0=np.nan; Omega0=np.nan; g0=np.nan 	
-
 
     if np.isnan(par) == False:
         if tp == "flux":
@@ -136,9 +150,22 @@ def f_ctes1(r0,M,par,tp):
                 F0=np.nan; T0=np.nan
         else:
             F0=np.nan; T0=np.nan; L0=np.nan
+    else:
+        F0=np.nan; T0=np.nan; L0=np.nan
         
     return A0,Psi0,Omega0,g0,F0,T0,L0
 
+
+
+
+def cte_veq(r0,M,omega,psi):
+    """
+    Returns the velocity in the equator in km/s.
+    """
+    A0,Psi0,Omega0,g0,F0,T0,L0=f_ctes1(r0,M,np.nan,"lum")
+    ob,omega,gamma,W=rocheparams(omega,"omega")
+
+    return Omega0*(r0*phc.Rsun.cgs)*psi**0.5*omega*ob*1e-5
 
 
 
@@ -233,6 +260,7 @@ def f_hdustquadratic(theta,omega,psi):
     rocheeq=f_rocheradius(0.5*np.pi,omega,psi)
     r_hdustquad=rocheeq*rochepole/np.sqrt(rocheeq**2.*np.cos(theta)**2.+rochepole**2.*np.sin(theta)**2.)
     return r_hdustquad
+
 
 
 
@@ -372,7 +400,7 @@ def f_ds(theta,dtheta,dphi,dafac):
 def f_integral_surfaceroche(theta,omega,psi,x):
     """
     Returns the integral of x over the equipotential surface.
-    I = \int_S x(\theta) \mathrm{d}S
+    $I = \int_S x(\theta) \mathrm{d}S$
     
     
     """
@@ -424,7 +452,7 @@ def f_dalinha(theta,omega,psi,dtheta):
 def f_integral_surfaceroche_v2(theta,omega,psi,x):
     """
     Returns the integral of x over the equipotential surface.
-    I = \int_S x(\theta) \mathrm{d}S
+    $I = \int_S x(\theta) \mathrm{d}S$
     
     
     """
@@ -513,6 +541,52 @@ def Tmean4_qu_v2(omega,psi,lum_fac,npts=18001):
 
 
     
+
+###########################################
+# Symmetric quartics
+
+def f_symmquartic(r,theta,A,B,C,D,E,F):
+	x=r*np.sin(theta)
+	y=r*np.cos(theta)
+	return A+B*x**2.+C*y**2.+D*x**2.*y**2.+E*x**4.+F*y**4.
+	
+def f_symmquartic_x(r,theta,A,B,C,D,E,F):
+	x=r*np.sin(theta)
+	y=r*np.cos(theta)
+	return 2.*B*x+2.*D*x*y**2.+4.*E*x**3.	
+
+def f_symmquartic_y(r,theta,A,B,C,D,E,F):
+	x=r*np.sin(theta)
+	y=r*np.cos(theta)
+	return 2.*C*y+2.*D*x**2.*y+4.*F*y**3.
+
+
+def f_symmquartic_prod(r,theta,A1,B1,C1,D1,E1,F1,A2,B2,C2,D2,E2,F2):
+	Q=f_symmquartic(r,theta,A1,B1,C1,D1,E1,F1)
+	G=f_symmquartic(r,theta,A2,B2,C2,D2,E2,F2)
+	return Q*G
+	
+def f_symmquartic_prod_x(r,theta,A1,B1,C1,D1,E1,F1,A2,B2,C2,D2,E2,F2):
+	Q=f_symmquartic(r,theta,A1,B1,C1,D1,E1,F1)
+	Q_x=f_symmquartic_x(r,theta,A1,B1,C1,D1,E1,F1)
+	G=f_symmquartic(r,theta,A2,B2,C2,D2,E2,F2)
+	G_x=f_symmquartic_x(r,theta,A2,B2,C2,D2,E2,F2)
+	return Q*G_x+Q_x*G
+
+def f_symmquartic_prod_y(r,theta,A1,B1,C1,D1,E1,F1,A2,B2,C2,D2,E2,F2):
+	Q=f_symmquartic(r,theta,A1,B1,C1,D1,E1,F1)
+	Q_y=f_symmquartic_y(r,theta,A1,B1,C1,D1,E1,F1)
+	G=f_symmquartic(r,theta,A2,B2,C2,D2,E2,F2)
+	G_y=f_symmquartic_y(r,theta,A2,B2,C2,D2,E2,F2)
+	return Q*G_y+Q_y*G
+
+def f_symmquartic_prod_drdtheta(r,theta,A1,B1,C1,D1,E1,F1,A2,B2,C2,D2,E2,F2):
+	dHdx=f_symmquartic_prod_x(r,theta,A1,B1,C1,D1,E1,F1,A2,B2,C2,D2,E2,F2)
+	dHdy=f_symmquartic_prod_y(r,theta,A1,B1,C1,D1,E1,F1,A2,B2,C2,D2,E2,F2)
+	return -r*(dHdx*np.cos(theta)-dHdy*np.sin(theta))/(dHdx*np.sin(theta)+dHdy*np.cos(theta))
+
+
+
 
 ###########################################
 
