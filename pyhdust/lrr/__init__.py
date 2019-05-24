@@ -9,8 +9,55 @@ import pyhdust.phc as phc
 __author__ = "Leandro Rimulo"
 __email__ = "lrrimulo@gmail.com"
 
-cwd='/home/lrrimulo/Dropbox/Main_programs/pyhdust/pyhdust/lrr/'
-#cwd = os.getcwd() # TODO: obtain cwd without the above line
+#cwd='/home/lrrimulo/Dropbox/Main_programs/pyhdust/pyhdust/lrr/'
+cwd = os.path.dirname(os.path.realpath(__file__))
+cwd+='/'
+
+
+def makeitso():
+    
+    N = 3
+    x = dice(minx=1,maxx=N,p='no')
+    
+    if x == 1:
+        print("\n MAKE IT SO! \n")
+        print("                                _____")
+        print("                       __...---'-----`---...__")
+        print("                  _===============================")
+        print(" ______________,/'      `---..._______...---'")
+        print("(____________LL). .    ,--'")
+        print(" /    /.---'       `. /")
+        print("'--------_  - - - - _/")
+        print("          `~~~~~~~~'")
+    if x == 2:
+        print("\n ENGAGE! \n")
+        print("               .")
+        print("              .:.")
+        print("             .:::.")
+        print("            .:::::.")
+        print("        ***.:::::::.***")
+        print("   *******.:::::::::.*******")       
+        print(" ********.:::::::::::.********")     
+        print("********.:::::::::::::.********")    
+        print("*******.::::::'***`::::.*******")    
+        print("******.::::'*********`::.******")    
+        print(" ****.:::'*************`:.****")
+        print("   *.::'*****************`.*")
+        print("   .:'  ***************    .")
+        print("  .")
+    if x == 3:
+        print("\n I'M GIVIN' HER ALL SHE'S GOT, CAPTAIN! \n")
+        print("__________________           __")
+        print("\_________________|)____.---'--`---.____")
+        print("              ||    \----.________.----/")
+        print("              ||     / /    `--'")
+        print("            __||____/ /_")
+        print("           |___         \ ")
+        print("               `--------'")
+
+
+    return
+
 
 
 def integrate_trapezia(f,dg):
@@ -241,8 +288,9 @@ def interLinND(X, X0, X1, Fx, tp="linear"):
     | X0 = list containing minimal values of the interval;
     | X1 = list containing maximum values of the inveral
     | Fx = list containing function values along the interval, 
-    |     ORDERED BY DIMENSTION.
+    |     ORDERED BY DIMENSION.
     |   Example: Fx = [F00, F01, F10, F11]
+    |   Example: Fx = [F000, F001, F010, F011, F100, F101, F110, F111]
 
     OUTPUT: interpolated value (float)"""
     X = np.array(X)     ### an array of N positions
@@ -262,16 +310,16 @@ def interLinND(X, X0, X1, Fx, tp="linear"):
                                     ### encompasses all the 
                                     ### possibilities of combinations 
                                     ### of normalized intervals.
-                                    ### np.product returns the product 
-                                    ### of the N elements of each
-                                    ### of the 2**N tuples
+        ### np.product returns the product 
+        ### of the N elements of each
+        ### of the 2**N tuples
         if tp == "linear":
             F+= Fx[i]*np.product(prod) 
         elif tp == "ln":
             F+= np.log(Fx[i])*np.product(prod) 
         elif tp == "arcsinh":
             F+= np.arcsinh(Fx[i])*np.product(prod) 
-           
+
         i+= 1
     #
     if tp == "linear":
@@ -282,30 +330,32 @@ def interLinND(X, X0, X1, Fx, tp="linear"):
         return np.sinh(F)
 
     
-def low_high(mmodel,mmodelaxis):
+def low_high(X,axis):
 
     low=[]; high=[]; ind=[]
-    for j in range(0,len(mmodelaxis)):
+    for j in range(0,len(axis)):
         chave=0
         ### If it is to extrapolate to a value before a minimum
-        if mmodel[j]<mmodelaxis[j][0]:
-            low.append(mmodelaxis[j][0]); ind.append(0)
-            high.append(mmodelaxis[j][1])
+        if X[j]<axis[j][0]:
+            low.append(axis[j][0])
+            ind.append(0)
+            high.append(axis[j][1])
             chave+=1
         ### If it is to extrapolate to a value after a maximum
-        if mmodel[j]>mmodelaxis[j][len(mmodelaxis[j])-1]:
-            low.append(mmodelaxis[j][len(mmodelaxis[j])-2])
-            ind.append(len(mmodelaxis[j])-2)
-            high.append(mmodelaxis[j][len(mmodelaxis[j])-1])
+        if X[j]>axis[j][len(axis[j])-1]:
+            low.append(axis[j][len(axis[j])-2])
+            ind.append(len(axis[j])-2)
+            high.append(axis[j][len(axis[j])-1])
             chave+=1
         ### If it is to interpolate
         i=0
         while chave==0:
-            if mmodel[j]>=mmodelaxis[j][i] \
-                    and mmodel[j]<=mmodelaxis[j][i+1] \
-                    and i<len(mmodelaxis[j][:])-1:
-                low.append(mmodelaxis[j][i]); ind.append(i)
-                high.append(mmodelaxis[j][i+1])
+            if X[j] >= axis[j][i] \
+                    and X[j] <= axis[j][i+1] \
+                    and i < len(axis[j][:])-1:
+                low.append(axis[j][i])
+                ind.append(i)
+                high.append(axis[j][i+1])
                 chave+=1
             i+=1
 
@@ -326,23 +376,41 @@ def find_index(ind,axis):
     
 
 def build_Fx(axis,values,ind):
+    """
+    This function builds the Fx array, to be used in the interpolation 
+    function 'interLinND'. 
+    
+    It uses the grid's domain defined by 'axis' 
+    and the 'values' contained in each element of the grid. With the 
+    index 'ind', it finds the 2**len(ind) elements of Fx in the correct 
+    order. 
+    """
+
     Fx=[]
-    for i in xrange(0,2**len(ind)):
+    N_Fx=2**len(ind)
+    for i in xrange(0,N_Fx):
         addn=dec_2_binary(i,len(ind))
+        #print("addn = ",addn)
         newind=np.array([ind[j]+addn[j] for j in xrange(len(ind))])
+        #print("newind = ",newind)
         indd=find_index(newind,axis)
+        #print("indd = ",indd)
         Fx.append(values[indd])
     Fx=np.array(Fx)
+    #print("Fx = ",Fx)
     return Fx
     
 def interpLinND(X,axis,values,tp="linear"):
     """N-dimensional linear interpolation.
     
     | INPUT:
-    | X = the position in with the interpolation is desired
-    | axis = list of vectors that create the basis of the space
-    | values = vector with all the values of the function to be 
-    |          interpolated
+    | 'X' = the position in which the interpolation is desired
+    | 'axis' = list of vectors that create domain of the grid
+    | 'values' = vector with all the values associated with each 
+    |           element of the grid domain.
+    |
+    | OUTPUT:
+    | 'interp' = interpolated value
     """
     
     if len(X) != len(axis):
@@ -356,61 +424,6 @@ def interpLinND(X,axis,values,tp="linear"):
     interp=interLinND(X, low, high, Fx, tp)
     return interp
 
-### EXAMPLE OF USING lrr.interpLinND
-### (Uncomment the columns with one '#'.)
-#
-#
-### Creating a 3D grid:
-#x=[1.,2.]
-#y=[3.,4.,5.]
-#z=[6.,7.,8.,9.]
-#
-### Atributing values to every point in the grid.
-### The chosen function is f = x^2*y^3*z.
-#values=[]
-#for i in xrange(0,len(x)):
-#    for j in xrange(0,len(y)):
-#        for k in xrange(0,len(z)):
-#            function_example=x[i]**2.*y[j]**3.*z[k]
-#            values.append(function_example)
-#            print(np.array([i,j,k]),\
-#                np.array([x[i],y[j],z[k]]),function_example)
-#
-#
-#
-#
-### The list 'axis', which enters the routine:
-#axis=[x,y,z]
-#
-#print(""); test=np.array([1.6,4.8,8.8]) ### Point in 3D space 
-#                                        ### inside the grid.
-#interp=lrr.interpLinND(test,axis,values)
-#print("The interpolated value in the point ",test," is ",interp)
-#f_example=test[0]**2.*test[1]**3.*test[2]
-#print("The real value in the point ",test," is ",f_example)
-#
-#print(""); test=np.array([1.0,3.0,6.0]) ### Point in 3D space 
-#                                        ### coinciding with one of 
-#                                        ### the points of the grid. 
-#interp=lrr.interpLinND(test,axis,values)
-#print("The interpolated value in the point ",test," is ",interp)
-#f_example=test[0]**2.*test[1]**3.*test[2]
-#print("The real value in the point ",test," is ",f_example)
-#    
-#
-#print(""); test=np.array([3.0,4.0,8.0]) ### Point in 3D space that 
-#                                        ### requires extrapolation.
-#interp=lrr.interpLinND(test,axis,values)
-#print("The interpolated value in the point ",test," is ",interp)
-#f_example=test[0]**2.*test[1]**3.*test[2]
-#print("The real value in the point ",test," is ",f_example)
-#
-#print(""); test=np.array([0.0,0.0,0.0]) ### Point in 3D space that 
-#                                        ### requires extrapolation.
-#interp=lrr.interpLinND(test,axis,values)
-#print("The interpolated value in the point ",test," is ",interp)
-#f_example=test[0]**2.*test[1]**3.*test[2]
-#print("The real value in the point ",test," is ",f_example)
 
 
 
@@ -418,8 +431,7 @@ def interpLinND(X,axis,values,tp="linear"):
 
 
 
-
-#######################################################################
+######################################################################
 
 
 
