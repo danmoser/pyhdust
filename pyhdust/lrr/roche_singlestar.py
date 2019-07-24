@@ -100,22 +100,35 @@ def rocheparams(param,tipo):
 
 def f_ctes1(r0,M,par,tp):
     """
-    Returns the value of the parameters A0 [cm2], Psi0 [erg/g], 
-    Omega0 [1/s], g0 [cm/s2], F0 [erg/s cm2], T0 [K] and L0 [Lsun], 
-    in this order. 
+    Calculates the values of the constants associated with the Roche 
+    model for a single star rotating as a solid body, given r0, M and 
+    one of the three (F0, T0 or L0).
 
-    Input:
-    . r0 [Rsun]
-    . M [Msun]
-    . par (should receive any of three parameters: F0 [erg/s cm2], T0 [K] and L0 [Lsun]) 
-    . tp (should receive any of the corresponding labes: 'flux', 'temp' and 'lum')
-
+    | INPUT:
+    |. r0 [Rsun]
+    |. M [Msun]
+    |. par (should receive any of three parameters: F0 [erg/s cm2], 
+    | T0 [K] and L0 [Lsun]) 
+    |. tp (should receive any of the corresponding lables: 
+    | 'flux', 'temp' and 'lum')
     NOTE: If not all of the input parameters are available, the NaN 
     should be provided instead. This will result in some NaNs being 
     returned, because some of the parameters hadn't the necessary input 
     parameters to be calculated.
+    
+    | OUTPUT:
+    |. A0 [cm2]
+    |. Psi0 [erg/g]
+    |. Omega0 [1/s]
+    |. g0 [cm/s2]
+    |. F0 [erg/s cm2]
+    |. T0 [K]
+    |. L0 [Lsun]
+
     """
-	
+
+    func_name = sys._getframe().f_code.co_name
+    
     if np.isnan(r0) == False:
         A0=4.*np.pi*(r0*phc.Rsun.cgs)**2.
         if np.isnan(M) == False:
@@ -149,6 +162,8 @@ def f_ctes1(r0,M,par,tp):
             else: 
                 F0=np.nan; T0=np.nan
         else:
+            print '<<',func_name,'>>'
+            print 'WARNING: Type of parameter not recognized: '+tp
             F0=np.nan; T0=np.nan; L0=np.nan
     else:
         F0=np.nan; T0=np.nan; L0=np.nan
@@ -221,7 +236,8 @@ def go_first_quadrant(theta):
 
 def f_rocheradius(theta,omega,psi):
     """
-    Returns the function s_psi(theta) for the Roche surface of a single star rotating with parameters omega and psi.
+    Returns the function s_psi(theta) for the Roche surface of a 
+    single star rotating with parameters omega and psi.
     
     Input: 
     . 'theta' is the angle theta in radians. 
@@ -231,7 +247,8 @@ def f_rocheradius(theta,omega,psi):
     if omega != 0.0:
         theta=go_first_quadrant(theta)
         if theta!=0.0*np.pi:
-            rocheradius=3./(psi*omega*np.sin(theta))*np.cos(np.pi/3.0+np.arccos(omega*np.sin(theta))/3.0)
+            rocheradius=3./(psi*omega*np.sin(theta))*\
+                np.cos(np.pi/3.0+np.arccos(omega*np.sin(theta))/3.0)
         else:
             rocheradius=1.0/psi
     else:
@@ -249,7 +266,8 @@ def f_tilde_r_roche(omega,psi,r):
     
 def f_hdustquadratic(theta,omega,psi):
     """
-    Returns the function s_psi(theta) for the surface of the ellipsoid used by HDUST.
+    Returns the function s_psi(theta) for the surface of the 
+    ellipsoid used by HDUST.
 
     Input: 
     . 'theta' is the angle theta in radians. 
@@ -285,17 +303,22 @@ def f_eff_gravity_vector(theta,omega,psi,r):
     . 'psi'  
     . 'r' is the scaled position.
     """
-    eff_gravity=np.sqrt((r**-2.0-(8./27.)*omega**2.0*psi**3.0*r*np.sin(theta)**2.0)**2.0\
-                            +((8./27.)*omega**2.0*psi**3.0*r*np.sin(theta)*np.cos(theta))**2.0)
+    eff_gravity=np.sqrt((r**-2.0-(8./27.)*omega**2.0*psi**3.0*\
+                            r*np.sin(theta)**2.0)**2.0\
+                            +((8./27.)*omega**2.0*psi**3.0*\
+                            r*np.sin(theta)*np.cos(theta))**2.0)
                             
-    r_component=-r**-2.0+(8./27.)*omega**2.0*psi**3.0*r*np.sin(theta)**2.0
-    theta_component=(8./27.)*omega**2.0*psi**3.0*r*np.sin(theta)*np.cos(theta)
+    r_component=-r**-2.0+(8./27.)*omega**2.0*psi**3.0\
+        *r*np.sin(theta)**2.0
+    theta_component=(8./27.)*omega**2.0*psi**3.0*\
+        r*np.sin(theta)*np.cos(theta)
     return np.array([r_component,theta_component])
 
 def f_eff_gravity(theta,omega,psi,r):
     """
-    Returns the absolute value of the scaled effective gravity for every point (r,theta), 
-    for a Roche single star with parameters omega and psi.
+    Returns the absolute value of the scaled effective gravity for 
+    every point (r,theta), for a Roche single star with parameters 
+    omega and psi.
 
     Input: 
     . 'theta' is the angle theta in radians. 
@@ -348,7 +371,8 @@ def f_normal_roche(theta,omega,psi,r,unity=True):
 
 def f_drochedtheta(theta,omega,psi):
     """
-    Returns dr/dtheta(theta), for a point in the single star Roche surface.
+    Returns dr/dtheta(theta), for a point in the single star Roche 
+    surface.
 
     Input: 
     . 'theta' is the angle theta in radians. 
@@ -360,13 +384,16 @@ def f_drochedtheta(theta,omega,psi):
         drochedtheta=0.0 # Removable discontinuity corrected.
     else:
         rocheradius=f_rocheradius(theta,omega,psi)
-        drochedtheta=(8./27.)*omega**2.0*psi**3.0*rocheradius**2.*np.sin(theta)*np.cos(theta)*\
-                        (rocheradius**(-2.0)-(8./27.)*omega**2.0*psi**3.0*rocheradius*np.sin(theta)**2.0)**(-1.)
+        drochedtheta=(8./27.)*omega**2.0*psi**3.0*\
+                rocheradius**2.*np.sin(theta)*np.cos(theta)*\
+                (rocheradius**(-2.0)-(8./27.)*omega**2.0*psi**3.0*\
+                rocheradius*np.sin(theta)**2.0)**(-1.)
     return drochedtheta
 
 def f_deffgravdtheta_roche(theta,omega,psi):
     """
-    Returns d(effgrav)/dtheta(theta), for a point in the single star Roche surface.
+    Returns d(effgrav)/dtheta(theta), for a point in the single star 
+    Roche surface.
 
     Input: 
     . 'theta' is the angle theta in radians. 
@@ -375,10 +402,15 @@ def f_deffgravdtheta_roche(theta,omega,psi):
     """
     rocheradius=f_rocheradius(theta,omega,psi)
     drochedtheta=f_drochedtheta(theta,omega,psi)
-    g1=-rocheradius**(-2.0)+(8./27.)*omega**2.0*psi**3.0*rocheradius*np.sin(theta)**2.0
-    g2=(8./27.)*omega**2.0*psi**3.0*rocheradius*np.sin(theta)*np.cos(theta)
-    dg1=2.0*rocheradius**-3.*drochedtheta+8./27.*psi**3.*omega**2.*(np.sin(theta)**2.*drochedtheta+2.*rocheradius*np.sin(theta)*np.cos(theta))
-    dg2=8./27.*psi**3.*omega**2.*(np.sin(theta)*np.cos(theta)*drochedtheta+rocheradius*np.cos(2.*theta))
+    g1=-rocheradius**(-2.0)+(8./27.)*omega**2.0*psi**3.0*\
+        rocheradius*np.sin(theta)**2.0
+    g2=(8./27.)*omega**2.0*psi**3.0*rocheradius*np.sin(theta)*\
+        np.cos(theta)
+    dg1=2.0*rocheradius**-3.*drochedtheta+8./27.*psi**3.*\
+        omega**2.*(np.sin(theta)**2.*drochedtheta+\
+        2.*rocheradius*np.sin(theta)*np.cos(theta))
+    dg2=8./27.*psi**3.*omega**2.*(np.sin(theta)*np.cos(theta)*\
+        drochedtheta+rocheradius*np.cos(2.*theta))
     deffgravdtheta_roche=(g1*dg1+g2*dg2)/np.sqrt(g1*g1+g2*g2)
     return deffgravdtheta_roche
     
@@ -389,8 +421,10 @@ def f_deffgravdtheta_roche(theta,omega,psi):
     
 
 def f_roche_dafac(rocheradius,drochedtheta):
-    """Returns the factor multiplied to the element of area of the equipotential surface"""
-    roche_dafac=np.sqrt(rocheradius**4.+rocheradius**2.*drochedtheta**2.)
+    """Returns the factor multiplied to the element of area of the 
+    equipotential surface"""
+    roche_dafac=np.sqrt(rocheradius**4.+rocheradius**2.*\
+        drochedtheta**2.)
     return roche_dafac
     
 def f_ds(theta,dtheta,dphi,dafac):
@@ -424,11 +458,16 @@ def f_integral_surfaceroche(theta,omega,psi,x):
             print ''
             return np.nan
     npts=len(theta)
-    dtheta=np.array([theta[i+1]-theta[i] for i in xrange(0,len(theta)-1)])
-    rocheradius=np.array([f_rocheradius(theta[i],omega,psi) for i in xrange(0,len(dtheta))])
-    drochedtheta=np.array([f_drochedtheta(theta[i],omega,psi) for i in xrange(0,len(dtheta))])
-    roche_dafac=np.array([f_roche_dafac(rocheradius[i],drochedtheta[i]) for i in xrange(0,len(dtheta))])
-    ds=np.array([f_ds(theta[i],dtheta[i],2.*np.pi,roche_dafac[i]) for i in xrange(0,len(dtheta))])
+    dtheta=np.array([theta[i+1]-theta[i] \
+        for i in xrange(0,len(theta)-1)])
+    rocheradius=np.array([f_rocheradius(theta[i],omega,psi) \
+        for i in xrange(0,len(dtheta))])
+    drochedtheta=np.array([f_drochedtheta(theta[i],omega,psi) \
+        for i in xrange(0,len(dtheta))])
+    roche_dafac=np.array([f_roche_dafac(rocheradius[i],\
+        drochedtheta[i]) for i in xrange(0,len(dtheta))])
+    ds=np.array([f_ds(theta[i],dtheta[i],2.*np.pi,roche_dafac[i]) \
+        for i in xrange(0,len(dtheta))])
 
     integral_roche=2.*lrr.integrate_trapezia(x,ds)
     return integral_roche
@@ -476,9 +515,12 @@ def f_integral_surfaceroche_v2(theta,omega,psi,x):
             print ''
             return np.nan
     npts=len(theta)
-    dtheta=np.array([theta[i+1]-theta[i] for i in xrange(0,len(theta)-1)])
-    rocheradius=np.array([f_rocheradius(theta[i],omega,psi) for i in xrange(0,len(dtheta))])
-    ds=np.array([f_dalinha(theta[i],omega,psi,dtheta[i]) for i in xrange(0,len(dtheta))])
+    dtheta=np.array([theta[i+1]-theta[i] \
+        for i in xrange(0,len(theta)-1)])
+    rocheradius=np.array([f_rocheradius(theta[i],omega,psi) \
+        for i in xrange(0,len(dtheta))])
+    ds=np.array([f_dalinha(theta[i],omega,psi,dtheta[i]) \
+        for i in xrange(0,len(dtheta))])
 
     integral_roche=2.*lrr.integrate_trapezia(x,ds)
     return integral_roche
@@ -490,16 +532,23 @@ def f_integral_surfaceroche_v2(theta,omega,psi,x):
 
 
 ####
-def f_flux_roche_betalaw(theta,omega,psi,lum_fac,r,betacte,npts=18001,conservation=True):
-    """"""
+def f_flux_roche_betalaw(theta,omega,psi,lum_fac,r,betacte,npts=18001,\
+        conservation=True):
+    """
+    
+    """
     effgrav=f_eff_gravity(theta,omega,psi,r)
     #
     if conservation == True:
         thetamin=0.0; thetamax=0.5*np.pi
-        thetas=np.array([thetamin+(thetamax-thetamin)*float(i)/float(npts-1) for i in xrange(0,npts)])
-        rocheradiuss=np.array([f_rocheradius(thetas[i],omega,psi) for i in xrange(0,npts)])
-        effgravs=np.array([f_eff_gravity(thetas[i],omega,psi,rocheradiuss[i]) for i in xrange(0,npts)])
-        cte=lum_fac/f_integral_surfaceroche_v2(thetas,omega,psi,effgravs**(4.*betacte))
+        thetas=np.array([thetamin+(thetamax-thetamin)*\
+            float(i)/float(npts-1) for i in xrange(0,npts)])
+        rocheradiuss=np.array([f_rocheradius(thetas[i],omega,psi) \
+            for i in xrange(0,npts)])
+        effgravs=np.array([f_eff_gravity(thetas[i],omega,psi,\
+            rocheradiuss[i]) for i in xrange(0,npts)])
+        cte=lum_fac/f_integral_surfaceroche_v2(thetas,omega,psi,\
+            effgravs**(4.*betacte))
         flux=cte*effgrav**(4.*betacte)
     else: flux=effgrav**(4.*betacte)
     return flux
@@ -508,16 +557,21 @@ def f_flux_roche_betalaw(theta,omega,psi,lum_fac,r,betacte,npts=18001,conservati
 def f_vw(omega,psi,npts):
     """Returns the volume inside the equipotential surface."""
     thetamin=0.0; thetamax=0.5*np.pi
-    theta=np.array([thetamin+(thetamax-thetamin)*float(i)/float(npts-1) for i in xrange(0,npts)])
-    rocheradius=np.array([f_rocheradius(theta[i],omega,psi) for i in xrange(0,len(theta))])
-    integ=np.array([0.5*np.sin(theta[i])*rocheradius[i]**3. for i in xrange(0,len(theta))])
-    dtheta=np.array([theta[i+1]-theta[i] for i in xrange(0,len(theta)-1)])
+    theta=np.array([thetamin+(thetamax-thetamin)*\
+        float(i)/float(npts-1) for i in xrange(0,npts)])
+    rocheradius=np.array([f_rocheradius(theta[i],omega,psi) \
+        for i in xrange(0,len(theta))])
+    integ=np.array([0.5*np.sin(theta[i])*rocheradius[i]**3. \
+        for i in xrange(0,len(theta))])
+    dtheta=np.array([theta[i+1]-theta[i] \
+        for i in xrange(0,len(theta)-1)])
     vw=2.*lrr.integrate_trapezia(integ,dtheta)
     return vw
     
 def f_meanflux(omega,psi,lum_fac,npts=18001):
     thetamin=0.0; thetamax=0.5*np.pi
-    theta=np.array([thetamin+(thetamax-thetamin)*float(i)/float(npts-1) for i in xrange(0,npts)])
+    theta=np.array([thetamin+(thetamax-thetamin)*\
+        float(i)/float(npts-1) for i in xrange(0,npts)])
     x=np.array([1. for i in xrange(0,npts)])
     meanflux=lum_fac/f_integral_surfaceroche(theta,omega,psi,x)
     return meanflux
@@ -529,7 +583,8 @@ def Tmean4_qu(omega,psi,lum_fac,npts=18001):
 
 def f_meanflux_v2(omega,psi,lum_fac,npts=18001):
     thetamin=0.0; thetamax=0.5*np.pi
-    theta=np.array([thetamin+(thetamax-thetamin)*float(i)/float(npts-1) for i in xrange(0,npts)])
+    theta=np.array([thetamin+(thetamax-thetamin)*\
+        float(i)/float(npts-1) for i in xrange(0,npts)])
     x=np.array([1. for i in xrange(0,npts)])
     meanflux=lum_fac/f_integral_surfaceroche_v2(theta,omega,psi,x)
     return meanflux
@@ -580,10 +635,14 @@ def f_symmquartic_prod_y(r,theta,A1,B1,C1,D1,E1,F1,A2,B2,C2,D2,E2,F2):
 	G_y=f_symmquartic_y(r,theta,A2,B2,C2,D2,E2,F2)
 	return Q*G_y+Q_y*G
 
-def f_symmquartic_prod_drdtheta(r,theta,A1,B1,C1,D1,E1,F1,A2,B2,C2,D2,E2,F2):
-	dHdx=f_symmquartic_prod_x(r,theta,A1,B1,C1,D1,E1,F1,A2,B2,C2,D2,E2,F2)
-	dHdy=f_symmquartic_prod_y(r,theta,A1,B1,C1,D1,E1,F1,A2,B2,C2,D2,E2,F2)
-	return -r*(dHdx*np.cos(theta)-dHdy*np.sin(theta))/(dHdx*np.sin(theta)+dHdy*np.cos(theta))
+def f_symmquartic_prod_drdtheta(r,theta,A1,B1,C1,D1,E1,F1,\
+        A2,B2,C2,D2,E2,F2):
+	dHdx=f_symmquartic_prod_x(r,theta,A1,B1,C1,D1,E1,F1,\
+        A2,B2,C2,D2,E2,F2)
+	dHdy=f_symmquartic_prod_y(r,theta,A1,B1,C1,D1,E1,F1,\
+        A2,B2,C2,D2,E2,F2)
+	return -r*(dHdx*np.cos(theta)-dHdy*np.sin(theta))/\
+        (dHdx*np.sin(theta)+dHdy*np.cos(theta))
 
 
 
@@ -593,12 +652,14 @@ def f_symmquartic_prod_drdtheta(r,theta,A1,B1,C1,D1,E1,F1,A2,B2,C2,D2,E2,F2):
 
 def f_v_ELR(theta,omega,psi,r):
     """Reference: 2011A&A...533A..43E"""
-    toler=0.0000001 # This precision usually requires 4 or 5 iterations.
+    toler=0.0000001 ### This precision usually requires 
+                    ### 4 or 5 iterations.
     theta=go_first_quadrant(theta)
     if theta == 0.0: v=theta; return v
     elif theta == 0.5*np.pi: v=theta; return v
     else:
-        auxi=8./81.*psi**3.*omega**2.*r**3.*np.cos(theta)**3.+np.cos(theta)+np.log(abs(np.tan(theta/2.)))
+        auxi=8./81.*psi**3.*omega**2.*r**3.*np.cos(theta)**3.+\
+            np.cos(theta)+np.log(abs(np.tan(theta/2.)))
         xprev=theta
         yprev=-np.cos(xprev)-np.log(abs(np.tan(xprev/2.)))+auxi
         yyprev=np.sin(xprev)-1./np.sin(xprev)
@@ -657,12 +718,18 @@ def f_Teff_ELR(theta,omega,psi,lum_fac,r):
 def Tmean_ELR(omega,psi,lum_fac,npts=18001):
 
     thetamin=0.0*np.pi; thetamax=0.5*np.pi
-    theta=np.array([thetamin+(thetamax-thetamin)*float(i)/float(npts-1) for i in xrange(0,npts)])
-    rocheradius=np.array([f_rocheradius(theta[i],omega,psi) for i in xrange(0,len(theta))])
+    theta=np.array([thetamin+(thetamax-thetamin)*\
+        float(i)/float(npts-1) for i in xrange(0,npts)])
+    rocheradius=np.array([f_rocheradius(theta[i],omega,psi) \
+        for i in xrange(0,len(theta))])
     oness=np.array([1. for i in xrange(0,len(theta))])
-    flux_nc=np.array([f_flux_ELR(theta[i],omega,psi,lum_fac,rocheradius[i],conservation=False) for i in xrange(0,len(theta))])
+    flux_nc=np.array([f_flux_ELR(theta[i],omega,psi,lum_fac,\
+        rocheradius[i],conservation=False) \
+        for i in xrange(0,len(theta))])
     sw=f_integral_surfaceroche(theta,omega,psi,oness)
-    Tmean=lum_fac**0.25/sw*f_integral_surfaceroche(theta,omega,psi,flux_nc**0.25)/f_integral_surfaceroche(theta,omega,psi,flux_nc)**0.25
+    Tmean=lum_fac**0.25/sw*f_integral_surfaceroche(theta,omega,psi,\
+        flux_nc**0.25)/f_integral_surfaceroche(theta,omega,psi,\
+        flux_nc)**0.25
 
     return Tmean
 
@@ -676,21 +743,27 @@ def f_dvdtheta_roche_ELR(theta,v,omega,psi):
     elif theta == 0.5*np.pi: dvdtheta=np.nan; return dvdtheta
     rocheradius=f_rocheradius(theta,omega,psi)
     drochedtheta=f_drochedtheta(theta,omega,psi)
-    dvdtheta_roche=(8./27.*psi**3.*omega**2.*rocheradius**2.*np.cos(theta)**2.*\
-                    (np.cos(theta)*drochedtheta-rocheradius*np.sin(theta))-np.sin(theta)+1./np.sin(theta))/\
-                    (-np.sin(v)+1./np.sin(v))
+    dvdtheta_roche=(8./27.*psi**3.*omega**2.*rocheradius**2.*\
+        np.cos(theta)**2.*\
+        (np.cos(theta)*drochedtheta-\
+        rocheradius*np.sin(theta))-np.sin(theta)+\
+        1./np.sin(theta))/\
+        (-np.sin(v)+1./np.sin(v))
     return dvdtheta_roche
 
 def f_dFdtheta_roche_ELR(theta,v,omega,psi):
     """Reference: 2011A&A...533A..43E"""
     theta=go_first_quadrant(theta)
-    if theta == 0.0: dFdtheta_roche=np.nan; return dFdtheta_roche
-    elif theta == 0.5*np.pi: dFdtheta_roche=np.nan; return dFdtheta_roche
+    if theta == 0.0: 
+        dFdtheta_roche=np.nan; return dFdtheta_roche
+    elif theta == 0.5*np.pi: 
+        dFdtheta_roche=np.nan; return dFdtheta_roche
     else:
         rocheradius=f_rocheradius(theta,omega,psi)
         F=f_F_ELR(theta,v,omega,psi,rocheradius)
         dvdtheta_roche=f_dvdtheta_roche_ELR(theta,v,omega,psi)
-        dFdtheta_roche=2.*(dvdtheta_roche/np.sin(v)/np.cos(v)-1./np.sin(theta)/np.cos(theta))*F
+        dFdtheta_roche=2.*(dvdtheta_roche/np.sin(v)/np.cos(v)-\
+            1./np.sin(theta)/np.cos(theta))*F
         return dFdtheta_roche
 
 def f_beta_ELR(theta,v,omega,psi,estimate=True):
@@ -708,21 +781,24 @@ def f_beta_ELR(theta,v,omega,psi,estimate=True):
         if estimate == True:
             deltinha=0.001
             theta2=theta+deltinha; theta3=theta2+deltinha
-            theta2=go_first_quadrant(theta2); theta3=go_first_quadrant(theta3)
+            theta2=go_first_quadrant(theta2)
+            theta3=go_first_quadrant(theta3)
             rocheradius2=f_rocheradius(theta2,omega,psi)
             eff_gravity2=f_eff_gravity(theta2,omega,psi,rocheradius2)
             v2=f_v_ELR(theta2,omega,psi,rocheradius2)
             F2=f_F_ELR(theta2,v2,omega,psi,rocheradius2)
             dFdtheta2=f_dFdtheta_roche_ELR(theta2,v2,omega,psi)
             deffgravdtheta2=f_deffgravdtheta_roche(theta2,omega,psi)
-            beta2=0.25*(1.+(dFdtheta2/F2)/(deffgravdtheta2/eff_gravity2))        
+            beta2=0.25*(1.+(dFdtheta2/F2)/\
+                (deffgravdtheta2/eff_gravity2))        
             rocheradius3=f_rocheradius(theta3,omega,psi)
             eff_gravity3=f_eff_gravity(theta3,omega,psi,rocheradius3)
             v3=f_v_ELR(theta3,omega,psi,rocheradius3)
             F3=f_F_ELR(theta3,v3,omega,psi,rocheradius3)
             dFdtheta3=f_dFdtheta_roche_ELR(theta3,v3,omega,psi)
             deffgravdtheta3=f_deffgravdtheta_roche(theta3,omega,psi)
-            beta3=0.25*(1.+(dFdtheta3/F3)/(deffgravdtheta3/eff_gravity3))
+            beta3=0.25*(1.+(dFdtheta3/F3)/\
+                (deffgravdtheta3/eff_gravity3))
             beta=beta2+(beta3-beta2)/(theta3-theta2)*(theta-theta2)        
             return beta
         else:
@@ -762,7 +838,8 @@ def oblat2w(oblat):
         elif oblat[iw] >= 1.5:
             w[iw] = 1.
         else:
-            w[iw] = (1.5**1.5) * np.sqrt(2.*(oblat[iw] - 1.) / oblat[iw]**3.)
+            w[iw] = (1.5**1.5) * np.sqrt(2.*(oblat[iw] - 1.) / \
+                oblat[iw]**3.)
 
     if nw == 1:
         w = w[0]
@@ -867,10 +944,11 @@ def beta_espinosa(w, oblat=False):
                 r1 = 0.
                 r = 1.
                 while delt >= 1e-5:
-                    f = omega[iw]**2. * r**3. * np.sin(theta[ithe])**2. \
+                    f = omega[iw]**2. * r**3. * np.sin(theta[ithe])**2.\
                         -(2.+omega[iw]**2.) * r + 2.
-                    df = 3. * omega[iw]**2. * r**2. * np.sin(theta[ithe])**2. \
-                         -(2. + omega[iw]**2.)
+                    df = 3. * omega[iw]**2. * r**2. * \
+                        np.sin(theta[ithe])**2. \
+                        -(2. + omega[iw]**2.)
                     r1 = r - f/df
                     delt = np.abs(r1 - r) / r
                     r = r1
@@ -878,8 +956,10 @@ def beta_espinosa(w, oblat=False):
                 # eta (Espinosa Lara lecture, slide 30)
                 delt = 1.
                 n1 = 0.
-                ftheta = 1./3. * omega[iw]**2.*r**3. * np.cos(theta[ithe])**3. \
-                         + np.cos(theta[ithe]) + np.log(np.tan(theta[ithe]/2.))
+                ftheta = 1./3. * omega[iw]**2.*r**3. * \
+                        np.cos(theta[ithe])**3. \
+                        + np.cos(theta[ithe]) + \
+                        np.log(np.tan(theta[ithe]/2.))
                 n = theta[ithe]
                 while delt >= 1e-5:
                     f = np.cos(n) + np.log(np.tan(n/2.)) - ftheta
@@ -889,16 +969,20 @@ def beta_espinosa(w, oblat=False):
                     n = n1
        
                 # parameters
-                grav[ithe, iw] = np.sqrt(1./r**4. + omega[iw]**4. * r**2. \
-                                * np.sin(theta[ithe])**2. - 2. * omega[iw]**2.
+                grav[ithe, iw] = np.sqrt(1./r**4. + omega[iw]**4. * \
+                                r**2. \
+                                * np.sin(theta[ithe])**2. - \
+                                2. * omega[iw]**2.
                                 * np.sin(theta[ithe])**2. / r)
        
-                corr[ithe, iw] = np.sqrt(np.tan(n) / np.tan(theta[ithe]))
+                corr[ithe, iw] = np.sqrt(np.tan(n) / \
+                    np.tan(theta[ithe]))
        
                 teff[ithe, iw] = corr[ithe, iw] * grav[ithe,iw]**0.25
 
             # fitting effective beta to the obtained result
-            coef = np.polyfit(np.log(grav[:, iw]), np.log(teff[:, iw]), 1)
+            coef = np.polyfit(np.log(grav[:, iw]), \
+                np.log(teff[:, iw]), 1)
             beta[iw]=coef[0]
 
     if nw == 1:
@@ -926,11 +1010,15 @@ def f_beta_ELR_fit(omega,psi,lum_fac):
         theta = np.linspace(0., np.pi/2., nthe+1)
         theta = 0.5*(theta[0:-1] + theta[1:]) # to avoid singularities at 0 and 90
     
-        rocheradius=np.array([f_rocheradius(theta[i],omega,psi) for i in xrange(0,nthe)])
-        v=np.array([f_v_ELR(theta[i],omega,psi,rocheradius[i]) for i in xrange(0,nthe)])
+        rocheradius=np.array([f_rocheradius(theta[i],omega,psi) \
+            for i in xrange(0,nthe)])
+        v=np.array([f_v_ELR(theta[i],omega,psi,rocheradius[i]) \
+            for i in xrange(0,nthe)])
 
-        grav=np.array([f_eff_gravity(theta[i],omega,psi,rocheradius[i]) for i in xrange(0,nthe)])
-        teff=np.array([f_Teff_ELR(theta[i],omega,psi,lum_fac,rocheradius[i]) for i in xrange(0,nthe)])
+        grav=np.array([f_eff_gravity(theta[i],omega,psi,\
+            rocheradius[i]) for i in xrange(0,nthe)])
+        teff=np.array([f_Teff_ELR(theta[i],omega,psi,lum_fac,\
+            rocheradius[i]) for i in xrange(0,nthe)])
 
         # fitting effective beta to the obtained result
         coef = np.polyfit(np.log(grav), np.log(teff), 1)
@@ -970,31 +1058,31 @@ def ctes1(mass,r0,lum):
 
 
 #READ model parameters
-ob,omega,gamma,W=rocheparams(0.7,'W')
-psi=1.0
-lum_fac=1.0
-
-if 1==2:    # 
-            #
-    thetamin=0.0*np.pi; thetamax=0.5*np.pi; npts=20
-    theta=np.array([thetamin+(thetamax-thetamin)*float(i)/float(npts-1) for i in xrange(0,npts)])
-    rocheradius=np.array([f_rocheradius(theta[i],omega,psi) for i in xrange(0,len(theta))])
-    eff_gravity=np.array([f_eff_gravity(theta[i],omega,psi,rocheradius[i]) for i in xrange(0,len(theta))])
-    for i in xrange(0,len(theta)):
-        print theta[i]/np.pi*180.,rocheradius[i],eff_gravity[i]
-    print ''
-
-if 1==2:
-    v=np.array([f_v_ELR(theta[i],omega,psi,rocheradius[i]) for i in xrange(0,len(theta))])
-    F=np.array([f_F_ELR(theta[i],v[i],omega,psi,rocheradius[i]) for i in xrange(0,len(theta))])
-    flux_ELR=np.array([f_flux_ELR(theta[i],omega,psi,lum_fac,rocheradius[i]) for i in xrange(0,len(theta))])
-    efftemp_ELR=np.array([flux_ELR[i]**0.25 for i in xrange(0,len(theta))])
-    #efftemp_betacte=np.array([f_efftemp_betacte(theta[i],omega,psi,0.25) for i in xrange(0,len(theta))])
-    beta_ELR=np.array([f_beta_ELR(theta[i],v[i],omega,psi) for i in xrange(0,len(theta))])
-    for i in xrange(0,len(theta)):
-        #print theta[i]/np.pi*180.,F[i],eff_gravity[i],flux_ELR[i],efftemp_ELR[i],efftemp_ELR[i]*((1.+0.5*W*W)/psi)**0.5
-        print theta[i]/np.pi*180.,F[i],eff_gravity[i],flux_ELR[i],efftemp_ELR[i],beta_ELR[i]
-    print ''
+#ob,omega,gamma,W=rocheparams(0.7,'W')
+#psi=1.0
+#lum_fac=1.0
+#
+#if 1==2:    # 
+#            #
+#    thetamin=0.0*np.pi; thetamax=0.5*np.pi; npts=20
+#    theta=np.array([thetamin+(thetamax-thetamin)*float(i)/float(npts-1) for i in xrange(0,npts)])
+#    rocheradius=np.array([f_rocheradius(theta[i],omega,psi) for i in xrange(0,len(theta))])
+#    eff_gravity=np.array([f_eff_gravity(theta[i],omega,psi,rocheradius[i]) for i in xrange(0,len(theta))])
+#    for i in xrange(0,len(theta)):
+#        print theta[i]/np.pi*180.,rocheradius[i],eff_gravity[i]
+#    print ''
+#
+#if 1==2:
+#    v=np.array([f_v_ELR(theta[i],omega,psi,rocheradius[i]) for i in xrange(0,len(theta))])
+#    F=np.array([f_F_ELR(theta[i],v[i],omega,psi,rocheradius[i]) for i in xrange(0,len(theta))])
+#    flux_ELR=np.array([f_flux_ELR(theta[i],omega,psi,lum_fac,rocheradius[i]) for i in xrange(0,len(theta))])
+#    efftemp_ELR=np.array([flux_ELR[i]**0.25 for i in xrange(0,len(theta))])
+#    #efftemp_betacte=np.array([f_efftemp_betacte(theta[i],omega,psi,0.25) for i in xrange(0,len(theta))])
+#    beta_ELR=np.array([f_beta_ELR(theta[i],v[i],omega,psi) for i in xrange(0,len(theta))])
+#    for i in xrange(0,len(theta)):
+#        #print theta[i]/np.pi*180.,F[i],eff_gravity[i],flux_ELR[i],efftemp_ELR[i],efftemp_ELR[i]*((1.+0.5*W*W)/psi)**0.5
+#        print theta[i]/np.pi*180.,F[i],eff_gravity[i],flux_ELR[i],efftemp_ELR[i],beta_ELR[i]
+#    print ''
 
 
 #import sys; sys.exit()
