@@ -18,7 +18,7 @@ def makeitso(x=None):
     A good function to run at the beginning of your program! :)
     """
     
-    N = 5
+    N = 5 
     if x == None:
         x = np.random.random_integers(1,N)
     
