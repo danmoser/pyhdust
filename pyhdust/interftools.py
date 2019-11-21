@@ -1396,7 +1396,7 @@ def plot_v2_img(ax, oidata, img, xlim=None, quiet=False, alp=.75):
 
 def plot_t3_img(ax, oidata, img, xlim=None, quiet=False, alp=.75):
     """ IMG from LitPRO
-    
+
     TODO: scales
     """
     ms = 3

@@ -1578,7 +1578,7 @@ def convgaussFunc(wl, flx, lbc, hwidth=1000., convgauss=0., frac=0., ssize=.05,
     y1 = yo
     y2 = 0.
     if convgauss > 0 and frac > 0:
-        step = _np.min([x[j + 1] - x[j] for j in range(len(x) - 1)])
+        step = _np.abs(_np.min([x[j + 1] - x[j] for j in range(len(x) - 1)]))
         xn = _np.arange(-hwidth - 3 * convgauss,
                         hwidth + 3 * convgauss + step, step)
         cf = _phc.normgauss(convgauss, x=xn)
@@ -1589,6 +1589,24 @@ def convgaussFunc(wl, flx, lbc, hwidth=1000., convgauss=0., frac=0., ssize=.05,
     if wlout:
         x = (x / _phc.c.cgs * 1e5 + 1) * lbc
     return x, y1 + y2
+
+
+# def gaussfold(wl, flx, sig, lbc, hwidth=1000., ssize=.05):
+#     """Translation from gaussfold.pro"""
+#     (x, yo) = lineProf(wl, flx, lbc=lbc, hwidth=hwidth+3*sig, ssize=ssize)
+#     x = (x / _phc.c.cgs * 1e5 + 1) * lbc
+#     lammax = _np.max(x)
+#     lammin = _np.min(x)
+#     dlambda = sig / 17.
+#     interlam  = lammin + dlambda * _np.arange( (lammax-lammin)/dlambda+1 )
+#     interflux = _np.interp( interlam, wl, flx )
+#     fwhm_pix = sig / dlambda
+#     window = fwhm_pix(17*fwhm_pix).astype(int)
+    # gauss = _phc.psf_gaussian(window, sig=fwhm_pix, norm=True, ndim=1)
+    # fold = _phc.convol
+    # fluxfold = _np.interp( lam, interlam, fold )
+    # _warn('# Function not implemented!!')
+    # return None
 
 
 def cutpastrefspec(ivl, iflx, irefvl, ireflx, hwidth, ssize=.05):

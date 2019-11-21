@@ -6,6 +6,7 @@ Module contains:
 - BAstar class
 - BAmod class
 
+:co-author: Rodrigo Vieira
 :license: GNU GPL v3.0 https://github.com/danmoser/pyhdust/blob/master/LICENSE
 """
 from __future__ import print_function
@@ -17,7 +18,9 @@ from glob import glob as _glob
 from itertools import product as _product
 import pyhdust.phc as _phc
 import pyhdust as _hdt
+import pyhdust.input as _inp
 import warnings as _warn
+from collections import OrderedDict as _OrderedDict
 
 try: 
     from scipy.interpolate import griddata as _griddata
@@ -29,7 +32,6 @@ __email__ = "dmfaes@gmail.com"
 
 
 class BAstar(object):
-
     """ BeAtlas source star filename structure.
 
     The filename must follow this structure (the sequence in filename is not 
@@ -39,10 +41,11 @@ class BAstar(object):
 
     See BAmod, phc.keys_values.
     """
-
     def __init__(self, f0):
-        vals = _phc.keys_values(['M', 'ob', 'H', 'Z', 'b'], f0)
-        self.M, self.ob, self.H, self.Z, self.beta = vals
+        # vals = _phc.keys_values(['M', 'ob', 'H', 'Z', 'b'], f0)
+        # self.M, self.ob, self.H, self.Z, self.beta = vals
+        vals = _phc.keys_values(['M', 'ob', 'H', 'Z'], f0)
+        self.M, self.ob, self.H, self.Z = vals
         self.shape = f0.split('_')[-1].replace('.txt', '')
         self._f0 = f0
 
@@ -51,7 +54,6 @@ class BAstar(object):
 
 
 class BAmod(BAstar):
-
     """ BeAtlas disk model filename structure.
 
     It could be f0.split('_'), but the f0.find('_X') way was chosen.
@@ -60,7 +62,6 @@ class BAmod(BAstar):
     may not be the case of other routines). And, by definition, the source star
     has a specific name added at the end of disk model name, starting with
     'Be_'. """
-
     def __init__(self, f0):
         """ Class initialiser """
         BAstar.__init__(self, f0[f0.find('Be_'):])
@@ -69,6 +70,9 @@ class BAmod(BAstar):
             self.param = True
             self.n = _phc.keys_values(['PLn'], f0)[0]
         self.sig, self.h, self.Rd = _phc.keys_values(['sig', 'h', 'Rd'], f0)
+
+    def __repr__(self):
+        return self._f0
 
     def build(self, ctrlarr, listpars):
         """ Set full list of parameters. """
@@ -114,20 +118,36 @@ class BAmod(BAstar):
         return self.idx
 
 
+class BAmodnew(_inp.HdustMod):
+    """ fullsed_mod01_PL_n3.3_Rd10.0_n01.00e+14_h60.0_Be_M13.20_ob1.32.sed2
+
+    Do not include "mod" in `_params`!
+    """
+    _params = ['n', 'sig', 'h', 'Rd', 'M', 'ob', 
+        'H', 'Z']
+    vfmt = ['{:.1f}', '{:.2f}', '{:03d}', '{:05.1f}', '{:04.1f}', '{:04.2f}', 
+        '{:04.2f}', '{:05.3f}']
+    vdict = _OrderedDict(zip(_params, vfmt))
+
+    def __init__(self, fname):
+        super(BAmodnew, self).__init__(fname)
+
+
 # Only for H=0.30
 vrots = [
-    [259.759, 354.834, 417.792, 464.549, 483.847],
-    [252.050, 346.163, 406.388, 449.818, 468.126],
-    [245.127, 336.834, 399.983, 448.076, 467.806],
-    [239.522, 329.496, 388.734, 432.532, 450.806],
-    [234.301, 321.139, 379.297, 423.241, 441.122],
-    [228.538, 313.797, 370.343, 412.488, 429.914],
-    [219.126, 299.656, 354.547, 395.821, 413.008],
-    [211.544, 288.840, 341.081, 380.426, 396.978],
-    [203.438, 279.328, 328.666, 365.697, 380.660],
-    [197.823, 268.964, 316.901, 353.568, 368.506],
-    [192.620, 262.688, 308.208, 341.963, 356.410],
-    [187.003, 255.125, 299.737, 332.511, 346.043]]
+    # [ 1.1 ,   1.2  ,   1.3  ,   1.40 ,   1.45 ]
+    [259.759, 354.834, 417.792, 464.549, 483.847],  # 14.6
+    [252.050, 346.163, 406.388, 449.818, 468.126],  # 12.5
+    [245.127, 336.834, 399.983, 448.076, 467.806],  # 10.8
+    [239.522, 329.496, 388.734, 432.532, 450.806],  # 09.6
+    [234.301, 321.139, 379.297, 423.241, 441.122],  # 08.6
+    [228.538, 313.797, 370.343, 412.488, 429.914],  # 07.7
+    [219.126, 299.656, 354.547, 395.821, 413.008],  # 06.4
+    [211.544, 288.840, 341.081, 380.426, 396.978],  # 05.5
+    [203.438, 279.328, 328.666, 365.697, 380.660],  # 04.8
+    [197.823, 268.964, 316.901, 353.568, 368.506],  # 04.2
+    [192.620, 262.688, 308.208, 341.963, 356.410],  # 03.8
+    [187.003, 255.125, 299.737, 332.511, 346.043]]  # 03.4
 
 obs = [1.1, 1.2, 1.3, 1.4, 1.45]
 ms = [14.6, 12.5, 10.8, 9.6, 8.6, 7.7, 6.4, 5.5, 4.8, 4.2, 3.8, 3.4]
@@ -321,6 +341,8 @@ def createBAsed(fsedlist, xdrpath, lbdarr, param=True, savetxt=False,
                             format(fsedlist[i]))
                 f0 = open(log)
                 lines = f0.readlines()
+                if len(lines) == 0:
+                    _warn.warn('# Empty log file {0} !!'.format(log))
                 f0.close()
                 iL = _phc.fltTxtOccur('L =', lines) * _phc.Lsun.cgs
                 if saveextra is not None:
@@ -540,7 +562,7 @@ def readXDRsed(xdrpath, quiet=False):
             print('# XDR {0} completely read!'.format(xdrpath))
     else:
         _warn.warn('# XDR {0} not completely read!\n# length '
-            'difference is {1} /4'.format(xdrpath), (len(f)-ixdr) )
+            'difference is {1} /4'.format(xdrpath, (len(f)-ixdr)) )
     # 
     return ( ninfo, intervals.reshape((nq, 2)), lbdarr, 
         listpar.reshape((nm, nq)), models.reshape((nm, nlbd)) )
@@ -749,22 +771,25 @@ def griddataBA(minfo, models, params, isig, silent=True):
     # find neighbours, delete coincidences
     if _phc.is_inside_ranges(isig, [0, len(params)-1]):
         # exclude sig0 dimension, to take all their entries for interpolation
-        keep, out, inside_ranges, params1, minfo1 = _phc.find_neighbours(_np.delete(params, isig), \
-                                                                    _np.delete(minfo, isig, axis=1), \
-                                                                    _np.delete(ranges.T, isig, axis=1).T, \
-                                                                    silent=silent)
+        keep, out, inside_ranges, params1, minfo1 = _phc.find_neighbours(
+            _np.delete(params, isig), _np.delete(minfo, isig, axis=1), 
+            _np.delete(ranges.T, isig, axis=1).T, silent=silent)
         params = _np.hstack([params1, params[isig]])
         minfo = _np.vstack([minfo1.T, minfo[:, isig]]).T
     else:
-        keep, out, inside_ranges, params, minfo = _phc.find_neighbours(params, minfo, ranges, silent=silent)
+        keep, out, inside_ranges, params, minfo = _phc.find_neighbours(params, 
+            minfo, ranges, silent=silent)
 
     # interpolation
-    model_interp = _griddata(minfo[keep], models[keep], params, method='linear')[0]
+    model_interp = _griddata(minfo[keep], models[keep], params, 
+        method='linear')[0]
 
     if _np.isnan(model_interp).any() or _np.sum(model_interp) == 0.:
         if not silent:
-            print('[griddataBA] Warning: linear interpolation didnt work, taking closest model')
-        model_interp = _griddata(minfo[keep], models[keep], params, method='nearest')[0]
+            print('[griddataBA] Warning: linear interpolation didnt work, '
+                'taking closest model')
+        model_interp = _griddata(minfo[keep], models[keep], params, 
+            method='nearest')[0]
 
     return model_interp
 
@@ -813,9 +838,9 @@ def check_xdr_limits(xdrminfo, todel=[]):
 
 def hfrac2tms(Hfrac, inverse=False):
     '''
-    Converts nuclear hydrogen fraction into fractional time in the main-sequence,
-    (and vice-versa) based on the polynomial fit of the average of this relation
-    for all B spectral types and rotational velocities.
+    Converts nuclear hydrogen fraction into fractional time in the 
+    main-sequence, (and vice-versa) based on the polynomial fit of the average 
+    of this relation for all B spectral types and rotational velocities.
 
     Usage:
     t = hfrac2tms(Hfrac, inverse=False)
@@ -823,12 +848,14 @@ def hfrac2tms(Hfrac, inverse=False):
     Hfrac = hfrac2tms(t, inverse=True)
     '''
     if not inverse:
-        coef = np.array([-0.57245754, -0.8041484 , -0.51897195,  1.00130795])
-        tms = coef.dot(np.array([Hfrac**3, Hfrac**2, Hfrac**1, Hfrac**0]))
+        coef = _np.array([-0.57245754, -0.8041484, -0.51897195, 1.00130795])
+        tms = coef.dot(_np.array([Hfrac**3, Hfrac**2, Hfrac**1, Hfrac**0]))
     else:
         # interchanged parameter names
-        coef = _np.array([-0.74740597,  0.98208541, -0.64318363, -0.29771094,  0.71507214])
-        tms = coef.dot(_np.array([Hfrac**4, Hfrac**3, Hfrac**2, Hfrac**1, Hfrac**0]))
+        coef = _np.array([-0.74740597, 0.98208541, -0.64318363, -0.29771094, 
+            0.71507214])
+        tms = coef.dot(_np.array([Hfrac**4, Hfrac**3, Hfrac**2, Hfrac**1, 
+            Hfrac**0]))
 
     # solving problem at lower extreme
     if tms < 0.:

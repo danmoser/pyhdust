@@ -197,7 +197,7 @@ def wg_avg_and_std(values, sigma):
         Weighted_sample_variance!
 
     average = _np.average(values, weights=weights)
-    #Fast and numerically precise:
+    # Fast and numerically precise:
     variance = _np.average((values-average)**2, weights=weights)
     return (average, _np.sqrt(variance))
 
@@ -205,12 +205,17 @@ def wg_avg_and_std(values, sigma):
 
     OUTPUT: average, avg_sig (float, float)
     """
-    avg = _np.average(values, weights=1 / sigma)
-    return (avg, _np.sqrt(_np.sum(sigma**2)) / len(values) )
+    values = _np.array(values)
+    sigma = _np.array(sigma)
+    avg = _np.average(values, weights=1. / sigma)
+    return avg, _np.sqrt(_np.sum(sigma**2)) / len(values) 
 
 
 def wg_avg_t(t, y, yerr=None):
     """ average weighted on ``t`` with optional ``yerr`` array.
+
+    Intended for binning use. To recover the weighted value of ``t``, use 
+    wg_avg_and_std.
 
     Warning: If there is two (or more) ``y`` points for the same value of 
     ``t``, all these points will be ignored.
@@ -229,9 +234,10 @@ def wg_avg_t(t, y, yerr=None):
     dx = _np.diff(t)
     avg = 0.
     for i in range(n-1):
+        if dx[i] == 0:
+            _warn('# phc.wg_avg_t: multiple points for same t value!')
         avg += dx[i]*(y[i+1]/yerr[i+1] + y[i]/yerr[i]) / \
             (1./yerr[i] + 1./yerr[i+1])
-
     return avg/_np.sum(dx)
 
 
@@ -260,7 +266,24 @@ def fill_points(in_arr, dx, n=1):
     return new_x, idx_extra
 
 
-def bindata(x, y, nbins=20, yerr=None, xlim=None, perc=0, interp=False):
+def change_dimension(x, nred=-1, fixedlim=False):
+    """ Reduce the dimension of an **equally spaced** vector.
+
+    `nred`: reduces the vector `x` size if nred < 0 and increases it otherwise.
+
+    `fixedlim` keeps the x limits values. Others
+    """
+    if len(_np.shape(x)) != 1:
+        _warn('# Invalid x shape!!')
+        return None
+    nred = int(nred)
+    if nred == 0:
+        return x
+    return _np.linspace(_np.min(x), _np.max(x), len(x)+nred)
+
+
+def bindata(x, y, yerr=None, nbins=20, xlim=None, perc=0, interp=False, 
+    weightx=True):
     """
     Return the weighted binned data.
 
@@ -271,6 +294,9 @@ def bindata(x, y, nbins=20, yerr=None, xlim=None, perc=0, interp=False):
 
     `interp` linearly interpolates NaN values in `y` (no changes on `x` and 
     `yerr` arrays).
+
+    `weightx=True` returns the averaged `x` value inside the bin. `False` 
+    returns the regularly spaced `x` values.
 
     INPUT: x, y, err - arrays with the same shape (they don't need to be
     sorted); nbins=int, xlim=[xmin, xmax]
@@ -304,12 +330,14 @@ def bindata(x, y, nbins=20, yerr=None, xlim=None, perc=0, interp=False):
         selx = _np.where( abs(x - tmpx[i]) <= shift / 2.+1e-6 )
         if len(selx[0]) >= 1:
             if perc <= 0:
-                tmpx[i] = _np.average(x[selx])
+                if weightx:
+                    tmpx[i] = _np.average(x[selx])
                 tmpy[i], tmpyerr[i] = wg_avg_and_std(y[selx], yerr[selx])
             else:
                 tmpy[i] = _np.percentile(y[selx], perc)
                 pid = find_nearest(y[selx], tmpy[i], idx=True)
-                tmpx[i] = x[selx][pid]
+                if weightx:
+                    tmpx[i] = x[selx][pid]
                 _, tmpyerr[i] = wg_avg_and_std(y[selx], yerr[selx])
             idx[i] = True
     if _np.sum(yerr) / len(x) == 1:

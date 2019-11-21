@@ -38,7 +38,7 @@ try:
 except ImportError:
     _warn.warn('# matplotlib, astropy and/or scipy module not installed!!')
 
-__version__ = '1.3.21'
+__version__ = '1.3.22'
 __release__ = "Stable"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -473,18 +473,20 @@ def mergesed1(models, iterations=[21, 22, 23, 24]):
     '''
     for i in range(len(models)):
         models[i] = models[i].replace('.inp', '.txt')
-    
+
     for model in models:
         modfld, modelname = list(_os.path.split(model))
         path = list(_os.path.split(modfld[:-1]))[0]
         if not _os.path.exists(_os.path.join('{0}'.format(path), 'fullsed')):
             _os.system(_os.path.join('mkdir {0}'.format(path), 'fullsed'))
         for it in iterations:
-            lsed1 = _os.path.join(modfld, '{0}{1}.sed1'.format(modelname[:-4], it))
+            lsed1 = _os.path.join(modfld, '{0}{1}.sed1'.format(modelname[:-4], 
+                it))
             try:
                 f = open(lsed1)
             except:
-                _warn.warn('# No SED1 found for {0} iteration {1}'.format(modelname[:-4], it))
+                _warn.warn('# No SED1 found for {0} iteration {1}'.format(
+                    modelname[:-4], it))
                 continue
             row = f.readline()
             f.close()
@@ -492,7 +494,7 @@ def mergesed1(models, iterations=[21, 22, 23, 24]):
             Rstar, Rwind = _np.array(row.split()[-2:], dtype=_np.float)
             sed1data = _np.loadtxt(lsed1, skiprows=1)
             extra = len(sed1data.T) - 28
-    
+
             print('# PROCESSED: {0} ITERATION {1}'.format(modelname[:-4], it))
             fullsed1 = _np.zeros((len(sed1data), 16))
             fullsed1[:, 0:3+extra] = sed1data[:, 0:3+extra]
@@ -500,7 +502,7 @@ def mergesed1(models, iterations=[21, 22, 23, 24]):
             fullsed1[:, 5] = sed1data[:, 19]
             fullsed1[:, 6] = sed1data[:, 27]
             fullsed1[:, 7:8+extra] = sed1data[:, 4:5+extra]
-            
+
             fullsed1 = _np.core.records.fromarrays(fullsed1.transpose(), 
                 names='MU,PHI,LAMBDA,FLUX,SCT FLUX,EMIT FLUX,TRANS FLUX,Q,U,' +
                 'Sig FLUX,Sig SCT FLUX,Sig EMIT FLUX,Sig TRANS FLU,Sig Q,' +
@@ -515,14 +517,14 @@ def mergesed1(models, iterations=[21, 22, 23, 24]):
                 'nlbd', 'nobs', 'Rstar', 'Rwind')
             hd += '{0:8d}{1:8d}{2:13.4f}{3:13.2f}\n'.format(
                 int(nlbd), int(nobs), Rstar, Rwind)
-            header = ['% PHI', 'LAMBDA', 'FLUX', 'SCT FLUX', 'EMIT FLUX', 
+            header = ['% MU', 'PHI', 'LAMBDA', 'FLUX', 'SCT FLUX', 'EMIT FLUX', 
                 'TRANS FLUX', 'Q', 'U', 'Sig FLUX', 'Sig FLUX', 'SigSCTFLX', 
                 'SigEMITFLX', 'SigTRANSFLX', 'Sig Q', 'Sig U']
             outfile = hd + _tab(fullsed1, headers=header, tablefmt="plain")
             if len(path) > 0:
                 path += _os.path.sep
-            f0 = open(path + 'fullsed' + _os.path.sep + 
-                'fullsed_' + modelname.replace('.txt', '{:}.sed1'.format(it)), 'w')
+            f0 = open(path + 'fullsed' + _os.path.sep + 'fullsed_' + 
+                modelname.replace('.txt', '{:}.sed1'.format(it)), 'w')
             f0.writelines(outfile)
             f0.close()
     return
@@ -696,8 +698,8 @@ def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
                 # '.sed2'), fullsed2, header=hd, comments="", fmt=fmt, 
                 # delimiter='')
             # New
-            header = ['% PHI', 'LAMBDA', 'FLUX', 'SCT FLUX', 'EMIT FLUX', 
-                'TRANS FLUX', 'Q', 'U', 'Sig FLUX', 'Sig FLUX', 'SigSCTFLX', 
+            header = ['% MU', 'PHI', 'LAMBDA', 'FLUX', 'SCT FLUX', 
+                'EMIT FLUX', 'TRANS FLUX', 'Q', 'U', 'Sig FLUX', 'SigSCTFLX', 
                 'SigEMITFLX', 'SigTRANSFLX', 'Sig Q', 'Sig U']
             outfile = hd + _tab(fullsed2, headers=header, tablefmt="plain")
             if len(path) > 0:
@@ -1044,39 +1046,44 @@ def printN0(modn):
     return
 
 
-def fs2rm_nan(fsed2, cols=[3], refcol=None, skiprows=5):
-    """ Remove ``nan`` values present in columns of a matrix file.
-    In a *fullsed2* file, ``cols=[3]`` and ``refcol=[2]``.
+# def fs2rm_nan(fsed2, cols=range(3, 8+1), refcol=None, skiprows=5):
+#     """ Remove ``nan`` values present in columns of a [full]sed2 matrix file.
+#     In a *fullsed2* file, ``cols=[3]`` and ``refcol=2``.
 
-    Input=filename, cols
+#     Input=filename, cols
 
-    Output=file overwritten.
+#     Output=file overwritten.
 
-    TDB: refcol apparently is not working...
-    """
-    f2mtx = _np.loadtxt(fsed2, skiprows=skiprows)
-    for col in cols:
-        nans, x = _phc.nan_helper(f2mtx[:, col])
-        if refcol is None:
-            f2mtx[:, col][nans] = _np.interp(x(nans), 
-                x(~nans), f2mtx[:, col][~nans])
-        else:
-            _warn.warn('# The output must be checked!')
-            f2mtx[:, col][nans] = _np.interp(f2mtx[:, refcol][nans], 
-                f2mtx[:, refcol][~nans], f2mtx[:, col][~nans])
-    #
-    oldf = open(fsed2).read().split('\n')
-    if _np.max(f2mtx[_np.isfinite(f2mtx)]) < 100000:
-        fmt = '%13.6f'
-    elif _np.max(f2mtx[_np.isfinite(f2mtx)]) < 1000000:
-        fmt = '%13.5f'
-    else:
-        raise ValueError('# ERROR at max values of fullsed2 {0}!!!!!!'.format(
-            fsed2))
-    _np.savetxt(fsed2, f2mtx, header='\n'.join(
-        oldf[:5]), comments="", fmt=fmt, delimiter='')
-    print('# {0} file updated!'.format(fsed2))
-    return
+#     TDB: refcol apparently is not working...
+#     The function `readfullsed2` is already doing the job...
+#     """
+#     f2mtx = _np.genfromtxt(fsed2, skip_header=skiprows)
+#     for col in cols:
+#         nans, x = _phc.nan_helper(f2mtx[:, col])
+#         if refcol is None:
+#             f2mtx[:, col][nans] = _np.interp(x(nans), 
+#                 x(~nans), f2mtx[:, col][~nans])
+#         else:
+#             _warn.warn('# The output must be checked!')
+#             f2mtx[:, col][nans] = _np.interp(f2mtx[:, refcol][nans], 
+#                 f2mtx[:, refcol][~nans], f2mtx[:, col][~nans])
+#     #
+#     oldf = open(fsed2).read().split('\n')
+#     # if _np.max(f2mtx[_np.isfinite(f2mtx)]) < 100000:
+#     #     fmt = '%13.6f'
+#     # elif _np.max(f2mtx[_np.isfinite(f2mtx)]) < 1000000:
+#     #     fmt = '%13.5f'
+#     # else:
+#     #     raise ValueError('# ERROR at max values of fullsed2 {0}!!!!!!'.
+#     #         format(fsed2))
+#     # _np.savetxt(fsed2, f2mtx, header='\n'.join(
+#         # oldf[:5]), comments="", fmt=fmt, delimiter='')
+#     outfile = '\n'.join(oldf[:5]) + _tab(f2mtx, tablefmt="plain")
+#     f0 = open(fsed2, 'w')
+#     f0.writelines(outfile)
+#     f0.close()
+#     print('# {0} file updated!'.format(fsed2))
+#     return
 
 
 def plottemp(tfiles, philist=[0], interpol=False, xax=0, fmt=['png'],

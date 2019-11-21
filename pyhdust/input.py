@@ -554,7 +554,7 @@ def makeDiskGrid(modn='01', mhvals=[1.5], hvals=[60.], rdvals=[18.6],
         '''
         src, sig0, rd, h, m, mh = prodI
         M, Req, Tp = _rot.readscr(src)
-        Mstr = str(M)
+        # Mstr = str(M)
         M *= Msun
         Req *= Rsun
 
@@ -697,13 +697,12 @@ def makeDiskGrid(modn='01', mhvals=[1.5], hvals=[60.], rdvals=[18.6],
 
     if sBdays is None or sBfiles is None:
         for prodI in _product(sources, sig0vals, rdvals, hvals, mvals, mhvals):
-            doPL(prodI)
-            i = 0
-            if doFVDD:
-                i = 1
+            if not doFVDD:
+                doPL(prodI)
+            else:
                 doMdot(prodI)
         print('# {0:.0f} arquivos foram gerados !!'.format(len(sources) *
-            len(sig0vals) * len(rdvals) * len(hvals) * (len(mvals) + i) * 
+            len(sig0vals) * len(rdvals) * len(hvals) * len(mvals) * 
             len(mhvals)))
     else:
         for prodI in _product(sources, rdvals, hvals, mhvals, sBdays, sBfiles):
