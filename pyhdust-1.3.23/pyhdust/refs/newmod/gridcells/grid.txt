@@ -1,0 +1,118 @@
+II) GRIDCELLS
+	A) RADIAL GRID
+		!-------------------------------------------------------------------
+		! The radial grid can either be created automatically by the code 
+		! (GRID MODE = 1), or read from a file (GRID MODE = 2).  For an 
+		! automatic grid, the cells can be either equally spaced in radius 
+		! (Spacing = 0) or equally spaced in optical depth (Spacing = 1).
+		! In this last case, specify the radial exponent of the density. This
+		! parameter, used only for building the grid, is useful because when
+		! the real density exponent is very large (as in Be disks, n = 3.5)
+		! the grid cells close to the star will be too small and the outer
+		! cells too large.
+		!-------------------------------------------------------------------
+		a) DISK/WIND GRID MODE = 1
+			1) AUTOMATIC GRID		!(DISK/WIND GRID MODE = 1)
+				!-----------------------------------------------------------
+				! Specify the total number of cells and their spacing.
+				! If equal electron scattering optical depth is chosen, the
+				! last cell will usually be very large.  This cell will be 
+				! divided into N_last equally sized cells.
+				!-----------------------------------------------------------
+				N_r = 40			!number of radial grid cells
+				Spacing = 1			!(linear = 0) or (tau = 1)
+				n_grid = 1.			!Fake density exponent. If set to 0., the 
+									!code will use the value specified in 
+									!Section I.C
+				N_last = 1			!number of subdivisions of last cell
+
+			2) GRID FILE			!(DISK/WIND GRID MODE = 2)
+				File = 'grids/grid_18.6.txt'
+
+		b) DUST GRID MODE = 1
+			1) AUTOMATIC GRID		!(DUST GRID MODE = 1)
+				!-----------------------------------------------------------
+				! For each dust shell specify the total number of cells.
+				! There must be at least N_dust entries (but more allowed; 
+				! the extra are not read).  Next enter their spacing (all
+				! shells will use the same form of spacing).
+				!-----------------------------------------------------------
+				Shell 1: N_r = 40	!number of radial grid cells
+				Shell 2: N_r = 20
+				Shell 3: N_r = 1
+				Shell 4: N_r = 1
+				Shell 5: N_r = 1
+				Spacing = 1			!(linear = 0) or (tau = 1)
+				n_grid = 1.			!Fake density exponent
+
+			2) GRID FILE			!(DUST GRID MODE = 2)
+				!-----------------------------------------------------------
+				! For each dust shell specify a grid file.  There must be at
+				! least N_dust entries (but more allowed; the extra are not 
+				! read).
+				!-----------------------------------------------------------
+				Shell 1: File = 'grids/grid_N50_A1.5_R1000.00.txt'
+				Shell 2: File = 'grids/file2.txt'
+				Shell 3: File = 'grids/file3.txt'
+				Shell 4: File = 'grids/file4.txt'
+				Shell 5: File = 'grids/file5.txt'
+
+	B) PHI GRID
+		!-------------------------------------------------------------------
+		! The phi grid can either be created automatically by the code 
+		! (GRID MODE = 1), or read from a file (GRID MODE = 2).  For the 
+		! automatic grid, the cells are equally spaced in phi.
+		!-------------------------------------------------------------------
+		a) WIND/DISK/DUST GRID MODE = 1
+			1) AUTOMATIC GRID		!(GRID MODE = 1)
+				!-----------------------------------------------------------
+				! Specify the total number of cells.
+				!-----------------------------------------------------------
+				N_phi = 1			!number of phi grid cells
+
+			2) GRID FILE			!(GRID MODE = 2)
+				File = 'grids/phigrid.txt'
+
+	C) MU GRID
+		!-------------------------------------------------------------------
+		! The mu (theta) grid can either be created automatically by the 
+		! code (GRID MODE = 1), or read from a file (GRID MODE = 2).  
+		! (However the GRID FILE option is only implemented for a wind with
+		! no other components).  For the automatic grid, the cells can be 
+		! either equally spaced in mu (Spacing = 0) or equally spaced in 
+		! density (Spacing = 1).  
+		! NOTES:
+		! 1) all components (wind/disk/dust) will have the same form of 
+		!	mu-spacing.  
+		! 2) when the cells are equally spaced in density, the 
+		!	mu-spacing (latitudinal cell size) becomes a function of 
+		!	radius.
+		! 3) The total number of mu cells in the wind/disk region will be
+		!	2*N_mu_w + 2*M_mu_d
+		!-------------------------------------------------------------------
+		a) WIND GRID MODE = 1
+			1) AUTOMATIC GRID		!(GRID MODE = 1)
+				!-----------------------------------------------------------
+				! Specify the total number of cells.
+				!-----------------------------------------------------------
+				N_mu_w = 20			!number of mu grid cells
+
+			2) GRID FILE			!(GRID MODE = 2)
+				File = 'grids/mugrid.txt'
+
+		b) DISK GRID MODE = 1
+			1) AUTOMATIC GRID		!(GRID MODE = 1)
+				!-----------------------------------------------------------
+				! Specify the total number of cells.
+				!-----------------------------------------------------------
+				N_mu_d = 20			!number of mu grid cells
+
+		c) DUST GRID MODE = 1
+			1) AUTOMATIC GRID		!(GRID MODE = 1)
+				!-----------------------------------------------------------
+				! Specify the total number of cells.
+				!-----------------------------------------------------------
+				N_mu_dust = 20	 	!number of mu grid cells
+
+		d) MU SPACING
+			Spacing = 1				!(linear = 0) or (density = 1)

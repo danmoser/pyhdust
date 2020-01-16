@@ -1,0 +1,40 @@
+V) COMPOSITION
+	A) GAS COMPOSITION
+		a) MOLECULAR WEIGHT
+		!-----------------------------------------------------------------------
+		! The gas part of the envelope (wind and disk) is composed of pure
+		! hydrogen. HDUST internally uses number density, whereas some of the
+		! density options in Sect. I.C.b will provide mass density to the code.
+		! In order to convert from mass density to number density, the
+		! molecular weight must be provided.
+		!-----------------------------------------------------------------------
+		mu = 0.5
+
+		b) ENERGY LEVELS
+			!-------------------------------------------------------------------
+			! Enter the number of NLTE level populations to be calculated 
+			! followed by the total number of hydrogen levels to use.  Note that
+			! these two numbers control the number of radiative transitions that
+			! will be sampled by the Monte Carlo simulation.
+			!-------------------------------------------------------------------
+			NLTE levels = 12		!Maximum explicit (NLTE) level
+			Total levels = 25		!Maximum implicit (LTE)  level
+
+	B) DUST MODEL
+		!-----------------------------------------------------------------------
+		! Enter the .bin file with the dust model.  
+		! ***WARNING*** Only a single dust file may be used currently in the 
+		! code.  For this reason, the last dust file read from the input list
+		! below is the one that will be used for *all* previous dust shells;
+		! all previous filenames will be ignored.
+		!-----------------------------------------------------------------------
+		SHELL 1
+			File = '../precalcs/sod010008.bin'
+		SHELL 2
+			File = '../precalcs/sod010008.bin'
+		SHELL 3
+			File = '../precalcs/sod010008.bin'
+		SHELL 4
+			File = '../precalcs/sod010008.bin'
+		SHELL 5
+			File = '../precalcs/sod010008.bin'

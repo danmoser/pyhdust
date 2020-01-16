@@ -1,0 +1,36 @@
+#PBS -S /bin/bash
+#
+#PBS -V
+#PBS -N hdust 
+#PBS -l nodes=128,walltime=36:00:00
+#PBS -o output_${PBS_JOBID}
+#PBS -e error_${PBS_JOBID}
+#PBS -m e
+#PBS -M alexcarciofi@gmail.com
+#
+
+MASTERFILE=hdust_bestar2.02.inp
+HDUST=./hdustparv2.10.bc
+
+#NO NEED DO MODIFY BEYOND THIS POINT
+NSLOTS=`cat $PBS_NODEFILE | wc -l`
+
+echo "---------------------------------" 
+echo "Running MPI HDUST on" $NSLOTS "cores" 
+echo "Executable: " $HDUST
+echo "Master input file: " $MASTERFILE
+echo "---------------------------------" 
+
+cd ${PBS_O_WORKDIR}
+
+START=$(date +%s.%N)
+mpirun -n $NSLOTS -machinefile $PBS_NODEFILE $HDUST file=$MASTERFILE
+END=$(date +%s.%N)
+DIFF=$(echo "$END - $START" | bc)
+
+MIN=`echo "$DIFF*0.0166667" | bc`
+
+echo "--------------------" 
+echo "Finished MPI HDUST  " 
+echo Exectution time: $MIN minutes "($DIFF seconds)"
+echo "--------------------" 

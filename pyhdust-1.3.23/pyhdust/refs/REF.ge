@@ -1,0 +1,12 @@
+#!/bin/bash
+#
+## -pe*4 48
+#$ -pe mpi* 48
+#$ -l h_rt=45:00:00
+#$ -o out.$JOB_ID
+#$ -e err.$JOB_ID
+#$ -M dmfaes@gmail.com
+
+source  /etc/profile.d/openmpi.sh
+
+mpiexec -n $NSLOTS  ./hdustparv2.10.bc file= hdust_bestar2.02.inp

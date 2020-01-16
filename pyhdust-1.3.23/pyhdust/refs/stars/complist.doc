@@ -1,0 +1,611 @@
+#UVI/KLIB component list of source numbers, names & types.
+# column     (:) indicates spectrum not used in combination, (m:) indicates spectrum missing from data distribution.
+# 1/2   UVI/KLIB number and type.
+# 3/4   Sviderskiene (1988) number and type.
+# 5-7   IUE (Heck et al. 1984) number, star-name and type.
+# 8-10  Gunn & Stryker (1983) number, name and type, OR Kiehling (1987) number, name and type.
+#11-13  Jacoby, Hunter & Christian (1984) number, name and type, OR Pickles & van der Kruit (1990) number, NGC6522_number and [Fe/H].
+#14-15  Pickles (1985) number and type, OR Silva and Cornell (1992) number and type.
+#16-17  Serote Roos, Boisson & Joly (1996) name and type, OR Danks & Dennefeld (1994) name and type.
+#18-20  Lancon & Rocca-Volmerange (1992) number, name and type, OR Dallier, Boisson and Joly (1996) name and type.
+#21-23  Kleinmann & Hall (1986) number, name and type, OR Cohen et al. (1995, 1996a, 1996b) name, type and table-number.
+#
+#uvi type  Svid88  Heck etal.84       Gunn&Stryker83 (g)     jhc84 (j)      p85         srbj96          lrv92 (sp)         kh86
+#                    IUE (i)           Kiehling87 (k)    n6522 (pk90-n)     sc92        dd94            dbj96              cohen (c)
+# 1   2    3 4     5    6      7        8   9   10      11    12    13      14  15      16      17      18    19     20    21 22  23
+#
+  1  O5V   1 OV:   i16 HD15570 O4...    g1 9Sgr O5      j1 HD242908 O5V     p1 OV:                      sp101 HD46223 O5V
+                   i222 HD215835 O5.5                   j2 HD215835 O5.5V   s1 O5V      dd49798 sdO6p   sp070 HD242908 O5V
+                   i74 HD46223 O5e                      j3 HD12993  O6.5V               dd47839 O7Ve    sp022 HD199579 O6V
+                   i139 HD93250 O5:
+                   i140 HD93403 O5e
+                   i201 HD192281 O5e
+                   i17 HD15629 O5e
+                   i136 HD93130 O+
+
+  2  O9V   1 OV:   i48 HD34078 O9.5Vv:  g3 HD199579O6Ve j4 HD35619  O7V     p1 OV:      dd37468 O9.5V   sp995 HR6175 O9V
+                   i71 HD46149 O8.5V:                   j5 HD4481   O7.5V                               sp287 HR8406 O9V
+                   i72 HD46150 O6e:                     j6 HD242935 O8V
+                   i77 HD47129 O8e:                     j7 HD236894 O8V                                 dbj bs2456 O7Ve
+                   i87 HD52266 O9V:                     j8 HD17520  O9V
+                   i98 HD57682 O9V                      j9 HD12323  O9V:
+                   i135 HD93028 O9V:                    j10 BD+62 249 O9.5V
+                   i169 HD152248 O7e:
+                   i183 HD165052 O8:
+                   i216 HD209481 O9V:
+                   i221 HD214680 O9V
+                   i70 HD46056 O8V:
+                   i73 HD46202 O9V:
+                   i64 HD38666 O9.5V
+                   
+  3  B0V   2 B0V:  i51 HD36512 B0V/O9V  g5 HD200310B1Ve j11 HD158659 B0V    s2 O7B0V    dd149438 B0V    sp081 HD35653 B0.5V
+                   i96 HD55857 B0.5V                    j12 HD237007 B0V                                dbj bs1123 B0.5V
+  
+  4  B1V   3 B1V:  i56 HD37042 B1V      g9 HD196775 B3V j13 HD35215 B1.5V   p2 B13V     dd143018 B1V+...
+                   i57 HD37061 B1V                                                      dd35411  B1V+...
+                   i60 HD37744 B1.5V                                                    dd144470 B1V
+                   i62 HD37903 B1.5V:
+                   i89 HD52918 B1V
+                   i111 HD74273 B1.5V
+                   i158 HD144470 B1V:
+                   i208 HD200120 B1ne
+                   i209 HD200310 B1V:
+                   i220 HD212571 B1Ve:
+                   i46 HD31726 B2V
+                   i52 HD36629 B2Vvar:
+                   i69 HD42690 B2V:
+                   i88 HD52721 B2Vne:
+                   i94 HD54306 B2V:
+                   i108 HD64802 B2V:
+                   i190 HD168905 B2.5V:
+                   i58 HD37129 B2Vp
+                   
+  5  B3V   4 B3V:  i47 HD32630 B3V      g7 HD74280 B3V  j14 HD37767 B3V      s3 B34V:   dd74280 B3V...(m:) sp298 HD186182 B3-5V
+                   i54 HD36824 B3V      g74 H179406 B3V j15 F-40 B4-5V                  dd208057 B3V       dbj bs4638 B3V
+                   i49 HD34759 B3V:                     j16 HD240344 B4-5V              HD120315 B3V       dbj bs4456 B4V
+                   i105 HD61831 B3V                     j72 HD56183  B3V
+                   i152 HD120315 B3V
+                   i162 HD148605 B3V
+                   i200 HD190993 B3V
+                   i202 HD192685 B3V
+                   i143 HD100600 B4V:
+                   
+  6  B57V  5 B5V:  i4 HD4142 B5V        g10 38 OphB5Vnn j17 HD30584 B9V      p3 B45V:   dd219688 B5Vn
+           6 B7V:  i5 HD4727 B5V        g77 H181828 B9V j18 O-1015  B8V
+                   i35 HD25340 B5V                                           s4 B6V:
+                   i132 HD90994 B6V
+                   i176 HD162374 B6V
+                   i22 HD21071 B7V
+                   i41 HD29335 B7V
+                   i128 HD87901 B7V
+                   
+  7  B8V   7 B8V:  i28 HD23324 B8V      g13 H189689 B9V                                 dd214923 B8.5V
+                   i30 HD23432 B8V
+                   i33 HD23753 B8V:
+                   i42 HD29365 B8V
+                   i76 HD47054 B8V
+                   i196 HD183914 B8V
+                   i210 HD201908 B8V
+                   
+  8  B9V   8 B9V:  i10 HD10250 B9V      g79 H162161 A1V                      p4 B69V    dd12767 B9.5sp
+                   i80 HD47755 B9V:
+                   i84 HD50138 B9
+                   i148 HD108767 B9.5V
+                   
+  9  A0V   9 A0V:  i9  HD9132 A0V       g16 H149632 A2V j19 HD116608 A1V     p5 A03V    dd161868 A0V:   sp282 HD199629 A1V 
+                   i45 HD31295 A0V:     g18 H156729 A2V j20 F-41 A1V         s5 A13V    dd71155  A0V                    cHR7001 alp_lyr A0V
+                   i63 HD38206 A0V                                                      dd198001 A1V                    cHR2491 alp_cma A1V
+                   i123 HD85504 A0Vs:                                                   dd216627 A1V
+                   i145 HD103287 A0V                                                    dd18331  A1Vn
+                   i155 HD125162 A0sh:
+                   i194 HD177724 A0Vn
+                   
+ 10  A2V  10 A2V:  i43  HD29646 A2V     g19 H190849BA3V j21 HD124320 A2V                dd222095 A2V    sp330 BD+05 3423 A2(V)
+                   i172 HD156208 A2V                    j22 F-28     A2V                dd18557  A2m
+                   i175 HD161817 sdA2:                  j23 HD190785 A2/4V              dd155125: A2.5Va
+                   i109 HD65456 A2Vvar:                 j127 SAO12149 A2V
+                  
+ 11  A3V  11 A3V:  i12  HD11031 A3V     g21 H159139 A1V j24 HD221741 A3V     s6 A57V                    sp247 HD122408 A3V
+                   i18  HD17138 A2V     g22 H160054 A5V
+                   i81  HD48250 A3V
+                   i224 HD216956 A3V
+                   i120 HD80081 A3V
+                   
+ 12  A5V  12 A5V:  i6   HD5448 A5V      g23 H187754 A2V j26 HD21619  A6V     p6 A46V    dd11636: A5V...
+                   i13  HD11636 A5V     g24 H175638 A5V                      s72 wA2V:  dd20320 A5m
+                   i114 HD76756 A5m:    g25 Pr276
+                   i118 HD79439 A5V
+                   i151 HD116842 A5V
+                   
+ 13  A7V  13 A7V:  i126 HD87696 A7V     g26 Pr114       j27 HD23863  A7V     s7 A8V     dd88824  A7V
+                   i113 HD76644 A7V     g27 Pr154       j28 HD111525 A7V                dd187642 A7V
+                                        g28 H190192 A5V
+                                        g85 H165475 A7p
+                                        g84 H165475B A7p
+                                        g88 HD508   A9V
+
+ 14  F0V  14 F0V:  i15  HD12311 F0V     g29 Pr226       j29 HD9972   A8V    p7 A7F1V:   HD88815 F2V 
+                   i36  HD27176 F0V     g30 Pr37        j30 HD23733  A9V    s8 A9F0V:     
+                   i101 HD58946 F0V     g31 H191177 F4V j31 HD10032  F0V
+                   i65  HD40136 F1V     k8  HR2085 F1V               
+                   
+ 15  F2V  15 F2V:  i115 HD77370 F3V     g32 Pr332       j32 HZ 948 F3V      p8 F24V     dd55179 F2 (m:) sp328 HD157950 F3V
+                   i156 HD128167 F2Vwv                                                  dd26690 F3V...  sp103 HR3589 F3V
+                                                                                        dd29992 F1V
+
+ 16  F5V  16 F5V:  i193 HD173667 F6V    g33 gs          j34 HZ 227          p9 F56V                    sp662 HD113713 F5V
+                                        g34 Pr222       j33 HD23511 F4V     s70 wF5V                   sp814 HR1436   F5V
+                                                        j36 HD24189 F6V
+
+ 17  wF5V 16 F5V:  i156 iue           g33 +29 3891F6V   j153 HD94028  wF4V  s70 wF5V
+                                                        j154 SAO102986 F6V
+
+ 18  F6V  17 F6V:  i191 HD170153 F7Vvar g35 H35296 F8V  j35 SAO57199 F6V    s9 F67V     dd30652 F6V     sp276 HD165908 F7V kh33 XiPeg F7V
+                                        g39 Pr418       j38 HD107132 F7Vvar             dd173667 F6V    sp285 HR8665   F7V
+                                        k6  HR1983 F7V                                  dd222368 F7V
+                                        k35 HR4540 F9V          
+          
+ 19  rF6V 18 F8V:  i144 iue             g35 gs          j39 HD107214 G0V    s61 rF8V
+          
+ 20  F8V  18 F8V:  i144 HD102870 F9V    g40 HYA 1       j40 HD6111  F8V     p10 F78V    dd1851 G5V(m:)  sp429 HR458  F8V
+                                        g41 H122693 F8V j41 HD31084 F9V     s10 F89V                    sp457 HR1780 F8V
+                                        g43 HYA 2       j42 HD107399 F8V                                sp301 HR4540 F9V
+                                                        j37 HD5702   F7V                                dbj   bs788  F9V
+
+ 21  wF8V 17 F6V:  i191 iue             g37 H148816 F8V j40 jhc             s71 wF9V:
+                                        g36 H339479 G0V j37 jhc             s65 wG01V
+                                                                            p10 F78V
+
+ 22  rF8V 19 G0V:  i144 iue             g43 gs          j41 jhc          
+                                        k52 HR5868 G0V  j42 jhc
+
+ 23  G0V  19 G0V:  i11 iue              g38 H155675 F8V j87 BD+30 2347 G1V  p11 G04V    dd39587 G0V     sp265 HD109358 G0V
+                                        g44 H227547 G5V j43 HD28099    G2V                              sp725 HR5868   G0V
+                                                                                                        dbj   bs4983 F9.5V
+     
+ 24  wG0V 18 F8V:  i144 iue             g46 H190605 G2V j40 jhc             s66 wG12V
+                                        g38 gs          j37 jhc
+      
+ 25  rG0V 20 G2V:  i11 iue              g47 HYA 15      j44 HD17647  G5V    s11 G12V
+          
+ 26  G2V  20 G2V:  i11 HD10307 G1.5V    g107 H152306G2V j45 HD66171  G2V    s12 G68V    HD38858  G4V   sp374 HR5853 G2.5V kh41 16CygA G1.5V
+                                        g45 H154760 G2V j46 BD+581199G3V                dd214850 G4V   sp013 HD190605 G2V kh43 16CygB G3V
+                                        k49 HR5459 G2V                                                                    cHR5459 G2V
+                                                                                                                          (table2_241) 
+     
+ 27  G5V  21 G5V:  i20 HD20630 G5Vvar   g51 HD150205G5V j48 HD22193  G5     p12 G58V    dd20630 G5Vvar  sp068: HD26736  G5
+                                                                                                        sp721 HR5659   G5V
+                                                                                                        sp316 HD150205 G5V
+
+ 28  wG5V 19 G0V:  i20 iue              g45 gs          j47 TR A 14 G4V     s67 wG5V
+                                        k33 HR4523 G5V                      s68 wG7V
+                                        k43 HR5072 G4V     
+
+ 29  rG5V 21 G5V:  i20 iue              g50 HYA 26      j49 HD27685 G4V     s58 rG8V
+                                        k42 HR5019 G5V                      s57 rG5V:
+                         
+ 30  G8V  22 G8V                        g49 H136274 G8V j50 HD33278  G9V    s13 G9K0V                   sp311 BD+02 3001 G8V
+                                        g52 HYA 21      j51 HD29050  K1V    s69 wG8K0V                  sp719 HR5544   G8V
+                                        k1 HR1325 K1V                                                   dbj bs4550 G8V
+     
+ 31  K0V  23 K0V                        g54 H190571 G8V                     p13 K01V    dd69830 K0V     dbj hd112758 K0V
+                                        g53 H141272 G8V                                 dd3651  K0V
+     
+ 32  rK0V 23 K0V                        g54 gs                              s59 rK0V    HD93800 K0VSMR  sp311/719
+                                        k50 HR5460 K1V                                  HD145675K0VSMR  dbj hd93800ab K0V   kh45 SigDra K0V
+          
+ 33  K2V  24 K2V:  i25 HD22049 K2V      g55 HYA 183                         p14 K23V    dd22049 K2V     dbj hd130871 K2V
+                                        g56 H190470 K3V                                                 dbj hd115404 K2V
+
+ 34  K3V  25 K3V                        g57 H154712 K4V                     s14 K4V     HD39715 K3VSMR  sp011 HD190470 K3V
+                                                                                                        dbj hd111180 K3V
+          
+ 35  K4V  26 K4V                        g58 HYA 185     j53 HD5351   K4V    p15 K47V
+                                        g59 +38 2457 K8V                    s15 K5V:
+                                        k59 HD156026 K5V      
+
+ 36  K5V  27 K5V                        g60 HYA 173
+     
+ 37  K7V  28 K7V                        g61 GL40 K5V    j55 HD260655 M1                                 sp326 HD157881 K7V
+                                        g62 HYA 189     j56 BD+63 137 K7V                               sp318 HD151288 K7
+                                        g63 H151288 K7V                                                 dbj hd157881 K7V
+                                        g64 H157881 K7V
+
+ 38  M0V  29 M0V                        g65 H132683 K7V                                 dd202560 M0V
+          
+ 39  M1V  29 M0V                                                            p16 M02V    HD36395 M1.5VSMR
+          30 M2V                                                                        dd36395 M1.5V
+     
+ 40  M2V  30 M2V                        g66 GL 15A M2V                      s16 M2V     dd217987 M2V    sp291 Gl 880 M2V   kh49 GL411 M2V
+                                        g67 GL 49  M2V     
+
+ 41 M2.5V 31 M3V                                                                                        dbj GL382ab M3V
+
+ 42  M3V  32 M4V                        g68 GL 109 M4V                      p17 M3V     dd180617 M3V
+          
+ 43  M4V  33 M5V                        g69 GL 15B M5V  j155 SAO81292 M4.5Ve s17 M4V
+                                                        j57 Yale 1755 M5V
+               
+ 44  M5V  34 M7V                        g70 GL 83.1 M5V                     p18 M4V                     sp310 Gl 83.1 M5-7V 
+                                                                                                                          kh51 Wolf359 M6Ve
+
+ 45  M6V  34 M7V                        g71 GL 65 M5.5Ve                    p19 M56V
+
+ 46  B2IV  3 B1V:  i92 HD53367 B0IV:    g6 HD166182 B2IV                                dd16582  B2IV   dbj bs4590 B2IV
+                   i93 HD53974 B0.5IV:  g4 HD36591  B1IV                                HD160762 B3IV
+                   i50 HD34816 B0.5IV:  g8 HD160762 B3IV:     
+                   i3  HD3360 B2IVh     
+                   i59 HD37367 B2IV/Vh:
+                   i61 HD37776 B2IVh
+                   i90 HD52942 B2.5IV-V:
+                   
+ 47  B6IV  5 B5V:  i38 HD27396 B4IVh    g76 H178475 B6IV
+                   i122 HD83754 B4IV/Vh g11 H176318 B7IV
+                   i159 HD147394 B5IVh  g15 H193432 B9IV
+                   i31 HD23480 B6IVh     
+                   i104 HD61429 B8IVh:
+                   i124 HD86360 B9IVh:
+                   
+ 48  A0IV  9 A0V:  i150 HD111775 A0IVh  g14 H114330 A1IV                                dd47105     A0IV
+                   i19 HD20346 A2IVh    g17 H190849A A1IV-V     
+                   i39 HD27962 A2IVh    g78 H154029 A3IV
+                   i141 HD95481 A1/2IV/V     
+                   
+ 49 A47IV 35 A4IV: i13 iue A5V          g81 H154494 A4IV                    s18 A7IV
+                   i126 iue A7V         g82 H192285 A4IV
+                        
+ 50 F02IV 36 F0IV: i211 HD202444 F0IVh  g89 H210875F0IV j58 HD13505 F0IV    s19 F3IV    dd182640 F0IV
+          37 F2IV: i130 HD90589 F2IVh   g87 H5132  F0IV j59 HD83140 F3IV                dd27397 F0IV
+                   i142 HD99028 F2IVh   g90 H194943 F2IV          
+                   
+ 51  F5IV 38 F5IV: i213 HD206901 F5IVh  g91 HD7331  F7IV                                dd48737  F5IV   sp339 HR7925 F6IV
+                                        g92 BD+6313 F5IV                                dd196524 F5IV
+                                        k13 HR2943 F5IV-V     
+
+ 52  F8IV 39 F8IV                       g42 H154417 F8.5IV-V                s20 F89IV   dd216385 F7IV   sp339 lrv         kh11 Ups Peg F8IV
+                                        k45 HR5235 G0IV                                 dd220657 F8IV
+               
+ 53  G0IV 40 G0IV                       g93 HD13391G2IV j60 HD78277 G2IV    p20 eGIV:   HD121370 G0IVSMR
+                                                                            s21 G2IV     
+
+ 54  G2IV 41 G2IV                       g94 H154962 G6IV-V j61 HD70178 G5IV s22 G5IV    dd195564G2.5IV  dbj hd160691 G3IV-V
+                                        g95 H192344 G4IV          
+                                        g96 H158614 G9IV-V
+                                        g97 H190360 G6IV+M6V
+                                        g48 H139777 G0IV-V
+     
+ 55  G5IV 42 G5IV                       g98 H128428 G3IV j52 HD23524 G6IV   p21 mGIV    HD161797 G5IVSMR
+                                        g99 H152572 G8IV                    s23 G8IV     
+                                        g102 H11004 G5IV: (F7?)
+                                        k60 HR6623 G5IV     
+
+ 56  G8IV 43 G8IV                       g100 BD-024018 G5IV                 p22 lGIV    dd188512 G8IVvar sp384 HR6950 G8IV
+                                        g103 H173399 G5IV     
+                                        g105 H227693 G5IV
+     
+ 57  K0IV 44 K0IV                       g104 H56176  G7IV                               dd23249 K0IV
+                                        g128 H142980 K1IV     
+                                        g110 H170527 G5IV/K0
+     
+ 58  K1IV 45 K1IV                       g112 H191615 G8IV
+                                        g117 HD7010  K0IV
+     
+ 59  K3IV 46 K3IV                       g116 HD4744  G8IV
+                                        g131 H121146 K2IV
+                                        g139 BD+282165 K1IV
+                                        g140 N188 1_69
+     
+ 60 O8III  1 OV:   i177 HD162978 O8III                  j63 SAO11810 O7.5III s24 O7B1III dd37043 O9III  dbj bs1879 O8III(:m)
+                   i55 HD36879 O7.5III                  j62 HD227018 O6.5III     
+                                                        j64 HD191978 O8.5III
+                                                        j65 HD16429A O9.5III
+                                                        j66 HD16429  O9.5III
+
+61 B12III  3 B1V:  i112 HD75821 B0III   g72 H187879 B1III+B3V j67 HD12727 B2III          dd147165 B1III dbj bs5056 B1III-IV+...
+                   i83 HD48434 B0III:   g73 H188252 B2III     j68 O 2311  B2III          dd30836 B2III+ dbj bs1790 B2iII
+                   i106 HD63922 B0III                                                    dd35468 B2III
+                   i165 HD149881 B0.5III      
+                   i225 HD219188 B0.5III
+                   i185 HD166937 B2III:
+                   i95 HD54439 B2IIIn
+                   i103 HD60753 B2III
+                   
+ 62 B3III  4 B3V:  i85 HD51283 B2/3III  g75 H185330 B3II-III j69 SAO11885 B2  s25 B5III: dd37490 B3IIIe
+                   i215 HD207330 B3III                       j70 HD166125 B3III     
+                   i119 HD79447 B3III     
+                   
+ 63 B5III  5 B5V:  i218 HD210424 B5III  g12 H184606 B8IIIn  j71 HD39136  B3III          dd34503 B5III
+                   i26 HD22928 B5III                        j73 HD256413 B5III          dd23302 B6III
+                   i27 HD23302 B6III                                                    dd23630 B7III:
+                   i149 HD109387 B6IIIp                                                 dd5737 B7IIIp
+     
+64 B9III 47 B9III: i32 HD23630 B7III    g80 H189090 B9III j74 BD+61339 B7III  p43 HB:    dd53244  B8II
+                   i34 HD23850 B8III                      j75 HD28696  B8III  s26 B9III: dd23850  B8III
+                   i29 HD23408 B9III                      j76 HD20023  B9III  s60 rB9III: dd315    B8IIIsp...
+                   i205 HD197392 B8II-III:                                               dd218045 B9III
+                   i147 HD107832 B9III     
+                   
+ 65 A0III  9 A0V:  i164 HD149212 A0III  g20 H188350 A0III j77 jhc                       dd47306 A0II
+                             
+ 66 A3III 48 A3III i198 HD189849 A4III                  j77 HD12027 A3III     p24 eAIII dd33111 A3IIIvar sp400 HR7711 A3III
+                                                        j25 HD9547  A3III     s27 A3III:     
+
+67 A5III 49 A5III: i173 HD159561 A5III  g83 H159561 A5III j78 HD240296 A6III  p44 wF0III
+                                                                               
+ 68 A7III 50 A7III i40 HD28319 A7III                    j79 HD12161 A8III     s28 A6F0III dd28319 A7III sp409 HR4900 A7III
+                   i223 HD216701 A7III                                                    dd48843 9III  sp404 HR8198 A8III
+                   i160 HD147547 A9III     
+                   
+69 F0III 51 F0III: i129 HD89025 F0III   g86 H159876 F0III j80 HD64191 F2IIIvar: p25 lAIII dd38558 F0III
+                   i174 HD159876 F0IIIp k36 HR4616 F2III                                  dd17094 F1III-IV
+                        
+ 70 F2III 52 F2III                                       j82 BD+61367 F5III             dd13174 F2III
+          
+71 F5III 53 F5III: i37 HD27290 F4III    k22 HR3684 F5III j81 HD5211 F4III   p26 lFIII   dd27290 F4III
+                                                         j83 HD56030 F6III  s29 F47III  dd217096 F8III/IV
+                                                         j84 SAO20603 F7III     
+                                                         j85 HD9979   F8III
+
+ 72 G0III 54 G0III                      k14 HR3043 G0III j86 HD15866 G0III  s30 G04III                  sp846 HD74395 G2I
+                                                         j88 HD25894 G2III                              dbj bs4883 G0IIIp
+                                                                                                                         kh13 31Com G0IIIp
+                                                                                                                         kh15 84Her G2IIIp
+
+ 73 G5III 55 G5III                      k41 HR4932G8IIIab j90BD+281885G5III p27 G59III  HD148856G7IIIa  sp349 HR8043 G5III 
+                                                                                        dd33833  G7III  sp664 HR3323 G5III
+                                                                                                        sp652 HR5160 G6III
+                                                                                                        dbj bs3903 G6/8III
+                                                                                                                        kh17 Omic Uma G5III
+
+74 wG5III 55 G5III                      g101 MF143 .871 j89 HD2506 G4III    p27 G59III  dd189005 G5III
+                                        g108 P212  .906 j96 SAO55155 G8III  p45 wG5III:     
+                                                        n10 1082: (fgdFV?)  s31 G56III
+
+75 rG5III 55 G5III                      k47 HR5288 K0-IIIb j91HD112872 G6III            HD163993 G8IIISMR
+                                        k56 HR6102 G9III   j93HD29883 K5III             dd21120  G6III
+                                                           n6 2240      
+
+ 76 G8III 56 G8III                      g109 H28307 K0III j94 HD249240 G7III s32 G8K0III HD72324 G9IIISMR sp407 HR4697 G8III
+                                                          j95 HD245389 G8III             dd184492 G8IIIa  dbj bs5020ab G8III
+                                                          j92 HD26514  G6III             dd223541 G8III/IV               kh19 Eps Vir G8III
+          
+77 wG8III 56 G8III                      g111H136366G8II/III n11 1089 -1.1    p38 rG5K0III HD139195 K0IIImp
+                                                                             p46 wG8III:  dd10761  G8III
+     
+ 78 K0III 57 K0III                      g122 H140301 K0III                  p28 K01III  dd8512 K0III    sp296 HR8551 K0III
+                                        g106 H199580 K0III-IV                                           sp104 HD143666 K0III
+                                                                                                        dbj bs4695ab K0IIIb
+                                                                                                                      kh21 IotaCep K0III
+                                                                                                                      kh47 61CygA K0III/K5V
+                                                                                                                      cHR2990 K0III
+                                                                                                                      (table7)
+
+79 wK0III 56 G8III                      g113 H124679 K0III  n7  1028 -0.7               dd8512
+                                        g120 MF141         n13 1123 -1.2
+                                                           n15 1185 -1.4
+     
+80 rK0III 57 K0III                      g121 H221148 K3III j97 SAO55164 G9III           dd8512
+                                        g115 H113493 K0III     
+
+ 81 K1III 58 K1III                      g118 H94264 K0III                               dd223428 K1/2III sp353 S119580 K1III
+                                        g123 H95272 K1III                                                sp413 HR4945  K1III
+                                        g125 H119425 K1III
+     
+82 wK1III 57 K0III                      g114 H131111 K0III                  p29 K2III
+                                        g119 H219449 K0III                  p47 wK02III:
+                                        g125 H119425 K1III
+     
+83 rK1III 58 K1III                      g129 H136514 K3III n12 1090 +.2     p39 rK12III HD72184 K2IIISMR
+                                        g133 H188056 K3IIICN1     
+                                        g124 H72184 K2III  n9  1056 +.2
+                                        k51 HR5854 K2IIIbCN1
+     
+ 84 K2III 59 K2III                      g130 H184406 K3                     s33 K2III   dd1157 K2IIICN... sp105 HD140573 K2III
+                                        g134 H140573 K2IIIbCN1                                            sp106 HD137759 K2III
+                                             =HR5854                                                                      kh23 KapOph K2III
+                                                                                                                    (table5)cHR5340 K1.5III
+                                                                                                              (table4a_2274)cHR5340 K1.5III
+                                                                                                              (table3_241)cHR6217 K2II-III:
+
+85 wK2III 58 K1III                      g126 H106760 K1III n4 1145 -1.1                 dd1157
+                                        g127 H96833  K1III
+     
+86 rK2III 59 K2III                      k48 HR5340      j99 SAO77849 K2III  s62 rK2III  HD112127:K2IIICN+
+                                           K1.5IIIFe-.5 j98 HD33506  K2III(F0) 
+                                                        j54 SAO76803 K2III  s63 rK3III  dd46259 K2/3IIIp
+               
+ 87 K3III 60 K3III                      g132 H154759 K3III                  p40 rK3III  dd211416 K3III  sp295 HR8498 K3II-III
+                                                                                                        dbj bs5824 K3III
+                                                                                                                          kh25 39Cyg K3III
+                                                                                                                  (table8)cHR3748 K3II-III
+                                                                                                            (table4_241)cHR3307 K3III+...:
+          
+88 wK3III 59 K2III                      g136 H141144 K0III n8 1038 -.9      p30 K3III                   dbj bs5315 K2.5III: (lambda)
+                                                                                                        dbj bs6973 K3III (:m) 
+     
+89 rK3III 60 K3III                      g138 H132345 K3-IIICN1  j100 HD26946K3III       HD176670 K3IIISMR dbj hd175674 K3IIICN:
+                                        g135 H85503 K2IIICN1Ca1 n2  1039 +.4            HD181984 K3IIISMR
+                                        g137 MF170              n14 1178 +.3     
+                                        k37 HR4630 K2.5IIIBa    n16 4322 +.2
+
+ 90 K4III 61 K4III                      g141 +30 2344 K3III                 p31 K4III                   dbj bs2764 K4III
+                                        g144 H166780 K5III j101 HD21110 K4III
+
+91 wK4III 61 K4III                      g143 H158885 K3III (G5)             p48 wK34III
+                                        g142 H83618 K3IIIvar
+
+92 rK4III 61 K4III                      g146 M67 T626       n1 1025 +.3     p31 K4III
+                                        g145 H148513 K4IIIp n5 1202 +.3     p41 rK4III
+                                        k18 HR3249 K4IIIBa  j101 jhc        s34 K4III
+
+ 93 K5III 62 K5III                      g150 H62721  K4III                  p32 K5III   dd216032 K5III  sp320 HR6228 K5III
+                                        g149 H50778 K4III                               dd167818 K5III  sp848 HD77189 K5III
+                                        g151 H116870 K5III                                              sp841 HD4933 K5I-II(III)(G5)
+                                                                                                        dbj bs2731 K5III(:m)
+                                                                                                        dbj hd109655 K5III
+                                                                                                        dbj bs1112 K5III
+                                                                                                                         kh27 GamDra K5III
+                                                                                                               (table4b_2274)cHR6705 K5III
+     
+94 rK5III 62 K5III                     g147 H127227 K5III  n3 1076 +.3      p42 rK5III  HD139669 K5IIISMR
+                                       g148 M67 IV-202                      s35 K7III   dd200914 K5/M0IIIr
+                                       k2 HR1457 K5+III      
+                                       k3 HR1654 K4III
+                                       k57 HR6159 K4III
+
+ 95 M0III 63 M0III                     g152 H60522  M0III j102 SAO21753 K7III                           dbj bs4174 M0III:
+                                       g153 H142230 K5III                                                                kh29 GamSge M0III
+                                       g154 +2 2884 K5III                                                     (table4e_2274)cHR4069 M0III:
+                                       k55 HR6056 M0.5III                                                             (table6)cHR337 M0III
+     
+ 96 M1III 64 M1III                     k32 HR4517 M1IIIab                   p33 M02III HD141477 M1III   dbj bs4127 M1.5III
+                                                                            s36 M01III                                    kh31 75Cyg M1III
+                                                                                                              (table4c_2274)cHR911 M1.5III
+
+ 97 M2III 65 M2III                     g155 gs                                         dd219215 M2III   sp309 BD-02 3873 M2III(=HD128684)
+                                                                                                                (table4) cHR8775 M2.5II-III
+          
+ 98 M3III 66 M3III                     g155 H128684 M2III j103 SAO63349 M3III          dd198026M3IIIvar sp019 BD+35 4938 M3III
+                                       g156 H104216 M2III                   s37 M3III                   sp009 BD+09 3920 M3III
+                                       g157 H142804 M1III                   p34 M3III                   sp007 BD+29 3730 M3III
+                                       k38 HR4763 M3.5III                                               sp107 S63349 M3III
+                                       k40 HR4910 M3+III                                                dbj bs4902ab M3III
+                                                                                                             (table4d_2274)cHR4763 M3.5III:
+       
+ 99 M4III 67 M4III                     g158 H30959 M3Svar j104 HD110964 M4III          HD123657 M4.2III sp417 HR4765 M4III
+                                       g159 H151658 M2/3III                 s38 M4III                   sp108 S82478 M4III
+                                       g160 -02 4025 M2III                  p35 M4III
+                                       k53 HR6020 M5IIIb 
+                                       k34 HR4532 M4+III     
+
+100 M5III 68 M5III                     g161 -01 3097 M2III j105 SAO62808 M5III p36 M5III  dd19285  M5III  sp109 S62808 M5III
+                                       g162 H150077 M5     j112 BD+19 1947 M5  s39 M5III  dd184313 M5III  sp650 S30107 M5III
+                                       g163 Z Cyg M8III(M5e)(M8V?)                                        sp418 S124789 M5III(=HD184313)
+                                       k44 HR5192 M4.5III                                                                   kh35 RLyr M5III
+
+101 M6III 69 M6III                     g164 +01 3133 M5III j113 BD+36 1963 M7  p37 M6III  dd24607 M6III
+                                       g165 -02 3886 M5III                     s40 M6III     
+                                       k46 HR5261M6.5III:      
+
+102 M7III 70 M7III                     g166 W Her M6III                     s41 M7SIII: dd207076M8IIIvar sp883 HR6119 M7III
+                                       g167 TY Dra M8                                   dd42537     S:                    kh37 BkVir M7III
+                                       g168 H114961  M7III                              dd7526      C:                    kh39 SwVir M7III
+                                        
+103 M8III 70 M7III                     g169 RZ Her M6III                                dd33894 M7eIII  sp875 WW Ser M8III
+                                       g170 H84748 M8IIIe                                               sp872 IRC+20281 M8.5III
+
+104 M9III   fluks M9III     
+
+105 M10III  fluks M10III
+
+106 B2II  71 B2II  i79 HD47432 O9.5II                   j106 HD14357 B2II               dd44743 B1II-III
+                   i1  HD698 B2II..          
+                   i134 HD92741 B1/2II
+                   
+107 B5II  72 B5II  i121 HD83183 B5II                                                    dd49333 B7II-III
+                                                                                        dd43836 B9II:
+
+108 F0II  73 F0II                       k9 HR2326 F0II   j131 HD9167 F1II               dd73634 A6II
+               
+109 F2II  74 F2II                       k16 HR3185 F6IIp j108 BD-003227F5II             dd164584 F2/3II-III
+                                        k27 HR4114 F2II                                 dd67523  F6IIp...
+     
+110 G5II  75 G5II                       k4 HR1829 G5II  j110 HD250368 G9II              dd185758 G1II
+                                        k24 HR3873 G1II j109 HD249384 G8II              dd36079  G5II
+                                        k39 HR4786 G5II          
+
+111 K01II 76 K1II                       k20 HR3547 G9II                                 HD180809 K0IImp      (table3_241)cHR6217 K2II-III:
+          77 K2II                                                                       dd179870 K0IIb
+     
+112 K34II 78 K2II                       k23 HR3748 K3II j111 HD249826 K6II:             dd31767 K2IIvar          (table8) cHR3748 K3II-III
+                                        k25 HR4050 K3IIa                                dd223719 K4II 
+                                        k28 HR4159 K3-4II:                              (23719)
+
+113 M3II  79 M3II                       k15 HR3153 M1.5IIa                                              sp020 BD+64 1842 M2II
+                                        k29 HR4362 M3IIb
+
+114 B0I   81 B0Ia: i107 HD64760 B0.5Ib  g173 H204172 B0Ib j116 HD16808 B0.5Ib           dd38771 B0.5Iavar
+                   i116 HD77581 B0Ia:                     j117 HD167451 B1Ib     
+                   i153 HD122879 B0Ia:     
+                   i178 HD163181 B0Ia/ab:
+                   i166 HD150898 B0.5Ia
+                   i180 HD164402 B0Iae
+                   i171 HD152667 B0.5Iae:
+                   i186 HD167264 B0.5Ia
+                   i187 HD167756 B0.5Ia
+                   
+115 B1I   82 B1Ib: i2 HD2905 B1Ia:                      j118 BD-145030 B1.5I s44 B1I                    sp083 HD41398 B2I
+                   i78 HD47240 B1Ib:                    j159 HD13256 B1Ia                               dbj bs4133 B1Ib
+                   i133 HD91316 B1Ib                    j119 HD209678 B2Iab:
+                   i161 HD148379 O+...:                 j160 HD50064 B6Ia:
+                   i68 HD41117 B2Iav:                   j107 BD-144956 B2Ib
+                   i182 HD165024 B2Ib     
+                   i192 HD173502 B1/2Ib
+                   i199 HD190603 B1.5Ib:
+                   i212 HD206165 B2Ib:
+                   
+116 B3I  83 B3Iab: i91 HD53138 B3Ia                     j120 SAO20899 B3Ib  s45 B35I    dd53138 B3Ia
+                   i188 HD167838 B3Ia:                  j161 BD+51 710 B5Ib             dd51309 B3Ib/II
+                   i206 HD198478 B3Iae:          
+                   
+117 B5I  84 B5Iab: i100 HD58350 B5Iab:  g174 H191243 B5Ib j121 HD192832 B5Ia            dd58350  B5Iab
+                   i125 HD86440 B5Ib                      j122 BD+61 220 B7Ib           dd164353 B5Ib
+                   i179 HD164353 B5Ib          
+                   i195 HD183143 B7Ia:
+                   
+118 B8I   85 B8Ia: i14 HD12301 B8Ib     g175 H199478 B8Iae j123 HD17145 B8Ia s46 B8I    dd34085 B8Iab   sp284 HD202850 B9I
+                   i75 HD46769 B8Ib:               
+                   i23 HD21291 B9Ia
+                   i207 HD199478 B8Iae
+                   
+119 A0I   86 A0Ib  i24 HD21389 A0Iab:                   j125 HD209900 A0Ib              dd46300 A0Ib
+                   i127 HD87737 A0Ib                    j126 SAO11344 A0Ib              dd92207 A0Iae:
+                                                        j124 LSIV P24 B9I     
+
+120 A2I   87 A2Ia  i204 HD197345 A2Iae                  j128 42 LSI         s47 A03I    dd62623 A2Iab
+                   i214 HD207260 A2Iab                  j129 SAO87716 A2Ia              dd59612 A6Ib/II
+                   i157 HD137422 A3Iab          
+                   i146 HD104035 A3Ib
+                   i217 HD210221 A3Ib:
+                   
+121 F0I   88 F0Ib: i131 HD90772 A9Ia    k5 HR1865 F0Ib  j130 SAO12096 F0Ib  s49 F03I:   dd90772 A9Ia    sp879 BD+38 2803 F2I/F8
+                   i102 HD59612 A6Ib/II k26 HR4110 A9Ia j132 HD842    A9Iab:            dd36673 F0Ib
+                   i163 HD148743 A7Ib                   j133 SAO37370 F0Ib              dd161471 F2Iae
+                   i53 HD36673 F0Ib                     j134 BD+58 204 F2Iab     
+                   i110 HD74180 F3Ia:                   j136 SAO21536 F4Iab:
+                        
+122 F5I   89 F5Ib  i21 HD20902 F5Iab                    j135HD12842 F6Iab   s50 F7I:    dd61715 F4Iab   sp419 HR4912 F3I
+                                                        j137 HD9973 F5Iab     
+                                                        j138 HD8992 F6Ib
+                   
+123 F8I   90 F8Iab i8 HD8890 F7Ib-IIv   k12 HR2693 F8Iab j139 HD17971 F5Ia              dd54605 F8Iab
+                                                         j140 HD187428 F8Ib-II     
+     
+124 G0I   91 G0Ib                       k31HR4511G0 0-IaFeI j141 HD25361 G2Ib           dd204867 G0Ib                     kh1 BS8752 G0Iab
+                                                                                        dd52220 G1Ib
+
+125 G2I   92 G2Ib                       k17 HR3188 G2Ib j142 SAO21446 G1Ibvar           HD159181 G2IabSMR sp846 HD74395 G2I
+                                                        j143 BD+56 84 G2I               dd209750 G2Ib     dbj bs3459 G2Iab
+                                                        j144 HD191010 G3Ib              dd44362  G2Ib
+          
+126 G5I   93 G5Ib                      k30 HR4441 G3 0-Ia j145 HD187299 G5I             dd206859 G5Ib
+                                       k54 HR6030 G2Ib-IIa          
+
+127 G8I   94 G8Ib  i82 HD48329 G8Ib    k19 HR3438 G7Ib-II j146 HD186293 K0I s64 rK3I                    sp415 HR5009 K0I
+                                                          j147 SAO37325 K1I                                              kh3 RWCep G8I/K2
+     
+128 K2I   95 K2Ib                                         j148 HD1069 K2I   s52 K12I    dd206778 K2Ibvar sp877 HD152326 K2I
+          
+129 K3I   96 K3Ib                      k10 HR2580 K3Iab   j149 HD1400 K7Iab s53 K35I    HD156283 K3Iab:SMR sp816 HD28749 K3I(II-III?)
+                                                                                        HD196725 K3IbSMR
+                                                                                        dd170975 K3Iab
+
+130 K4I   97 K4Ib                       k11 HR     2646 M0Iab                           HD185622 K4Ib     sp841 HD4933 K5I-II(G5III)
+                                        k21 HR3634 K4.5Ib-II                            HD168532 K4Iab:mp dbj bs5645 K4Ib
+                                                                                        dd185622 K4Ib                     kh5 BS8726 K5Iab
+
+131 M2I   98 M2Iab                      k7 HR2061 M1/2 Ia/ab                s54 M0II:   HD206936 M2Iae:  sp110 HR2197 M1I
+                                                                            s55 M3II    dd36389 M2Iab    sp293 AZ Cyg M2I
+                                                                                                         dbj bs3170 M1Iab
+                                                                                                         dbj bs3364 M2Iab
+                                                                                                                           kh7 MuCep M2Iae

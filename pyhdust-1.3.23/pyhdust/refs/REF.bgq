@@ -1,0 +1,17 @@
+#@ job_name = hdust
+#@ comment = "Hdust"
+#@ error = $(job_name).$(jobid).err
+#@ output = $(job_name).$(jobid).out
+#@ environment = COPY_ALL
+#@ wall_clock_limit = 24:00:00
+#@ notification = error
+#@ job_type = bluegene
+#@ class = usp
+#@ group = usp
+#@ bg_size = 32 
+#@ queue
+ 
+EXE="./hdustparv2.10.bc"
+ARGS=" = hdust_bestar2.02.inp"
+
+runjob --np 512 --ranks-per-node=16 --exe $EXE --args $ARGS

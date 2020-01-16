@@ -1,0 +1,35 @@
+HILIB Stellar Library Input Source Summary
+   Spectral  Lumin.   Navail/  Lambda Range     R    A/  xBin  Usage                         Ref
+      Types  Class     Nused                        pix   {a}  
+SVID{b} O--M  I--V     98/98   1200--- 10500   50    50     -  SED, uv for late types           1
+IUE     O--G  I--V    229/173  1153---  3201  500     2     2  uv for early types               2
+GS      O--M  I--V    175/170  3160--- 10620  250 10/20     -  3200-3500A, 9000---10620A        3
+KIEHL   F--M  I--V     60/59   3200---  8800  500    10     -  where available                  4
+JHC     O--M  I--V    161/157  3510---  7427 1200   1.4     3  where available                  5
+SC      O--M  I--V     72/52   3510---  8930  500     5     -  some doubtful types excluded     6
+PIC     O--M  I--V     48/34   3600--- 10000  500     3     2  3900-10000A                      7 
+N6522   K     III      16/15   3800---  6800  400     6     -  where available                  8 
+SRBJ    GKM   I/III    21/19   4800---  8920 6000  0.43    10  where available                  9 
+SRBJ    GKM   I/III     7/7    5000---  9783 1000   3.3     2  where available                  9 
+DD      O-M   I--V    130/121  5804--- 10200  800     4     -  contin. fitted to SVID or GS    10 
+LRV     O--M  I--V     84/83  14300--- 25000  500    ~7     -  where available                 11 
+DBJ     O--M  I,III,V  40/36  15700---165000 2000   3/6   2/1  where available                 12 
+KH      F--M  I--V     26/24  20100--- 24100 3000    ~2     4  contin. fitted to LRV or COHEN  13 
+COHEN   AGKM  III,V    14/8   10000---350000  100   100     -  where available                 14 
+FLUKS   M     III      11/11    995---125000 5000     1     8  Synthetic MIII spectra          15
+
+Notes
+{a}Binning of data prior to combination; the IUE, JHC and higher resolution SRBJ data were also 
+slightly gauss filtered to match other data sets and conform to the chosen output resolution.
+{b}SVID spectra were used to define the Spectral Energy Distribution (SED) for most types and to 
+check other input spectra flux calibrations. They were included in the final combination when no 
+other spectra were available; the uv of some late types, and a few other gaps.}
+References
+(1) Sviderskiene 1988; (2) Heck et al. 1984; (3) Gunn and Stryker 1983;
+(4) Kiehling 1987; (5) Jacoby, Hunter and Christian 1984; (6) Silva and Cornell 1992;
+(7) Pickles 1985; (8) Pickles and van der Kruit 1990; (9) Serote Roos, Boisson and Joly 1996;
+(10) Danks and Dennefeld 1994; (11) Lancon and Rocca-Volmerange 1992;
+(12) Dallier, Boisson and Joly 1996; (13) Kleinmann and Hall 1986; 
+(14) Cohen et al. 1995, 1996a 1996b; 
+(15) Fluks et al. 1994
+
