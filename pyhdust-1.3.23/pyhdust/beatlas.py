@@ -169,7 +169,7 @@ Sig0 = ['{0:.2f}'.format(x) for x in sig0]
 
 def rmMods(modn, Ms, clusters=['job']):
     """
-    Remove the *.inp models of models `modn` according to the list structure
+    Remove the \*.inp models of models `modn` according to the list structure
     below.
 
     | Masses list ans sig0 POSITION do be excluded
@@ -189,7 +189,7 @@ def rmMods(modn, Ms, clusters=['job']):
 
     INPUT: string, structured list
 
-    OUTPUT: *files removed
+    OUTPUT: (files removed)
     """
     # Create sig0 list
     sig0s = Sig0
