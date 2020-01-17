@@ -918,6 +918,22 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'], basesims=[''],
                 wout[31] = ('chmod -f 664 {0}/{1}/*{2}\nchmod -f 664 log/*\n' 
                     'chmod -f 664 ../../tmp/*\n'.format(proj, *modchmod))
             f0.writelines('qsub {0}/{1}s/{2}\n'.format(proj, sel, outname))
+        elif sel == 'bat':
+            wout[4] = wout[4].replace('128', '{0}'.format(nodes))
+            wout[4] = wout[4].replace('36:00:00', '{0}'.format(walltime))
+            wout[5] = wout[5].replace('output', 'log/output')
+            wout[6] = wout[6].replace('error', 'log/error')
+            wout[8] = wout[8].replace(
+                'alexcarciofi@gmail.com', '{0}'.format(email))
+            wout[11] = wout[11].replace('hdust_bestar2.02.inp', '{0}/{1}'.
+            format(proj, mod.replace('.txt', '.inp')))
+            if touch:
+                wout[24] = addtouch
+                modchmod = _phc.trimpathname(mod)
+                modchmod[1] = modchmod[1].replace('.txt', '*')
+                wout[31] = ('chmod -f 664 {0}/{1}/*{2}\nchmod -f 664 log/*\n' 
+                    'chmod -f 664 ../../tmp/*\n'.format(proj, *modchmod))
+            f0.writelines('sbatch {0}/{1}s/{2}\n'.format(proj, sel, outname))
         elif sel == 'oar':
             wout[2] = wout[2].replace('12', '{0}'.format(int(round(
                 nodes/12.))))
