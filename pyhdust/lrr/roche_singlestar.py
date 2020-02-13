@@ -22,9 +22,10 @@ def rocheparams(param,tipo):
     
     if tipo=='W':
         if param < 0.0 or param > 1.0: 
-            print '<<',func_name,'>>'
-            print 'Please, give me <<W>> between 0 and 1!'
-            print ''; ob=np.nan; omega=np.nan; gamma=np.nan; W=np.nan
+            print('<<',func_name,'>>')
+            print('Please, give me <<W>> between 0 and 1!')
+            print('')
+            ob=np.nan; omega=np.nan; gamma=np.nan; W=np.nan
         else:
             W=param
             ob=1.+0.5*W*W
@@ -35,9 +36,10 @@ def rocheparams(param,tipo):
             gamma=2./3.*ob*omega
     elif tipo=='omega':
         if param < 0.0 or param > 1.0: 
-            print '<<',func_name,'>>'
-            print 'Please, give me <<omega>> between 0 and 1!'
-            print ''; ob=np.nan; omega=np.nan; gamma=np.nan; W=np.nan
+            print('<<',func_name,'>>')
+            print('Please, give me <<omega>> between 0 and 1!')
+            print('')
+            ob=np.nan; omega=np.nan; gamma=np.nan; W=np.nan
         else:
             omega=param
             if omega != 0.:
@@ -51,9 +53,10 @@ def rocheparams(param,tipo):
                 W=0.
     elif tipo=='oblateness':
         if param < 1.0 or param > 1.5: 
-            print '<<',func_name,'>>'
-            print 'Please, give me <<oblateness>> between 1 and 1.5!'
-            print ''; ob=np.nan; omega=np.nan; gamma=np.nan; W=np.nan
+            print('<<',func_name,'>>')
+            print('Please, give me <<oblateness>> between 1 and 1.5!')
+            print('')
+            ob=np.nan; omega=np.nan; gamma=np.nan; W=np.nan
         else:
             ob=param
             if ob != 1.0:
@@ -70,9 +73,10 @@ def rocheparams(param,tipo):
                 W=0.
     elif tipo=='gamma':
         if param < 0.0 or param > 1.0: 
-            print '<<',func_name,'>>'
-            print 'Please, give me <<gamma>> between 0 and 1!'
-            print ''; ob=np.nan; omega=np.nan; gamma=np.nan; W=np.nan
+            print('<<',func_name,'>>')
+            print('Please, give me <<gamma>> between 0 and 1!')
+            print('')
+            ob=np.nan; omega=np.nan; gamma=np.nan; W=np.nan
         else:
             gamma=param
             if gamma != 0.0:
@@ -88,10 +92,11 @@ def rocheparams(param,tipo):
             else:
                 W=0.
     else:
-        print '<<',func_name,'>>'
-        print tipo+' ???'
-        print 'I do not know the meaning of this parameter you gave me!'
-        print ''; ob=np.nan; omega=np.nan; gamma=np.nan; W=np.nan
+        print('<<',func_name,'>>')
+        print(tipo+' ???')
+        print('I do not know the meaning of this parameter you gave me!')
+        print('')
+        ob=np.nan; omega=np.nan; gamma=np.nan; W=np.nan
     
     return ob,omega,gamma,W
 
@@ -118,6 +123,7 @@ def f_ctes1(r0,M,par,tp):
     
     | OUTPUT:
     |. A0 [cm2]
+    |. V0 [cm3]
     |. Psi0 [erg/g]
     |. Omega0 [1/s]
     |. g0 [cm/s2]
@@ -131,6 +137,7 @@ def f_ctes1(r0,M,par,tp):
     
     if np.isnan(r0) == False:
         A0=4.*np.pi*(r0*phc.Rsun.cgs)**2.
+        V0=4.*np.pi*(r0*phc.Rsun.cgs)**3./3.
         if np.isnan(M) == False:
             Psi0=-phc.G.cgs*M*phc.Msun.cgs/(r0*phc.Rsun.cgs)
             Omega0=np.sqrt((8./27.)*phc.G.cgs*M*phc.Msun.cgs/(r0*phc.Rsun.cgs)**3.)
@@ -139,7 +146,7 @@ def f_ctes1(r0,M,par,tp):
             Psi0=np.nan; Omega0=np.nan; g0=np.nan 
 
     else:
-        A0=np.nan; Psi0=np.nan; Omega0=np.nan; g0=np.nan 	
+        V0=np.nan; A0=np.nan; Psi0=np.nan; Omega0=np.nan; g0=np.nan 	
 
     if np.isnan(par) == False:
         if tp == "flux":
@@ -162,13 +169,13 @@ def f_ctes1(r0,M,par,tp):
             else: 
                 F0=np.nan; T0=np.nan
         else:
-            print '<<',func_name,'>>'
-            print 'WARNING: Type of parameter not recognized: '+tp
+            print('<<',func_name,'>>')
+            print('WARNING: Type of parameter not recognized: '+tp)
             F0=np.nan; T0=np.nan; L0=np.nan
     else:
         F0=np.nan; T0=np.nan; L0=np.nan
         
-    return A0,Psi0,Omega0,g0,F0,T0,L0
+    return V0,A0,Psi0,Omega0,g0,F0,T0,L0
 
 
 
@@ -177,7 +184,7 @@ def cte_veq(r0,M,omega,psi):
     """
     Returns the velocity in the equator in km/s.
     """
-    A0,Psi0,Omega0,g0,F0,T0,L0=f_ctes1(r0,M,np.nan,"lum")
+    V0,A0,Psi0,Omega0,g0,F0,T0,L0=f_ctes1(r0,M,np.nan,"lum")
     ob,omega,gamma,W=rocheparams(omega,"omega")
 
     return Omega0*(r0*phc.Rsun.cgs)*psi**0.5*omega*ob*1e-5
@@ -198,10 +205,10 @@ def psi_Fremat2005(W=np.nan,mass=np.nan):
         pm=5.66+9.43/mass**2.0
         psi=1.0/(1.0-pm*tau)
     else:
-        print '<<',func_name,'>>'
-        print 'I did not receive meaningful values of the mass of the star or W.'
-        print 'Therefore, I considered the polar radius unvariable with W.'
-        print ''
+        print('<<',func_name,'>>')
+        print('I did not receive meaningful values of the mass of the star or W.')
+        print('Therefore, I considered the polar radius unvariable with W.')
+        print('')
         psi=1.0
             
     return psi
@@ -217,10 +224,10 @@ def lum_fac_Fremat2005(W=np.nan,mass=np.nan):
         tau=(0.0072+0.008*W)*W
         lum_fac=a+(1.0-a)*np.exp(-b*tau)
     else:
-        print '<<',func_name,'>>'
-        print 'I did not receive meaningful values of the mass of the star or W.'
-        print 'Therefore, I considered the luminosity to be unvariable with W.'
-        print ''
+        print('<<',func_name,'>>')
+        print('I did not receive meaningful values of the mass of the star or W.')
+        print('Therefore, I considered the luminosity to be unvariable with W.')
+        print('')
         lum_fac=1.0
         
     return lum_fac
@@ -440,22 +447,22 @@ def f_integral_surfaceroche(theta,omega,psi,x):
     """
     if len(theta) < 2 or len(x) < 2 or len(theta) != len(x):
         func_name = sys._getframe().f_code.co_name
-        print '<<',func_name,'>>'
-        print 'There is something wrong with the integration!'
-        print ''
+        print('<<',func_name,'>>')
+        print('There is something wrong with the integration!')
+        print('')
         return np.nan
     for i in xrange(0,len(theta)):
         if not (theta[i] >= 0.0*np.pi and theta[i] <= 0.5*np.pi):
             func_name = sys._getframe().f_code.co_name
-            print '<<',func_name,'>>'
-            print 'The thetas you gave me are out of the desired range!'
-            print ''
+            print('<<',func_name,'>>')
+            print('The thetas you gave me are out of the desired range!')
+            print('')
             return np.nan
         if i > 0 and theta[i] <= theta[i-1]:
             func_name = sys._getframe().f_code.co_name
-            print '<<',func_name,'>>'
-            print 'The thetas you gave me are not in ascending order!'
-            print ''
+            print('<<',func_name,'>>')
+            print('The thetas you gave me are not in ascending order!')
+            print('')
             return np.nan
     npts=len(theta)
     dtheta=np.array([theta[i+1]-theta[i] \
@@ -497,22 +504,22 @@ def f_integral_surfaceroche_v2(theta,omega,psi,x):
     """
     if len(theta) < 2 or len(x) < 2 or len(theta) != len(x):
         func_name = sys._getframe().f_code.co_name
-        print '<<',func_name,'>>'
-        print 'There is something wrong with the integration!'
-        print ''
+        print('<<',func_name,'>>')
+        print('There is something wrong with the integration!')
+        print('')
         return np.nan
     for i in xrange(0,len(theta)):
         if not (theta[i] >= 0.0*np.pi and theta[i] <= 0.5*np.pi):
             func_name = sys._getframe().f_code.co_name
-            print '<<',func_name,'>>'
-            print 'The thetas you gave me are out of the desired range!'
-            print ''
+            print('<<',func_name,'>>')
+            print('The thetas you gave me are out of the desired range!')
+            print('')
             return np.nan
         if i > 0 and theta[i] <= theta[i-1]:
             func_name = sys._getframe().f_code.co_name
-            print '<<',func_name,'>>'
-            print 'The thetas you gave me are not in ascending order!'
-            print ''
+            print('<<',func_name,'>>')
+            print('The thetas you gave me are not in ascending order!')
+            print('')
             return np.nan
     npts=len(theta)
     dtheta=np.array([theta[i+1]-theta[i] \
