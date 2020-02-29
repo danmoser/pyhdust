@@ -143,10 +143,10 @@ def dec_2_binary(number,dim=None):
         print('')
         return np.nan
 
-    addreverse=[]; res=number%2; quo=number/2
+    addreverse=[]; res=number%2; quo=int(number/2)
     addreverse.append(res)
     while quo != 0: 
-        res=quo%2; quo=quo/2; addreverse.append(res)
+        res=quo%2; quo=int(quo/2); addreverse.append(res)
     
     if dim != None and dim < len(addreverse):
         func_name = sys._getframe().f_code.co_name
