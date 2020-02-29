@@ -163,7 +163,7 @@ def dec_2_binary(number,dim=None):
         addn[len(addn)-1-j]=addreverse[j]
 
     return addn
-    
+     
 def dice(minx=None,maxx=None,p='no'):
     """Returns a random integer number between 
     two boundaries (inclusive)."""
