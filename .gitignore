@@ -55,3 +55,7 @@ docs/_build/
 hdtbuilder.sh
 hdtbuilder.py
 target/
+
+#Custom
+*.sublime-workspace
+.DS_Store

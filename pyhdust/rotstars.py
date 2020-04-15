@@ -106,11 +106,9 @@ def beta(par, is_ob=False):
     If ``is_ob == True``, it consider the param as ob (instead of
     :math:`w_{\rm frac}`). """
 
-    # Ekstrom et al. 2008, Eq. 9
-    if is_ob:
+    wfrac = par
+    if is_ob:  # Ekstrom et al. 2008, Eq. 9
         wfrac = (1.5 ** 1.5) * _np.sqrt(2. * (par - 1.) / par ** 3)
-    else: 
-        wfrac = par
 
     # avoid exceptions
     if wfrac == 0:
@@ -132,8 +130,9 @@ def beta(par, is_ob=False):
         delt = _np.abs(omega1 - omega) / omega
         omega = omega1
 
-    nthe = 100
-    theta = _np.linspace(0, _np.pi / 2, nthe + 1)[1:]
+    nthe = 99
+    theta = _np.linspace(0, _np.pi / 2, nthe + 2)[1:-1]
+    print(theta)
     grav = _np.zeros(nthe)
     teff = _np.zeros(nthe)
     corr = _np.zeros(nthe)

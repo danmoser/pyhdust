@@ -27,6 +27,7 @@ from glob import glob as _glob
 import pyhdust.phc as _phc
 import pyhdust.jdcal as _jdcal
 import pyhdust.input as _inp
+import pyhdust.stats as _stt
 import pyhdust as _hdt
 from six import string_types as _strtypes
 from shutil import copyfile as _copyfile
@@ -42,6 +43,7 @@ try:
     import matplotlib.gridspec as _gridspec
     import scipy.interpolate as _interpolate 
     from scipy.optimize import curve_fit as _curve_fit
+    from scipy.stats import percentileofscore as _pos
     from astropy.modeling import models as _models
     from astropy.modeling import fitting as _fitting
 except ImportError:
@@ -1926,6 +1928,30 @@ def VREWcalc(vels, flux, vw=1000):
     return ew0, ew1, vc
 
 
+def normcontinuum_std(flux, contper=5):
+    """
+    Assumes that the `flux` vector is normalized.
+
+    `contper` is the percentage of the flux vector to be sampled as continuum
+    (0-100); default=5.
+
+    It returns the standard deviation of the normalized continuum (around 1.0).
+    """
+    mp = _np.copy(contper)
+    pp = _np.copy(contper)
+    p50 = _pos(flux, 1.)
+    if p50 > 100-pp:
+        _warn('The continuum of this spec is too low! <1: Is is nomalized?')
+        pp = 100-p50
+    elif p50 < mp:
+        _warn('The continuum of this spec is too high! >1: Is is nomalized?')
+        mp = p50
+    p45 = _np.percentile(flux, p50-mp)
+    p55 = _np.percentile(flux, p50+pp)
+    continuum = flux[_np.where((flux > p45) & (flux < p55))]
+    return _stt.mad(continuum)
+
+
 def plotSpecData(dtb, limits=None, civcfg=[1, 'm', 2013, 1, 1],
     fmt=['png'], ident=None, lims=None, setylim=False, addsuf=''):
     """ Plot spec class database `vs` MJD e civil date
@@ -3364,6 +3390,8 @@ def classify_specs(list_of_specs, starid, instrument, calib, comment=''):
         expname += "_{}_{:04d}".format( int(MJD), int(round(1e4*(MJD % 1))) )
         expname += ".{}.fits".format(calib)
         _copyfile(s, expname)
+
+
 
 
 # MAIN ###

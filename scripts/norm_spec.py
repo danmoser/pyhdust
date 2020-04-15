@@ -64,6 +64,7 @@ def norm_spec(fname):
     imfits.close()
     return
 
+
 if __name__ == '__main__':
 
     linput = args.INPUT
