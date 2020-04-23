@@ -25,7 +25,7 @@ import pyhdust.phc as _phc
 import pyhdust.rotstars as _rot
 import pyhdust as _hdt
 from collections import OrderedDict as _OrderedDict
-from collections import Mapping as _mapdict
+# from collections import Mapping as _mapdict
 from six import string_types as _string_types
 import warnings as _warn
 
@@ -40,38 +40,109 @@ class Input(object):
     - Terminando verificação de existência prévia de *.inp e *.sed2
     - Incluído verificação do *_SEI.sed2
     """
-    f0 = open(_os.path.join(_hdt.hdtpath(), 'refs', 'REF_disco.txt'))
-    mod = f0.readlines()
-    f0.close()
-
     attl_to_chk = ['case1', 'case2', 'composition', 'controls', 'gridcells', 
         'observers', 'perturbations', 'source']
 
-    def __init__(self, proj=None, modn='mod01'):
+    def __init__(self, fname=None, proj=None):
+        self.fname = fname
         self.proj = proj
-        if proj is None:
-            self.proj = _os.path.split(_os.getcwd())[1]
-        self.set_modn(modn)
+        if fname is not None:
+            self.set_fname(fname)
         return
 
-    def set_modn(self, modn):
-        self.modn = modn
-        if isinstance(modn, _string_types):
-            if modn.isdigit():
-                modn = int(modn)
-            elif not modn.startswith('mod'):
-                raise ValueError('# ERROR! modn must startswith "mod"')
-        if isinstance(modn, ( int, long )):
-            if modn > 0 and modn < 1000:
-                self.modn = 'mod{0:02d}'.format(int(modn))
+    def set_fname(self, fname):
+        self.fname = fname
+        self.modn, self.suf = _os.path.split(fname)
+        self.suf = _os.path.splitext(self.suf)[0]
+        if (not self.modn.startswith('mod')) or (
+            not self.modn.startswith('fullsed')):
+            self.proj, self.modn = _os.path.split(self.modn)
+        else:
+            self.proj = ''
+        if not self.modn.startswith('mod'):
+            self.modn = ''
+        if len(self.modn) == 0:
+            self.modn = 'mod' + self.suf.split('mod')[-1].split('_')[0]
+        self.suf = '_'+'_'.join(self.suf.split('mod')[-1].split('_')[1:])
+        if hasattr(self, 'vdict'):
+            if _os.path.splitext(fname)[1] == '.log':
+                self._fill()
             else:
-                raise ValueError('# ERROR! modn must be <1000')
+                self._fillfname()
+        else:
+            _warn.warn('Warning! No `vdict` found for Input class')
+
+    def _fill(self):
+        f0 = open(self.fname).read().split('\n')
+        for it in self.vdict.items():
+            setattr(self, it[0], _phc.fltTxtOccur(it[1], f0))
+        return
+
+    def _fillfname(self):
+        for it in self.vdict.keys():
+            setattr(self, it, _phc.fltTxtOccur(it, self.suf))
+        return
+
+    def __str__(self):
+        if self.fname is None:
+            return 'None'
+        return '_'+'_'.join(it[0]+it[1].format(getattr(self, it[0])) for it in 
+            self.vdict.items())
+
+    # def set_modn(self, modn):
+    #     self.modn = modn
+    #     if isinstance(modn, _string_types):
+    #         if modn.isdigit():
+    #             modn = int(modn)
+    #         elif not modn.startswith('mod'):
+    #             raise ValueError('# ERROR! modn must startswith "mod"')
+    #     # if isinstance(modn, ( int, long )): TODO py3
+    #     if isinstance(modn, int): 
+    #         if modn > 0 and modn < 1000:
+    #             self.modn = 'mod{0:02d}'.format(int(modn))
+    #         else:
+    #             raise ValueError('# ERROR! modn must be <1000')
+
+    def set_Be_source(self, **kwargs):
+        """Define `self.source` from "_Be_...(end)" in `self.suf`
+
+        self.source: str, optional
+            Source name that goes inside ".inp" file
+        """
+        self.__dict__.update( kwargs )
+        if 'source' in kwargs:
+            return
+        i = self.suf.find('_Be_')
+        self.source = self.suf[i+1:]
+        return
 
     def set_input(self, docasesl=None, case1='step1', case2='step1_refine', 
         case3l=None, imagesl=None, composition='pureH', controls='controls', 
         gridcells='grid', observers='observers', perturbations='', source='', 
         chkout=True, c1max=20, c2max=24, c3prefl=None, clustl=None, ncore=48, 
-        walltime='72:00:00', email='$USER@localhost', touch=False, **kwargs):
+        walltime='72:00:00', email='$USER@localhost', touch=False):
+        """`set_input()` set the parameters below for the disk HDUST '.inp' 
+        configuration.
+
+        Parameters
+        -----------
+        docasesl : list
+            cases [1, 2, 3]
+        case[1|2] : str
+            simulation filename for case[1|2] (eg., 'step1')
+        case3l:
+            list of case3 simulations (eg., ['SED', 'Halpha'])
+        imagesl:
+            list of images for case simulations (eg., ['SED', ''])
+        source:
+            source star filename. If `self.suf` has **Be_**, this is will be
+            automatically generated if empty.
+
+        Returns
+        ---------   
+        (self.parameters)
+            The parameter defined appropriately.
+        """
 
         if isinstance(case3l, _string_types):
             self.case3l = [case3l]
@@ -99,7 +170,10 @@ class Input(object):
         self.gridcells = gridcells
         self.observers = observers 
         self.perturbations = perturbations
-        self.source = source
+        if not hasattr(self, 'source'):
+            self.source = source
+        if self.source == '':
+            self.set_Be_source()
 
         self.chkout = chkout
         self.c1max = str(c1max)
@@ -121,14 +195,14 @@ class Input(object):
         self.email = email
         self.touch = touch
 
-        for it in kwargs.items():
-            setattr(self, *it)
         return
 
     def write_inp(self):
-        bdir = self.proj
-        if bdir == _os.path.split(_os.getcwd())[1]:
-            bdir = ""
+        """ Make use of all variables defined in `set_input()` """
+        bdir = ""
+        # bdir = self.proj
+        # if bdir == _os.path.split(_os.getcwd())[1]:
+        #     bdir = ""
 
         head = "PROJECT = {0}\nMODEL = {1}".format(_os.path.split(
             self.proj)[1], self.modn[3:])
@@ -197,13 +271,31 @@ class Input(object):
             not line.startswith('!'))]
         return bool(sims)
 
-    def write_job(self):
+    def write_job(self, **kwargs):
+        """ The parameters can be set with **kwargs
+        Parameters
+        ----------
+        self.proj: str
+            Name of the project (eg., BeStar)
+        self.clustl: list
+            List of strings of the clusters (eg., ['job', 'oar', 'bat'])
+        self.touch : bool
+            Touch files to avoid user permission problems (**TBD**)
+
+        Returns
+        -------
+        (file written)
+            at *TBC*
+        """
+        self.__dict__.update( kwargs )
+
         if self.touch is True:
             raise NotImplementedError('# touch option not available')
 
-        bdir = self.proj
-        if bdir == _os.path.split(_os.getcwd())[1]:
-            bdir = ""
+        bdir = ""
+        # bdir = self.proj
+        # if bdir == _os.path.split(_os.getcwd())[1]:
+        #     bdir = ""
         outname = _os.path.join(bdir, self.modn, self.modn + self.suf + '.inp')
         intname = _os.path.join(self.proj, self.modn, 
             self.modn + self.suf + '.inp')
@@ -273,15 +365,47 @@ class Disk(Input):
     mod = f0.readlines()
     f0.close()
 
-    def __init__(self, proj=None, modn='mod01'):
-        super(Disk, self).__init__(proj=proj, modn=modn)
+    def __init__(self, fname=None, proj=None):
+        super(Disk, self).__init__(fname=fname, proj=proj)
         return
 
     def set_disk(self, renv=18.6, mh=1.5, ht=60., nr=2., dval=1e12, hseq=False, 
-        alpha=.5, mu=.5, R0r=100, vt=0., denstype=None, **kwargs):
-        """ denstype = ['n0', 'sig0', 'mdot'] 
+        alpha=.5, mu=.5, R0r=100, vt=0., denstype=None):
+        """`set_disk()` set the parameters below for the disk HDUST input 
+        configuration.
 
-        ``sig0`` means g/cm2 instead of ``n0``"""
+        Parameters
+        -----------
+        renv : float
+            Envelope/Disk radius (or Rd)
+        mh : float
+            r^mh is the dependence of the disk scale height
+        ht : float
+            Either the absolute temperature (if ht > 1000), or the relative 
+            polar temperature 
+        nr : float
+            r^-nr is the density radius dependence
+        dval : float
+            value of the base density (see below)
+        denstype : str
+            one of the following: ['n0', 'sig0', 'mdot']; ``sig0`` means g/cm2 
+            instead of ``n0``
+        hseq : bool
+            self-consistent vertical scale-height
+        alpha : float
+            Shakura-Sunyaev viscosity parameter
+        mu : float
+            mean molecular weight
+        R0r : float
+            R0r >> Rd typically
+        vt : float
+            Turbulence velocity 
+
+        Returns
+        ---------   
+        (self.parameters)
+            The parameters defined appropriately.
+        """
         self.renv = renv
         self.mh = mh
         self.ht = ht
@@ -292,44 +416,25 @@ class Disk(Input):
         self.mu = mu
         self.R0r = R0r
         self.vt = vt
-        if isinstance(denstype, _string_types):
-            if denstype.lower() in ['n0', 'sig0', 'mdot']:
-                self.denstype = denstype
-            denstype = None
-        if denstype is None:
+        self.denstype = denstype
+        if isinstance(self.denstype, _string_types):
+            if not self.denstype.lower() in ['n0', 'sig0', 'mdot']:
+                self.denstype = None
+        if not isinstance(self.denstype, _string_types):
+            self.denstype = None
             _warn.warn('# Warning! Guessing the denstype...')
             self.denstype = 'n0'
             if dval < 1e-2:
                 self.denstype = 'mdot'
             elif dval < 1e2:
                 self.denstype = 'sig0'
-
-        for it in kwargs.items():
-            setattr(self, *it)
         return
 
-    def set_suf(self, vfmt=''):
-        """    vfmt = dict(zip(['renv', 'dval', 'ht', 'M', "n"], 
-        ['{:04.1f}', '{:.1e}', '{:02.0f}', '{:04.1f}', '{:.1f}'])) """
-        if isinstance(vfmt, _mapdict):
-            self.vfmt = vfmt
-        if hasattr(self, 'vfmt'):
-            if isinstance(self.vfmt, _mapdict):    
-                self.suf = '_' + '_'.join(it[0]+it[1].format(getattr(self, 
-                    it[0])) for it in self.vfmt.items())
-            else:
-                delattr(self, vfmt)
-                self.suf = vfmt
-        else:
-            self.suf = vfmt
-
-    def __str__(self):
-        return self.suf
-
     def makedisk(self):
+        """ Make use of all variables defined in `set_disk()` """
         if not self.modn.startswith('mod'):
             raise ValueError('# ERROR! Invalid Disk.modn')
-        modi = Disk.mod[:]
+        modi = self.mod[:]
 
         if self.hseq is True and self.denstype is not 'mdot':
             print('# Warning! Your choice of HSEQ don\'t appears to be '
