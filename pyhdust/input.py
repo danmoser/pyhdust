@@ -236,7 +236,7 @@ class Input(object):
         c3 = '\n\n'
         gen = (sim for sim in self.case3l if 3 in self.docasesl)
         for sim in gen:
-            if self.chkout:
+            if self.chkout and len(self.c3prefl) > self.case3l.index(sim):
                 pref = self.c3prefl[self.case3l.index(sim)]
                 if not pref.endswith('_'):
                     pref = pref+'_'

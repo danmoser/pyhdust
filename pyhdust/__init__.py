@@ -38,7 +38,7 @@ try:
 except ImportError:
     _warn.warn('# matplotlib, astropy and/or scipy module not installed!!')
 
-__version__ = '1.3.31'
+__version__ = '1.3.32'
 __release__ = "Stable"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -104,12 +104,26 @@ def readsed2(sfile):
 def readfullsed2(sfile):
     """ Read data from HDUST fullSED2 file.
 
-    :type sfile: str
-    :param sfile: HDUST fullSED2 file path
+    Parameter
+    -----------
+    sfile: str
+        HDUST fullSED2 file path
 
-    :rtype: ``np.array(nobs, nlbd, -1)``, where the number of columns from 
-        fullSED2 file replaces "-1"
-    :returns: HDUST fullSED2 file content
+    Returns
+    --------
+    numpy.array
+        ``np.array(nobs, nlbd, -1)``, where the number of columns from  
+        fullSED2 file replaces "-1". Example: ``lbd_obs0 = fs2data[0, :, 2]``.
+
+    - 0: cos(i) == cos(mu)
+    - 1: cos(phi)
+    - 2: lambda
+    - 3: flux
+    - 4: sct flux
+    - 5: emit flux
+    - 6: trans flux
+    - 7: Q flux
+    - 8: U flux (zero for symmetric disks)
     """
     sed2data = _np.loadtxt(sfile, skiprows=5)
     nlbd, nobs, Rstar, Rwind = sed2info(sfile)
@@ -1539,7 +1553,7 @@ def diskcalcs(M, Req, T, alpha, R0, mu, n0, Rd):
 
 
 def n0toSigma0(n0, M, Req, f, Tp, mu):
-    """ VDD Steady-State conversion between `n0` (particles[ionized]/volume) 
+    """ VDD Steady-State conversion between `n0` ([ionized] particles/volume) 
     to `Sigma0`.
 
     INPUT: n0 (float), M, Req (mass and equatorial radius, Solar units),
@@ -1552,6 +1566,22 @@ def n0toSigma0(n0, M, Req, f, Tp, mu):
     sig0 = (2 * _np.pi) ** .5 * a / (_phc.G.cgs * M * _phc.Msun.cgs / (Req *
         _phc.Rsun.cgs)) ** .5 * Req * _phc.Rsun.cgs * rho0
     return sig0
+
+
+def sig0ton0(sig0, M, Req, f, Tp, mu=0.5):
+    """ VDD Steady-State conversion between `Sigma0` [g/cm2] to `n0` 
+    ([ionized] particles/volume) .
+
+    INPUT: sig0 (float), M, Req (mass and equatorial radius, Solar units),
+    fraction and polar temperature ([0-1], Kelvin) and mu molecular weight
+    [0.5-2.0].
+
+    OUTPUT: n0 (particles cm-3) """
+    muH = mu * _phc.mH.cgs
+    a = (_phc.kB.cgs * f * Tp / muH) ** .5
+    n0 = sig0 / muH * (_phc.G.cgs * M * _phc.Msun.cgs / 2 / _np.pi )**.5 / a *\
+        (Req * _phc.Rsun.cgs)**(-1.5)
+    return n0
 
 
 def n0toMdot(n0, M, Req, f, Tp, mu, alpha, R0):

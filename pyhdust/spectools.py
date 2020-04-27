@@ -1928,27 +1928,42 @@ def VREWcalc(vels, flux, vw=1000):
     return ew0, ew1, vc
 
 
-def normcontinuum_std(flux, contper=5):
+def normcontinuum_std(flux, ssize=.05):
     """
     Assumes that the `flux` vector is normalized.
 
-    `contper` is the percentage of the flux vector to be sampled as continuum
-    (0-100); default=5.
+    `ssize` is the percentage of the flux vector to be sampled as continuum
+    (0-1.); default=0.05.
 
     It returns the standard deviation of the normalized continuum (around 1.0).
     """
-    mp = _np.copy(contper)
-    pp = _np.copy(contper)
-    p50 = _pos(flux, 1.)
+    # averaging borders
+    ny = _np.array(flux)[:]
+    if ssize < 0 or ssize > .5:
+        _warn.warn('Invalid ssize value...', stacklevel=2)
+        ssize = 0
+    ssize = int(ssize * len(ny))
+    if ssize == 0:
+        ssize = 1
+    if ssize > 1:
+        continuum = _np.concatenate( (ny[:ssize], ny[-ssize:]) )
+        if _np.abs(1-_np.average(continuum)) < 0.05:
+            return _stt.mad( continuum )
+    # Whole averaging
+    mp = ssize*100
+    pp = ssize*100
+    p50 = _pos(ny, 1.)
     if p50 > 100-pp:
-        _warn('The continuum of this spec is too low! <1: Is is nomalized?')
+        _warn.warn('The continuum of this spec is too low! <1: '
+            'Is is nomalized?')
         pp = 100-p50
     elif p50 < mp:
-        _warn('The continuum of this spec is too high! >1: Is is nomalized?')
+        _warn.warn('The continuum of this spec is too high! >1: '
+            'Is is nomalized?')
         mp = p50
-    p45 = _np.percentile(flux, p50-mp)
-    p55 = _np.percentile(flux, p50+pp)
-    continuum = flux[_np.where((flux > p45) & (flux < p55))]
+    p45 = _np.percentile(ny, p50-mp)
+    p55 = _np.percentile(ny, p50+pp)
+    continuum = ny[_np.where((ny > p45) & (ny < p55))]
     return _stt.mad(continuum)
 
 
