@@ -1441,7 +1441,7 @@ def makeSimulLine2(basesims, Rs, hwidth, Ms, Ws, ts, lsuffix, path='source/'):
     return
 
 
-def makeSourceGrid(masses, rps, lums, Ws, betas, path=None):
+def makeSourceGrid(masses, rps, lums, Ws, betas, path=None, suffix=None):
     """ Arbitrary values (no stellar model info), for the SELF-CONSISTENT RIGID 
     ROTATOR setup.
 
@@ -1474,8 +1474,9 @@ def makeSourceGrid(masses, rps, lums, Ws, betas, path=None):
         wmod[6] = wmod[6].replace('7500.', ('%.2f' % Lum))
         wmod[7] = wmod[7].replace('0.25', ('%.5f' % Beta))
         # 
-        suffix = '_M{0:05.2f}_W{1:.2f}_b{2:.2f}_rp{3:05.2f}_L{4:05.0f}_Ell'. \
-            format(MI, W, Beta, Raio, Lum)
+        if suffix is None:
+            suffix = ('_M{0:05.2f}_W{1:.2f}_b{2:.2f}_rp{3:05.2f}_L{4:05.0f}_'
+                'Ell'.format(MI, W, Beta, Raio, Lum) )
         f0 = open('{0}source/Be'.format(path) + suffix + '.txt', 'w')
         f0.writelines(wmod)
         f0.close()

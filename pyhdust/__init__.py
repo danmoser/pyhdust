@@ -38,7 +38,7 @@ try:
 except ImportError:
     _warn.warn('# matplotlib, astropy and/or scipy module not installed!!')
 
-__version__ = '1.3.32'
+__version__ = '1.3.33'
 __release__ = "Stable"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -592,6 +592,7 @@ def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
         else:
             lsed2 = []
             for f in onlyfilters:
+                f = f.rstrip('_')
                 pattern = _os.path.join(modfld, '{0}_'.format(f) +
                     '*{0}.sed2'.format(modelname[:-4]))
                 lsed2.extend(_glob(pattern))
@@ -1568,7 +1569,7 @@ def n0toSigma0(n0, M, Req, f, Tp, mu):
     return sig0
 
 
-def sig0ton0(sig0, M, Req, f, Tp, mu=0.5):
+def sig0_to_n0(sig0, M, Req, f, Tp, mu=0.5):
     """ VDD Steady-State conversion between `Sigma0` [g/cm2] to `n0` 
     ([ionized] particles/volume) .
 
@@ -1581,7 +1582,7 @@ def sig0ton0(sig0, M, Req, f, Tp, mu=0.5):
     a = (_phc.kB.cgs * f * Tp / muH) ** .5
     n0 = sig0 / muH * (_phc.G.cgs * M * _phc.Msun.cgs / 2 / _np.pi )**.5 / a *\
         (Req * _phc.Rsun.cgs)**(-1.5)
-    return n0
+    return int(n0)
 
 
 def n0toMdot(n0, M, Req, f, Tp, mu, alpha, R0):
