@@ -319,13 +319,14 @@ def bin_map(mfile, nbins, new_pref='BIN_'):
 
 
 def img2fits(img, lbd, xmax, dist, outname='model', rot=0., lum=0.,
-    orient=0., coordsinf=None, deg=False, ulbd=''):
+    orient=0., coordsinf=None, deg=False, ulbd='meters'):
     r""" Export an image (e.g., data[0,0,0,:,:]) to the fits format.
 
-    `lbd` is the wavelength value and the dimension is kept as it is. It must
-    be in meters for JMMC softwares (ASPRO2/LITPRO).
+    `lbd` is the wavelength value. It must be in meters for JMMC softwares 
+    (ASPRO2/LITPRO). 
 
-    `ulbd` units of the lbd.
+    `ulbd` units description in the header. If empty or `None`, the CDELT3 and 
+    CRVAL3 entries are no written in the header.
 
     `rot` = rotation angle to be applied to the images. 'x' and 'y' coordinate
     axes should be orientated with equatorial north corresponding to 'up' (and
@@ -340,7 +341,7 @@ def img2fits(img, lbd, xmax, dist, outname='model', rot=0., lum=0.,
     to BeAtlas is performed, and the final results are in 10^-17
     erg/s/cm^2/Ang. If `lum` = 0, no change is done.
 
-    `coordsinf` = [RA,DEC], as ['21:51:12.055', '+28:51:38.72']
+    `coordsinf` = [RA,DEC], as ['21:51:12.055', '+28:51:38.72'] -- F2000.0
 
     `deg` = angles in degrees (instead of radians).
 
@@ -376,6 +377,7 @@ def img2fits(img, lbd, xmax, dist, outname='model', rot=0., lum=0.,
         orientr = orient
         orient = orient * 180 / _np.pi
     #
+    npx = len(img)
     if rot != 0.:
         # print('# Total flux BEFORE rotation {0}'.format(_np.sum(img)))
         img = _img.rotate_image(img, rot, 0, 0, fill=0.)
@@ -386,7 +388,7 @@ def img2fits(img, lbd, xmax, dist, outname='model', rot=0., lum=0.,
     #
     hdu = _pyfits.PrimaryHDU(img[::-1, :])
     hdulist = _pyfits.HDUList([hdu])
-    pixsize = 2 * xmax / len(img)
+    pixsize = 2 * xmax / npx
     ang_per_pixel = _np.double(pixsize * _phc.Rsun.cgs / (dist * _phc.pc.cgs))
     # *60.*60.*1000.*180./_np.pi)
     if deg:
@@ -394,8 +396,9 @@ def img2fits(img, lbd, xmax, dist, outname='model', rot=0., lum=0.,
     #
     hdulist[0].header['CDELT1'] = (-ang_per_pixel, ucdelt)
     hdulist[0].header['CDELT2'] = (ang_per_pixel, ucdelt)
-    hdulist[0].header['CDELT3'] = (1., ulbd)
-    hdulist[0].header['CRVAL3'] = (lbd, ulbd)
+    if len(ulbd) == 0 or ulbd is None:
+        hdulist[0].header['CDELT3'] = (1., ulbd)
+        hdulist[0].header['CRVAL3'] = (lbd, ulbd)
     hdulist[0].header['NAXIS1'] = len(img)
     hdulist[0].header['NAXIS2'] = len(img[0])
     hdulist[0].header['CRPIX1'] = len(img) / 2.
