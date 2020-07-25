@@ -396,7 +396,7 @@ def img2fits(img, lbd, xmax, dist, outname='model', rot=0., lum=0.,
     #
     hdulist[0].header['CDELT1'] = (-ang_per_pixel, ucdelt)
     hdulist[0].header['CDELT2'] = (ang_per_pixel, ucdelt)
-    if len(ulbd) == 0 or ulbd is None:
+    if len(ulbd) != 0 or ulbd is None:
         hdulist[0].header['CDELT3'] = (1., ulbd)
         hdulist[0].header['CRVAL3'] = (lbd, ulbd)
     hdulist[0].header['NAXIS1'] = len(img)
