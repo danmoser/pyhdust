@@ -68,11 +68,12 @@ def cdf(x, xlim=None, savefig=False):
     fig, ax = _plt.subplots()
     ax.plot(sortedx, p, label='Data')
     ax.plot(linx, p, ls=':', label='linearized', color='gray')
-    ax.plot(gausx, p, ls="--", label='Gauss equiv.', color='gray')
+    ax.plot(gausx, p, ls="-.", label='Gauss equiv.', color='gray')
     ax.set_xlim(xlim)
     ax.legend(loc='best', fancybox=True, framealpha=0.5, fontsize=8, 
             labelspacing=0.05)
     ax.set_ylabel('c.d.f.')
+    ax.set_ylim([0, 1])
     if savefig:
         _phc.savefig(fig)  # figname='outname')
     return

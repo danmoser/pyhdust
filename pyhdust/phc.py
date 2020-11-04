@@ -591,6 +591,34 @@ def cart_rot(x, y, z, ang_xy=0., ang_yz=0., ang_zx=0.):
 
 
 # Lists and strings manipulation
+def isnumber(val, contains=False):
+    """Return [True|False] if a string can be converted to a number (int,  
+    float or scientific notation).
+
+    `contains`: check if the string CONTAINS a valid number.
+    """
+    rule = r"-?[\d.]+(?:e-?\d+)?"
+    match = _re.findall(rule, val)
+    isn = False
+    if len(match) == 1:
+        isn = True
+        if not contains:
+            if match[0] != val:
+                isn = False
+    return isn
+
+
+def str2float(val):
+    """Returns a float converted from the string ``val``. 
+
+    If more than one float is identified, it returns ``None``"""
+    rule = r"-?[\d.]+(?:e-?\d+)?"
+    match = _re.findall(rule, val)
+    if len(match) != 1:
+        return None
+    return float(match[0])
+
+
 def closest_idx(arr, mtx):
     """ Return the closest index of `mtx` corresponding to the values of `arr`.
     """
@@ -602,7 +630,8 @@ def closest_idx(arr, mtx):
 
 
 def unic2ascii(string):
-    return _unicdata.normalize('NFKD', unicode(string)).encode('ascii', 
+    """ Converts unicode to ASCII """
+    return _unicdata.normalize('NFKD', string).encode('ascii', 
         'ignore')
 
 

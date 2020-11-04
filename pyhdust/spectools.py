@@ -62,7 +62,6 @@ _outfold = ''
 
 
 class Spec(object):
-
     """Definicao de classe espectro para conter toda a informacao util
     para plots e analises.
 
@@ -468,7 +467,7 @@ def lineProf(x, flx, lbc, flxerr=_np.empty(0), hwidth=1000., ssize=0.05):
 
 
 def linfit(x, y, ssize=0.05, yerr=_np.empty(0)):
-    '''
+    r'''
     linfit() - retorna um array (y) normalizado, em posicoes de x
 
     x eh importante, pois y pode ser nao igualmente amostrado.

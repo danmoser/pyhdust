@@ -24,6 +24,7 @@ class MyParser(ArgumentParser):
         self.print_help()
         sys.exit(2)
 
+
 parser = MyParser(description=__doc__)
 parser.add_argument('--version', action='version', 
     version='%(prog)s {0}'.format(__version__))
@@ -33,7 +34,8 @@ parser.add_argument("-n", action="store", dest="n",
 
 group2 = parser.add_argument_group('other arguments')
 group2.add_argument("-c", "--check", action="store_true", dest="chk", 
-    help=("If this flag is enabled, it only removed the *.map* file if the "
+    help=("If this flag is enabled, it does not make new compressed files. It "
+        "will only removed the *.map* file if the "
         "*.map.bz2 file exists"), default=False)
 
 args = parser.parse_args()
@@ -46,7 +48,7 @@ def compact(fp):
         # fpnew = fp+'.gz'
         # with gzip.open(fpnew, 'wb') as fout:
         with bz2.BZ2File(fpnew, 'wb', compresslevel=1) as fout:
-            fout.write(open(fp).read())
+            fout.write(open(fp, 'rb').read())
         if os.path.exists(fpnew):
             if os.path.getsize(fpnew) > 40000:
                 os.remove(fp)
@@ -55,6 +57,7 @@ def compact(fp):
     else:
         print('# {0} was not found!'.format(fp))
         return 1
+
 
 if __name__ == '__main__':
     extensions = ['.tau', '.map']
@@ -78,8 +81,12 @@ if __name__ == '__main__':
                             os.remove(fp)
                             print('# Removing '+fp)
 
-    if not args.chk:
+    if not args.chk and args.n > 1:
         pool = Pool(processes=args.n)
         # for result in pool.imap_unordered(compact, clist):
         result = pool.map(compact, clist)
+        print('# DONE!')
+    if not args.chk and args.n == 1:
+        for c in clist:
+            compact(c)
         print('# DONE!')

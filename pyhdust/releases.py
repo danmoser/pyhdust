@@ -4,6 +4,11 @@
 
 History
 ============
+v1.4.0 @ 2020-11-04
+---------------------
+- Multiple small updates
+- Incorporate max(M)==20.0Msun (instead of 14.6Msun)
+
 v1.007 @ 2016-09-16
 ---------------------
 - New ploting 2d routines

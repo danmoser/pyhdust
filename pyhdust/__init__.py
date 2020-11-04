@@ -38,7 +38,7 @@ try:
 except ImportError:
     _warn.warn('# matplotlib, astropy and/or scipy module not installed!!')
 
-__version__ = '1.3.35'
+__version__ = '1.4.0'
 __release__ = "Stable"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -579,6 +579,8 @@ def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
     for model in models:
         modfld, modelname = list(_os.path.split(model))
         path = list(_os.path.split(modfld[:-1]))[0]
+        if path == '':
+            path = '.'
         if not _os.path.exists(_os.path.join('{0}'.format(path), 'fullsed')):
             _os.system(_os.path.join('mkdir {0}'.format(path), 'fullsed'))
         sed2data = _np.empty(0)
@@ -593,7 +595,7 @@ def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
             lsed2 = []
             for f in onlyfilters:
                 f = f.rstrip('_')
-                pattern = _os.path.join(modfld, '{0}_'.format(f) +
+                pattern = _os.path.join(modfld, '{0}_'.format(f) + 
                     '*{0}.sed2'.format(modelname[:-4]))
                 lsed2.extend(_glob(pattern))
                 pattern = _os.path.join(modfld, '{0}_'.format(f) +
@@ -632,7 +634,7 @@ def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
                 if checklineval:
                     print('# I found {0} as wavelength for {1}'.format(lbrest,
                         suf))
-                    print('# Type a number to change it (no sci. notation/' +
+                    print('# Type a number to change it (no sci. notation/'
                         'or empty to continue): ')
                     loop = True
                     while loop:
@@ -987,6 +989,8 @@ def genlog(proj=None, mods=None):
 def printN0(modn):
     """ Print the n0 of the model inside modn folder. It does a grep of `n_0` of
     all *.txt files of the folder.
+
+    Warning: max(M)==14.6Msun (instead of 20.0Msun).
 
     INPUT: string
 
