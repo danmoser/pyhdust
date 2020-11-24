@@ -46,7 +46,7 @@ class Input(object):
     def __init__(self, fname=None, proj=None):
         self.fname = fname
         self.proj = proj
-        if fname is not None:
+        if fname != None:
             self.set_fname(fname)
         return
 
@@ -436,7 +436,7 @@ class Disk(Input):
             raise ValueError('# ERROR! Invalid Disk.modn')
         modi = self.mod[:]
 
-        if self.hseq is True and self.denstype is not 'mdot':
+        if self.hseq is True and self.denstype != 'mdot':
             print('# Warning! Your choice of HSEQ don\'t appears to be '
                 'consistent')
 
@@ -461,7 +461,7 @@ class Disk(Input):
             _ = _phc.repl_fline_val(modi, 43, '72.', self.ht)
 
         if self.denstype == 'sig0':
-            raise ValueError('# ERROR! `sig0` is not a valid option yet')
+            raise ValueError('# ERROR! `sig0` != a valid option yet')
         elif self.denstype == 'n0':
             _ = _phc.repl_fline_val(modi, 52, '2.35E13', self.dval)
         else:
@@ -490,7 +490,7 @@ class HdustMod(object):
     """
     def __init__(self, fname=None):
         self.fname = fname
-        if fname is not None:
+        if fname != None:
             self.set_fname(fname)
         return
 
@@ -793,7 +793,7 @@ def makeDiskGrid(modn='01', mhvals=[1.5], hvals=[60.], rdvals=[18.6],
 
     # PROGRAM BEGINS
     path0 = _os.getcwd()
-    if path is not None:
+    if path != None:
         _os.chdir(path)
         if path[-1] != '/':
             path += '/'
@@ -831,7 +831,7 @@ def makeDiskGrid(modn='01', mhvals=[1.5], hvals=[60.], rdvals=[18.6],
             len(rdvals) * len(hvals) * len(sBdays) * (len(mhvals) + i) * 
             len(sBfiles)))
 
-    if path is not '':
+    if path != '':
         _os.chdir(path0)
     # END PROGRAM    
     return
@@ -902,7 +902,7 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'], basesims=[''],
     """
     def isFloat(x):
         try:
-            a = float(x)
+            _ = float(x)
         except ValueError:
             return False
         else:
@@ -923,7 +923,7 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'], basesims=[''],
         case1[5] = case1[5].replace('source', src)
         if not oldstp1:
             case1.append("OBSERVERS   = '{}'\n".format(observers))
-        if perturbations is not None:
+        if perturbations != None:
             case1.append("PERTURBATIONS = '{0}'\n".format(perturbations))
         if 1 not in cases:
             for i in range(len(case1)):
@@ -945,7 +945,7 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'], basesims=[''],
         case1[5] = case1[5].replace('source', src)
         if not oldstp1:
             case1.append("OBSERVERS   = '{}'\n".format(observers))
-        if perturbations is not None:
+        if perturbations != None:
             case1.append("PERTURBATIONS = '{0}'\n".format(perturbations))
         if 2 not in cases:
             for i in range(len(case1)):
@@ -977,19 +977,23 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'], basesims=[''],
                 case1[4] = case1[4].replace('step1', '{0}_{1}'.format(
                     simulations[i], src))
             else:
-                if _np.array([b.split('/')[-1][:-4]==simulations[i] for b in basesims]).any():
-                    sim_tmp = '{0}_{1}'.format(simulations[i], suf[suf.find('Be_'):])
+                if _np.array([b.split('/')[-1][:-4]==simulations[i] for 
+                        b in basesims]).any():
+                    sim_tmp = '{0}_{1}'.format(simulations[i], 
+                        suf[suf.find('Be_'):])
                 else:
                     sim_tmp = simulations[i]
                 case1[4] = case1[4].replace('step1', sim_tmp)
             case1.append("OBSERVERS   = '{0}'\n".format(observers))
             if images[i] != '':
-                if _np.array([b.split('/')[-1][:-4]==images[i] for b in baseimgs]).any():
-                    image_tmp = '{0}_{1}'.format(images[i], suf[suf.find('Be_'):])
+                if _np.array([b.split('/')[-1][:-4]==images[i] for 
+                        b in baseimgs]).any():
+                    image_tmp = '{0}_{1}'.format(images[i], 
+                        suf[suf.find('Be_'):])
                 else:
                     image_tmp = images[i]
                 case1.append("IMAGES      = '{0}'\n".format(image_tmp))
-            if perturbations is not None:
+            if perturbations != None:
                 case1.append("PERTURBATIONS = '{0}'\n".format(perturbations))
             case1.append('\n')
             if not simchk[i]:
@@ -1072,6 +1076,15 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'], basesims=[''],
                 outname))
             f0.writelines(
                 'llsubmit ./{0}/{1}s/{2}\n'.format(proj, sel, outname))
+        elif sel == 'slurm':
+            wout[1] = wout[1].replace('Proj', '{0}'.format(proj))
+            wout[2] = wout[2].replace('Proj', '{0}'.format(proj))
+            wout[5] = wout[5].replace('23:59:59', '{0}'.format(walltime))
+            wout[8] = wout[8].replace('60', '{0}'.format(nodes))
+            wout[26] = wout[26].replace('mod01.inp', '{0}/{1}'.
+            format(proj, mod.replace('.txt', '.inp')))
+            f0.writelines(
+                'sbatch {0}/{1}s/{2}\n'.format(proj, sel, outname))
         f0.close()
 
         f0 = open('{0}s/{1}'.format(sel, outname), 'w')
@@ -1230,7 +1243,7 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'], basesims=[''],
             for sel in clusters:
                 doJobs(mod, sel, nodes, addtouch)
 
-    if path is not '':
+    if path != '':
         _os.chdir(path0)
     # PROGRAM END
     return
@@ -1265,7 +1278,7 @@ def makeNoDiskGrid(modn, selsources, path=None):
 
     # PROGRAM BEGINS
     path0 = _os.getcwd()
-    if path is not None:
+    if path != None:
         _os.chdir(path)
         if path[-1] != '/':
             path += '/'
@@ -1287,7 +1300,7 @@ def makeNoDiskGrid(modn, selsources, path=None):
         prodI = prodI[0]
         doNoCS(prodI)
     print('# {0:.0f} arquivos foram gerados !!'.format(len(sources)))
-    if path is not "":
+    if path != "":
         _os.chdir(path0)
     # END PROGRAM
     return
@@ -1451,7 +1464,7 @@ def makeSourceGrid(masses, rps, lums, Ws, betas, path=None, suffix=None):
     Example: 2 of each parameters results in 32 models (2^5)
     """
     path0 = _os.getcwd()
-    if path is not None:
+    if path != None:
         _os.chdir(path)
         if path[-1] != '/':
             path += '/'
@@ -1481,7 +1494,7 @@ def makeSourceGrid(masses, rps, lums, Ws, betas, path=None, suffix=None):
         f0.writelines(wmod)
         f0.close()
     #
-    if path is not "":
+    if path != "":
         _os.chdir(path0)    
     return 
 
@@ -1496,7 +1509,7 @@ def makeStarGrid(oblats, Hfs, path=None):
     Masses list a Z value are inside `geneve_par.pro` file.
     """
     path0 = _os.getcwd()
-    if path is not None:
+    if path != None:
         _os.chdir(path)
         if path[-1] != '/':
             path += '/'
@@ -1591,7 +1604,7 @@ def makeStarGrid(oblats, Hfs, path=None):
                 f0.writelines(wmod)
                 f0.close()
     #
-    if path is not "":
+    if path != "":
         _os.chdir(path0)
     return
 
@@ -1608,7 +1621,7 @@ def makeStarGrid2(Ms, Ws, ts, Zs=[0.014], path=None):
     For while, only Z=0.014 (solar) is available
     """
     path0 = _os.getcwd()
-    if path is not None:
+    if path != None:
         _os.chdir(path)
         if path[-1] != '/':
             path += '/'
@@ -1658,7 +1671,7 @@ def makeStarGrid2(Ms, Ws, ts, Zs=[0.014], path=None):
         f0.close()
     print("%.0f arquivos gerados\n" % (len(Ms) * len(Ws) * len(ts) * len(Zs)))
     #
-    if path is not "":
+    if path != "":
         _os.chdir(path0)
     return
 
@@ -1759,7 +1772,7 @@ def makeCSGrid_bistabWind1Dust(modn='01', renv=[18.6], rcs=[5.],
 
     # PROGRAM BEGINS
     path0 = _os.getcwd()
-    if path is not None:
+    if path != None:
         _os.chdir(path)
     else:
         path = ''
@@ -1780,7 +1793,7 @@ def makeCSGrid_bistabWind1Dust(modn='01', renv=[18.6], rcs=[5.],
         grain_dust_ratio, grain_dens, renv, rcs, sources):
         dobistabWind1Dust(lpars)
 
-    if path is not "":
+    if path != "":
         _os.chdir(path0)
     # END PROGRAM
     return
@@ -1823,7 +1836,7 @@ def check_inp(mods=None, step1=["step1", 20], step1_ref=["step1_refine", 30],
                         if int(last) >= step1[1]:
                             for j in range(len(f0)):
                                 if (_re.search(r"SIMULATION.*?=.*?" + sim + 
-                                r"[\"' \t\n]", f0[j]) is not None):
+                                r"[\"' \t\n]", f0[j]) != None):
                                     f0[j] = "! "+f0[j]
                                     if f0[j].upper().find("SUFFIX") > -1:
                                         break
@@ -1844,7 +1857,7 @@ def check_inp(mods=None, step1=["step1", 20], step1_ref=["step1_refine", 30],
                         if int(last) >= step1[1]:
                             for j in range(len(f0)):
                                 if (_re.search(r"SIMULATION.*?=.*?" + sim + 
-                                r"[\"' \t\n]", f0[j]) is not None):
+                                r"[\"' \t\n]", f0[j]) != None):
                                     f0[j] = "! "+f0[j]
                                     if f0[j].upper().find("SUFFIX") > -1:
                                         break
@@ -1869,7 +1882,7 @@ def check_inp(mods=None, step1=["step1", 20], step1_ref=["step1_refine", 30],
                     if len(chk) == 1:
                         for j in range(len(f0)):
                             if (_re.search(r"SIMULATION.*?=.*?" + sim + 
-                            r"[\"' \t\n]", f0[j]) is not None):
+                            r"[\"' \t\n]", f0[j]) != None):
                                 f0[j] = "! "+f0[j]
                                 # print(f0[0])
                                 if f0[j].upper().find("SUFFIX") > -1:

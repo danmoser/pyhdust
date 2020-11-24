@@ -4,6 +4,11 @@
 
 History
 ============
+v1.4.1 @ 2020-11-24
+---------------------
+- Correlation functions in pyhdust.stats
+- Other small updates
+
 v1.4.0 @ 2020-11-04
 ---------------------
 - Multiple small updates

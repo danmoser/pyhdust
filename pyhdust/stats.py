@@ -117,3 +117,115 @@ def snr(count_rate, texp=1., nexp=1, npix=10., bg=10., dk=0., ron=2., var=0.):
     """
     return count_rate*texp*nexp / \
         _np.sqrt(texp*nexp*(count_rate+bg*npix+dk*npix) +ron**2*npix*nexp+ var)
+
+
+def corr_coef(x, y, clear_nan=True):
+    """ Pearson correlation coefficient for two ``x`` and ``y`` arrays (same 
+    length).
+
+    See also ``scipy.stats.pearsonr()``
+    """
+    if len(x) != len(y):
+        _warn('# length of x and y arrays do not match!')
+        return None
+    x = _np.array(x)
+    y = _np.array(y)
+    if clear_nan:
+        idx = _np.isnan(x)
+        idy = _np.isnan(y)
+        idxy = idx+idy
+        x = x[~idxy]
+        y = y[~idxy]
+    avgx = _np.average(x)
+    avgy = _np.average(y)
+    return (_np.sum((x-avgx)*(y-avgy)))/(
+        _np.sqrt(_np.sum((x-avgx)**2)*_np.sum((y-avgy)**2)) )
+
+
+def corr_coef_spearman(x, y, clear_nan=True):
+    """ Spearman's correlation coefficient for two ``x`` and ``y`` arrays (same 
+    length).
+
+    See also ``scipy.stats.spearmanr()``
+    """
+    if len(x) != len(y):
+        _warn('# length of x and y arrays do not match!')
+        return None
+    x = _np.array(x)
+    y = _np.array(y)
+    if clear_nan:
+        idx = _np.isnan(x)
+        idy = _np.isnan(y)
+        idxy = idx+idy
+        x = x[~idxy]
+        y = y[~idxy]
+    idx = _np.argsort(x)
+    x = x[idx]
+    y = y[idx]
+    n = len(x)
+    diff = (_np.arange(n)-_np.argsort(y))
+    diff2 = diff**2
+    return 1 - 6*_np.sum(diff2)/(n*(n**2-1))
+
+
+def corr_coef_cov(x, y, clear_nan=True):
+    r""" Correlation coefficient based on the Covariance of two ``x`` and ``y`` 
+    arrays (same length).
+
+    :math:`\rho(x,y)=Cov(x,y)/sqrt(Var(x)*Var(y))`
+
+    If :math:`\rho(x,y)= 0` we say that X and Y are "uncorrelated." If two 
+    variables are independent, then their correlation will be 0. However, 
+    like with covariance. it doesn't go the other way. A correlation of 0
+    does not imply independence.
+    """
+    if len(x) != len(y):
+        _warn('# length of x and y arrays do not match!')
+        return None
+    x = _np.array(x)
+    y = _np.array(y)
+    if clear_nan:
+        idx = _np.isnan(x)
+        idy = _np.isnan(y)
+        idxy = idx+idy
+        x = x[~idxy]
+        y = y[~idxy]
+    idx = _np.argsort(x)
+    c, cov = _np.polyfit(x, y, 1, cov=True)
+    return cov[0, 1]/_np.sqrt(cov[0, 0]*cov[1, 1])
+
+
+def corr_coef_cov_with_err(x, y, yerr, xerr=None, clear_nan=True, 
+    nsample=1000):
+    r""" Correlation coefficient based on the Covariance of two ``x`` and ``y`` 
+    arrays (same length).
+
+    :math:`\rho(x,y)=Cov(x,y)/sqrt(Var(x)*Var(y))`
+
+    If :math:`\rho(x,y)= 0` we say that X and Y are "uncorrelated." If two 
+    variables are independent, then their correlation will be 0. However, 
+    like with covariance. it doesn't go the other way. A correlation of 0
+    does not imply independence.
+    """
+    if xerr is None:
+        xerr = _np.zeros(len(x))
+    if len(x) != len(y) or len(x) != len(xerr) or len(xerr) != len(yerr):
+        _warn('# length of input arrays do not match!')
+        return None
+    x = _np.array(x)
+    xerr = _np.array(xerr)
+    y = _np.array(y)
+    yerr = _np.array(yerr)
+    if clear_nan:
+        idx = _np.isnan(x)
+        idxe = _np.isnan(xerr)
+        idy = _np.isnan(y)
+        idye = _np.isnan(yerr)
+        idxy = idx+idy+idxe+idye
+        x = x[~idxy]
+        xerr = xerr[~idxy]
+        y = y[~idxy]
+        yerr = yerr[~idxy]
+    mx = _np.random.multivariate_normal(x, _np.diag(xerr**2), nsample)
+    my = _np.random.multivariate_normal(y, _np.diag(yerr**2), nsample)
+    return corr_coef_cov(mx.reshape(-1), my.reshape(-1))

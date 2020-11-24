@@ -333,7 +333,7 @@ def createBAsed(fsedlist, xdrpath, lbdarr, param=True, savetxt=False,
                 # modn = fsedlist[i][j + 11:j + 13]
                 modn = _re.match(r'.*mod(\d+)_', fsedlist[i]).group(1)
                 log = fsedlist[i].replace('fullsed_mod', '../mod{0}/mod'.
-                    format(modn)).replace('.sed2', '.log')
+                    format(modn)).replace('.sed2', '*.log')
                 if not _os.path.exists(log):
                     log = _glob(log.replace('../mod{0}/mod'.format(modn),
                     '../mod{0}/*mod'.format(modn)))

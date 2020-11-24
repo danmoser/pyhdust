@@ -282,26 +282,26 @@ def change_dimension(x, nred=-1, fixedlim=False):
     return _np.linspace(_np.min(x), _np.max(x), len(x)+nred)
 
 
-def bindata(x, y, yerr=None, nbins=20, xlim=None, perc=0, interp=False, 
+def bindata(x, y, yerr=None, nbins=20, xlim=None, interp=False, perc=0,
     weightx=True):
     """
-    Return the weighted binned data.
-
-    if ``perc > 0``, then it returns the percentile value of the interval.
-
-    if yerr is None:
-        yerr = _np.ones(shape=_np.shape(x))
+    Return the weighted binned data. It is assumed no errors for x values.
 
     `interp` linearly interpolates NaN values in `y` (no changes on `x` and 
     `yerr` arrays).
 
-    `weightx=True` returns the averaged `x` value inside the bin. `False` 
-    returns the regularly spaced `x` values.
+    if ``perc > 0``, then it returns the percentile value of the interval. In 
+    this case, the output xvals will be the ones from the closest y  
+    value within a given bin corresponding to that percentile.
 
-    INPUT: x, y, err - arrays with the same shape (they don't need to be
-    sorted); nbins=int, xlim=[xmin, xmax]
+    `weightx` only works if `perc=0`. `True` returns the simply averaged `x` 
+    value of a given bin interval (it is not based on y or yerr values); 
+    `False` returns the regularly spaced `x` bin values.
 
-    OUTPUT: xvals, yvals, new_yerr (arrays)
+    INPUT: x, y, yerr - arrays with the same shape (they don't need to be
+    sorted); nbins=int, xlim=[xmin, xmax]. 
+
+    OUTPUT: xvals, yvals, new_yerr [if `yerr!=None`]; (arrays)
     """
     x = _np.array(x)
     y = _np.array(y)
