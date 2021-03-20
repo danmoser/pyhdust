@@ -565,7 +565,8 @@ def fastnumvis(img, lbd, Bproj, PA, rad_per_pixel, PAdisk=90., silent=False):
     output: complexVis, VisAmp, VisPhase
     """
     if (lbd < 1e-6 or lbd > 4e-6) and not silent:
-        print('# Warning! *fastnumvis*(lbd) is {0:.1e} m!'.format(lbd))
+        print('# Warning! *fastnumvis*(lbd) is out of JHK range {0:.1e} m'
+            .format(lbd))
     PA = PA - PAdisk + 90.
     idx = _np.where(img > 0)
 

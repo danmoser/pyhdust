@@ -197,7 +197,8 @@ def corr_coef_cov(x, y, clear_nan=True):
 
 def corr_coef_cov_with_err(x, y, yerr, xerr=None, clear_nan=True, 
     nsample=1000):
-    r""" Correlation coefficient based on the Covariance of two ``x`` and ``y`` 
+    r""" TO BE DONE
+    Correlation coefficient based on the Covariance of two ``x`` and ``y`` 
     arrays (same length).
 
     :math:`\rho(x,y)=Cov(x,y)/sqrt(Var(x)*Var(y))`
