@@ -1049,8 +1049,27 @@ def fracday2hms(frac):
     return hh, mm, ss
 
 
+def raf2ra(raf):
+    """ Decimal RA (float in deg) to sexagesimal RA (h:m:s) """
+    raf /= 15. 
+    hour, amin = divmod(raf, 1)
+    amin *= 60
+    amin, asec = divmod(amin, 1)
+    asec *= 60
+    return ('{:02.0f}:{:02.0f}:{:06.3f}').format(hour, amin, asec)
+
+
+def decf2dec(decf):
+    """ Decimal DEC (float) to sexagesimal DEC (deg:m:s; string) """
+    deg, amin = divmod(decf, 1)
+    amin *= 60
+    amin, asec = divmod(amin, 1)
+    asec *= 60
+    return ('{:02.0f}:{:02.0f}:{:06.3f}').format(deg, amin, asec)
+
+
 def ra2degf(rastr):
-    """ RA to degrees (decimal). Input is string. """
+    """ RA (sexagemsimal; string) to degrees (decimal; float) """
     rastr = rastr.replace('::', ':')
     rastr = rastr.replace(',', '.')
     vals = _np.array(rastr.split(':')).astype(float)
@@ -1058,7 +1077,7 @@ def ra2degf(rastr):
 
 
 def dec2degf(decstr, delimiter=":"):
-    """ Sexagesimal to decimal. Input is string. """
+    """ Sexagesimal (string) to decimal (float) """
     vals = _np.array(decstr.split(delimiter)).astype(float)
     if vals[0] < 0:
         vals[1:] *= -1
