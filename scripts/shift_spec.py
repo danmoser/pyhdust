@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 
 """ Program that shifts a FITS spectrum based on an line-profile Gaussian fit 

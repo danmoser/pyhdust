@@ -4,6 +4,10 @@
 
 History
 ============
+v1.5.0 @ 2021-04-26
+--------------------
+- Formally removing support for python 2.7 (Python 3.4+ only)
+
 v1.4.1 @ 2020-11-24
 ---------------------
 - Correlation functions in pyhdust.stats

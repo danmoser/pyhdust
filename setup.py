@@ -1,12 +1,12 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 
 import os
 import sys
 
 
-if sys.version_info[:2] < (2, 7) or (3, 0) <= sys.version_info[:2] < (3, 4):
-    raise RuntimeError("Python version 2.7 or >= 3.4 required.")
+if sys.version_info[:2] < (3, 3):
+    raise RuntimeError("Python version >= 3.4 required.")
 
 try:
     from setuptools import setup, find_packages
@@ -61,7 +61,7 @@ if sys.argv[-1] == "publish":
     sys.exit()
 
 setup(name='pyhdust',
-    version='1.4.2',
+    version='1.5.0',
     description=('Analysis tools for multi-technique astronomical data and '
         'hdust models'),
     url='http://pyhdust.readthedocs.io',
@@ -91,7 +91,6 @@ setup(name='pyhdust',
         " (GPLv3+)",
         "Operating System :: OS Independent",
         "Programming Language :: Python",
-        "Programming Language :: Python :: 2",
         "Programming Language :: Python :: 3",
         "Topic :: Scientific/Engineering :: Astronomy",
         "Topic :: Scientific/Engineering :: Physics"
@@ -105,4 +104,4 @@ if errimport:
     print('# You don\'t have "setuptools" installed!')
     print('# Because of this, you MAY need to copy the package data: \n')
     print('# Warning! The path can change according to your system')
-    print('$ cp -r -f pyhdust ~/.local/lib/python2.7/site-packages/')
+    print('$ cp -r -f pyhdust ~/.local/lib/python3.x/site-packages/')
