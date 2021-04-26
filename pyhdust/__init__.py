@@ -38,7 +38,7 @@ try:
 except ImportError:
     _warn.warn('# matplotlib, astropy and/or scipy module not installed!!')
 
-__version__ = '1.4.2'
+__version__ = '1.4.3'
 __release__ = "Stable"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -381,56 +381,64 @@ def readdust(dfile):
     (r,phi,mu)
     - lacentro = controla os tipos e tamanhos das poeiras
     """
-    f0 = open(dfile, 'rb').read()
-    f0 = f0.split('\n')
-    # Header
-    tmp = f0[0].split()
-    ncr, ncmu, ncphi, NdustShells = _np.array(tmp[:4], dtype='int')
-    Rstar, Ra = _np.array(tmp[4:], dtype='float')
-    tmp = f0[1].split()
-    ncrdust = int(tmp[0])
-    Rdust, Tdestruction = _np.array(tmp[1:], dtype='float')
-    ntip = int(f0[2])
-    # 
+    Arq = open(dfile)
+    
+    #First line
+    Line = Arq.readline().split()
+    ncr, ncmu, ncphi, NdustShells = _np.array(Line[:4], dtype='int')
+    Rstar,Ra = _np.array(Line[4:], dtype='float')
+    
+    #Read the lines of each dustshell
+    ncrdust, Rdust, Tdestruction  = [],[],[]
+    for _ in range(NdustShells):
+        Line = Arq.readline().split()
+        ncrdust.append(int(Line[0]))
+        Rdust.append(_np.float32(Line[1]))
+        Tdestruction.append(_np.float32(Line[2]))
+    
+    ntip = int(Arq.readline().split()[0])
+    
     pcrc = _np.zeros(ncr)
-    pcmuc = _np.zeros((ncmu, ncr))
+    pcmuc = _np.zeros((ncr,ncmu))
     pcphic = _np.zeros(ncphi)
-    i = 3
+    
     for stip in range(ntip):
-        na = int(f0[i])
-        # 
-        if stip is 0:
-            Tdust = _np.zeros((ntip, na, ncr, ncmu, ncphi))
-            lacentro = _np.zeros((ntip, na))
-        i += 1
-        lacentro[stip] = _np.array(f0[i].split(), dtype=_np.float)
+        na = int(Arq.readline().split()[0])
+        
+        if (stip == 0):
+            Tdust = _np.zeros((ncphi,ncmu,ncr,na,ntip))
+            lacentro = _np.zeros((na,ntip))
+            temp = _np.zeros(na+3)
+                    
+        lacentro[:,stip] = _np.array(Arq.readline().split(), dtype='float')
+        
         for icphi, icmu, icr in _itprod(range(ncphi), range(ncmu), range(ncr)):
-            i += 1 
-            tmp = _np.array(f0[i].split(), dtype=_np.float)
-            pcrc[icr] = tmp[0]
-            pcmuc[icmu, icr] = tmp[1]
-            pcphic[icphi] = tmp[2]
-            Tdust[stip, :, icr, icmu, icphi] = tmp[3:3 + na]
-    # 
+            temp = _np.array(Arq.readline().split(), dtype='float')
+            pcrc[icr] = temp[0]
+            pcmuc[icr,icmu] = temp[1]
+            pcphic[icphi] = temp[2]
+            Tdust[icphi,icmu,icr,:,stip] = temp[3:3 + na]
+    
+    Arq.close()
+    
     pcr = _np.zeros(ncr + 1)
-    pcr[0] = _np.array([Rdust])[0]
-    for icr in range(1, ncr + 1):
-        pcr[icr] = pcr[icr - 1] + 2 * (pcrc[icr - 1] - pcr[icr - 1])
-    # 
-    pcmu = _np.zeros((ncmu + 1, ncr))
+    pcr[0] = Rdust[0]
     for icr in range(ncr):
-        pcmu[0, icr] = -1.
-        for icmu in range(1, ncmu + 1):
-            pcmu[icmu, icr] = pcmu[icmu - 1, icr] + 2.*(pcmuc[icmu - 1, icr] -
-                pcmu[icmu - 1, icr])
-    # 
+        pcr[icr + 1] = pcr[icr] + 2.*(pcrc[icr] - pcr[icr])
+    
+    pcmu = _np.zeros((ncr, ncmu+1))
+    for icr in range(ncr):
+        pcmu[icr,0] = -1.
+        for icmu in range(ncmu):
+            pcmu[icr,icmu + 1] = pcmu[icr,icmu] + 2.*(pcmuc[icr,icmu] - pcmu[icr,icmu])
+
     pcphi = _np.zeros(ncphi + 1)
     pcphi[0] = 0.
-    for icphi in range(1, ncphi + 1):
-        pcphi[icphi] = pcphi[icphi - 1] + 2 * \
-            (pcphic[icphi - 1] - pcphi[icphi - 1])
-    return ncr, ncmu, ncphi, ntip, na, Rstar, Ra, NdustShells, Rdust,\
-        Tdestruction, Tdust, pcrc, pcmuc, pcphic, pcr, pcmu, pcphi, lacentro
+    for icphi in range(ncphi):
+        pcphi[icphi + 1] = pcphi[icphi] + 2*(pcphic[icphi] - pcphi[icphi])
+    
+    return ncr,ncmu,ncphi,ntip,na,Rstar,Ra, NdustShells,Rdust,\
+        Tdestruction,Tdust,pcrc,pcmuc,pcphic,pcr,pcmu,pcphi,lacentro
 
 
 def temp_interp(tempfile, theta, pos=[0, 1]):
@@ -900,12 +908,78 @@ def readSingleBe(sBfile):
 
 
 # Hdust useful
-def plotdust(tfile):
-    """ TBD!!
-
-    .. seealso:: py:func:`readdust`.
-
+def plotdust(tfiles, mulist=[0], philist=[0], typelist=[0], alist=None, axis = [1.,1e2,90.,2200.], 
+                interpola=False, fmt=['png'], figname=None, title=''):
     """
+    :Example:
+    >>> import pyhdust as phc
+    >>> phc.plotdust('bestar2.10/mod01/mod01.dust', tfrange=[30,33])
+    .. image:: _static/hdt_plottemp.png
+        :width: 512px
+        :align: center
+        :alt: hdt.plottemp example
+    `tfiles` = filenames list.
+    'philist' = phi values
+    'typelist' = grain type index
+    'alist' = grain size values
+    'axis' = boundaries of the image, x in stellar radius, y in K 
+    `figname` = prefix of the output images
+    `fmts` = format of the output images.
+    If interpol==True, what will be plotted is the population along rays of
+    a given latitude. The latitudes are defined in array muplot below.
+    If interpola==False, what will be plotted is the population for a given mu
+    index as a function of radius, starting with index ncmu/2(midplane) + plus
+    OUTPUT = ...
+    """
+    if isinstance(tfiles, _strtypes):
+        tfiles = [tfiles]
+    
+    if isinstance(figname, _strtypes):
+        figname = [f"{figname}-{ifile}" for ifile in range(len(tfiles))]
+    
+    for i in range(len(tfiles)):
+        rtfile = tfiles[i]
+        print(rtfile)
+        ncr,ncmu,ncphi,ntip,na,Rstar,Ra,NdustShells,Rdust,Tdestruction,Tdust,pcrc,\
+                            pcmuc,pcphic,pcr,pcmu,pcphi,lacentro = readdust(rtfile)
+        
+        x = pcrc/Rdust[0]
+        y = _np.zeros(x.shape)
+        
+        if alist is None:    sizes = [lacentro[0], lacentro[-1]]
+        else:                sizes = alist
+        
+        fig = _plt.figure()
+        
+        for a in sizes:
+            ia = _phc.find_nearest(lacentro, a, idx=True)
+            for tip in typelist:
+                for phi in philist:
+                    icphi = _phc.find_nearest(pcphic, phi, idx=True)
+                    for mu in mulist:
+                        for icr in range(ncr):
+                            muarr = pcmuc[icr]
+                            icmu = _phc.find_nearest(muarr, mu, idx=True)
+                                
+                            y[icr] = Tdust[icphi,icmu,icr,ia,tip]
+                            
+                            if (interpola and y[icr] != 0.):
+                                if(icmu == ncmu-1): icmu = icmu - 1
+                                f = (mu - muarr[icmu])/(muarr[icmu+1]-muarr[icmu])
+                                y[icr] = (1.-f)*Tdust[icphi,icmu,icr,ia,tip] + \
+                                                f*Tdust[icphi,icmu+1,icr,ia,tip]
+                                
+                        _plt.loglog(x, y, label=f'type={tip} a={lacentro[ia, tip]} phi={pcphic[icphi]} mu={muarr[icmu]}', base=10)
+    
+        _plt.xlabel(r'$r/R_{dust}}$',fontsize=15)
+        _plt.ylabel('Dust Temperature (K)',fontsize=15)
+        _plt.axis(axis) # [xmin,xmax,ymin,ymax]
+        _plt.subplots_adjust(bottom=0.15,left = 0.15,right=0.92,top=0.92)
+        _plt.legend(loc='best', fancybox=True, framealpha=0.5)
+        _plt.title(f'{title} file={rtfile}')
+        _phc.savefig(fig, figname=figname, fmt=fmt)
+        _plt.close()
+    
     return
 
 
