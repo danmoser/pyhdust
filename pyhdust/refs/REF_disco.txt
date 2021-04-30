@@ -36,12 +36,12 @@ I) ENVELOPE DESCRIPTION
 				1) HSEQ VD			  !(VERTICAL DENSITY = 1)
 					betad = 1.5 !disk flaring parameter (used to define the disk
 
-			iii) VERTICAL SCALE HEIGHT = 1
+			iii) VERTICAL SCALE HEIGHT = 2
 				 1) ACTUAL TEMPERATURE
 					Teff_SH = 18000. K	!Effective temperature for setting the  
 										!scale height.  
 				 2) FRACTION OF TEFF OF PRIMARY STAR
-					Fraction = 72.%
+					Fraction = 60.%
 				
 			iv) DISK SURFACE
 				RATIO = 1.E7

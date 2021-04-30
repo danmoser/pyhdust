@@ -132,7 +132,6 @@ def beta(par, is_ob=False):
 
     nthe = 99
     theta = _np.linspace(0, _np.pi / 2, nthe + 2)[1:-1]
-    print(theta)
     grav = _np.zeros(nthe)
     teff = _np.zeros(nthe)
     corr = _np.zeros(nthe)

@@ -1,0 +1,14 @@
+#!/bin/bash
+#SBATCH --mem-per-cpu=2048
+#SBATCH -J Proj
+#SBATCH -p slims
+#SBATCH -n 60
+#SBATCH --ntasks-per-node=8
+#SBATCH -o Proj_%j.out
+#SBATCH -e Proj_%j.err
+#SBATCH --mail-user=edgar.sanders@uv.cl
+#SBATCH --mail-type=ALL
+
+cd
+cd hdust/runs/hdust/
+srun ./hdustparv2.10.bc = mod01.inp

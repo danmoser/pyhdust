@@ -855,7 +855,7 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'], basesims=[''],
 
         #clusters config
         # job = AlphaCrucis; oar = MesoCentre Licallo; ge = MesoCentre FRIPP
-        clusters = ['job','oar','ge','bgq']
+        clusters = ['job', 'bat', 'oar', 'ge', 'bgq', 'slurm', 'slurm_ch']
         clusters = ['oar']
         nodes    = 48
         #if wcheck == True, walltime will be AUTOMATICALLY estimated
@@ -993,7 +993,7 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'], basesims=[''],
                 else:
                     image_tmp = images[i]
                 case1.append("IMAGES      = '{0}'\n".format(image_tmp))
-            if perturbations != None:
+            if perturbations is not None:
                 case1.append("PERTURBATIONS = '{0}'\n".format(perturbations))
             case1.append('\n')
             if not simchk[i]:
@@ -1019,7 +1019,7 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'], basesims=[''],
             wout[8] = wout[8].replace(
                 'alexcarciofi@gmail.com', '{0}'.format(email))
             wout[11] = wout[11].replace('hdust_bestar2.02.inp', '{0}/{1}'.
-            format(proj, mod.replace('.txt', '.inp')))
+                format(proj, mod.replace('.txt', '.inp')))
             if touch:
                 wout[24] = addtouch
                 modchmod = _phc.trimpathname(mod)
@@ -1035,7 +1035,7 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'], basesims=[''],
             wout[8] = wout[8].replace(
                 'alexcarciofi@gmail.com', '{0}'.format(email))
             wout[11] = wout[11].replace('hdust_bestar2.02.inp', '{0}/{1}'.
-            format(proj, mod.replace('.txt', '.inp')))
+                format(proj, mod.replace('.txt', '.inp')))
             if touch:
                 wout[24] = addtouch
                 modchmod = _phc.trimpathname(mod)
@@ -1048,7 +1048,7 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'], basesims=[''],
                 nodes/12.))))
             wout[2] = wout[2].replace('24:0:0', '{0}'.format(walltime))
             wout[10] = wout[10].replace('hdust_bestar2.02.inp', '{0}/{1}'.
-            format(proj, mod.replace('.txt', '.inp')))
+                format(proj, mod.replace('.txt', '.inp')))
             f0.writelines(
                 'chmod -f a+x {0}/{1}s/{2}\n'.format(proj, sel, outname))
             f0.writelines(
@@ -1058,7 +1058,7 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'], basesims=[''],
             wout[4] = wout[4].replace('45:00:00', '{0}'.format(walltime))
             wout[7] = wout[7].replace('dmfaes@gmail.com', '{0}'.format(email))
             wout[11] = wout[11].replace('hdust_bestar2.02.inp', '{0}/{1}'.
-            format(proj, mod.replace('.txt', '.inp')))
+                format(proj, mod.replace('.txt', '.inp')))
             f0.writelines(
                 'qsub -P hdust {0}/{1}s/{2}\n'.format(proj, sel, outname))
         elif sel == 'bgq':
@@ -1071,7 +1071,7 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'], basesims=[''],
             wout[10] = wout[10].replace('128', '{0}'.format(nrsv))
             wout[5] = wout[5].replace('24:00:00', '{0}'.format(walltime))
             wout[14] = wout[14].replace('hdust_bestar2.02.inp', '{0}/{1}'.
-            format(proj, mod.replace('.txt', '.inp')))
+                format(proj, mod.replace('.txt', '.inp')))
             f0.writelines('chmod -f +x {0}/{1}s/{2}\n'.format(proj, sel, 
                 outname))
             f0.writelines(
@@ -1082,7 +1082,19 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'], basesims=[''],
             wout[5] = wout[5].replace('23:59:59', '{0}'.format(walltime))
             wout[8] = wout[8].replace('60', '{0}'.format(nodes))
             wout[26] = wout[26].replace('mod01.inp', '{0}/{1}'.
-            format(proj, mod.replace('.txt', '.inp')))
+                format(proj, mod.replace('.txt', '.inp')))
+            f0.writelines(
+                'sbatch {0}/{1}s/{2}\n'.format(proj, sel, outname))
+        elif sel == 'slurm_cl':
+            wout[2] = wout[2].replace('Proj', '{0}'.format(proj))
+            # wout[5] = wout[5].replace('23:59:59', '{0}'.format(walltime))
+            wout[4] = wout[4].replace('60', '{0}'.format(nodes))
+            wout[6] = wout[6].replace('Proj', '{0}'.format(proj))
+            wout[7] = wout[7].replace('Proj', '{0}'.format(proj))
+            wout[8] = wout[8].replace('edgar.sanders@uv.cl', '{0}'.
+                format(email))
+            wout[13] = wout[13].replace('mod01.inp', '{0}/{1}'.
+                format(proj, mod.replace('.txt', '.inp')))
             f0.writelines(
                 'sbatch {0}/{1}s/{2}\n'.format(proj, sel, outname))
         f0.close()
@@ -1193,13 +1205,13 @@ def makeInpJob(modn='01', nodes=512, simulations=['SED'], basesims=[''],
         if _os.path.exists(mod.replace('.txt', '{0:02d}.temp'.format(st1max)))\
             and chkout and 1 in cases:
             cases.remove(1)
-        case1 = doCase1(inp, cases)
+        case1 = doCase1(inp, cases, oldstp1=oldstp1)
         f0.writelines(case1 + ['\n'])
 
         if _os.path.exists(mod.replace('.txt', '{0:02d}.temp'.format(
             st1refmax))) and chkout and 2 in cases:
             cases.remove(2)    
-        case2 = doCase2(inp, cases)
+        case2 = doCase2(inp, cases, oldstp1=oldstp1)
         f0.writelines(case2 + ['\n'])
 
         if chkout and 3 in cases:
