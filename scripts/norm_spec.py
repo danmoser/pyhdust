@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 
 """ Program to normalize a FITS (*.fit*) or a 2-columns text file (other 

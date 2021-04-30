@@ -32,10 +32,14 @@ import pyhdust as _hdt
 from six import string_types as _strtypes
 from shutil import copyfile as _copyfile
 import warnings as _warn
+import wget as _wget
+import requests as _requests
+import xmltodict as _xmltodict
 # from lmfit import Model as _Model
 
 try:    
     import astropy.io.fits as _pyfits
+    import astropy.coordinates.sky_coordinate.SkyCoord as _SkyCoord
     import matplotlib as _mpl
     import matplotlib.pyplot as _plt
     import matplotlib.patches as _mpatches
@@ -46,14 +50,15 @@ try:
     from scipy.stats import percentileofscore as _pos
     from astropy.modeling import models as _models
     from astropy.modeling import fitting as _fitting
+    import pandas as _pd
 except ImportError:
-    _warn.warn('matplotlib and/or scipy and/or astropy module not installed!!!')
+    _warn.warn('matplotlib and/or scipy and/or astropy and/or pandas module not installed!!!')
 
-try:
-    import pyqt_fit.nonparam_regression as _smooth
-    from pyqt_fit import npr_methods as _npr_methods
-except ImportError:
-    _warn.warn('pyqt_fit module not installed!!!')
+#try:
+#    import pyqt_fit.nonparam_regression as _smooth
+#    from pyqt_fit import npr_methods as _npr_methods
+#except ImportError:
+#    _warn.warn('pyqt_fit module not installed!!!')
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -1792,30 +1797,34 @@ def normalize_spec(lb, flx, q=2, diff=0.03, perc=0, nlbp=50):
     If perc > 0, a "percentile filter" is applyed to the spectrum (divided in
     nlbp bins).
 
-    For details, see http://pythonhosted.org/PyQt-Fit/NonParam_tut.html .
-
     INPUT: lb, flx
 
     OUTPUT: norm_flx
     """
+    def linear_model(x, *coef):
+        result = 0
+        for i in range(len(coef)):
+            result += coef[i]*x**i
+        return result
+    
     if perc <= 0:
-        k1 = _smooth.NonParamRegression(lb, flx, 
-            method=_npr_methods.LocalPolynomialKernel(q=1))
-        k1.fit()
-
+        Initial_guess = [0.,0.]
+        coef1, cov1 = _curve_fit(linear_model, lb, flx, Initial_guess)
         idx0 = _np.where(flx != 0)
         ilb = lb[idx0]
         iflx = flx[idx0]
-        idxi = _np.where(_np.abs(k1(ilb)/iflx-1) < diff)
+        idxi = _np.where(_np.abs(linear_model(ilb, *coef1)/iflx-1) < diff)
         xsi = ilb[idxi]
         ysi = iflx[idxi]
     else:
         xsi, ysi = _phc.bindata(lb, flx, nbins=nlbp, perc=perc)
-
-    k2 = _smooth.NonParamRegression(xsi, ysi, 
-        method=_npr_methods.LocalPolynomialKernel(q=q))
-    k2.fit()
-    return flx/k2(lb)
+        xsi = xsi.reshape(-1,1)
+    
+    Initial_guess = _np.zeros(q+1)
+    coef2, cov2 = _curve_fit(linear_model, xsi, ysi, Initial_guess)
+    k2 = linear_model(lb, *coef2)
+    
+    return flx/k2
 
 
 def renorm(vl, y):
@@ -3405,7 +3414,119 @@ def classify_specs(list_of_specs, starid, instrument, calib, comment=''):
         expname += ".{}.fits".format(calib)
         _copyfile(s, expname)
 
+def automatic_BeSS(RA, DEC, size='0.2', date_lower='1000-01-01', date_upper="3000-01-01", band_lower='6.4e-7', band_upper='6.7e-7'):
+    
+    """
+    
+    This is a script for downloading BeSS spectra, directly from the database website, 
+    using VO Table and pandas dataframes
+    
+    Parameters
+    ----------
+    RA : str
+        Right ascension [° J200] as string
+    DEC : str
+        Declination [° J2000] as string
+    size: str
+        Radius of the cone search in degree as string
+    date_lower: str
+        Initial date in format yyyy-mm-dd as string
+    date_upper: str
+        Final date in format yyyy-mm-dd as string
+    band lower: str
+        Initial wavelength [meters] in scientific notation as string
+    band_upper: str
+        Final wavelength [meters] in scientific notation as string
+    
+    Returns
+    -------
+    None, the routine downloads file in the script directory.
+    
+    Example
+    -------
+    #Halpha for 25 Cyg from 2019-10-01 to 2020-03-27
+    >>> RA = "299.979"
+    >>> DEC = "37.04"
+    >>> date_lower = "2019-10-01"
+    >>> date_upper = "2020-03-27"
+    >>> automatic_BeSS(RA, DEC, size='0.1', date_lower, date_upper, band_lower='6.4e-7', band_upper='6.7e-7')
+    #Data downloaded in the script directory
+    
+    -------
+    #Download all Ha data of a star
+    >>> automatic_BeSS(RA="299.979", DEC="37.04")
+    
+    Routine written by Pedro Ticiani dos Santos
+    
+    IMPORTANT NOTE: When using this function, the downloaded files go to the script 
+    directory. This is something still undergoing work.
+    
+    """
+    
+    user_url = 'http://basebe.obspm.fr/cgi-bin/ssapBE.pl?POS={0},{1}&SIZE={2}&BAND={3}/{4}&TIME={5}/{6}'.format(RA, DEC, size, band_lower, band_upper, date_lower, date_upper)
+    
+    r = _requests.get(url = user_url)
 
+    # xml parsed => dict
+    global_dict = _xmltodict.parse(r.text)
+    
+    # Interesting data selection
+    entries_list = global_dict['VOTABLE']['RESOURCE']['TABLE']['DATA']['TABLEDATA']['TR']
+    
+    # Dataframe init (eq. Table)
+    df01 = _pd.DataFrame()
+    
+    # Browse through the entries and record it in the dataframe df01
+    for item in entries_list:  
+        # Create a row for the dataframe
+        p01 = {'Fits URL': item['TD'][0],
+        'Target name': item['TD'][45],
+        "Target class": item['TD'][46],
+        "vo_format": item['TD'][1]}
+    
+    # add row in progress in the dataframe
+        df01 = df01.append(p01, ignore_index=True)
+    
+    # Dataframe init
+    df02 = _pd.DataFrame()
+    
+    # Iteration on each row
+    for item in entries_list:
+        vo_url_fits = item['TD'][0]
+    
+        try:
+            # Download of each file in progress with his url
+            file_bess = _wget.download(vo_url_fits)
+    
+            # Opening FITS
+            fits_in_progress = _pyfits.open(file_bess) 
+    
+            # Retrieve header information for fits in progress
+            header_fits_ip = fits_in_progress[1].header
+    
+        # catch potential errors
+        except IOError:
+            print("Error downloading fits file.")
+        
+        # Create a row for the dataframe
+        # with VO Table value + Header infos
+        p02 = {'Fits URL': item['TD'][0],
+               'Target name': item['TD'][45],
+               "Target class": item['TD'][46],
+               "Resolution" : header_fits_ip['SPEC_RES'],
+               "Creation Date" : header_fits_ip['DATE']}
+    
+        # add row in progress in the dataframe
+        df02 = df02.append(p02, ignore_index=True)
+    
+    
+    # if you want to download only the first file, change : to 1.
+    
+    download = _pyfits.open(_wget.download(df02.iloc[0][:]))
+    
+    
+    # THE FILES DOWNLOADED ARE IN VOTABLE FORMAT. Some scripts must be changed
+    # in the .fits reading part when extracting wavelength and flux values.
 
 
 # MAIN ###
