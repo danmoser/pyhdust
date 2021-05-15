@@ -189,7 +189,13 @@ def rt(th, wfrac):
     """ Roche Rpole normalized radius as function of wfrac. 
 
     :param th: theta, in radians (0 = pole; pi/2 = equator).
+
+    Based on Mc.Gill(?) and  J. Patrick Harrington (notes) formula:
+
+    ``r = 3/wfrac/np.sin(th)*np.cos(1/3.*(np.pi+np.arccos(wfrac*np.sin(th))))`` 
     """
+    if wfrac == 0:
+        wfrac = 1e-9
     if th == 0:
         r = 1.
     else:
@@ -634,7 +640,7 @@ def geneva_interp_fast(Mstar, oblat, t, Zstr='014', silent=True):
         fname = 'geneva_interp_Z{:}_highM.npz'.format(Zstr)
     data = _np.load(dir0 + fname)
     Mstar_arr = data['Mstar_arr']
-    oblat_arr =data['oblat_arr']
+    oblat_arr = data['oblat_arr']
     t_arr = data['t_arr']
     Rpole_grid = data['Rpole_grid']
     logL_grid = data['logL_grid']

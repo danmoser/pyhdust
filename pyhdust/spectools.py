@@ -32,14 +32,12 @@ import pyhdust as _hdt
 from six import string_types as _strtypes
 from shutil import copyfile as _copyfile
 import warnings as _warn
-import wget as _wget
 import requests as _requests
-import xmltodict as _xmltodict
 # from lmfit import Model as _Model
 
 try:    
     import astropy.io.fits as _pyfits
-    import astropy.coordinates.sky_coordinate.SkyCoord as _SkyCoord
+    # import astropy.coordinates.sky_coordinate.SkyCoord as _SkyCoord
     import matplotlib as _mpl
     import matplotlib.pyplot as _plt
     import matplotlib.patches as _mpatches
@@ -51,6 +49,8 @@ try:
     from astropy.modeling import models as _models
     from astropy.modeling import fitting as _fitting
     import pandas as _pd
+    import wget as _wget
+    import xmltodict as _xmltodict
 except ImportError:
     _warn.warn('matplotlib and/or scipy and/or astropy and/or pandas module not installed!!!')
 

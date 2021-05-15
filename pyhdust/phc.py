@@ -822,7 +822,7 @@ def find_nearest(array, value, bigger=None, idx=False):
     if not idx:
         return found
     else:
-        return i
+        return flatten(i)[0]
 
 
 def find_nearND(matrix, array, idx=False, bigger=None, outlen=1):

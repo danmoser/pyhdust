@@ -4,7 +4,7 @@ Welcome to **pyhdust** documentation!
 =============================================================
 **Analysis tools for multi-technique astronomical data and** *hdust* **models**.
 
-Pyhdust is currently at **version 1.5.1**.
+Pyhdust is currently at **version 1.5.2**.
 
 About *hdust* code: Carciofi & Bjorkman (`2006 <http://adsabs.harvard.edu/abs/2006ApJ...639.1081C>`_, `2008 <http://adsabs.harvard.edu/abs/2008ApJ...684.1374C>`_).
 
@@ -62,12 +62,12 @@ If your are not the root of the system, add the flag ``--user`` to the command a
 
 **pyhdust** requires numpy and six modules. Optionally, it makes use of: 
 
-    - matplotlib
     - astropy
     - emcee
+    - matplotlib
+    - pandas
     - pIDLy
     - scipy
-    - pandas
     - wget
     - xmltodict
 

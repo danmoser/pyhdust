@@ -34,12 +34,12 @@ If your are not the root of the system, add the flag ``--user`` to the command a
 
 **pyhdust** requires numpy and six modules. Optionally, it makes use of: 
 
-    - matplotlib
     - astropy
     - emcee
+    - matplotlib
+    - pandas
     - pIDLy
     - scipy
-    - pandas
     - wget
     - xmltodict
 
