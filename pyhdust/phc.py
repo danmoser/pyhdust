@@ -39,6 +39,7 @@ from functools import reduce as _ftreduce
 import warnings as _warn
 import struct as _struct
 import unicodedata as _unicdata
+from dateutil import tz as _tz
 
 try:
     import csv as _csv
@@ -813,16 +814,18 @@ def find_nearest(array, value, bigger=None, idx=False):
     elif bigger:
         found = _np.min([x for x in array if x > value])
         i = _np.where(array == found)
+        i = flatten(i)[0]
     elif not bigger:
         found = _np.max([x for x in array if x < value])
         i = _np.where(array == found)
+        i = flatten(i)[0]
     else:
         _warn.warn('# ERROR at bigger!!')
     # return
     if not idx:
         return found
     else:
-        return flatten(i)[0]
+        return i
 
 
 def find_nearND(matrix, array, idx=False, bigger=None, outlen=1):
@@ -986,6 +989,27 @@ def dtflag(ms=False):
         return '{0}{1:02d}{2:02d}-{3:02d}{4:02d}{5:02d}{6:02.0f}'.format(
             now.year, now.month, now.day, now.hour, now.minute, now.second, 
             now.microsecond/1e4)
+
+
+def MJD2greg(mjd):
+    """ mjd: float 
+
+    returns YY,MM,DD,dfrac
+    """
+    return _jdcal.jd2gcal(_jdcal.MJD_0, mjd)
+
+
+def MJD2datetime(mjd):
+    """ mjd: float 
+
+    returns datetime (seconds precision)
+    """
+    greg = MJD2greg(mjd)
+    hour = int(greg[-1]*24 // 1)
+    minute = int( (greg[-1]*24 % 1)*60 // 1 )
+    second = int( ((greg[-1]*24 % 1)*60 % 1)*60 //1 )
+    return _dt.datetime(year=greg[0], month=greg[1], day=greg[2], hour=hour, 
+        minute=minute, second=second, tzinfo=_tz.gettz('UTC'))
 
 
 def greg2MJD(yr, mon, day, fracday):
@@ -1186,12 +1210,13 @@ def mas2deg(mas=1.):
 
 
 # Files manipulation
-def csvread(fname):
-    """ Read a CSV file and return it as a list (table).
+def csvread(fname, delimiter=','):
+    """ Read a CSV file and return it as a list (table). It handles entries 
+    with quotation marks as a single column.
     """
     out = []
-    with open(fname, 'rb') as f:
-        reader = _csv.reader(f)
+    with open(fname, 'r') as f:
+        reader = _csv.reader(f, delimiter=delimiter)
         for row in reader:
             out += [row]
     return out
@@ -1214,7 +1239,7 @@ def readfixwd(fname, wlims, chklims=True):
     """ ``chklims`` : read line from beginning until the end
     """
     lines = fileread(fname).split('\n')
-    lsz = [len(l) for l in lines]
+    lsz = [len(ls) for ls in lines]
     if wlims[-1] is None or wlims[-1] < 0:
         chklims = True
     wlims = [int(i-1) for i in wlims if (i is not None and i >= 0)]

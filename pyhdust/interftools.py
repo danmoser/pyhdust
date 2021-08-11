@@ -2316,7 +2316,7 @@ def plot_oifits(oidata, ffile='last_run', fmt=['png'], xlim=None,
     legend=True, outfold="./"):
     """ Standard observational log for AMBER
 
-    If the file starts with "PRODUCT_", it searchs for the specs in the "AVG"
+    If the file starts with ``PRODUCT_``, it searchs for the specs in the "AVG"
     folder.
 
     (One could write this info into the fits file. Since I've only tested the
