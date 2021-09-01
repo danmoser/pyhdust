@@ -48,7 +48,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Python tools for the BeACoN group'
-copyright = u'2015-2017, D. Moser'
+copyright = u'2015-2021, D. Moser'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

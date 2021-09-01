@@ -2,11 +2,9 @@
 
 Welcome to **pyhdust** documentation!
 =============================================================
-**Analysis tools for multi-technique astronomical data and** *hdust* **models**.
+**Analysis tools for multi-technique astronomical data and** *hdust* **models**. About the *hdust* code, see Carciofi & Bjorkman (`2006 <http://adsabs.harvard.edu/abs/2006ApJ...639.1081C>`_, `2008 <http://adsabs.harvard.edu/abs/2008ApJ...684.1374C>`_).
 
 Pyhdust is currently at **version 1.5.2**.
-
-About *hdust* code: Carciofi & Bjorkman (`2006 <http://adsabs.harvard.edu/abs/2006ApJ...639.1081C>`_, `2008 <http://adsabs.harvard.edu/abs/2008ApJ...684.1374C>`_).
 
 Package contents:
 
@@ -34,7 +32,7 @@ Package contents:
     tabulate
     triangle
 
-**pyhdust** should be independent of plataform (Linux, Mac, Windows) and compatible with any version of Python (superior or equal to 3.4).
+**pyhdust** should be independent of plataform (Linux, Mac, Windows) and compatible with any version of Python (3.6+).
 
 
 How to install/uninstall

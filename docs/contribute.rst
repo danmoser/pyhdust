@@ -1,19 +1,19 @@
 How to contribute to pyhdust
 =========================================
 References:
-    - http://pythonclub.com.br/como-fazer-fork-clone-push-pull-request-no-github.html
-    - http://rogerdudler.github.io/git-guide/index.pt_BR.html
+    - [PT-BR] http://pythonclub.com.br/como-fazer-fork-clone-push-pull-request-no-github.html
+    - [PT-BR] http://rogerdudler.github.io/git-guide/index.pt_BR.html
 
-#. Access `github page of *pyhdust* <https://github.com/danmoser/pyhdust>`_ and make a **fork*.
+1. Access `github page of pyhdust <https://github.com/danmoser/pyhdust>`_ and make a *fork*.
 
-#. In '*download*', copy the url and paste it in the following command in your  terminal (be sure to do it in the right local path):
+2. In *download*, copy the url and paste it in the following command in your terminal (be sure to do it in the right local path):
 
 .. code:: bash
 
     git clone https://github.com/GITUSER/pyhdust.git
 
 
-#. If you had already downloaded it, sync it with the original source to avoid conflicts:
+3. If you had already downloaded it, sync it with the original source to avoid conflicts:
 
 .. code:: bash
 
@@ -22,15 +22,15 @@ References:
     git checkout master
     git merge upstream/master
 
-#. Make your changes/contribuitions.
+4. Make your changes/contribuitions.
 
-#. To see them, type inside your local folder:
+5. To see them, type inside your local folder:
 
 .. code:: bash
 
     git status
 
-#. The are two ways for accepting the changes:
+6. The are two ways for accepting the changes:
 
 .. code:: bash
 
@@ -39,7 +39,7 @@ References:
     git add .
     # The later, inclues all the newly modified files 
 
-#. Save your actions in the github repository:
+7. Save your actions in the github repository:
 
 .. code:: bash
     
@@ -49,13 +49,13 @@ References:
     git config --global user.email "you@example.com"
     git config --global user.name "Your Name"
 
-#. Send the changes to your github account:
+8. Send the changes to your github account:
 
 .. code:: bash
     
     git push
 
-#. Do '*pull request*' in the `github page of *pyhdust* <https://github.com/danmoser/pyhdust>`_.
+9. Do *pull request* in the `github page of pyhdust <https://github.com/danmoser/pyhdust>`_.
 
 
 Example script
