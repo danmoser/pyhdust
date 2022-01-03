@@ -58,6 +58,10 @@ v0.993 @ 2016-04-30
 ----------------------
 - New inp.makeCSGrid_bistabWind1Dust()
 
+v0.981+ @ 2016-03-xx
+-----------------------
+- After the version 0.981, the ``analline`` function returns FWHM instead of ``depthcent``
+
 v.0970 @ 2016-01-xx
 -----------------------
 - New README.md
@@ -77,16 +81,11 @@ v0.966 @ 2015-12-16
 
 v0.965 @ 2015-12-16
 ----------------------
-- hdt.mergesed2: SED was the first because, if present, the code will check if 
-    other bands parameters are the same (i.e., observers, Rstar, Rwind).
-- hdt.mergesed2: The criteria I elected for distinguishing between broad-band 
-    and line (Sobolev 0/1) is the presence of "_SEI" extension in the filename, 
-    assumed that the line rest wavelength is the BAND CENTER WAVELENGTH. There 
-    is an option to the user manually put it.
+- hdt.mergesed2: SED was the first because, if present, the code will check if other bands parameters are the same (i.e., observers, Rstar, Rwind).
+- hdt.mergesed2: The criteria I elected for distinguishing between broad-band and line (Sobolev 0/1) is the presence of "_SEI" extension in the filename, assumed that the line rest wavelength is the BAND CENTER WAVELENGTH. There is an option to the user manually put it.
 - hdt.mergesed2: A new output format of the numbers was done.
 - inp.makeSourceGrid: Function created as discussed
-- inp.makeDiskGrid: Define convSig2Rho=True, then all the values of sig0vals 
-will be considered as rho0 values.
+- inp.makeDiskGrid: Define convSig2Rho=True, then all the values of sig0vals will be considered as rho0 values.
 
 v0.964 @ 2015-09-15
 ----------------------

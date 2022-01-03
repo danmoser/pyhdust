@@ -78,7 +78,7 @@ def sed2info(sfile):
     f0.close()
     info = ''
     i = 0
-    while info is '':
+    while info == '':
         if fcont[i][0] != '%':
             info = _np.array(fcont[i].split(), dtype=float)
         i += 1

@@ -6,14 +6,15 @@ Algumas definicoes: para todas as rotinas funcionarem, todos os espectros devem
 estar agrupados num mesmo caminho (`path`), em estrutura de
 noite/estrelas/espec.
 
-Neste momento, as rotinas somente leem arquivos `*.cal.fits`. Para receber este
-sufixo `.cal`, algumas informacoes no header sao necessarias:
+Currently the functions only read ``*.cal.fits`` files. The ``.cal`` suffix means 
+a header with the following keywords:
 
-    * 'MJD-OBS' ou 'MJD' ou 'JD' ou 'DATE-OBS'
+    * 'MJD-OBS' or 'MJD' or 'JD' or 'DATE-OBS'
     * 'CRVAL1' + 'CDELT1'
 
-IMPORTANT NOTE: after the version 0.981, the "analline" function returns 
-FWHM instead of `depthcent`.
+A useful tool for normalizing spectra with Python (not used/imported here): 
+https://python4esac.github.io/plotting/specnorm.html
+
 
 :license: GNU GPL v3.0 https://github.com/danmoser/pyhdust/blob/master/LICENSE
 """
@@ -2156,9 +2157,9 @@ def din_spec(metadata, lbc=6562.86, hwidth=1500., res=50, interv=None,
 def plot_line_str(fig, ax, lbc='', ylabel='', fs=14, xlim=None, dlim=None, 
     cmapn='gnuplot', lfs=10, ylim=None):
     """ Line plotting structure """
-    if lbc is not '':
+    if lbc != '':
         ax.set_title(r'$\lambda_c$ = {0:.1f} $\AA$'.format(lbc), size=fs)
-    if ylabel is not '':
+    if ylabel != '':
         ax.set_ylabel(ylabel, size=fs)
 
     if xlim is not None:
@@ -2204,7 +2205,7 @@ def spec_time(speclist, lbc=6562.8, ref_spec=("/data/Dropbox/work/"
 
     ``ysh`` control the vertical separation of the profiles.
      """
-    if outname is None or outname is "":
+    if outname is None or outname == "":
         outname = _phc.dtflag()
     MJDs = [_np.inf, 0]
     for sp in speclist:
@@ -2316,7 +2317,7 @@ def spec_time(speclist, lbc=6562.8, ref_spec=("/data/Dropbox/work/"
 def spec_time_Achernar(speclist, lbc=6562.8, fmt=['png', 'pdf'], outname=None, 
     cmapn='inferno', hwidth=1000., outpath='', figsize=(5, 15), ysh=0.01):
     """ Plot specs over time as suggested by Rivi """
-    if outname is None or outname is "":
+    if outname is None or outname == "":
         outname = _phc.dtflag()
     MJDs = [_np.inf, 0]
     for sp in speclist:

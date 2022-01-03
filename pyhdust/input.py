@@ -594,9 +594,10 @@ class HdustMod(object):
 
 class AeriMod(HdustMod):    
     """docstring for AeriMod"""
-    vdict = _OrderedDict(zip(['dval', 'ht', "nr", 'renv', 'M', 'vt'],
-            ['n_0', 'Fraction', ' n ', 'R_env', ' M ', 'V_turb'])) 
-    vfmt = _OrderedDict(zip(['dval', 'ht', "nr", 'renv', 'M', 'vt'], 
+    _params = ['dval', 'ht', "nr", 'renv', 'M', 'vt']
+    vdict = _OrderedDict(zip(_params,
+        ['n_0', 'Fraction', ' n ', 'R_env', ' M ', 'V_turb'])) 
+    vfmt = _OrderedDict(zip(_params, 
         ['{:.1e}', '{:03.0f}', '{:.1f}', '{:04.1f}', '{:04.1f}', '{:03.0f}']))
 
     def __init__(self, fname):
@@ -604,9 +605,10 @@ class AeriMod(HdustMod):
 
 
 class PhotMod(HdustMod):    
-    """docstring for AeriMod"""
-    vdict = _OrderedDict(zip(['W', 'M'], ['w =', ' M '])) 
-    vfmt = _OrderedDict(zip(['W', 'M'], ['{:.3f}', '{:04.1f}']))
+    """docstring for PhotMod"""
+    _params = ['W', 'M']
+    vdict = _OrderedDict(zip(_params, ['w =', ' M '])) 
+    vfmt = _OrderedDict(zip(_params, ['{:.3f}', '{:04.1f}']))
 
     def __init__(self, fname):
         super(PhotMod, self).__init__(fname)
