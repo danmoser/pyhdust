@@ -34,10 +34,10 @@ from six import string_types as _strtypes
 from shutil import copyfile as _copyfile
 import warnings as _warn
 import requests as _requests
+import astropy.io.fits as _pyfits
 # from lmfit import Model as _Model
 
 try:    
-    import astropy.io.fits as _pyfits
     # import astropy.coordinates.sky_coordinate.SkyCoord as _SkyCoord
     import matplotlib as _mpl
     import matplotlib.pyplot as _plt
@@ -53,7 +53,7 @@ try:
     import wget as _wget
     import xmltodict as _xmltodict
 except ImportError:
-    _warn.warn('matplotlib and/or scipy and/or astropy and/or pandas module not installed!!!')
+    _warn.warn('matplotlib, scipy and/or pandas module not installed!!!')
 
 #try:
 #    import pyqt_fit.nonparam_regression as _smooth
@@ -1304,7 +1304,7 @@ def writeFits(flx, lbd, extrahead=None, savename=None, verbose=False,
         savename = 'spec_{0}'.format(_phc.dtflag())
     if savename.find('.fit') == -1:
         savename += '.fits'
-    hdu.writeto(path + savename, clobber=True)
+    hdu.writeto(path + savename, overwrite=True)
     if verbose:
         print('# FITS file {0}{1} saved!'.format(path, savename))
     return

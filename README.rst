@@ -32,9 +32,8 @@ If your are not the root of the system, add the flag ``--user`` to the command a
         PATH=$PATH:~/.local/bin/
 
 
-**pyhdust** requires numpy and six modules. Optionally, it makes use of: 
+**pyhdust** requires numpy, six and astropy modules. Optionally, it makes use of: 
 
-    - astropy
     - emcee
     - matplotlib
     - pandas

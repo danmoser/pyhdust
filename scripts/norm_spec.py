@@ -59,7 +59,7 @@ def norm_spec(fname):
     hdu = pf.PrimaryHDU(nflux)
     hdulist = pf.HDUList([hdu])
     hdulist[0].header = hdr
-    hdu.writeto(outname, clobber=True)
+    hdu.writeto(outname, overwrite=True)
     print('# {0} saved!'.format(outname))
     imfits.close()
     return

@@ -28,15 +28,15 @@ import pyhdust.jdcal as _jdcal
 from pyhdust.tabulate import tabulate as _tab
 from six import string_types as _strtypes
 import warnings as _warn
+import astropy.io.fits as _pf
 
 try:
     import matplotlib.pyplot as _plt
     import matplotlib.patches as _mpatches
     from scipy import interpolate as _interpolate
     from scipy.interpolate import griddata as _griddata
-    import astropy.io.fits as _pf
 except ImportError:
-    _warn.warn('# matplotlib, astropy and/or scipy module not installed!!')
+    _warn.warn('# matplotlib and/or scipy module not installed!!')
 
 __version__ = '1.5.3'
 __release__ = "Stable"

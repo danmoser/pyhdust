@@ -39,6 +39,7 @@ from six import string_types as _strtypes
 import warnings as _warn
 # from array import array as _array
 from itertools import product as _iprod
+import astropy.io.fits as _pyfits
 
 try:
     import matplotlib as _mpl
@@ -46,9 +47,8 @@ try:
     import matplotlib.gridspec as _gridspec
     import matplotlib.ticker as _mtick
     from matplotlib.lines import Line2D as _Line2D
-    import astropy.io.fits as _pyfits
 except ImportError:
-    _warn.warn('matplotlib, six and/or astropy module not installed!!!')
+    _warn.warn('matplotlib module not installed!!!')
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -430,7 +430,7 @@ def img2fits(img, lbd, xmax, dist, outname='model', rot=0., lum=0.,
     hdulist[0].header['LONPOLE'] = 180.000
     hdulist[0].header['LATPOLE'] = 0.000
     outname = '{0}.fits'.format(outname.replace(".fits", ""))
-    hdu.writeto(outname, clobber=True)
+    hdu.writeto(outname, overwrite=True)
     print('# Saved {0} !'.format(outname))
     return
 
@@ -533,7 +533,7 @@ def data2fitscube(data, obs, lbdc, xmax, dist, zoom=0, outname='model',
     hdulist[0].header['LONPOLE'] = 180.000
     hdulist[0].header['LATPOLE'] = 0.000
     outname = '{0}.fits'.format(outname.replace(".fits", ""))
-    hdu.writeto(outname, clobber=True)
+    hdu.writeto(outname, overwrite=True)
     print('# Saved {0} !'.format(outname))
     return
 

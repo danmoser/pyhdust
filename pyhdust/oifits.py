@@ -82,12 +82,7 @@ import datetime as _datetime
 import copy as _copy
 import numpy as _np
 import numbers as _numbers
-import warnings as _warn
-
-try:
-    import astropy.io.fits as _pyfits
-except ImportError:
-    _warn.warn('astropy module not installed!!!')
+import astropy.io.fits as _pyfits
 
 __author__ = "Paul Boley"
 __email__ = "boley@mpia-hd.mpg.de"
@@ -131,7 +126,7 @@ class _angpoint(float):
         return self.angle == other.angle
 
     def __ne__(self, other):
-        return not self.__eq__(other)    
+        return not self.__eq__(other)
 
     def asdms(self):
         """Return the value as a string in dms format,

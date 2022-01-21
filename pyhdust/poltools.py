@@ -29,23 +29,24 @@ from pyhdust import hdtpath as _hdtpath
 # from sys import _argv
 # from matplotlib import rc as _rc
 import sys as _sys
+import astropy.io.fits as _pyfits
 
 
 def eprint(*args, **kwargs):
     print(*args, file=_sys.stderr, **kwargs)
     return
 
+
 try:
     import matplotlib.pyplot as _plt
     from matplotlib.transforms import offset_copy as _offset_copy
-    import astropy.io.fits as _pyfits
     from scipy.optimize import curve_fit as _curve_fit
     from scipy.integrate import simps as _simps
     from scipy.interpolate import interp1d as _interp1d
     import matplotlib as _mpl
-    _mpl.rcParams['pdf.fonttype']=42
+    _mpl.rcParams['pdf.fonttype'] = 42
 except ImportError:
-    eprint('# Warning! matplotlib and/or astropy and/or scipy module not installed!!!')
+    eprint('# Warning! matplotlib and/or scipy module not installed!!!')
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"

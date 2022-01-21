@@ -40,5 +40,5 @@ if __name__ == '__main__':
         path, oname = os.path.split(fname)
         pref, ext = os.path.splitext(oname)
         hdu.writeto(os.path.join(path, pref+"_{0:04d}".format(i)+ext), 
-            clobber=True)
+            overwrite=True)
     print('# Saved {0} 2D images from {1}'.format(nimgs, oname))
