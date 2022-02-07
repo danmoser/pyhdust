@@ -38,7 +38,7 @@ try:
 except ImportError:
     _warn.warn('# matplotlib and/or scipy module not installed!!')
 
-__version__ = '1.5.3'
+__version__ = '1.5.4'
 __release__ = "Stable"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -382,68 +382,68 @@ def readdust(dfile):
     - lacentro = controla os tipos e tamanhos das poeiras
     """
     Arq = open(dfile)
-    
-    #First line
+
+    # First line
     Line = Arq.readline().split()
     ncr, ncmu, ncphi, NdustShells = _np.array(Line[:4], dtype='int')
-    Rstar,Ra = _np.array(Line[4:], dtype='float')
-    
-    #Read the lines of each dustshell
-    ncrdust, Rdust, Tdestruction  = [],[],[]
+    Rstar, Ra = _np.array(Line[4:], dtype='float')
+
+    # Read the lines of each dustshell
+    ncrdust, Rdust, Tdestruction = [], [], []
     for _ in range(NdustShells):
         Line = Arq.readline().split()
         ncrdust.append(int(Line[0]))
         Rdust.append(_np.float32(Line[1]))
         Tdestruction.append(_np.float32(Line[2]))
-    
+
     ntip = int(Arq.readline().split()[0])
-    
+
     pcrc = _np.zeros(ncr)
-    pcmuc = _np.zeros((ncr,ncmu))
+    pcmuc = _np.zeros((ncr, ncmu))
     pcphic = _np.zeros(ncphi)
-    
+
     for stip in range(ntip):
         na = int(Arq.readline().split()[0])
-        
+
         if (stip == 0):
-            Tdust = _np.zeros((ncphi,ncmu,ncr,na,ntip))
-            lacentro = _np.zeros((na,ntip))
+            Tdust = _np.zeros((ncphi, ncmu, ncr, na, ntip))
+            lacentro = _np.zeros((na, ntip))
             temp = _np.zeros(na+3)
-                    
-        lacentro[:,stip] = _np.array(Arq.readline().split(), dtype='float')
-        
+
+        lacentro[:, stip] = _np.array(Arq.readline().split(), dtype='float')
+
         for icphi, icmu, icr in _itprod(range(ncphi), range(ncmu), range(ncr)):
             temp = _np.array(Arq.readline().split(), dtype='float')
             pcrc[icr] = temp[0]
-            pcmuc[icr,icmu] = temp[1]
+            pcmuc[icr, icmu] = temp[1]
             pcphic[icphi] = temp[2]
-            Tdust[icphi,icmu,icr,:,stip] = temp[3:3 + na]
-    
+            Tdust[icphi, icmu, icr, :, stip] = temp[3:3 + na]
+
     Arq.close()
-    
+
     pcr = _np.zeros(ncr + 1)
     pcr[0] = Rdust[0]
     for icr in range(ncr):
         pcr[icr + 1] = pcr[icr] + 2.*(pcrc[icr] - pcr[icr])
-    
+
     pcmu = _np.zeros((ncr, ncmu+1))
     for icr in range(ncr):
-        pcmu[icr,0] = -1.
+        pcmu[icr, 0] = -1.
         for icmu in range(ncmu):
-            pcmu[icr,icmu + 1] = pcmu[icr,icmu] + 2.*(pcmuc[icr,icmu] - pcmu[icr,icmu])
+            pcmu[icr, icmu + 1] = ( pcmu[icr, icmu] + 2.*(pcmuc[icr, icmu] - 
+                pcmu[icr, icmu]) )
 
     pcphi = _np.zeros(ncphi + 1)
     pcphi[0] = 0.
     for icphi in range(ncphi):
         pcphi[icphi + 1] = pcphi[icphi] + 2*(pcphic[icphi] - pcphi[icphi])
-    
-    return ncr,ncmu,ncphi,ntip,na,Rstar,Ra, NdustShells,Rdust,\
-        Tdestruction,Tdust,pcrc,pcmuc,pcphic,pcr,pcmu,pcphi,lacentro
+
+    return (ncr, ncmu, ncphi, ntip, na, Rstar, Ra, NdustShells, Rdust, 
+        Tdestruction, Tdust, pcrc, pcmuc, pcphic, pcr, pcmu, pcphi, lacentro)
 
 
 def temp_interp(tempfile, theta, pos=[0, 1]):
-    '''
-    Returns temp file properties interpolated at a given line-of-sight
+    '''Returns temp file properties interpolated at a given line-of-sight
 
     Usage:
     r, interp = temp_interp(tempfile, theta, pos=[0, 1])
@@ -483,6 +483,268 @@ def temp_interp(tempfile, theta, pos=[0, 1]):
         interp = _griddata(xy, grid.T, xyinterp, method='nearest')
 
     return r, interp
+
+
+def readtau(taufile, quiet=False):
+    f = open(taufile, 'rb').read()
+    ixdr = 0
+    nlbd, nNLTE, ncr = _struct.unpack('>3l', f[ixdr:ixdr + 4 * 3])
+    ixdr += 4 * 3
+    #
+    pcr = _struct.unpack(f'>{ncr+1}f', f[ixdr:ixdr + 4 * (ncr+1)])
+    ixdr += 4 * (ncr+1)
+    pcr = _np.array(pcr)
+    #
+    lbdarr = _np.zeros(nlbd)
+    pfom = _np.zeros((nlbd, ncr))
+    pfoel = _np.zeros((nlbd, ncr))
+    pfoff = _np.zeros((nlbd, ncr))
+    pfobf = _np.zeros((nlbd, ncr))
+    pfodu = _np.zeros((nlbd, ncr))
+    pfobfith = _np.zeros((nlbd, ncr, nNLTE))
+    pfolte = _np.zeros((nlbd, ncr))
+    #
+    for ilbd in range(nlbd):
+        dum = _struct.unpack('>1f', f[ixdr:ixdr + 4 * 1])
+        lbdarr[ilbd] = dum[0]
+        ixdr += 4 * 1
+        for icr in range(ncr):
+            dum = _struct.unpack('>1f', f[ixdr:ixdr + 4 * 1])
+            ixdr += 4 * 1
+            pfom[ilbd, icr] = dum[0]
+            #
+            dum = _struct.unpack('>1f', f[ixdr:ixdr + 4 * 1])
+            ixdr += 4 * 1
+            pfoel[ilbd, icr] = dum[0]
+            #
+            dum = _struct.unpack('>1f', f[ixdr:ixdr + 4 * 1])
+            ixdr += 4 * 1
+            pfoff[ilbd, icr] = dum[0]
+            #
+            dum = _struct.unpack('>1f', f[ixdr:ixdr + 4 * 1])
+            ixdr += 4 * 1
+            pfodu[ilbd, icr] = dum[0]
+            #
+            dum = _struct.unpack('>1f', f[ixdr:ixdr + 4 * 1])
+            ixdr += 4 * 1
+            pfobf[ilbd, icr] = dum[0]
+            for iNLTE in range(nNLTE):
+                dum = _struct.unpack('>1f', f[ixdr:ixdr + 4])
+                ixdr += 4 * 1
+                pfobfith[ilbd, icr, iNLTE] = dum[0]
+            #
+            dum = _struct.unpack('>1f', f[ixdr:ixdr + 4 * 1])
+            ixdr += 4 * 1
+            pfolte[ilbd, icr] = dum[0]
+    #
+    # this will check if the XDR is finished.
+    if ixdr == len(f):
+        if not quiet:
+            print('# XDR {0} completely read!'.format(taufile))
+    else:
+        _warn.warn( '# XDR {0} not completely read!\n# length difference is '
+            '{1}'.format(taufile, (len(f)-ixdr)/4 ) )
+    #
+    return lbdarr, nNLTE, ncr, pcr, pfom, pfobf, pfoff, pfoel, pfodu, pfolte
+
+
+def readtauz(taufile, quiet=False):
+    f = open(taufile, 'rb').read()
+    ixdr = 0
+    nlbd, nNLTE, ncr = _struct.unpack('>3l', f[ixdr:ixdr + 4 * 3])
+    ixdr += 4 * 3
+    #
+    pcr = _struct.unpack(f'>{ncr+1}f', f[ixdr:ixdr + 4 * (ncr+1)])
+    ixdr += 4 * (ncr+1)
+    pcr = _np.array(pcr)
+    #
+    lbdarr = _np.zeros(nlbd)
+    pfom = _np.zeros((nlbd, ncr))
+    pfoel = _np.zeros((nlbd, ncr))
+    pfoff = _np.zeros((nlbd, ncr))
+    pfobf = _np.zeros((nlbd, ncr))
+    pfodu = _np.zeros((nlbd, ncr))
+    pfobfith = _np.zeros((nlbd, ncr, nNLTE))
+    # pfolte = _np.zeros((nlbd, ncr))
+    #
+    for ilbd in range(nlbd):
+        dum = _struct.unpack('>1f', f[ixdr:ixdr + 4 * 1])
+        lbdarr[ilbd] = dum[0]
+        ixdr += 4 * 1
+        for icr in range(ncr):
+            dum = _struct.unpack('>1f', f[ixdr:ixdr + 4 * 1])
+            ixdr += 4 * 1
+            pfom[ilbd, icr] = dum[0]
+            #
+            dum = _struct.unpack('>1f', f[ixdr:ixdr + 4 * 1])
+            ixdr += 4 * 1
+            pfoel[ilbd, icr] = dum[0]
+            #
+            dum = _struct.unpack('>1f', f[ixdr:ixdr + 4 * 1])
+            ixdr += 4 * 1
+            pfoff[ilbd, icr] = dum[0]
+            #
+            dum = _struct.unpack('>1f', f[ixdr:ixdr + 4 * 1])
+            ixdr += 4 * 1
+            pfodu[ilbd, icr] = dum[0]
+            #
+            dum = _struct.unpack('>1f', f[ixdr:ixdr + 4 * 1])
+            ixdr += 4 * 1
+            pfobf[ilbd, icr] = dum[0]
+            for iNLTE in range(nNLTE):
+                dum = _struct.unpack('>1f', f[ixdr:ixdr + 4])
+                ixdr += 4 * 1
+                pfobfith[ilbd, icr, iNLTE] = dum[0]
+            #
+            # dum = _struct.unpack('>1f', f[ixdr:ixdr + 4 * 1])
+            # ixdr += 4 * 1
+            # pfolte[ilbd, icr] = dum[0]
+    #
+    # this will check if the XDR is finished.
+    if ixdr == len(f):
+        if not quiet:
+            print('# XDR {0} completely read!'.format(taufile))
+    else:
+        _warn.warn( '# XDR {0} not completely read!\n# length difference is '
+            '{1}'.format(taufile, (len(f)-ixdr)/4 ) )
+    #
+    return lbdarr, nNLTE, ncr, pcr, pfom, pfobf, pfoff, pfoel, pfodu
+
+
+def plottau(taufile, rad=[2, 5, 15], lbd=0.55, dpi=200):
+    figname = _os.path.split(taufile)[1]
+    figname = _os.path.splitext(figname)[0]
+    cor = _phc.colors
+    ls = _phc.line_styles
+
+    nrad = len(rad)
+    irad = _np.zeros(nrad).astype(int)
+
+    lbdarr, nNLTE, ncr, pcr, pfom, pfobf, pfoff, pfoel, pfodu, pfolte = \
+        readtau(taufile)
+
+    pcr = pcr/pcr[0]
+    pcrc = _np.zeros(ncr)
+    for i in range(ncr):
+        pcrc[i] = (pcr[i] + pcr[i+1])/2
+    ilambda = _np.where(abs(lbdarr-lbd) == _np.min(abs(lbdarr-lbd)))[0][0]
+    for ir in range(nrad):
+        irad[ir] = _np.where(abs(pcr-rad[ir]) == _np.min(
+            abs(pcr-rad[ir])))[0][0]
+
+    fig, ax = _plt.subplots()
+    ax.plot(pcrc, pfom[ilambda], label='total', color=cor[1], ls=ls[0])
+    ax.plot(pcrc, pfobf[ilambda], label='bf', color=cor[1], ls=ls[1])
+    ax.plot(pcrc, pfoff[ilambda], label='ff', color=cor[1], ls=ls[2])
+    ax.plot(pcrc, pfoel[ilambda], label='el', color=cor[1], ls=ls[3])
+    # ax.locator_params(axis='x', nbins=6)
+    # fig.subplots_adjust(left=0.125, right=0, bottom=0.1, top=0.9, wspace=0.2)
+    # fig.savefig('output.png', transparent=True)
+    # fig.clf()
+    ax.legend()
+    ax.set_title(f'Tau at {lbd:.2f} $\\mu$m')
+    xtitle = "$R~[R_*]$"
+    ytitle = "$\\tau_{R}$"
+    ax.set_xlabel(xtitle)
+    ax.set_ylabel(ytitle)
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    _phc.savefig(fig, figname=figname+'tau1', dpi=dpi)
+
+    fig, ax = _plt.subplots()
+    dpcr = pcr[1:ncr+1] - pcr[0:ncr]
+    alphael = pfoel[ilambda]/dpcr/6.96e10
+    ax.plot(pcrc, alphael, label='$\\alpha^{\\rm el}$', color=cor[0])
+    ax.plot(pcrc, (pcrc[0]/pcrc)**3.5*alphael[0], 
+        label='$(R/R_0)^{-3.5}\\alpha^{\\rm el}_0$', color=cor[1])
+    ax.legend()
+    ax.set_title(f'Tau at {lbd:.2f} $\\mu$m')
+    xtitle = "$R~[R_*]$"
+    ytitle = "$\\tau_{R}$"
+    ax.set_xlabel(xtitle)
+    ax.set_ylabel(ytitle)
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    _phc.savefig(fig, figname=figname+'tau2', dpi=dpi)
+
+    fig, ax = _plt.subplots()
+    for ir in range(nrad):
+        ax.plot(lbdarr, pfom[:, irad[ir]], label=f'total at R={rad[ir]}', 
+            color=cor[ir+1], ls=ls[0])
+        ax.plot(lbdarr, pfobf[:, irad[ir]], label=f'bf at R={rad[ir]}', 
+            color=cor[ir+1], ls=ls[1])
+        ax.plot(lbdarr, pfoff[:, irad[ir]], label=f'ff at R={rad[ir]}', 
+            color=cor[ir+1], ls=ls[2])
+        # ax.plot(lbdarr, pfoel[:, irad[ir]], label='el')
+
+    ax.legend(fontsize='small')
+    xtitle = "$\\lambda [\\mu m]$"
+    ytitle = "$\\tau_{R}$"
+    ax.set_xlabel(xtitle)
+    ax.set_ylabel(ytitle)
+    # ax.set_title(f"Radial Tau(R)")
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    _phc.savefig(fig, figname=figname+'tau3', dpi=dpi)
+    return
+
+
+def plottauz(tauzfile, rad=[2, 5, 15], lbd=0.55, dpi=200):
+    # Vertical plots
+    figname = _os.path.split(tauzfile)[1]
+    figname = _os.path.splitext(figname)[0]
+    cor = _phc.colors
+    ls = _phc.line_styles
+
+    nrad = len(rad)
+    irad = _np.zeros(nrad).astype(int)
+
+    lbdarr, nNLTE, ncr, pcr, pfom, pfobf, pfoff, pfoel, pfodu = \
+        readtauz(tauzfile)
+
+    pcr = pcr/pcr[0]
+    pcrc = _np.zeros(ncr)
+    for i in range(ncr):
+        pcrc[i] = (pcr[i] + pcr[i+1])/2
+    ilambda = _np.where(abs(lbdarr-lbd) == _np.min(abs(lbdarr-lbd)))[0][0]
+    for ir in range(nrad):
+        irad[ir] = _np.where(abs(pcr-rad[ir]) == _np.min(
+            abs(pcr-rad[ir])))[0][0]
+
+    fig, ax = _plt.subplots()
+    ax.plot(pcrc, pfom[ilambda], label='total', color=cor[1], ls=ls[0])
+    ax.plot(pcrc, pfobf[ilambda], label='bf', color=cor[1], ls=ls[1])
+    ax.plot(pcrc, pfoff[ilambda], label='ff', color=cor[1], ls=ls[2])
+    ax.plot(pcrc, pfoel[ilambda], label='el', color=cor[1], ls=ls[3])
+    ax.legend()
+    xtitle = "$R~[R_{*}]$"
+    ytitle = "$\\tau_{Z}$"
+    ax.set_xlabel(xtitle)
+    ax.set_ylabel(ytitle)
+    ax.set_title(f'Tau at {lbd:.2f} $\\mu$m')
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    _phc.savefig(fig, figname=figname+'tauz1', dpi=200)
+
+    fig, ax = _plt.subplots()
+    for ir in range(nrad):
+        ax.plot(lbdarr, pfom[:, irad[ir]], label=f'total at R={rad[ir]}', 
+            color=cor[ir+1], ls=ls[0])
+        ax.plot(lbdarr, pfobf[:, irad[ir]], label=f'bf at R={rad[ir]}', 
+            color=cor[ir+1], ls=ls[1])
+        ax.plot(lbdarr, pfoff[:, irad[ir]], label=f'ff at R={rad[ir]}', 
+            color=cor[ir+1], ls=ls[2])
+        # ax.plot(lbdarr, pfoel[:, irad[ir]], label='el')
+    ax.legend()
+    xtitle = "$\\lambda [\\mu m]$"
+    ytitle = "$\\tau_{Z}$"
+    ax.set_xlabel(xtitle)
+    ax.set_ylabel(ytitle)
+    # ax.set_title(f"Radial Tau(z)")
+    ax.set_xscale("log")
+    ax.set_yscale("log")
+    _phc.savefig(fig, figname=figname+'tauz2', dpi=dpi)
+    return
 
 
 def mergesed1(models, iterations=[21, 22, 23, 24]):
@@ -692,13 +954,13 @@ def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
             fullsed2[:, 7:8 + 1] = sed2data[:, 4:5 + 1]
             # Old 
             # if _np.max(fullsed2[_np.isfinite(fullsed2)]) < 100000:
-                # fmt = '%13.6f'
+            #     fmt = '%13.6f'
             # elif _np.max(fullsed2[_np.isfinite(fullsed2)]) < 1000000:
-                # fmt = '%13.5f'
+            #     fmt = '%13.5f'
             # else:
-                # print('# ERROR at max values of fullsed2!!!!!!!!')
-                # print(_np.max(fullsed2[_np.isfinite(fullsed2)]))
-                # raise SystemExit(0)
+            #     print('# ERROR at max values of fullsed2!!!!!!!!')
+            #     print(_np.max(fullsed2[_np.isfinite(fullsed2)]))
+            #     raise SystemExit(0)
             fullsed2 = _np.core.records.fromarrays(fullsed2.transpose(), 
                 names='MU,PHI,LAMBDA,FLUX,SCT FLUX,EMIT FLUX,TRANS FLUX,Q,U,' +
                 'Sig FLUX,Sig SCT FLUX,Sig EMIT FLUX,Sig TRANS FLU,Sig Q,' +
@@ -714,14 +976,14 @@ def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
             hd += '{0:8d}{1:8d}{2:13.4f}{3:13.2f}\n'.format(
                 int(nlbd), int(nobs), Rstar, Rwind)
             # hd += '%{0:>12s}'.format('MU') + (15 * '{:>13s}').format('PHI', 
-                # 'LAMBDA', 'FLUX', \
-                # 'SCT FLUX', 'EMIT FLUX', 'TRANS FLUX', 'Q', 'U',
-                # 'Sig FLUX', 'Sig FLUX', \
-                # 'SigSCTFLX', 'SigEMITFLX', 'SigTRANSFLX',
-                # 'Sig Q', 'Sig U')
+            #     'LAMBDA', 'FLUX', \
+            #     'SCT FLUX', 'EMIT FLUX', 'TRANS FLUX', 'Q', 'U',
+            #     'Sig FLUX', 'Sig FLUX', \
+            #     'SigSCTFLX', 'SigEMITFLX', 'SigTRANSFLX',
+            #     'Sig Q', 'Sig U')
             # _np.savetxt(path + 'fullsed/fullsed_' + modelname.replace('.txt', 
-                # '.sed2'), fullsed2, header=hd, comments="", fmt=fmt, 
-                # delimiter='')
+            #     '.sed2'), fullsed2, header=hd, comments="", fmt=fmt, 
+            #     delimiter='')
             # New
             header = ['% MU', 'PHI', 'LAMBDA', 'FLUX', 'SCT FLUX', 
                 'EMIT FLUX', 'TRANS FLUX', 'Q', 'U', 'Sig FLUX', 'SigSCTFLX', 
@@ -742,6 +1004,7 @@ def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
 
 class SingleBe(object):
     """docstring for SingleBe"""
+
     def __init__(self, sBfile):
         super(SingleBe, self).__init__()
         self.sBfile = sBfile
@@ -765,7 +1028,7 @@ class SingleBe(object):
         self.mstar = mstar
         req = float(line0[6])         # equatorial radius, in solar units
         self.req = req
-        omega0 = float(line0[8])      # disk angular velocity at equator in rad/s?
+        omega0 = float(line0[8])      # disk angular vel at equator in rad/s?
         self.omega0 = omega0
         rho0 = float(line0[13])       # g cm-3
         self.rho0 = rho0
@@ -775,7 +1038,7 @@ class SingleBe(object):
         self.rin = rin
         rout = float(line0[16])       # external radius of the disk (in req?)
         self.rout = rout
-        rinject = float(line0[17])    # radius of injection in the disk (in req?)
+        rinject = float(line0[17])    # injection radius in the disk (in req?)
         self.rinject = rinject
         n = int(line0[18])            # number of radial cells
         self.nrad = n
@@ -794,13 +1057,13 @@ class SingleBe(object):
         lsinject = _np.array(f0[hs + 2::9]).astype(float)  # `sinject` ?
         self.lsinject = lsinject
         # alpha(r)
-        lalpha_r = _np.array([l.split() for l in f0[hs + 3::9]]).astype(float) 
+        lalpha_r = _np.array([j.split() for j in f0[hs + 3::9]]).astype(float) 
         self.lalpha_r = lalpha_r
         # s1(r) = sig/sig0 ?
-        ls1_r = _np.array([l.split() for l in f0[hs + 4::9]]).astype(float)
+        ls1_r = _np.array([j.split() for j in f0[hs + 4::9]]).astype(float)
         self.ls1_r = ls1_r
         # sigma(r)
-        lsig_r = _np.array([l.split() for l in f0[hs + 5::9]]).astype(float)
+        lsig_r = _np.array([j.split() for j in f0[hs + 5::9]]).astype(float)
         self.lsig_r = lsig_r
         # maxr = maximmum non-zero cell
         lmaxr = _np.array(f0[hs + 6::9]).astype(float)            
@@ -831,10 +1094,10 @@ class SingleBe(object):
         sig_r = _np.array(lines[5].split()).astype(float)   # sigma(r)
         maxr = _np.array(lines[6]).astype(float)            # maxr = maximmum
                                                             # non-zero cell
-        vr_cs = _np.array(lines[7].split()).astype(float)  # vel_rad/cs ?
+        vr_cs = _np.array(lines[7].split()).astype(float)   # vel_rad/cs ?
         decrr = _np.array(lines[8].split()).astype(float)   # Decretion rate
-                                                            #(units?)
-        return
+                                                            # (units?)
+        return (tau, tausec, sinject, alpha_r, s1_r, sig_r, maxr, vr_cs, decrr)
 
 
 def readSingleBe(sBfile):
@@ -842,23 +1105,6 @@ def readSingleBe(sBfile):
 
     OUTPUT = rgrid, lsig_r, nsnaps, simdays, alpha
     """
-
-    def readSBeBlock(lines):
-        """ """
-        tau = _np.array(lines[0]).astype(float)              # tauintval in rad
-        tausec = _np.array(lines[1]).astype(float)           # tausec in rad
-        sinject = _np.array(lines[2]).astype(float)          # `sinject` ?
-        alpha_r = _np.array(lines[3].split()).astype(float)  # alpha(r)
-        s1_r = _np.array(lines[4].split()).astype(
-            float)    # s1(r) = sig/sig0 ?
-        sig_r = _np.array(lines[5].split()).astype(float)   # sigma(r)
-        maxr = _np.array(lines[6]).astype(float)            # maxr = maximmum
-                                                            # non-zero cell
-        vr_cs = _np.array(lines[7].split()).astype(float)  # vel_rad/cs ?
-        decrr = _np.array(lines[8].split()).astype(float)   # Decretion rate
-                                                            #(units?)
-        return
-
     hs = 15                     # header size
     f0 = open(sBfile).read().split('\n')
     f0 = f0[:-1]
@@ -908,8 +1154,9 @@ def readSingleBe(sBfile):
 
 
 # Hdust useful
-def plotdust(tfiles, mulist=[0], philist=[0], typelist=[0], alist=None, axis = [1.,1e2,90.,2200.], 
-                interpola=False, fmt=['png'], figname=None, title=''):
+def plotdust(tfiles, mulist=[0], philist=[0], typelist=[0], alist=None, 
+    axis=[1., 1e2, 90., 2200.], interpola=False, fmt=['png'], figname=None, 
+    title=''):
     """
     :Example:
     >>> import pyhdust as phc
@@ -933,24 +1180,25 @@ def plotdust(tfiles, mulist=[0], philist=[0], typelist=[0], alist=None, axis = [
     """
     if isinstance(tfiles, _strtypes):
         tfiles = [tfiles]
-    
+
     if isinstance(figname, _strtypes):
         figname = [f"{figname}-{ifile}" for ifile in range(len(tfiles))]
-    
+
     for i in range(len(tfiles)):
         rtfile = tfiles[i]
         print(rtfile)
         ncr,ncmu,ncphi,ntip,na,Rstar,Ra,NdustShells,Rdust,Tdestruction,Tdust,pcrc,\
                             pcmuc,pcphic,pcr,pcmu,pcphi,lacentro = readdust(rtfile)
-        
+
         x = pcrc/Rdust[0]
         y = _np.zeros(x.shape)
-        
-        if alist is None:    sizes = [lacentro[0], lacentro[-1]]
-        else:                sizes = alist
-        
+
+        if alist is None:    
+            sizes = [lacentro[0], lacentro[-1]]
+        else:
+            sizes = alist
+
         fig = _plt.figure()
-        
         for a in sizes:
             ia = _phc.find_nearest(lacentro, a, idx=True)
             for tip in typelist:
@@ -960,26 +1208,26 @@ def plotdust(tfiles, mulist=[0], philist=[0], typelist=[0], alist=None, axis = [
                         for icr in range(ncr):
                             muarr = pcmuc[icr]
                             icmu = _phc.find_nearest(muarr, mu, idx=True)
-                                
-                            y[icr] = Tdust[icphi,icmu,icr,ia,tip]
-                            
+
+                            y[icr] = Tdust[icphi, icmu, icr, ia, tip]
+
                             if (interpola and y[icr] != 0.):
                                 if(icmu == ncmu-1): icmu = icmu - 1
                                 f = (mu - muarr[icmu])/(muarr[icmu+1]-muarr[icmu])
                                 y[icr] = (1.-f)*Tdust[icphi,icmu,icr,ia,tip] + \
                                                 f*Tdust[icphi,icmu+1,icr,ia,tip]
-                                
+
                         _plt.loglog(x, y, label=f'type={tip} a={lacentro[ia, tip]} phi={pcphic[icphi]} mu={muarr[icmu]}', base=10)
-    
-        _plt.xlabel(r'$r/R_{dust}}$',fontsize=15)
-        _plt.ylabel('Dust Temperature (K)',fontsize=15)
-        _plt.axis(axis) # [xmin,xmax,ymin,ymax]
-        _plt.subplots_adjust(bottom=0.15,left = 0.15,right=0.92,top=0.92)
+
+        _plt.xlabel(r'$r/R_{dust}}$', fontsize=15)
+        _plt.ylabel('Dust Temperature (K)', fontsize=15)
+        _plt.axis(axis)  # [xmin,xmax,ymin,ymax]
+        _plt.subplots_adjust(bottom=0.15, left=0.15, right=0.92, top=0.92)
         _plt.legend(loc='best', fancybox=True, framealpha=0.5)
         _plt.title(f'{title} file={rtfile}')
         _phc.savefig(fig, figname=figname, fmt=fmt)
         _plt.close()
-    
+
     return
 
 
@@ -1061,8 +1309,8 @@ def genlog(proj=None, mods=None):
 
 
 def printN0(modn):
-    """ Print the n0 of the model inside modn folder. It does a grep of `n_0` of
-    all *.txt files of the folder.
+    """ Print the n0 of the model inside modn folder. It does a grep of `n_0` 
+    of all *.txt files of the folder.
 
     Warning: max(M)==14.6Msun (instead of 20.0Msun).
 
@@ -1863,7 +2111,7 @@ def obsCalc():
     dg = _np.array(dg, dtype=float)
     dj = julian_date(dg[0], dg[1], dg[2] + 1, 0 + ut, 0, 0.)
     # dj = julian_date(now.year, now.month, now.day, now.hour, now.minute, 
-        # now.second)
+    #     now.second)
 
     # dias/ano passados do solsticio de verao (ndays)
     ndays = dj - djsol
@@ -2145,8 +2393,7 @@ def plot_obs(observ_dates=[], legend=[], civcfg=[1, 'm'], civdt=None,
     ax2.set_xticks(mjdticks)
     xlabs = [date.strftime('%Y-%m-%d') for date in dtticks]
     xlabs[1::2] = ['']*len(xlabs[1::2])
-    ax2.set_xticklabels(xlabs)  
-        # , fontsize=10)
+    ax2.set_xticklabels(xlabs)  # , fontsize=10)
     ax2.set_xticks(minjdticks, minor=True)
     # ax2.set_xticklabels([date.strftime("%Y/%M/%d") for date in dtticks])
     ax.set_yticks([])
@@ -2444,41 +2691,41 @@ def readphotxdr(xdrfile='kur_ap00k0.xdr', quiet=False):
 
 # def chkObsLog(path=None, nights=None, badweath=None):
     # """ Check if there is data for all nights with observations.
-# 
+
     # If not, check if the night is in the list of night lost due to bad 
-        # weather.
-# 
+    #     weather.
+
     # If no data and no bad weather info is registered, prints an error.
-# 
+
     # If the night is included as bad weather and is not in night list, prints
     # a warning.
     # """
     # if path == None:
-        # path = _os.getcwd()
+    #     path = _os.getcwd()
     # if nights == None:
-        # nights = '{0}pyhdust/refs/noites.txt'.format(hdtpath())
+    #     nights = '{0}pyhdust/refs/noites.txt'.format(hdtpath())
     # lnights = _np.loadtxt(nights, dtype=str)
     # if badweath == None:
-        # badweath = '{0}pyhdust/refs/maltempo.txt'.format(hdtpath())
+    #     badweath = '{0}pyhdust/refs/maltempo.txt'.format(hdtpath())
     # lbadweath = _np.loadtxt(badweath, dtype=str)
     # for night in lnights:
-        # if night in lbadweath:
-            # pass
-        # elif not _os.path.exists(night):
-            # print('# ERROR! {0} has no data and was not lost for bad' +\
-                # 'weather!'.format(night))
+    #     if night in lbadweath:
+    #         pass
+    #     elif not _os.path.exists(night):
+    #         print('# ERROR! {0} has no data and was not lost for bad' +\
+    #             'weather!'.format(night))
     # flds = [fld for fld in _os.listdir('{0}'.format(path)) if \
-            # _os.path.isdir(_os.path.join('{0}'.format(path), fld))]
+    #         _os.path.isdir(_os.path.join('{0}'.format(path), fld))]
     # for fld in flds:
-        # if fld not in lnights:
-            # print('# Warning! Night {0} is not recorded as OPD night!'. \
-                # format(fld))
-            # print('# Update the file {0}'.format(nights))
+    #     if fld not in lnights:
+    #         print('# Warning! Night {0} is not recorded as OPD night!'. \
+    #             format(fld))
+    #         print('# Update the file {0}'.format(nights))
     # for night in lbadweath:
-        # if night not in lnights:
-            # print('# Warning! Bad weather {0} is not recorded as OPD ' +\
-                # 'night!'.format(night))
-            # print('# Probably it is a spec night.')
+    #     if night not in lnights:
+    #         print('# Warning! Bad weather {0} is not recorded as OPD ' +\
+    #             'night!'.format(night))
+    #         print('# Probably it is a spec night.')
     # return
 
 

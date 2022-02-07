@@ -479,7 +479,7 @@ def bin_ndarray(ndarray, new_shape, operation='avg'):
                                                            new_shape))
     compression_pairs = [(d, c//d) for d, c in zip(new_shape,
                                                    ndarray.shape)]
-    flattened = [l for p in compression_pairs for l in p]
+    flattened = [j for p in compression_pairs for j in p]
     # print flattened
     ndarray = ndarray.reshape(flattened)
     for i in range(len(new_shape)):
@@ -545,7 +545,7 @@ def convnorm(x, arr, pattern):
 # 3D Coordinates manipulation (rotation)
 def cart2sph(x, y, z=None):
     """ Cartesian to spherical coordinates. Output in **rad**.
-    **Warning**: :math:`z=0\rightarrow \theta=\pi`.
+    **Warning**: :math:`z=0\\rightarrow \\theta=\\pi`.
 
     TODO: check is len(x)==len(y) 
 
@@ -562,7 +562,7 @@ def cart2sph(x, y, z=None):
 
 
 def sph2cart(r, phi, th=None):
-    """ **Warning**: the sequence is :math:`(r, \phi, \theta)`.
+    """ **Warning**: the sequence is :math:`(r, \\phi, \\theta)`.
     """
     if th is None:
         th = _np.zeros(len(r))
@@ -625,8 +625,7 @@ def closest_idx(arr, mtx):
     """
     lidx = []
     for i in range(len(arr)):
-        lidx.append( _np.where(mtx[:, i] == find_nearest(mtx[:, i], arr[i])
-            )[0] )
+        lidx.append(_np.where(mtx[:, i] == find_nearest(mtx[:, i], arr[i]))[0])
     return _ftreduce(_np.intersect1d, lidx)[0]
 
 
@@ -755,7 +754,7 @@ def keys_values(keys, text, delimiter='_'):
     """
     vals = []
     for k in keys:
-        rule = ".*{0}{1}([0-9.e+-]+)[{0}\.].*".format(delimiter, k)
+        rule = ".*{0}{1}([0-9.e+-]+)[{0}\\.].*".format(delimiter, k)
         out = _re.findall(rule, text, flags=_re.DOTALL)
         if len(out) == 1:
             vals += [out[0]]
@@ -931,8 +930,10 @@ def find_neighbours(par, par_grid, ranges, silent=True):
         # out of ranges
         if not is_inside_ranges(par[i], ranges[i]):
             if not silent:
-                print('[find_neighbours] Warning: parameter entry out of allowed range, taking closest value')
-            keep *= _np.abs(par[i]-par_grid[:, i]) == _np.min(_np.abs(par[i]-par_grid[:, i]))
+                print('[find_neighbours] Warning: parameter entry out of '
+                    'allowed range, taking closest value')
+            keep *= _np.abs(par[i]-par_grid[:, i]) == _np.min(
+                _np.abs(par[i]-par_grid[:, i]))
             out.append(i)
         # coincidence
         elif (par[i] == par_grid[:, i]).any():
@@ -1692,7 +1693,8 @@ def n_air(lbd=.55, T=300.15, P=1013.25, wp=6.113):
 
 
 def BBlbd(T, lbd=None):
-    """ Black body radiation as function of lambda. CGS units (erg s-1 sr−1 cm−3).
+    """ Black body radiation as function of lambda. CGS units (erg s-1 sr−1 
+    cm−3).
 
     INPUT: lambda vector in cm. If None, lbd = _np.arange(1000, 10000, 100) *
     1e-8 #Angs -> cm"""

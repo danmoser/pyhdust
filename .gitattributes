@@ -1,3 +1,5 @@
-*.py linguist-language=Python
-docs/* linguist-documentation
+# *.py linguist-language=Python
+# *.rst linguist-language=reStructuredText
 pyhdust/refs/* -linguist-detectable
+build/* -linguist-detectable
+docs/_build/* -linguist-detectable

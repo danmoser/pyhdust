@@ -4,6 +4,10 @@
 
 History
 ============
+v1.5.4 @ 2022-02-07
+---------------------
+- Added ``readtau``, ``readtauz``, ``plottau`` and ``plottauz``
+
 v1.5.0 @ 2021-04-26
 --------------------
 - Formally removing support for python 2.7 (Python 3.4+ only)
