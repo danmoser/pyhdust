@@ -80,7 +80,7 @@ setup(name='pyhdust',
     # data_files = [('refs/*', 'stmodels/*')],
     # package_dir = {'../'},
     zip_safe=False,
-    install_requires=['numpy >= 1.9.0', 'six', 'astropy'],
+    install_requires=['numpy >= 1.9.0', 'six', 'extension-helpers', 'astropy'],
     long_description=rd('README.rst'),
     classifiers=[
         # "Development Status :: 4 - Beta",
