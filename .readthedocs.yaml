@@ -7,3 +7,4 @@ build:
     pre_install:
       - pip install -r requirements.txt
       - python3 setup.py install
+# More at https://docs.readthedocs.io/en/stable/build-customization.html

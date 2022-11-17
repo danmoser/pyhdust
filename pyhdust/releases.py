@@ -10,7 +10,7 @@ v1.5.5 @ 2022-03-xx
 
 v1.5.4 @ 2022-02-07
 ---------------------
-- Added ``readtau``, ``readtauz``, ``plottau`` and ``plottauz`` to main lib 
+- Added ``readtau``, ``readtauz``, ``plottau`` and ``plottauz`` to main lib
 
 v1.5.0 @ 2021-04-26
 --------------------
@@ -157,42 +157,41 @@ __email__ = "dmfaes@gmail.com"
 
 
 def setRelease():
-    """ Read the version values from __init__.py and write it to the setup.py
-    and doc files. """
+    """Read the version values from __init__.py and write it to the setup.py
+    and doc files."""
     import os
     import re
     from pyhdust import __version__, hdtpath
-    #  
-    f0 = open(os.path.join(os.path.split(hdtpath()[:-1])[0], 'setup.py'))
+
+    #
+    f0 = open(os.path.join(os.path.split(hdtpath()[:-1])[0], "setup.py"))
     lines = f0.readlines()
     f0.close()
-    i = [lines.index(x) for x in lines if x.find('version=') > -1][0]
+    i = [lines.index(x) for x in lines if x.find("version=") > -1][0]
     verline = lines[i]
     if len(verline.split("'")) == 3:
         oldver = verline.split("'")[1]
     else:
         oldver = verline.split('"')[1]
     lines[i] = lines[i].replace(oldver, str(__version__))
-    f0 = open(os.path.join(os.path.split(hdtpath()[:-1])[0], 'setup.py'), 'w')
+    f0 = open(os.path.join(os.path.split(hdtpath()[:-1])[0], "setup.py"), "w")
     f0.writelines(lines)
     f0.close()
-    print('# ../setup.py file updated!')
+    print("# ../setup.py file updated!")
     #
-    f0 = open(os.path.join(os.path.split(hdtpath()[:-1])[0], 'docs', 
-        'index.rst'))
+    f0 = open(os.path.join(os.path.split(hdtpath()[:-1])[0], "docs", "index.rst"))
     lines = f0.readlines()
     f0.close()
-    i = [lines.index(x) for x in lines if x.find('at **version') > -1][0]
+    i = [lines.index(x) for x in lines if x.find("at **version") > -1][0]
     verline = lines[i]
-    oldver = re.findall(r'[0-9].*', verline)[0]
+    oldver = re.findall(r"[0-9].*[0-9]", verline)[0]
     lines[i] = lines[i].replace(oldver, str(__version__))
-    f0 = open(os.path.join(os.path.split(hdtpath()[:-1])[0], 'docs', 
-        'index.rst'), 'w')
+    f0 = open(os.path.join(os.path.split(hdtpath()[:-1])[0], "docs", "index.rst"), "w")
     f0.writelines(lines)
-    f0.close()    
-    print('# docs/index.rst file updated!')
-    os.chdir(os.path.join(os.path.split(hdtpath()[:-1])[0], 'docs'))
-    os.system('make html')
+    f0.close()
+    print("# docs/index.rst file updated!")
+    os.chdir(os.path.join(os.path.split(hdtpath()[:-1])[0], "docs"))
+    os.system("make html")
     # os.system('rsync -rP _build/html/ astroweb:/www/moser/www/doc')
     # os.system('rsync -rP _build/html/ /data/Dropbox/Public/doc')
     # print('# From version {0} to {1}'.format(oldver, __version__))
