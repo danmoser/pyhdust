@@ -12,6 +12,7 @@ import numpy as _np
 from pyhdust import hdtpath as _hdtpath
 from scipy.interpolate import griddata as _griddata
 import pyhdust.phc as _phc
+import pyhdust.spectools as _spt
 import tarfile as _tarfile
 import warnings as _warn
 
@@ -177,7 +178,7 @@ def beta(par, is_ob=False):
 
 
 def ellips_th(th, rf):
-    """ Ellipsoid radius 
+    """ Oblate ellipsoid radius 
 
     :param th: theta, in radians (0 = pole; pi/2 = equator).
     :param rt: radius fraction (Req/Rp >= 1) 
@@ -202,6 +203,60 @@ def rt(th, wfrac):
         r = (-3. * _np.cos((_np.arccos(wfrac * _np.sin(th)) + 4 *
             _np.pi) / 3)) / (wfrac * _np.sin(th))
     return r
+
+
+def area(wfrac, th_res=5001):
+    """ Roche star area. This is an brute force alternative to ``rochearea`` 
+    function (from Cranmer 1996). This function return **smaller values**. 
+    The reason for the differences are TBD.
+    """
+    ths = _np.linspace(_np.pi / 2, 0, th_res)
+    a = 0.
+    for i in range(len(ths)):
+        a = a + 2 * _np.pi * rt(ths[i], wfrac) ** 2 * _np.sin(ths[i])
+    return 2 * a * ths[-2]
+
+
+def rochearea(wfrac, isW=False):
+    """ Calculate the Roche area of a rigid rotator.
+
+    Equation 4.23 from Cranmer 1996 (thesis).
+
+    Area in (squared) radial unit (it must be multiplied to Rpole**2 to a 
+    physical size).
+    """
+    if isW:
+        w = wfrac_rot(wfrac)
+    else:
+        w = wfrac
+    return 4*_np.pi*(1+.19444*w**2+0.28053*w**2-1.9014*w**6+6.8298*w**8-
+        9.502*w**10+4.6631*w**12)
+
+
+def ellipsoidarea(rf, th_res=5001):
+    """ Ellipsoid area, brute force.
+
+    :param rt: radius fraction (Req/Rp >= 1) 
+    """
+    ths = _np.linspace(_np.pi / 2, 0, th_res)
+    a = 0.
+    for i in range(len(ths)):
+        a = a + 2 * _np.pi * ellips_th(ths[i], rf) ** 2 * _np.sin(ths[i])
+    return 2 * a * ths[-2]
+
+
+def ellipsoidarea2(rf):
+    """ Ellipsoid area, from Wikipedia.
+
+    :param rt: radius fraction (Req/Rp >= 1) 
+    """
+    p = 1.6075
+    a = rf
+    # b = rf
+    # c = 1
+    # arg = (a**p*b**p + a**p*c**p + b**p*c**p)/3
+    arg = (4*a**p)/3
+    return 4*_np.pi* (arg)**(1/p)
 
 
 def rotStar(Tp=20000., M=10.3065, rp=5.38462, star='B', beta=0.25, wfrac=0.8,
@@ -234,13 +289,6 @@ def rotStar(Tp=20000., M=10.3065, rp=5.38462, star='B', beta=0.25, wfrac=0.8,
 
     # DEFS ###
     # rh = outside
-
-    def area(wfrac):
-        ths = _np.linspace(_np.pi / 2, 0, th_res)
-        a = 0.
-        for i in range(len(ths)):
-            a = a + 2 * _np.pi * rt(ths[i], wfrac) ** 2 * _np.sin(ths[i])
-        return 2 * a * ths[-2]
 
     def g(wfrac, M, rp, th):
         wcrit = _np.sqrt(8 * G * M / (27 * rp ** 3))
@@ -324,33 +372,17 @@ def rotStar(Tp=20000., M=10.3065, rp=5.38462, star='B', beta=0.25, wfrac=0.8,
     return ob, (Cw * abs(g(wfrac, M, rp, 0.))) ** beta, area(wfrac) * (rp**2)
 
 
-def rochearea(wfrac, isW=False):
-    """ Calculate the Roche area of a rigid rotator.
-
-    Equation 4.23 from Cranmer 1996 (thesis).
-
-    Area in (squared) radial unit (it must be multiplied to Rpole**2 to a 
-    physical size).
-    """
-    if isW:
-        w = wfrac_rot(wfrac)
-    else:
-        w = wfrac
-    return 4*_np.pi*(1+.19444*w**2+0.28053*w**2-1.9014*w**6+6.8298*w**8-
-        9.502*w**10+4.6631*w**12)
-
-
-def sigma4b_cranmer(M, w):
+def sigma4b_cranmer(M, wfrac):
     '''Computes sigma4b defined in Cranmer 1996 (Eq. 4.22)
 
     Usage:
-    s4b = sigma4b_cranmer(M, w)
+    s4b = sigma4b_cranmer(M, wfrac)
 
-    where w=Omega/Omega_c, M=stellar mass in Msun (from 1.7 to 20.)
+    where wfrac=Omega/Omega_c, M=stellar mass in Msun (from 1.7 to 20.)
     '''
     dir0 = '{0}/refs/tables/'.format(_hdtpath())
     tab = _np.load(dir0 + 'sigma4b_cranmer.npz')
-    s4b = _griddata(tab['parlist'], tab['sigma4b'], _np.array([M, w]), 
+    s4b = _griddata(tab['parlist'], tab['sigma4b'], _np.array([M, wfrac]), 
         method='linear')[0]
     return s4b
 
@@ -797,6 +829,133 @@ def geneva_read(fname, Zstr='014', tar=None):
     Rpole = t[:, 8]
 
     return age, Mstar, logL, logTeff, Hfrac, Hefrac, oblat, w, Rpole
+
+
+def lum_rotstar(Rp=6, Teff=18703, W=0.732, roche=True):
+    """It calculates the luminosity of a rotation star (ie., oblate star area)
+    impossing an (artificial) effective temperature.
+
+    If ``roche=True``, calculate Roche star area. If ``False``, assumes an 
+    ellipsoid with same oblateness (as determined by ``W``). 
+
+    Units: Solar units.
+    """
+    wfrac = wfrac_rot(W)
+    if roche:
+        areaob = area(wfrac)
+    else:
+        ob = rt(_np.pi/2, wfrac)
+        areaob = ellipsoidarea(ob)
+    lum = areaob/4/_np.pi*Rp**2 * (Teff/_phc.Tsun.cgs)**4
+    return lum
+
+
+def teff_rotstar(Rp=6, lum=5224, W=0.732, roche=True):
+    """It calculates the "effective/average" temperature of a rotation star 
+    (ie., oblate star area).
+
+    If ``roche=True``, calculate Roche star area. If ``False``, assumes an 
+    ellipsoid with same oblateness (as determined by ``W``). 
+
+    Units: Solar units.
+    """
+    wfrac = wfrac_rot(W)
+    if roche:
+        areaob = area(wfrac)
+    else:
+        ob = rt(_np.pi/2, wfrac)
+        areaob = ellipsoidarea(ob)
+    teff = ( lum / (areaob*Rp**2/4/_np.pi) )**(1/4.) * _phc.Tsun.cgs
+    return teff
+
+
+def mag_BB(R=6, T=18703, d=279, lb0=5466., f0=3.6e-9):
+    """Calculates the magnitude of a Black Body star.
+
+    [R]=solar, [T]=Kelvin, [d]=parsec, [lb0;filter eff lambda]=Ang, 
+    [f0]=erg/s/cm2/A
+    """
+    flux_t = _phc.BBlbd(T, _np.array(lb0*1e-8))*_np.pi*1e-8  # erg/s/cm2/A
+    dist_fact = (R*_phc.Rsun.cgs/d/_phc.pc.cgs)**2
+    return -2.5*_np.log10(flux_t*dist_fact/f0)
+
+
+def mag_Kurucz(R=6, T=18703, d=279, logg=3.5, lb0=5466., f0=3.6e-9):
+    """Calculates the magnitude of a Kurucz star. 
+
+    [R]=solar, [T]=Kelvin, [d]=parsec, [lb0;filter eff lambda]=Ang, 
+    [f0]=erg/s/cm2/A
+    """
+    lbd, flux_t, info = _spt.kuruczflux(T, logg)  # erg/s/sr/cm2/Hz
+    flux_t = _np.interp([lb0*1e-1], lbd, flux_t)[0]  # just wavelength lb0
+    flux_t = _phc.c.cgs*1e8*flux_t*(lb0)**-2*4*_np.pi  # erg/s/cm2/A
+    dist_fact = (R*_phc.Rsun.cgs/d/_phc.pc.cgs)**2
+    return -2.5*_np.log10(flux_t*dist_fact/f0)
+
+
+def mag_avgBBrotstar(Rp=6, lum=5224, d=279, W=0.732, lb0=5466., 
+    f0=3.6e-9, roche=True):
+    """It calculates an "averaged" observed magnitude of a rotating star, 
+    assuming a Black Body.
+
+    This function assumes an uniform luminosity of the star and an average
+    projected area, increased due to the the stellar rotation.
+
+    This is seen as an "average" calculation. To be more precise, it is 
+    required multiple projections of effetive quantities as function of the 
+    inclination angle (eg., the stellar projected area and its effetive 
+    surface temperature).
+
+    For example, for the face-on (pole-on) case, area=4*pi*Req**2, but what 
+    would be an adequade Teff? The center of the area will be in Tpole, but an 
+    additional "limb darkening" would be seen due to the cooler temperature 
+    towards the equator (ie., the further away from the surface center).
+
+    Note that the observed flux from a rotating star will be greater the 
+    smaller the angle of inclination (ie, maximum flux for face-on and minimum 
+    for pole-on). 
+
+    If ``roche=True``, calculate Roche star area. If ``False``, assumes an 
+    ellipsoid with same oblateness (as determined by ``W``). 
+    """
+    wfrac = wfrac_rot(W)
+    if roche:
+        areaob = area(wfrac)
+    else:
+        ob = rt(_np.pi/2, wfrac)
+        areaob = ellipsoidarea(ob)
+    teff = ( lum / (areaob*Rp**2/4/_np.pi) )**(1/4.) * _phc.Tsun.cgs
+    flux_t = _phc.BBlbd(teff, _np.array(lb0*1e-8))*_np.pi*1e-8  # erg/s/cm2/A
+    Reff = (areaob/4/_np.pi)**(1/2.)*Rp
+    dist_fact = (Reff*_phc.Rsun.cgs/d/_phc.pc.cgs)**2
+    return -2.5*_np.log10(flux_t*dist_fact/f0)
+
+
+def mag_avgKuruczrotstar(Rp=6, lum=5224, d=279, W=0.732, logg=3.5, 
+    lb0=5466., f0=3.6e-9, roche=True):
+    """It calculates an "averaged" observed magnitude of a rotating star, 
+    using a Kurucz model.
+
+    This function assumes an uniform luminosity of the star and an average
+    projected area, increased due to the the stellar rotation. For more 
+    details, see ``calc_mag_avgBBrotstar``.
+
+    If ``roche=True``, calculate Roche star area. If ``False``, assumes an 
+    ellipsoid with same oblateness (as determined by ``W``). 
+    """
+    wfrac = wfrac_rot(W)
+    if roche:
+        areaob = area(wfrac)
+    else:
+        ob = rt(_np.pi/2, wfrac)
+        areaob = ellipsoidarea(ob)
+    Reff = (areaob/4/_np.pi)**(1/2.)*Rp
+    teff = (lum / Reff**2)**(1/4.) * _phc.Tsun.cgs
+    lbd, flux_t, _ = _spt.kuruczflux(teff, logg)  # erg/s/sr/cm2/Hz
+    flux_t = _np.interp([lb0*1e-1], lbd, flux_t)[0]  # just wavelength lb0
+    flux_t = _phc.c.cgs*1e8*flux_t*(lb0)**-2*4*_np.pi  # erg/s/cm2/A
+    dist_fact = (Reff*_phc.Rsun.cgs/d/_phc.pc.cgs)**2
+    return -2.5*_np.log10(flux_t*dist_fact/f0)
 
 
 # MAIN ###

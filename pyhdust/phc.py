@@ -31,7 +31,6 @@ import gzip as _gzip
 from bz2 import BZ2File as _BZ2File
 from glob import glob as _glob
 from itertools import product as _product
-from collections import Iterable as _It
 import pyhdust.jdcal as _jdcal
 from pyhdust.tabulate import tabulate as _tab
 from six import string_types as _strtypes
@@ -48,6 +47,12 @@ try:
     from scipy import optimize as _optimize
 except ImportError:
     ('matplotlib, csv and/or scipy module not installed!!!')
+
+try:
+    from collections.abc import Iterable as _It
+except ImportError:
+    from collections import Iterable as _It
+
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -1332,7 +1337,7 @@ def readrange(file, i0, ie):
     INPUT: string, int, int
 
     OUTPUT: list of strings """
-    _warn.warn('Update this with linecache')
+    _warn.warn('Update this with linecache for better performance')
     lines = []
     fp = open(file)
     for i, line in enumerate(fp):

@@ -50,16 +50,20 @@ try:
     from astropy.modeling import models as _models
     from astropy.modeling import fitting as _fitting
     import pandas as _pd
-    import wget as _wget
-    import xmltodict as _xmltodict
 except ImportError:
     _warn.warn('matplotlib, scipy and/or pandas module not installed!!!')
 
-#try:
-#    import pyqt_fit.nonparam_regression as _smooth
-#    from pyqt_fit import npr_methods as _npr_methods
-#except ImportError:
-#    _warn.warn('pyqt_fit module not installed!!!')
+try:
+    import wget as _wget
+    import xmltodict as _xmltodict
+except ImportError:
+    _warn.warn('wget and/or xmltodict module not installed!!!')
+
+# try:
+#     import pyqt_fit.nonparam_regression as _smooth
+#     from pyqt_fit import npr_methods as _npr_methods
+# except ImportError:
+#     _warn.warn('pyqt_fit module not installed!!!')
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"

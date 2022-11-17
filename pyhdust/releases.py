@@ -4,9 +4,13 @@
 
 History
 ============
+v1.5.5 @ 2022-03-xx
+--------------------
+- New ``rotstars`` functions
+
 v1.5.4 @ 2022-02-07
 ---------------------
-- Added ``readtau``, ``readtauz``, ``plottau`` and ``plottauz``
+- Added ``readtau``, ``readtauz``, ``plottau`` and ``plottauz`` to main lib 
 
 v1.5.0 @ 2021-04-26
 --------------------
