@@ -61,7 +61,7 @@ if sys.argv[-1] == "publish":
     sys.exit()
 
 setup(name='pyhdust',
-    version='1.5.5-3',
+    version='1.5.6',
     description=('Analysis tools for multi-technique astronomical data and '
         'hdust models'),
     url='http://pyhdust.readthedocs.io',
@@ -80,8 +80,7 @@ setup(name='pyhdust',
     # data_files = [('refs/*', 'stmodels/*')],
     # package_dir = {'../'},
     zip_safe=False,
-    install_requires=['numpy>=1.20.0', 'six<=1.16.0', 'extension-helpers<=1.0.0', 
-        'astropy<=5.1.1'],
+    install_requires=rd('requirements.txt').split('\n'),
     long_description=rd('README.rst'),
     classifiers=[
         # "Development Status :: 4 - Beta",
