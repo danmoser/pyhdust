@@ -61,7 +61,7 @@ if sys.argv[-1] == "publish":
     sys.exit()
 
 setup(name='pyhdust',
-    version='1.5.6',
+    version='1.5.6-1',
     description=('Analysis tools for multi-technique astronomical data and '
         'hdust models'),
     url='http://pyhdust.readthedocs.io',

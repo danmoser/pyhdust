@@ -184,7 +184,7 @@ def setRelease():
     f0.close()
     i = [lines.index(x) for x in lines if x.find('at **version') > -1][0]
     verline = lines[i]
-    oldver = re.findall('[-+]?[0-9]*\.?[0-9]*\.?[0-9]+', verline)[0]
+    oldver = re.findall(r'[0-9].*', verline)[0]
     lines[i] = lines[i].replace(oldver, str(__version__))
     f0 = open(os.path.join(os.path.split(hdtpath()[:-1])[0], 'docs', 
         'index.rst'), 'w')
