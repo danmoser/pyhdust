@@ -10,25 +10,26 @@ if sys.version_info[:2] < (3, 3):
 
 try:
     from setuptools import setup, find_packages
+
     errimport = False
 except ImportError:
     from distutils.core import setup
     from glob import glob
+
     errimport = True
 
     def is_package(path):
-        return ( os.path.isdir(path) and os.path.isfile(os.path.join(path, 
-            '__init__.py')) )
+        return os.path.isdir(path) and os.path.isfile(os.path.join(path, "__init__.py"))
 
     def find_packages(path=".", base="", exclude=[]):
-        """ Find all packages in path """
+        """Find all packages in path"""
         packages = {}
         lexc = []
         for item in exclude:
             lexc.extend(glob(item))
         for item in os.listdir(path):
             dir = os.path.join(path, item)
-            if is_package( dir ) and item not in lexc:
+            if is_package(dir) and item not in lexc:
                 if base:
                     module_name = "%(base)s.%(item)s" % vars()
                 else:
@@ -60,48 +61,60 @@ if sys.argv[-1] == "publish":
     os.system("python setup.py sdist upload")
     sys.exit()
 
-setup(name='pyhdust',
-    version='1.5.6-1',
-    description=('Analysis tools for multi-technique astronomical data and '
-        'hdust models'),
-    url='http://pyhdust.readthedocs.io',
-    author='Daniel M. Faes',
-    author_email='dmfaes@gmail.com',
-    license='GNU GPLv3.0',      
+setup(
+    name="pyhdust",
+    version="1.5.7",
+    description=(
+        "Analysis tools for multi-technique astronomical data and " "hdust models"
+    ),
+    url="http://pyhdust.readthedocs.io",
+    author="Daniel M. Faes",
+    author_email="dmfaes@gmail.com",
+    license="GNU GPLv3.0",
     # packages=['pyhdust','pyhdust_refs'],
-    scripts=[os.path.join('scripts', f) for f in os.listdir('scripts') if 
-        os.path.splitext(f)[1] == '.py'],
-    packages=find_packages(exclude=['build', 'docs', '*egg*', 'dist', 
-        'scripts']),
+    scripts=[
+        os.path.join("scripts", f)
+        for f in os.listdir("scripts")
+        if os.path.splitext(f)[1] == ".py"
+    ],
+    packages=find_packages(exclude=["build", "docs", "*egg*", "dist", "scripts"]),
     # include=recfiles('refs'),
-    package_data={'pyhdust': recfiles('pyhdust', 'refs') + 
-        ['LICENSE', 'README.rst']},
+    package_data={"pyhdust": recfiles("pyhdust", "refs") + ["LICENSE", "README.rst"]},
     include_package_data=True,
     # data_files = [('refs/*', 'stmodels/*')],
     # package_dir = {'../'},
     zip_safe=False,
-    install_requires=rd('requirements.txt').split('\n'),
-    long_description=rd('README.rst'),
+    install_requires=rd("requirements.txt").split("\n"),
+    long_description=rd("README.rst"),
     classifiers=[
         # "Development Status :: 4 - Beta",
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
         "Intended Audience :: Science/Research",
-        "License :: OSI Approved :: GNU General Public License v3 or later" + \
-        " (GPLv3+)",
+        "License :: OSI Approved :: GNU General Public License v3 or later"
+        + " (GPLv3+)",
         "Operating System :: OS Independent",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
         "Topic :: Scientific/Engineering :: Astronomy",
-        "Topic :: Scientific/Engineering :: Physics"
+        "Topic :: Scientific/Engineering :: Physics",
     ],
-    keywords=['astronomy', 'astrophysics', 'science', 'hdust', 'Be stars',
-        'spectroscopy', 'polarimetry', 'interferometry', 'radiative transfer',
-        'optical-interferometry'],
+    keywords=[
+        "astronomy",
+        "astrophysics",
+        "science",
+        "hdust",
+        "Be stars",
+        "spectroscopy",
+        "polarimetry",
+        "interferometry",
+        "radiative transfer",
+        "optical-interferometry",
+    ],
 )
 
 if errimport:
     print('# You don\'t have "setuptools" installed!')
-    print('# Because of this, you MAY need to copy the package data: \n')
-    print('# Warning! The path can change according to your system')
-    print('$ cp -r -f pyhdust ~/.local/lib/python3.x/site-packages/')
+    print("# Because of this, you MAY need to copy the package data: \n")
+    print("# Warning! The path can change according to your system")
+    print("$ cp -r -f pyhdust ~/.local/lib/python3.x/site-packages/")

@@ -1,7 +1,7 @@
 # -*- coding:utf-8 -*-
 
 """PyHdust *jdcal* module: third-part functions for converting between Julian
-dates and calendar dates. 
+dates and calendar dates.
 
 I did not make any modification. The original README is below.
 
@@ -452,6 +452,7 @@ def jd2jcal(jd1, jd2):
 def _test_gcal2jd_with_sla_cldj():
     """Compare gcal2jd with slalib.sla_cldj."""
     import random
+
     try:
         from pyslalib import slalib
     except ImportError:
@@ -471,10 +472,8 @@ def _test_gcal2jd_with_sla_cldj():
         if day[i] > mday[month[i]] + x:
             day[i] = mday[month[i]]
 
-    jd_jdc = [gcal2jd(y, m, d)[1]
-              for y, m, d in zip(year, month, day)]
-    jd_sla = [slalib.sla_cldj(y, m, d)[0]
-              for y, m, d in zip(year, month, day)]
+    jd_jdc = [gcal2jd(y, m, d)[1] for y, m, d in zip(year, month, day)]
+    jd_sla = [slalib.sla_cldj(y, m, d)[0] for y, m, d in zip(year, month, day)]
     diff = [abs(i - j) for i, j in zip(jd_sla, jd_jdc)]
     assert max(diff) <= 1e-8
     assert min(diff) <= 1e-8
@@ -483,6 +482,7 @@ def _test_gcal2jd_with_sla_cldj():
 def _test_jd2gcal():
     """Check jd2gcal as reverse of gcal2jd."""
     import random
+
     n = 1000
     mday = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 
@@ -496,8 +496,7 @@ def _test_jd2gcal():
         if day[i] > mday[month[i]] + x:
             day[i] = mday[month[i]]
 
-    jd = [gcal2jd(y, m, d)[1]
-          for y, m, d in zip(year, month, day)]
+    jd = [gcal2jd(y, m, d)[1] for y, m, d in zip(year, month, day)]
 
     x = [jd2gcal(MJD_0, i) for i in jd]
 
@@ -511,13 +510,13 @@ def _test_jd2gcal():
 def _test_jd2jcal():
     """Check jd2jcal as reverse of jcal2jd."""
     import random
+
     n = 1000
     year = [random.randint(-4699, 2200) for i in range(n)]
     month = [random.randint(1, 12) for i in range(n)]
     day = [random.randint(1, 28) for i in range(n)]
 
-    jd = [jcal2jd(y, m, d)[1]
-          for y, m, d in zip(year, month, day)]
+    jd = [jcal2jd(y, m, d)[1] for y, m, d in zip(year, month, day)]
 
     x = [jd2gcal(MJD_0, i) for i in jd]
 
@@ -526,6 +525,7 @@ def _test_jd2jcal():
         assert x[i][1] == month[i]
         assert x[i][2] == day[i]
         assert x[i][3] <= 1e-15
+
 
 # MAIN ###
 if __name__ == "__main__":

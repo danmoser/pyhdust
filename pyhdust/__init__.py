@@ -36,9 +36,9 @@ try:
     from scipy import interpolate as _interpolate
     from scipy.interpolate import griddata as _griddata
 except ImportError:
-    _warn.warn('# matplotlib and/or scipy module not installed!!')
+    _warn.warn("# matplotlib and/or scipy module not installed!!")
 
-__version__ = '1.5.6-1'
+__version__ = "1.5.7"
 __release__ = "Stable"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -46,7 +46,7 @@ __email__ = "dmfaes@gmail.com"
 
 # Package tools
 def hdtpath():
-    """ 
+    """
     :rtype: str
     :returns: The module path.
 
@@ -57,7 +57,7 @@ def hdtpath():
     """
     fulldir = list(_os.path.split(__file__))[0] + _os.path.sep
     # fulldir = _os.path.split(fulldir)[0] + _os.path.sep
-    end = 'pyhdust' + _os.path.sep
+    end = "pyhdust" + _os.path.sep
     if not fulldir.endswith(end):
         fulldir += end
     return fulldir
@@ -65,7 +65,7 @@ def hdtpath():
 
 # Hdust I/O
 def sed2info(sfile):
-    """ Read info from a HDUST SED2 file.
+    """Read info from a HDUST SED2 file.
 
     :type  sfile: str
     :param sfile: HDUST SED2 file path
@@ -73,27 +73,27 @@ def sed2info(sfile):
     :rtype: tuple of floats
     :returns: ``nlbd, nobs, Rstar, Rwind``, the HDUST parameters
     """
-    f0 = open(sfile, 'r')
+    f0 = open(sfile, "r")
     fcont = f0.readlines()
     f0.close()
-    info = ''
+    info = ""
     i = 0
-    while info == '':
-        if fcont[i][0] != '%':
+    while info == "":
+        if fcont[i][0] != "%":
             info = _np.array(fcont[i].split(), dtype=float)
         i += 1
     return info
 
 
 def readsed2(sfile):
-    """ Read data from HDUST SED2 file.
+    """Read data from HDUST SED2 file.
 
     Note: this format is different of **readfullsed2**.
 
     :type sfile: str
     :param sfile: HDUST SED2 file path
 
-    :rtype: ``np.array(nobs*nlbd, -1)``, where number of columns from SED2 file 
+    :rtype: ``np.array(nobs*nlbd, -1)``, where number of columns from SED2 file
     replaces "-1"
     :returns: SED2 header info
     """
@@ -102,7 +102,7 @@ def readsed2(sfile):
 
 
 def readfullsed2(sfile):
-    """ Read data from HDUST fullSED2 file.
+    """Read data from HDUST fullSED2 file.
 
     Parameter
     -----------
@@ -112,7 +112,7 @@ def readfullsed2(sfile):
     Returns
     --------
     numpy.array
-        ``np.array(nobs, nlbd, -1)``, where the number of columns from  
+        ``np.array(nobs, nlbd, -1)``, where the number of columns from
         fullSED2 file replaces "-1". Example: ``lbd_obs0 = fs2data[0, :, 2]``.
 
     - 0: cos(i) == cos(mu)
@@ -132,13 +132,16 @@ def readfullsed2(sfile):
     for i, j in _itprod([3, 7], range(int(nobs))):
         isnan = _np.isnan(sed2data[j, :, i])
         if any(isnan):
-            sed2data[j, :, i][isnan] = _np.interp(sed2data[0, :, 2][isnan], 
-                sed2data[0, :, 2][~isnan], sed2data[j, :, i][~isnan])
+            sed2data[j, :, i][isnan] = _np.interp(
+                sed2data[0, :, 2][isnan],
+                sed2data[0, :, 2][~isnan],
+                sed2data[j, :, i][~isnan],
+            )
     return sed2data
 
 
 def readtemp(tfile, quiet=False):
-    """ Read HDUST temp file
+    """Read HDUST temp file
 
     - ncr = número de células da simulação na coordenada radial
     - ncmu = número de células da simulação na coordenada latitudinal
@@ -159,37 +162,39 @@ def readtemp(tfile, quiet=False):
 
     .. seealso::
 
-        Temperature are in `data[3, ...]`. More info. see :py:func:`plottemp` 
+        Temperature are in `data[3, ...]`. More info. see :py:func:`plottemp`
         function.
 
     :type sfile: str
     :param sfile: HDUST fullSED2 file path.
 
-    :rtype: ``np.array(nobs, nlbd, -1)``, number of columns from fullSED2 file 
+    :rtype: ``np.array(nobs, nlbd, -1)``, number of columns from fullSED2 file
         replaces "-1".)
     :returns: HDUST fullSED2 file content.
 
     OUTPUT = ncr,ncmu,ncphi,nLTE,nNLTE,Rstar,Ra,beta,data,pcr,pcmu,pcphi
     """
-    f = open(tfile, 'rb').read()
+    f = open(tfile, "rb").read()
     ixdr = 0
-    ncr, ncmu, ncphi, nLTE, nNLTE = _struct.unpack('>5l', f[ixdr:ixdr + 4 * 5])
+    ncr, ncmu, ncphi, nLTE, nNLTE = _struct.unpack(">5l", f[ixdr : ixdr + 4 * 5])
     ixdr += 4 * 5
-    Rstar, Ra, beta = _struct.unpack('>3f', f[ixdr:ixdr + 4 * 3])
+    Rstar, Ra, beta = _struct.unpack(">3f", f[ixdr : ixdr + 4 * 3])
     ixdr += 4 * 3
-    # 
+    #
     rlen = (nLTE + 6) * ncr * ncmu * ncphi
-    data = _struct.unpack('>{0}f'.format(rlen), f[ixdr:ixdr + 4 * rlen])
+    data = _struct.unpack(">{0}f".format(rlen), f[ixdr : ixdr + 4 * rlen])
     ixdr += 4 * rlen
-    data = _np.reshape(data, (nLTE + 6, ncr, ncmu, ncphi), order='F')
+    data = _np.reshape(data, (nLTE + 6, ncr, ncmu, ncphi), order="F")
     #
     # this will check if the XDR is finished.
     if ixdr == len(f):
         if not quiet:
-            print('# XDR {0} completely read!'.format(tfile))
+            print("# XDR {0} completely read!".format(tfile))
     else:
-        _warn.warn( '# XDR {0} not completely read!\n# length difference is '
-            '{1}'.format(tfile, (len(f)-ixdr)/4 ) )
+        _warn.warn(
+            "# XDR {0} not completely read!\n# length difference is "
+            "{1}".format(tfile, (len(f) - ixdr) / 4)
+        )
     #
     pcrc = data[0, :, 0, 0]
     pcr = _np.zeros(ncr + 1)
@@ -197,25 +202,25 @@ def readtemp(tfile, quiet=False):
     for icr in range(1, ncr + 1):
         pcr[icr] = pcr[icr - 1] + 2 * (pcrc[icr - 1] - pcr[icr - 1])
     pcmu = _np.zeros((ncmu + 1, ncr))
-    # 
+    #
     for icr in range(0, ncr):
         pcmuc = data[1, icr, :, 0]
-        pcmu[0, icr] = -1.
+        pcmu[0, icr] = -1.0
         for icmu in range(1, ncmu + 1):
-            pcmu[icmu, icr] = pcmu[icmu - 1, icr] + 2. * \
-                (pcmuc[icmu - 1] - pcmu[icmu - 1, icr])
+            pcmu[icmu, icr] = pcmu[icmu - 1, icr] + 2.0 * (
+                pcmuc[icmu - 1] - pcmu[icmu - 1, icr]
+            )
     #
     pcphic = data[2, 0, 0, :]
     pcphi = _np.zeros(ncphi + 1)
-    pcphi[0] = 0.
+    pcphi[0] = 0.0
     for icphi in range(1, ncphi + 1):
-        pcphi[icphi] = pcphi[icphi - 1] + 2 * \
-            (pcphic[icphi - 1] - pcphi[icphi - 1])
-    # 
+        pcphi[icphi] = pcphi[icphi - 1] + 2 * (pcphic[icphi - 1] - pcphi[icphi - 1])
+    #
     if not quiet:
-        lev = nLTE+2
-        dens = _np.zeros(ncr*ncmu*ncphi)
-        volume = _np.zeros(ncr*ncmu*ncphi)
+        lev = nLTE + 2
+        dens = _np.zeros(ncr * ncmu * ncphi)
+        volume = _np.zeros(ncr * ncmu * ncphi)
         i = 0
         for icr in range(ncr):
             for icmu in range(ncmu):
@@ -224,26 +229,28 @@ def readtemp(tfile, quiet=False):
                     # vol = vol*(pcmu[icmu+1, icr]-pcmu[icmu, icr])
                     # vol = vol*(pcr[icr+1]**3.-pcr[icr]**3.)/3.
                     # vol = vol*_phc.Rsun.cgs**3.
-                    pcmu = _np.where(pcmu>1, 1, pcmu)
-                    r = (pcr[icr+1]+pcr[icr])/2.*_phc.Rsun.cgs*Rstar
-                    dr = (pcr[icr+1]-pcr[icr])*_phc.Rsun.cgs*Rstar
-                    th = (_np.arccos(pcmu[icmu+1, icr]) + 
-                        _np.arccos(pcmu[icmu, icr]))/2.
-                    dth = _np.arccos(pcmu[icmu, icr]) - \
-                        _np.arccos(pcmu[icmu+1, icr])
-                    dphi = pcmu[icmu+1, icr]-pcmu[icmu, icr]
-                    volume[i] = r**2*_np.sin(th)*dr*dth*dphi
-                    dens[i] = data[3+lev, icr, icmu, icphi]*_phc.mp.cgs
+                    pcmu = _np.where(pcmu > 1, 1, pcmu)
+                    r = (pcr[icr + 1] + pcr[icr]) / 2.0 * _phc.Rsun.cgs * Rstar
+                    dr = (pcr[icr + 1] - pcr[icr]) * _phc.Rsun.cgs * Rstar
+                    th = (
+                        _np.arccos(pcmu[icmu + 1, icr]) + _np.arccos(pcmu[icmu, icr])
+                    ) / 2.0
+                    dth = _np.arccos(pcmu[icmu, icr]) - _np.arccos(pcmu[icmu + 1, icr])
+                    dphi = pcmu[icmu + 1, icr] - pcmu[icmu, icr]
+                    volume[i] = r**2 * _np.sin(th) * dr * dth * dphi
+                    dens[i] = data[3 + lev, icr, icmu, icphi] * _phc.mp.cgs
                     i += 1
-        print('# Disk mass is {0:.2e} Msun (Rstar={1:.1e} Rsun)'.format(
-            _np.sum(dens*volume)/_phc.Msun.cgs, Rstar))
+        print(
+            "# Disk mass is {0:.2e} Msun (Rstar={1:.1e} Rsun)".format(
+                _np.sum(dens * volume) / _phc.Msun.cgs, Rstar
+            )
+        )
 
-    return ncr, ncmu, ncphi, nLTE, nNLTE, Rstar, Ra, beta, data, pcr, pcmu,\
-        pcphi
+    return ncr, ncmu, ncphi, nLTE, nNLTE, Rstar, Ra, beta, data, pcr, pcmu, pcphi
 
 
 def read_vol_dens_temp(tfile):
-    """ Returns the values of ``volume, dens, temp`` of ``tfile``.
+    """Returns the values of ``volume, dens, temp`` of ``tfile``.
 
     :Example:
 
@@ -253,13 +260,14 @@ def read_vol_dens_temp(tfile):
         >>> avg_temp_by_mass = np.sum(volume*dens*temp) / total_mass
         >>> avg_temp_by_vol = np.sum(volume*temp) / np.sum(volume)
     """
-    ncr, ncmu, ncphi, nLTE, nNLTE, Rstar, Ra, beta, data, pcr, pcmu, pcphi =\
-        readtemp(tfile)
-    lev = nLTE+2
+    ncr, ncmu, ncphi, nLTE, nNLTE, Rstar, Ra, beta, data, pcr, pcmu, pcphi = readtemp(
+        tfile
+    )
+    lev = nLTE + 2
     levt = 0
-    dens = _np.zeros(ncr*ncmu*ncphi)
-    temp = _np.zeros(ncr*ncmu*ncphi)
-    volume = _np.zeros(ncr*ncmu*ncphi)
+    dens = _np.zeros(ncr * ncmu * ncphi)
+    temp = _np.zeros(ncr * ncmu * ncphi)
+    volume = _np.zeros(ncr * ncmu * ncphi)
     i = 0
     for icr in range(ncr):
         for icmu in range(ncmu):
@@ -268,44 +276,47 @@ def read_vol_dens_temp(tfile):
                 # vol = vol*(pcmu[icmu+1, icr]-pcmu[icmu, icr])
                 # vol = vol*(pcr[icr+1]**3.-pcr[icr]**3.)/3.
                 # vol = vol*_phc.Rsun.cgs**3.
-                pcmu = _np.where(pcmu>1, 1, pcmu)
-                r = (pcr[icr+1]+pcr[icr])/2.*_phc.Rsun.cgs*Rstar
-                dr = (pcr[icr+1]-pcr[icr])*_phc.Rsun.cgs*Rstar
-                th = (_np.arccos(pcmu[icmu+1, icr]) + 
-                    _np.arccos(pcmu[icmu, icr]))/2.
-                dth = _np.arccos(pcmu[icmu, icr])-_np.arccos(pcmu[icmu+1, icr])
-                dphi = pcmu[icmu+1, icr]-pcmu[icmu, icr]
-                volume[i] = r**2*_np.sin(th)*dr*dth*dphi
-                dens[i] = data[3+lev, icr, icmu, icphi]*_phc.mp.cgs
-                temp[i] = data[3+levt, icr, icmu, icphi]
+                pcmu = _np.where(pcmu > 1, 1, pcmu)
+                r = (pcr[icr + 1] + pcr[icr]) / 2.0 * _phc.Rsun.cgs * Rstar
+                dr = (pcr[icr + 1] - pcr[icr]) * _phc.Rsun.cgs * Rstar
+                th = (
+                    _np.arccos(pcmu[icmu + 1, icr]) + _np.arccos(pcmu[icmu, icr])
+                ) / 2.0
+                dth = _np.arccos(pcmu[icmu, icr]) - _np.arccos(pcmu[icmu + 1, icr])
+                dphi = pcmu[icmu + 1, icr] - pcmu[icmu, icr]
+                volume[i] = r**2 * _np.sin(th) * dr * dth * dphi
+                dens[i] = data[3 + lev, icr, icmu, icphi] * _phc.mp.cgs
+                temp[i] = data[3 + levt, icr, icmu, icphi]
                 i += 1
     return volume, dens, temp
 
 
 def readtempmass(tfile, quiet=False):
-    """ Read HDUST temp file
+    """Read HDUST temp file
 
     OUTPUT = mass (in g)
     """
-    f = open(tfile, 'rb').read()
+    f = open(tfile, "rb").read()
     ixdr = 0
-    ncr, ncmu, ncphi, nLTE, nNLTE = _struct.unpack('>5l', f[ixdr:ixdr + 4 * 5])
+    ncr, ncmu, ncphi, nLTE, nNLTE = _struct.unpack(">5l", f[ixdr : ixdr + 4 * 5])
     ixdr += 4 * 5
-    Rstar, Ra, beta = _struct.unpack('>3f', f[ixdr:ixdr + 4 * 3])
+    Rstar, Ra, beta = _struct.unpack(">3f", f[ixdr : ixdr + 4 * 3])
     ixdr += 4 * 3
-    # 
+    #
     rlen = (nLTE + 6) * ncr * ncmu * ncphi
-    data = _struct.unpack('>{0}f'.format(rlen), f[ixdr:ixdr + 4 * rlen])
+    data = _struct.unpack(">{0}f".format(rlen), f[ixdr : ixdr + 4 * rlen])
     ixdr += 4 * rlen
-    data = _np.reshape(data, (nLTE + 6, ncr, ncmu, ncphi), order='F')
+    data = _np.reshape(data, (nLTE + 6, ncr, ncmu, ncphi), order="F")
     #
     # this will check if the XDR is finished.
     if ixdr == len(f):
         if not quiet:
-            print('# XDR {0} completely read!'.format(tfile))
+            print("# XDR {0} completely read!".format(tfile))
     else:
-        _warn.warn( '# XDR {0} not completely read!\n# length difference is '
-            '{1}'.format(tfile, (len(f)-ixdr)/4 ) )
+        _warn.warn(
+            "# XDR {0} not completely read!\n# length difference is "
+            "{1}".format(tfile, (len(f) - ixdr) / 4)
+        )
     #
     pcrc = data[0, :, 0, 0]
     pcr = _np.zeros(ncr + 1)
@@ -313,25 +324,25 @@ def readtempmass(tfile, quiet=False):
     for icr in range(1, ncr + 1):
         pcr[icr] = pcr[icr - 1] + 2 * (pcrc[icr - 1] - pcr[icr - 1])
     pcmu = _np.zeros((ncmu + 1, ncr))
-    # 
+    #
     for icr in range(0, ncr):
         pcmuc = data[1, icr, :, 0]
-        pcmu[0, icr] = -1.
+        pcmu[0, icr] = -1.0
         for icmu in range(1, ncmu + 1):
-            pcmu[icmu, icr] = pcmu[icmu - 1, icr] + 2. * \
-                (pcmuc[icmu - 1] - pcmu[icmu - 1, icr])
+            pcmu[icmu, icr] = pcmu[icmu - 1, icr] + 2.0 * (
+                pcmuc[icmu - 1] - pcmu[icmu - 1, icr]
+            )
     #
     pcphic = data[2, 0, 0, :]
     pcphi = _np.zeros(ncphi + 1)
-    pcphi[0] = 0.
+    pcphi[0] = 0.0
     for icphi in range(1, ncphi + 1):
-        pcphi[icphi] = pcphi[icphi - 1] + 2 * \
-            (pcphic[icphi - 1] - pcphi[icphi - 1])
-    # 
+        pcphi[icphi] = pcphi[icphi - 1] + 2 * (pcphic[icphi - 1] - pcphi[icphi - 1])
+    #
     if not quiet:
-        lev = nLTE+2
-        dens = _np.zeros(ncr*ncmu*ncphi)
-        volume = _np.zeros(ncr*ncmu*ncphi)
+        lev = nLTE + 2
+        dens = _np.zeros(ncr * ncmu * ncphi)
+        volume = _np.zeros(ncr * ncmu * ncphi)
         i = 0
         for icr in range(ncr):
             for icmu in range(ncmu):
@@ -340,24 +351,25 @@ def readtempmass(tfile, quiet=False):
                     # vol = vol*(pcmu[icmu+1, icr]-pcmu[icmu, icr])
                     # vol = vol*(pcr[icr+1]**3.-pcr[icr]**3.)/3.
                     # vol = vol*_phc.Rsun.cgs**3.
-                    pcmu = _np.where(pcmu>1, 1, pcmu)
-                    r = (pcr[icr+1]+pcr[icr])/2.*_phc.Rsun.cgs*Rstar
-                    dr = (pcr[icr+1]-pcr[icr])*_phc.Rsun.cgs*Rstar
-                    th = (_np.arccos(pcmu[icmu+1, icr]) + 
-                        _np.arccos(pcmu[icmu, icr]))/2.
-                    dth = _np.arccos(pcmu[icmu, icr]) - \
-                        _np.arccos(pcmu[icmu+1, icr])
-                    dphi = pcmu[icmu+1, icr]-pcmu[icmu, icr]
-                    volume[i] = r**2*_np.sin(th)*dr*dth*dphi
-                    dens[i] = data[3+lev, icr, icmu, icphi]*_phc.mp.cgs
+                    pcmu = _np.where(pcmu > 1, 1, pcmu)
+                    r = (pcr[icr + 1] + pcr[icr]) / 2.0 * _phc.Rsun.cgs * Rstar
+                    dr = (pcr[icr + 1] - pcr[icr]) * _phc.Rsun.cgs * Rstar
+                    th = (
+                        _np.arccos(pcmu[icmu + 1, icr]) + _np.arccos(pcmu[icmu, icr])
+                    ) / 2.0
+                    dth = _np.arccos(pcmu[icmu, icr]) - _np.arccos(pcmu[icmu + 1, icr])
+                    dphi = pcmu[icmu + 1, icr] - pcmu[icmu, icr]
+                    volume[i] = r**2 * _np.sin(th) * dr * dth * dphi
+                    dens[i] = data[3 + lev, icr, icmu, icphi] * _phc.mp.cgs
                     i += 1
-        print('# Disk mass is {0:.2e} Msun'.format(_np.sum(dens*volume)/
-            _phc.Msun.cgs))
-    return _np.sum(dens*volume)
+        print(
+            "# Disk mass is {0:.2e} Msun".format(_np.sum(dens * volume) / _phc.Msun.cgs)
+        )
+    return _np.sum(dens * volume)
 
 
 def readdust(dfile):
-    """ Read *.dust files
+    """Read *.dust files
 
     - ncr = número de células da simulação na coordenada radial
     - ncmu = número de células da simulação na coordenada latitudinal
@@ -371,13 +383,13 @@ def readdust(dfile):
     - pcmu = distância entre as células em mu
     - pcphi = distância entre as células em phi
 
-    - ntip = número de tipos de poeira determinados para a simulação 
+    - ntip = número de tipos de poeira determinados para a simulação
     (composição)
-    - na = número de tamanho por tipo da poeira 
+    - na = número de tamanho por tipo da poeira
     - NdustShells = número de camadas de poeiras da simulação
     - Rdust = raio onde está(ão) a(s) camada(s)
     - Tdestruction = temperatura na qual os grãos são evaporados
-    - Tdust = temperatura da poeira numa da posição da grade da simulação 
+    - Tdust = temperatura da poeira numa da posição da grade da simulação
     (r,phi,mu)
     - lacentro = controla os tipos e tamanhos das poeiras
     """
@@ -385,8 +397,8 @@ def readdust(dfile):
 
     # First line
     Line = Arq.readline().split()
-    ncr, ncmu, ncphi, NdustShells = _np.array(Line[:4], dtype='int')
-    Rstar, Ra = _np.array(Line[4:], dtype='float')
+    ncr, ncmu, ncphi, NdustShells = _np.array(Line[:4], dtype="int")
+    Rstar, Ra = _np.array(Line[4:], dtype="float")
 
     # Read the lines of each dustshell
     ncrdust, Rdust, Tdestruction = [], [], []
@@ -405,45 +417,64 @@ def readdust(dfile):
     for stip in range(ntip):
         na = int(Arq.readline().split()[0])
 
-        if (stip == 0):
+        if stip == 0:
             Tdust = _np.zeros((ncphi, ncmu, ncr, na, ntip))
             lacentro = _np.zeros((na, ntip))
-            temp = _np.zeros(na+3)
+            temp = _np.zeros(na + 3)
 
-        lacentro[:, stip] = _np.array(Arq.readline().split(), dtype='float')
+        lacentro[:, stip] = _np.array(Arq.readline().split(), dtype="float")
 
         for icphi, icmu, icr in _itprod(range(ncphi), range(ncmu), range(ncr)):
-            temp = _np.array(Arq.readline().split(), dtype='float')
+            temp = _np.array(Arq.readline().split(), dtype="float")
             pcrc[icr] = temp[0]
             pcmuc[icr, icmu] = temp[1]
             pcphic[icphi] = temp[2]
-            Tdust[icphi, icmu, icr, :, stip] = temp[3:3 + na]
+            Tdust[icphi, icmu, icr, :, stip] = temp[3 : 3 + na]
 
     Arq.close()
 
     pcr = _np.zeros(ncr + 1)
     pcr[0] = Rdust[0]
     for icr in range(ncr):
-        pcr[icr + 1] = pcr[icr] + 2.*(pcrc[icr] - pcr[icr])
+        pcr[icr + 1] = pcr[icr] + 2.0 * (pcrc[icr] - pcr[icr])
 
-    pcmu = _np.zeros((ncr, ncmu+1))
+    pcmu = _np.zeros((ncr, ncmu + 1))
     for icr in range(ncr):
-        pcmu[icr, 0] = -1.
+        pcmu[icr, 0] = -1.0
         for icmu in range(ncmu):
-            pcmu[icr, icmu + 1] = ( pcmu[icr, icmu] + 2.*(pcmuc[icr, icmu] - 
-                pcmu[icr, icmu]) )
+            pcmu[icr, icmu + 1] = pcmu[icr, icmu] + 2.0 * (
+                pcmuc[icr, icmu] - pcmu[icr, icmu]
+            )
 
     pcphi = _np.zeros(ncphi + 1)
-    pcphi[0] = 0.
+    pcphi[0] = 0.0
     for icphi in range(ncphi):
-        pcphi[icphi + 1] = pcphi[icphi] + 2*(pcphic[icphi] - pcphi[icphi])
+        pcphi[icphi + 1] = pcphi[icphi] + 2 * (pcphic[icphi] - pcphi[icphi])
 
-    return (ncr, ncmu, ncphi, ntip, na, Rstar, Ra, NdustShells, Rdust, 
-        Tdestruction, Tdust, pcrc, pcmuc, pcphic, pcr, pcmu, pcphi, lacentro)
+    return (
+        ncr,
+        ncmu,
+        ncphi,
+        ntip,
+        na,
+        Rstar,
+        Ra,
+        NdustShells,
+        Rdust,
+        Tdestruction,
+        Tdust,
+        pcrc,
+        pcmuc,
+        pcphic,
+        pcr,
+        pcmu,
+        pcphi,
+        lacentro,
+    )
 
 
 def temp_interp(tempfile, theta, pos=[0, 1]):
-    '''Returns temp file properties interpolated at a given line-of-sight
+    """Returns temp file properties interpolated at a given line-of-sight
 
     Usage:
     r, interp = temp_interp(tempfile, theta, pos=[0, 1])
@@ -453,46 +484,54 @@ def temp_interp(tempfile, theta, pos=[0, 1]):
           1-25: energy levels population fraction
           26: ionization fraction
           27: number density [cm-3]
-    '''
+    """
     # read data
     icphi = 0
-    ncr, ncmu, ncphi, nLTE, nNLTE, Rstar, Ra, beta, data, pcr, pcmu, pcphi = \
-        readtemp(tempfile, quiet=True)
+    ncr, ncmu, ncphi, nLTE, nNLTE, Rstar, Ra, beta, data, pcr, pcmu, pcphi = readtemp(
+        tempfile, quiet=True
+    )
     r = data[0, :, 0, icphi]
     r = r / Rstar
     muarr = data[1, :, :, icphi]  # muarr[ir, imu]
     # build grid
     xy = []
     count = 0
-    xy = _np.zeros([ncr*ncmu/2, 2])
-    grid = _np.zeros([len(pos), ncr*ncmu/2])
+    xy = _np.zeros([ncr * ncmu / 2, 2])
+    grid = _np.zeros([len(pos), ncr * ncmu / 2])
     for ir in range(ncr):
-        for imu in _np.arange(0, ncmu/2, 1):
-            xy[count] = _np.array([r[ir] * _np.sqrt(1. - 
-                muarr[ir, ncmu-1-imu]**2), r[ir] * muarr[ir, ncmu-1-imu]])
+        for imu in _np.arange(0, ncmu / 2, 1):
+            xy[count] = _np.array(
+                [
+                    r[ir] * _np.sqrt(1.0 - muarr[ir, ncmu - 1 - imu] ** 2),
+                    r[ir] * muarr[ir, ncmu - 1 - imu],
+                ]
+            )
             for ip in range(len(pos)):
                 # average based on z-symmetry
-                grid[ip, count] = .5 * (data[pos[ip]+3, ir, imu, icphi] + 
-                    data[pos[ip]+3, ir, ncmu-1-imu, icphi])
+                grid[ip, count] = 0.5 * (
+                    data[pos[ip] + 3, ir, imu, icphi]
+                    + data[pos[ip] + 3, ir, ncmu - 1 - imu, icphi]
+                )
             count += 1
     # interpolate
-    xyinterp = _np.vstack([r*_np.cos(theta*_np.pi/180.), r*_np.sin(
-        theta*_np.pi/180.)]).T
-    interp = _griddata(xy, grid.T, xyinterp, method='linear')
+    xyinterp = _np.vstack(
+        [r * _np.cos(theta * _np.pi / 180.0), r * _np.sin(theta * _np.pi / 180.0)]
+    ).T
+    interp = _griddata(xy, grid.T, xyinterp, method="linear")
     if _np.isnan(interp).any():
-        interp = _griddata(xy, grid.T, xyinterp, method='nearest')
+        interp = _griddata(xy, grid.T, xyinterp, method="nearest")
 
     return r, interp
 
 
 def readtau(taufile, quiet=False):
-    f = open(taufile, 'rb').read()
+    f = open(taufile, "rb").read()
     ixdr = 0
-    nlbd, nNLTE, ncr = _struct.unpack('>3l', f[ixdr:ixdr + 4 * 3])
+    nlbd, nNLTE, ncr = _struct.unpack(">3l", f[ixdr : ixdr + 4 * 3])
     ixdr += 4 * 3
     #
-    pcr = _struct.unpack(f'>{ncr+1}f', f[ixdr:ixdr + 4 * (ncr+1)])
-    ixdr += 4 * (ncr+1)
+    pcr = _struct.unpack(f">{ncr+1}f", f[ixdr : ixdr + 4 * (ncr + 1)])
+    ixdr += 4 * (ncr + 1)
     pcr = _np.array(pcr)
     #
     lbdarr = _np.zeros(nlbd)
@@ -505,57 +544,59 @@ def readtau(taufile, quiet=False):
     pfolte = _np.zeros((nlbd, ncr))
     #
     for ilbd in range(nlbd):
-        dum = _struct.unpack('>1f', f[ixdr:ixdr + 4 * 1])
+        dum = _struct.unpack(">1f", f[ixdr : ixdr + 4 * 1])
         lbdarr[ilbd] = dum[0]
         ixdr += 4 * 1
         for icr in range(ncr):
-            dum = _struct.unpack('>1f', f[ixdr:ixdr + 4 * 1])
+            dum = _struct.unpack(">1f", f[ixdr : ixdr + 4 * 1])
             ixdr += 4 * 1
             pfom[ilbd, icr] = dum[0]
             #
-            dum = _struct.unpack('>1f', f[ixdr:ixdr + 4 * 1])
+            dum = _struct.unpack(">1f", f[ixdr : ixdr + 4 * 1])
             ixdr += 4 * 1
             pfoel[ilbd, icr] = dum[0]
             #
-            dum = _struct.unpack('>1f', f[ixdr:ixdr + 4 * 1])
+            dum = _struct.unpack(">1f", f[ixdr : ixdr + 4 * 1])
             ixdr += 4 * 1
             pfoff[ilbd, icr] = dum[0]
             #
-            dum = _struct.unpack('>1f', f[ixdr:ixdr + 4 * 1])
+            dum = _struct.unpack(">1f", f[ixdr : ixdr + 4 * 1])
             ixdr += 4 * 1
             pfodu[ilbd, icr] = dum[0]
             #
-            dum = _struct.unpack('>1f', f[ixdr:ixdr + 4 * 1])
+            dum = _struct.unpack(">1f", f[ixdr : ixdr + 4 * 1])
             ixdr += 4 * 1
             pfobf[ilbd, icr] = dum[0]
             for iNLTE in range(nNLTE):
-                dum = _struct.unpack('>1f', f[ixdr:ixdr + 4])
+                dum = _struct.unpack(">1f", f[ixdr : ixdr + 4])
                 ixdr += 4 * 1
                 pfobfith[ilbd, icr, iNLTE] = dum[0]
             #
-            dum = _struct.unpack('>1f', f[ixdr:ixdr + 4 * 1])
+            dum = _struct.unpack(">1f", f[ixdr : ixdr + 4 * 1])
             ixdr += 4 * 1
             pfolte[ilbd, icr] = dum[0]
     #
     # this will check if the XDR is finished.
     if ixdr == len(f):
         if not quiet:
-            print('# XDR {0} completely read!'.format(taufile))
+            print("# XDR {0} completely read!".format(taufile))
     else:
-        _warn.warn( '# XDR {0} not completely read!\n# length difference is '
-            '{1}'.format(taufile, (len(f)-ixdr)/4 ) )
+        _warn.warn(
+            "# XDR {0} not completely read!\n# length difference is "
+            "{1}".format(taufile, (len(f) - ixdr) / 4)
+        )
     #
     return lbdarr, nNLTE, ncr, pcr, pfom, pfobf, pfoff, pfoel, pfodu, pfolte
 
 
 def readtauz(taufile, quiet=False):
-    f = open(taufile, 'rb').read()
+    f = open(taufile, "rb").read()
     ixdr = 0
-    nlbd, nNLTE, ncr = _struct.unpack('>3l', f[ixdr:ixdr + 4 * 3])
+    nlbd, nNLTE, ncr = _struct.unpack(">3l", f[ixdr : ixdr + 4 * 3])
     ixdr += 4 * 3
     #
-    pcr = _struct.unpack(f'>{ncr+1}f', f[ixdr:ixdr + 4 * (ncr+1)])
-    ixdr += 4 * (ncr+1)
+    pcr = _struct.unpack(f">{ncr+1}f", f[ixdr : ixdr + 4 * (ncr + 1)])
+    ixdr += 4 * (ncr + 1)
     pcr = _np.array(pcr)
     #
     lbdarr = _np.zeros(nlbd)
@@ -568,31 +609,31 @@ def readtauz(taufile, quiet=False):
     # pfolte = _np.zeros((nlbd, ncr))
     #
     for ilbd in range(nlbd):
-        dum = _struct.unpack('>1f', f[ixdr:ixdr + 4 * 1])
+        dum = _struct.unpack(">1f", f[ixdr : ixdr + 4 * 1])
         lbdarr[ilbd] = dum[0]
         ixdr += 4 * 1
         for icr in range(ncr):
-            dum = _struct.unpack('>1f', f[ixdr:ixdr + 4 * 1])
+            dum = _struct.unpack(">1f", f[ixdr : ixdr + 4 * 1])
             ixdr += 4 * 1
             pfom[ilbd, icr] = dum[0]
             #
-            dum = _struct.unpack('>1f', f[ixdr:ixdr + 4 * 1])
+            dum = _struct.unpack(">1f", f[ixdr : ixdr + 4 * 1])
             ixdr += 4 * 1
             pfoel[ilbd, icr] = dum[0]
             #
-            dum = _struct.unpack('>1f', f[ixdr:ixdr + 4 * 1])
+            dum = _struct.unpack(">1f", f[ixdr : ixdr + 4 * 1])
             ixdr += 4 * 1
             pfoff[ilbd, icr] = dum[0]
             #
-            dum = _struct.unpack('>1f', f[ixdr:ixdr + 4 * 1])
+            dum = _struct.unpack(">1f", f[ixdr : ixdr + 4 * 1])
             ixdr += 4 * 1
             pfodu[ilbd, icr] = dum[0]
             #
-            dum = _struct.unpack('>1f', f[ixdr:ixdr + 4 * 1])
+            dum = _struct.unpack(">1f", f[ixdr : ixdr + 4 * 1])
             ixdr += 4 * 1
             pfobf[ilbd, icr] = dum[0]
             for iNLTE in range(nNLTE):
-                dum = _struct.unpack('>1f', f[ixdr:ixdr + 4])
+                dum = _struct.unpack(">1f", f[ixdr : ixdr + 4])
                 ixdr += 4 * 1
                 pfobfith[ilbd, icr, iNLTE] = dum[0]
             #
@@ -603,10 +644,12 @@ def readtauz(taufile, quiet=False):
     # this will check if the XDR is finished.
     if ixdr == len(f):
         if not quiet:
-            print('# XDR {0} completely read!'.format(taufile))
+            print("# XDR {0} completely read!".format(taufile))
     else:
-        _warn.warn( '# XDR {0} not completely read!\n# length difference is '
-            '{1}'.format(taufile, (len(f)-ixdr)/4 ) )
+        _warn.warn(
+            "# XDR {0} not completely read!\n# length difference is "
+            "{1}".format(taufile, (len(f) - ixdr) / 4)
+        )
     #
     return lbdarr, nNLTE, ncr, pcr, pfom, pfobf, pfoff, pfoel, pfodu
 
@@ -620,64 +663,81 @@ def plottau(taufile, rad=[2, 5, 15], lbd=0.55, dpi=200):
     nrad = len(rad)
     irad = _np.zeros(nrad).astype(int)
 
-    lbdarr, nNLTE, ncr, pcr, pfom, pfobf, pfoff, pfoel, pfodu, pfolte = \
-        readtau(taufile)
+    lbdarr, nNLTE, ncr, pcr, pfom, pfobf, pfoff, pfoel, pfodu, pfolte = readtau(taufile)
 
-    pcr = pcr/pcr[0]
+    pcr = pcr / pcr[0]
     pcrc = _np.zeros(ncr)
     for i in range(ncr):
-        pcrc[i] = (pcr[i] + pcr[i+1])/2
-    ilambda = _np.where(abs(lbdarr-lbd) == _np.min(abs(lbdarr-lbd)))[0][0]
+        pcrc[i] = (pcr[i] + pcr[i + 1]) / 2
+    ilambda = _np.where(abs(lbdarr - lbd) == _np.min(abs(lbdarr - lbd)))[0][0]
     for ir in range(nrad):
-        irad[ir] = _np.where(abs(pcr-rad[ir]) == _np.min(
-            abs(pcr-rad[ir])))[0][0]
+        irad[ir] = _np.where(abs(pcr - rad[ir]) == _np.min(abs(pcr - rad[ir])))[0][0]
 
     fig, ax = _plt.subplots()
-    ax.plot(pcrc, pfom[ilambda], label='total', color=cor[1], ls=ls[0])
-    ax.plot(pcrc, pfobf[ilambda], label='bf', color=cor[1], ls=ls[1])
-    ax.plot(pcrc, pfoff[ilambda], label='ff', color=cor[1], ls=ls[2])
-    ax.plot(pcrc, pfoel[ilambda], label='el', color=cor[1], ls=ls[3])
+    ax.plot(pcrc, pfom[ilambda], label="total", color=cor[1], ls=ls[0])
+    ax.plot(pcrc, pfobf[ilambda], label="bf", color=cor[1], ls=ls[1])
+    ax.plot(pcrc, pfoff[ilambda], label="ff", color=cor[1], ls=ls[2])
+    ax.plot(pcrc, pfoel[ilambda], label="el", color=cor[1], ls=ls[3])
     # ax.locator_params(axis='x', nbins=6)
     # fig.subplots_adjust(left=0.125, right=0, bottom=0.1, top=0.9, wspace=0.2)
     # fig.savefig('output.png', transparent=True)
     # fig.clf()
     ax.legend()
-    ax.set_title(f'Tau at {lbd:.2f} $\\mu$m')
+    ax.set_title(f"Tau at {lbd:.2f} $\\mu$m")
     xtitle = "$R~[R_*]$"
     ytitle = "$\\tau_{R}$"
     ax.set_xlabel(xtitle)
     ax.set_ylabel(ytitle)
     ax.set_xscale("log")
     ax.set_yscale("log")
-    _phc.savefig(fig, figname=figname+'tau1', dpi=dpi)
+    _phc.savefig(fig, figname=figname + "tau1", dpi=dpi)
 
     fig, ax = _plt.subplots()
-    dpcr = pcr[1:ncr+1] - pcr[0:ncr]
-    alphael = pfoel[ilambda]/dpcr/6.96e10
-    ax.plot(pcrc, alphael, label='$\\alpha^{\\rm el}$', color=cor[0])
-    ax.plot(pcrc, (pcrc[0]/pcrc)**3.5*alphael[0], 
-        label='$(R/R_0)^{-3.5}\\alpha^{\\rm el}_0$', color=cor[1])
+    dpcr = pcr[1 : ncr + 1] - pcr[0:ncr]
+    alphael = pfoel[ilambda] / dpcr / 6.96e10
+    ax.plot(pcrc, alphael, label="$\\alpha^{\\rm el}$", color=cor[0])
+    ax.plot(
+        pcrc,
+        (pcrc[0] / pcrc) ** 3.5 * alphael[0],
+        label="$(R/R_0)^{-3.5}\\alpha^{\\rm el}_0$",
+        color=cor[1],
+    )
     ax.legend()
-    ax.set_title(f'Tau at {lbd:.2f} $\\mu$m')
+    ax.set_title(f"Tau at {lbd:.2f} $\\mu$m")
     xtitle = "$R~[R_*]$"
     ytitle = "$\\tau_{R}$"
     ax.set_xlabel(xtitle)
     ax.set_ylabel(ytitle)
     ax.set_xscale("log")
     ax.set_yscale("log")
-    _phc.savefig(fig, figname=figname+'tau2', dpi=dpi)
+    _phc.savefig(fig, figname=figname + "tau2", dpi=dpi)
 
     fig, ax = _plt.subplots()
     for ir in range(nrad):
-        ax.plot(lbdarr, pfom[:, irad[ir]], label=f'total at R={rad[ir]}', 
-            color=cor[ir+1], ls=ls[0])
-        ax.plot(lbdarr, pfobf[:, irad[ir]], label=f'bf at R={rad[ir]}', 
-            color=cor[ir+1], ls=ls[1])
-        ax.plot(lbdarr, pfoff[:, irad[ir]], label=f'ff at R={rad[ir]}', 
-            color=cor[ir+1], ls=ls[2])
+        ax.plot(
+            lbdarr,
+            pfom[:, irad[ir]],
+            label=f"total at R={rad[ir]}",
+            color=cor[ir + 1],
+            ls=ls[0],
+        )
+        ax.plot(
+            lbdarr,
+            pfobf[:, irad[ir]],
+            label=f"bf at R={rad[ir]}",
+            color=cor[ir + 1],
+            ls=ls[1],
+        )
+        ax.plot(
+            lbdarr,
+            pfoff[:, irad[ir]],
+            label=f"ff at R={rad[ir]}",
+            color=cor[ir + 1],
+            ls=ls[2],
+        )
         # ax.plot(lbdarr, pfoel[:, irad[ir]], label='el')
 
-    ax.legend(fontsize='small')
+    ax.legend(fontsize="small")
     xtitle = "$\\lambda [\\mu m]$"
     ytitle = "$\\tau_{R}$"
     ax.set_xlabel(xtitle)
@@ -685,7 +745,7 @@ def plottau(taufile, rad=[2, 5, 15], lbd=0.55, dpi=200):
     # ax.set_title(f"Radial Tau(R)")
     ax.set_xscale("log")
     ax.set_yscale("log")
-    _phc.savefig(fig, figname=figname+'tau3', dpi=dpi)
+    _phc.savefig(fig, figname=figname + "tau3", dpi=dpi)
     return
 
 
@@ -699,41 +759,54 @@ def plottauz(tauzfile, rad=[2, 5, 15], lbd=0.55, dpi=200):
     nrad = len(rad)
     irad = _np.zeros(nrad).astype(int)
 
-    lbdarr, nNLTE, ncr, pcr, pfom, pfobf, pfoff, pfoel, pfodu = \
-        readtauz(tauzfile)
+    lbdarr, nNLTE, ncr, pcr, pfom, pfobf, pfoff, pfoel, pfodu = readtauz(tauzfile)
 
-    pcr = pcr/pcr[0]
+    pcr = pcr / pcr[0]
     pcrc = _np.zeros(ncr)
     for i in range(ncr):
-        pcrc[i] = (pcr[i] + pcr[i+1])/2
-    ilambda = _np.where(abs(lbdarr-lbd) == _np.min(abs(lbdarr-lbd)))[0][0]
+        pcrc[i] = (pcr[i] + pcr[i + 1]) / 2
+    ilambda = _np.where(abs(lbdarr - lbd) == _np.min(abs(lbdarr - lbd)))[0][0]
     for ir in range(nrad):
-        irad[ir] = _np.where(abs(pcr-rad[ir]) == _np.min(
-            abs(pcr-rad[ir])))[0][0]
+        irad[ir] = _np.where(abs(pcr - rad[ir]) == _np.min(abs(pcr - rad[ir])))[0][0]
 
     fig, ax = _plt.subplots()
-    ax.plot(pcrc, pfom[ilambda], label='total', color=cor[1], ls=ls[0])
-    ax.plot(pcrc, pfobf[ilambda], label='bf', color=cor[1], ls=ls[1])
-    ax.plot(pcrc, pfoff[ilambda], label='ff', color=cor[1], ls=ls[2])
-    ax.plot(pcrc, pfoel[ilambda], label='el', color=cor[1], ls=ls[3])
+    ax.plot(pcrc, pfom[ilambda], label="total", color=cor[1], ls=ls[0])
+    ax.plot(pcrc, pfobf[ilambda], label="bf", color=cor[1], ls=ls[1])
+    ax.plot(pcrc, pfoff[ilambda], label="ff", color=cor[1], ls=ls[2])
+    ax.plot(pcrc, pfoel[ilambda], label="el", color=cor[1], ls=ls[3])
     ax.legend()
     xtitle = "$R~[R_{*}]$"
     ytitle = "$\\tau_{Z}$"
     ax.set_xlabel(xtitle)
     ax.set_ylabel(ytitle)
-    ax.set_title(f'Tau at {lbd:.2f} $\\mu$m')
+    ax.set_title(f"Tau at {lbd:.2f} $\\mu$m")
     ax.set_xscale("log")
     ax.set_yscale("log")
-    _phc.savefig(fig, figname=figname+'tauz1', dpi=200)
+    _phc.savefig(fig, figname=figname + "tauz1", dpi=200)
 
     fig, ax = _plt.subplots()
     for ir in range(nrad):
-        ax.plot(lbdarr, pfom[:, irad[ir]], label=f'total at R={rad[ir]}', 
-            color=cor[ir+1], ls=ls[0])
-        ax.plot(lbdarr, pfobf[:, irad[ir]], label=f'bf at R={rad[ir]}', 
-            color=cor[ir+1], ls=ls[1])
-        ax.plot(lbdarr, pfoff[:, irad[ir]], label=f'ff at R={rad[ir]}', 
-            color=cor[ir+1], ls=ls[2])
+        ax.plot(
+            lbdarr,
+            pfom[:, irad[ir]],
+            label=f"total at R={rad[ir]}",
+            color=cor[ir + 1],
+            ls=ls[0],
+        )
+        ax.plot(
+            lbdarr,
+            pfobf[:, irad[ir]],
+            label=f"bf at R={rad[ir]}",
+            color=cor[ir + 1],
+            ls=ls[1],
+        )
+        ax.plot(
+            lbdarr,
+            pfoff[:, irad[ir]],
+            label=f"ff at R={rad[ir]}",
+            color=cor[ir + 1],
+            ls=ls[2],
+        )
         # ax.plot(lbdarr, pfoel[:, irad[ir]], label='el')
     ax.legend()
     xtitle = "$\\lambda [\\mu m]$"
@@ -743,34 +816,34 @@ def plottauz(tauzfile, rad=[2, 5, 15], lbd=0.55, dpi=200):
     # ax.set_title(f"Radial Tau(z)")
     ax.set_xscale("log")
     ax.set_yscale("log")
-    _phc.savefig(fig, figname=figname+'tauz2', dpi=dpi)
+    _phc.savefig(fig, figname=figname + "tauz2", dpi=dpi)
     return
 
 
 def mergesed1(models, iterations=[21, 22, 23, 24]):
-    '''
+    """
     Convert mod#/*.sed1 files into the fullsed file.
 
     INPUT: models lists (*.txt or *.inp), step 1 iterations (array).
 
     OUTPUT: *files written (status printed).
-    '''
+    """
     for i in range(len(models)):
-        models[i] = models[i].replace('.inp', '.txt')
+        models[i] = models[i].replace(".inp", ".txt")
 
     for model in models:
         modfld, modelname = list(_os.path.split(model))
         path = list(_os.path.split(modfld[:-1]))[0]
-        if not _os.path.exists(_os.path.join('{0}'.format(path), 'fullsed')):
-            _os.system(_os.path.join('mkdir {0}'.format(path), 'fullsed'))
+        if not _os.path.exists(_os.path.join("{0}".format(path), "fullsed")):
+            _os.system(_os.path.join("mkdir {0}".format(path), "fullsed"))
         for it in iterations:
-            lsed1 = _os.path.join(modfld, '{0}{1}.sed1'.format(modelname[:-4], 
-                it))
+            lsed1 = _os.path.join(modfld, "{0}{1}.sed1".format(modelname[:-4], it))
             try:
                 f = open(lsed1)
             except:
-                _warn.warn('# No SED1 found for {0} iteration {1}'.format(
-                    modelname[:-4], it))
+                _warn.warn(
+                    "# No SED1 found for {0} iteration {1}".format(modelname[:-4], it)
+                )
                 continue
             row = f.readline()
             f.close()
@@ -779,36 +852,60 @@ def mergesed1(models, iterations=[21, 22, 23, 24]):
             sed1data = _np.loadtxt(lsed1, skiprows=1)
             extra = len(sed1data.T) - 28
 
-            print('# PROCESSED: {0} ITERATION {1}'.format(modelname[:-4], it))
+            print("# PROCESSED: {0} ITERATION {1}".format(modelname[:-4], it))
             fullsed1 = _np.zeros((len(sed1data), 16))
-            fullsed1[:, 0:3+extra] = sed1data[:, 0:3+extra]
+            fullsed1[:, 0 : 3 + extra] = sed1data[:, 0 : 3 + extra]
             fullsed1[:, 4] = sed1data[:, 11]
             fullsed1[:, 5] = sed1data[:, 19]
             fullsed1[:, 6] = sed1data[:, 27]
-            fullsed1[:, 7:8+extra] = sed1data[:, 4:5+extra]
+            fullsed1[:, 7 : 8 + extra] = sed1data[:, 4 : 5 + extra]
 
-            fullsed1 = _np.core.records.fromarrays(fullsed1.transpose(), 
-                names='MU,PHI,LAMBDA,FLUX,SCT FLUX,EMIT FLUX,TRANS FLUX,Q,U,' +
-                'Sig FLUX,Sig SCT FLUX,Sig EMIT FLUX,Sig TRANS FLU,Sig Q,' +
-                'Sig U', formats='f8,f8,f8,f8,f8,f8,f8,f8,f8,f8,f8,f8,f8,f8,' +
-                'f8,f8')
-            idx = _np.argsort(fullsed1, order=('MU', 'PHI', 'LAMBDA'))
+            fullsed1 = _np.core.records.fromarrays(
+                fullsed1.transpose(),
+                names="MU,PHI,LAMBDA,FLUX,SCT FLUX,EMIT FLUX,TRANS FLUX,Q,U,"
+                + "Sig FLUX,Sig SCT FLUX,Sig EMIT FLUX,Sig TRANS FLU,Sig Q,"
+                + "Sig U",
+                formats="f8,f8,f8,f8,f8,f8,f8,f8,f8,f8,f8,f8,f8,f8," + "f8,f8",
+            )
+            idx = _np.argsort(fullsed1, order=("MU", "PHI", "LAMBDA"))
             fullsed1 = fullsed1[idx]
-            hd = '%CONTAINS: SED1 ITERATION {:}\n'.format(it)
-            hd += '%CREATED: {0}\n'.format(
-                _time.asctime(_time.localtime(_time.time())))
-            hd += '%{0:>7s}{1:>8s}{2:>13s}{3:>13s}\n'.format(
-                'nlbd', 'nobs', 'Rstar', 'Rwind')
-            hd += '{0:8d}{1:8d}{2:13.4f}{3:13.2f}\n'.format(
-                int(nlbd), int(nobs), Rstar, Rwind)
-            header = ['% MU', 'PHI', 'LAMBDA', 'FLUX', 'SCT FLUX', 'EMIT FLUX', 
-                'TRANS FLUX', 'Q', 'U', 'Sig FLUX', 'Sig FLUX', 'SigSCTFLX', 
-                'SigEMITFLX', 'SigTRANSFLX', 'Sig Q', 'Sig U']
+            hd = "%CONTAINS: SED1 ITERATION {:}\n".format(it)
+            hd += "%CREATED: {0}\n".format(_time.asctime(_time.localtime(_time.time())))
+            hd += "%{0:>7s}{1:>8s}{2:>13s}{3:>13s}\n".format(
+                "nlbd", "nobs", "Rstar", "Rwind"
+            )
+            hd += "{0:8d}{1:8d}{2:13.4f}{3:13.2f}\n".format(
+                int(nlbd), int(nobs), Rstar, Rwind
+            )
+            header = [
+                "% MU",
+                "PHI",
+                "LAMBDA",
+                "FLUX",
+                "SCT FLUX",
+                "EMIT FLUX",
+                "TRANS FLUX",
+                "Q",
+                "U",
+                "Sig FLUX",
+                "Sig FLUX",
+                "SigSCTFLX",
+                "SigEMITFLX",
+                "SigTRANSFLX",
+                "Sig Q",
+                "Sig U",
+            ]
             outfile = hd + _tab(fullsed1, headers=header, tablefmt="plain")
             if len(path) > 0:
                 path += _os.path.sep
-            f0 = open(path + 'fullsed' + _os.path.sep + 'fullsed_' + 
-                modelname.replace('.txt', '{:}.sed1'.format(it)), 'w')
+            f0 = open(
+                path
+                + "fullsed"
+                + _os.path.sep
+                + "fullsed_"
+                + modelname.replace(".txt", "{:}.sed1".format(it)),
+                "w",
+            )
             f0.writelines(outfile)
             f0.close()
     return
@@ -818,7 +915,7 @@ def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
     """
     Merge all mod#/*.sed2 files into the fullsed file.
 
-    It will check if all sed2info are the same (i.e., nobs, Rstar, Rwind). 
+    It will check if all sed2info are the same (i.e., nobs, Rstar, Rwind).
     That's the reason why SED was the first band in previous versions.
     If not, it asks if you want to continue (and receive and error).
 
@@ -829,7 +926,7 @@ def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
 
     `onlyfitlters` is a iterable of desired filters (``None`` for all).
 
-    IMPORTANT: the line rest wavelength is assumed to be the center of the SEI 
+    IMPORTANT: the line rest wavelength is assumed to be the center of the SEI
     band!
 
     INPUT: models lists (*.txt or *.inp), Vrots (array).
@@ -841,56 +938,63 @@ def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
     if isinstance(Vrots, (int, float)):
         Vrots = [Vrots]
         if len(Vrots) < len(models):
-            Vrots = list(Vrots)+(len(models)-len(Vrots))*Vrots[-1:]
+            Vrots = list(Vrots) + (len(models) - len(Vrots)) * Vrots[-1:]
 
     for i in range(len(models)):
-        models[i] = models[i].replace('.inp', '.txt')
+        models[i] = models[i].replace(".inp", ".txt")
 
     for model in models:
         modfld, modelname = list(_os.path.split(model))
         path = list(_os.path.split(modfld[:-1]))[0]
-        if path == '':
-            path = '.'
-        if not _os.path.exists(_os.path.join('{0}'.format(path), 'fullsed')):
-            _os.system(_os.path.join('mkdir {0}'.format(path), 'fullsed'))
+        if path == "":
+            path = "."
+        if not _os.path.exists(_os.path.join("{0}".format(path), "fullsed")):
+            _os.system(_os.path.join("mkdir {0}".format(path), "fullsed"))
         sed2data = _np.empty(0)
         sfound = []
         # Get all *.sed2 and choose if it is a broad-band or a line
         if onlyfilters is None:
-            lsed2 = _glob(_os.path.join('{0}'.format(modfld), 
-                '*{0}.sed2'.format(modelname[:-4])))
-            lsed2.extend( _glob(_os.path.join('{0}'.format(modfld), 
-                '*{0}_SEI.sed2'.format(modelname[:-4]))) )
+            lsed2 = _glob(
+                _os.path.join("{0}".format(modfld), "*{0}.sed2".format(modelname[:-4]))
+            )
+            lsed2.extend(
+                _glob(
+                    _os.path.join(
+                        "{0}".format(modfld), "*{0}_SEI.sed2".format(modelname[:-4])
+                    )
+                )
+            )
         else:
             lsed2 = []
             for f in onlyfilters:
-                f = f.rstrip('_')
-                pattern = _os.path.join(modfld, '{0}_'.format(f) + 
-                    '*{0}.sed2'.format(modelname[:-4]))
+                f = f.rstrip("_")
+                pattern = _os.path.join(
+                    modfld, "{0}_".format(f) + "*{0}.sed2".format(modelname[:-4])
+                )
                 lsed2.extend(_glob(pattern))
-                pattern = _os.path.join(modfld, '{0}_'.format(f) +
-                    '*{0}_SEI.sed2'.format(modelname[:-4]))
+                pattern = _os.path.join(
+                    modfld, "{0}_".format(f) + "*{0}_SEI.sed2".format(modelname[:-4])
+                )
                 lsed2.extend(_glob(pattern))
         # print lsed2, '{0}*{1}*.sed2'.format(modfld, modelname[:-4])
         for file in lsed2:
-            suf = list(_os.path.split(file))[-1].split('_')[0]
+            suf = list(_os.path.split(file))[-1].split("_")[0]
             sfound += [suf]
             newdata = readsed2(file)
-            if file.find('_SEI.') == -1 or file.find('SED_') > -1:
+            if file.find("_SEI.") == -1 or file.find("SED_") > -1:
                 # Process broad-band
                 if len(sed2data) == 0:
                     sed2data = newdata.copy()
                     nlbd, nobs, Rstar, Rwind = sed2info(file)
                 else:
                     # Check if the SED2 file has the info as the first file
-                    if _np.product((nobs, Rstar, Rwind) == sed2info(file)[1:])\
-                        == 0:
-                        key = ''
-                        while key.upper() != 'Y':
-                            _warn.warn('# {0} has different HDUST '
-                                'output!'.format(modelname))
-                            key = _phc.user_input(
-                                'Do you want do proceed? (y/other): ')
+                    if _np.product((nobs, Rstar, Rwind) == sed2info(file)[1:]) == 0:
+                        key = ""
+                        while key.upper() != "Y":
+                            _warn.warn(
+                                "# {0} has different HDUST " "output!".format(modelname)
+                            )
+                            key = _phc.user_input("Do you want do proceed? (y/other): ")
                     nlbd += sed2info(file)[0]
                     sed2data = _np.vstack((sed2data, newdata))
             else:
@@ -899,27 +1003,28 @@ def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
                 nlbdSEI, tmp, tmp, tmp = sed2info(file)
                 # Rest wavelength
                 # print nlbd, nlbdSEI, newdata[:nlbdSEI, 2]
-                lbrest = (newdata[int(nlbdSEI)-1, 2] - newdata[0, 2]) / 2. +\
-                    newdata[0, 2]
+                lbrest = (newdata[int(nlbdSEI) - 1, 2] - newdata[0, 2]) / 2.0 + newdata[
+                    0, 2
+                ]
                 if checklineval:
-                    print('# I found {0} as wavelength for {1}'.format(lbrest,
-                        suf))
-                    print('# Type a number to change it (no sci. notation/'
-                        'or empty to continue): ')
+                    print("# I found {0} as wavelength for {1}".format(lbrest, suf))
+                    print(
+                        "# Type a number to change it (no sci. notation/"
+                        "or empty to continue): "
+                    )
                     loop = True
                     while loop:
-                        userinp = _phc.user_input('# lbd: ')
+                        userinp = _phc.user_input("# lbd: ")
                         if len(userinp) == 0:
                             loop = False
-                        elif userinp.replace('.', '', 1).isdigit():
+                        elif userinp.replace(".", "", 1).isdigit():
                             lbrest = float(userinp)
                             loop = False
                 deltalbd = Vrot / _phc.c.cgs / 1e-5 * lbrest
                 mini = newdata[0, 2] + deltalbd
                 maxi = newdata[-1, 2] - deltalbd
                 # print deltalbd, Vrot
-                idx = _np.where(
-                    (newdata[:, 2] >= mini) & (newdata[:, 2] <= maxi))
+                idx = _np.where((newdata[:, 2] >= mini) & (newdata[:, 2] <= maxi))
                 # print len(newdata), len(newdata[idx])
                 ncut = len(newdata) - len(newdata[idx])
                 newdata = newdata[idx]
@@ -929,30 +1034,28 @@ def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
                     nlbd = sed2info(file)[0] - ncut / sed2info(file)[1]
                 else:
                     # Check if the SED2 file has the info as the first file
-                    if _np.product((nobs, Rstar, Rwind) == sed2info(file)[1:])\
-                        == 0:
-                        key = ''
-                        while key.upper() != 'Y':
-                            _warn.warn('# {0} has different HDUST '
-                                'input!!'.format(modelname))
-                            key = _phc.user_input(
-                                'Do you want do proceed? (y/other): ')
-                    idx = _np.where(
-                        (sed2data[:, 2] < mini) | (sed2data[:, 2] > maxi))
+                    if _np.product((nobs, Rstar, Rwind) == sed2info(file)[1:]) == 0:
+                        key = ""
+                        while key.upper() != "Y":
+                            _warn.warn(
+                                "# {0} has different HDUST " "input!!".format(modelname)
+                            )
+                            key = _phc.user_input("Do you want do proceed? (y/other): ")
+                    idx = _np.where((sed2data[:, 2] < mini) | (sed2data[:, 2] > maxi))
                     ncut += len(sed2data) - len(sed2data[idx])
                     sed2data = sed2data[idx]
                     nlbd += sed2info(file)[0] - ncut / sed2info(file)[1]
                     sed2data = _np.vstack((sed2data, newdata))
-        # 
+        #
         if len(sfound) > 0:
-            print('# PROCESSED: {0} with {1}'.format(model, sfound))
+            print("# PROCESSED: {0} with {1}".format(model, sfound))
             fullsed2 = _np.zeros((len(sed2data), 16))
-            fullsed2[:, 0:3 + 1] = sed2data[:, 0:3 + 1]
+            fullsed2[:, 0 : 3 + 1] = sed2data[:, 0 : 3 + 1]
             fullsed2[:, 4] = sed2data[:, 11]
             fullsed2[:, 5] = sed2data[:, 19]
             fullsed2[:, 6] = sed2data[:, 27]
-            fullsed2[:, 7:8 + 1] = sed2data[:, 4:5 + 1]
-            # Old 
+            fullsed2[:, 7 : 8 + 1] = sed2data[:, 4 : 5 + 1]
+            # Old
             # if _np.max(fullsed2[_np.isfinite(fullsed2)]) < 100000:
             #     fmt = '%13.6f'
             # elif _np.max(fullsed2[_np.isfinite(fullsed2)]) < 1000000:
@@ -961,44 +1064,67 @@ def mergesed2(models, Vrots, path=None, checklineval=False, onlyfilters=None):
             #     print('# ERROR at max values of fullsed2!!!!!!!!')
             #     print(_np.max(fullsed2[_np.isfinite(fullsed2)]))
             #     raise SystemExit(0)
-            fullsed2 = _np.core.records.fromarrays(fullsed2.transpose(), 
-                names='MU,PHI,LAMBDA,FLUX,SCT FLUX,EMIT FLUX,TRANS FLUX,Q,U,' +
-                'Sig FLUX,Sig SCT FLUX,Sig EMIT FLUX,Sig TRANS FLU,Sig Q,' +
-                'Sig U', formats='f8,f8,f8,f8,f8,f8,f8,f8,f8,f8,f8,f8,f8,f8,' +
-                'f8,f8')
-            idx = _np.argsort(fullsed2, order=('MU', 'PHI', 'LAMBDA'))
+            fullsed2 = _np.core.records.fromarrays(
+                fullsed2.transpose(),
+                names="MU,PHI,LAMBDA,FLUX,SCT FLUX,EMIT FLUX,TRANS FLUX,Q,U,"
+                + "Sig FLUX,Sig SCT FLUX,Sig EMIT FLUX,Sig TRANS FLU,Sig Q,"
+                + "Sig U",
+                formats="f8,f8,f8,f8,f8,f8,f8,f8,f8,f8,f8,f8,f8,f8," + "f8,f8",
+            )
+            idx = _np.argsort(fullsed2, order=("MU", "PHI", "LAMBDA"))
             fullsed2 = fullsed2[idx]
-            hd = '%CONTAINS: {0}\n'.format(' + '.join(sfound))
-            hd += '%CREATED: {0}\n'.format(
-                _time.asctime(_time.localtime(_time.time())))
-            hd += '%{0:>7s}{1:>8s}{2:>13s}{3:>13s}\n'.format(
-                'nlbd', 'nobs', 'Rstar', 'Rwind')
-            hd += '{0:8d}{1:8d}{2:13.4f}{3:13.2f}\n'.format(
-                int(nlbd), int(nobs), Rstar, Rwind)
-            # hd += '%{0:>12s}'.format('MU') + (15 * '{:>13s}').format('PHI', 
+            hd = "%CONTAINS: {0}\n".format(" + ".join(sfound))
+            hd += "%CREATED: {0}\n".format(_time.asctime(_time.localtime(_time.time())))
+            hd += "%{0:>7s}{1:>8s}{2:>13s}{3:>13s}\n".format(
+                "nlbd", "nobs", "Rstar", "Rwind"
+            )
+            hd += "{0:8d}{1:8d}{2:13.4f}{3:13.2f}\n".format(
+                int(nlbd), int(nobs), Rstar, Rwind
+            )
+            # hd += '%{0:>12s}'.format('MU') + (15 * '{:>13s}').format('PHI',
             #     'LAMBDA', 'FLUX', \
             #     'SCT FLUX', 'EMIT FLUX', 'TRANS FLUX', 'Q', 'U',
             #     'Sig FLUX', 'Sig FLUX', \
             #     'SigSCTFLX', 'SigEMITFLX', 'SigTRANSFLX',
             #     'Sig Q', 'Sig U')
-            # _np.savetxt(path + 'fullsed/fullsed_' + modelname.replace('.txt', 
-            #     '.sed2'), fullsed2, header=hd, comments="", fmt=fmt, 
+            # _np.savetxt(path + 'fullsed/fullsed_' + modelname.replace('.txt',
+            #     '.sed2'), fullsed2, header=hd, comments="", fmt=fmt,
             #     delimiter='')
             # New
-            header = ['% MU', 'PHI', 'LAMBDA', 'FLUX', 'SCT FLUX', 
-                'EMIT FLUX', 'TRANS FLUX', 'Q', 'U', 'Sig FLUX', 'SigSCTFLX', 
-                'SigEMITFLX', 'SigTRANSFLX', 'Sig Q', 'Sig U']
+            header = [
+                "% MU",
+                "PHI",
+                "LAMBDA",
+                "FLUX",
+                "SCT FLUX",
+                "EMIT FLUX",
+                "TRANS FLUX",
+                "Q",
+                "U",
+                "Sig FLUX",
+                "SigSCTFLX",
+                "SigEMITFLX",
+                "SigTRANSFLX",
+                "Sig Q",
+                "Sig U",
+            ]
             outfile = hd + _tab(fullsed2, headers=header, tablefmt="plain")
             if len(path) > 0:
                 path += _os.path.sep
-            if not _os.path.exists(path + 'fullsed' + _os.path.sep):
-                _os.makedirs(path + 'fullsed' + _os.path.sep)
-            f0 = open(path + 'fullsed' + _os.path.sep + 
-                'fullsed_' + modelname.replace('.txt', '.sed2'), 'w')
+            if not _os.path.exists(path + "fullsed" + _os.path.sep):
+                _os.makedirs(path + "fullsed" + _os.path.sep)
+            f0 = open(
+                path
+                + "fullsed"
+                + _os.path.sep
+                + "fullsed_"
+                + modelname.replace(".txt", ".sed2"),
+                "w",
+            )
             f0.writelines(outfile)
             f0.close()
         else:
-            _warn.warn('# No SED2 found for {0}'.format(model))
+            _warn.warn("# No SED2 found for {0}".format(model))
     return
 
 
@@ -1009,69 +1135,69 @@ class SingleBe(object):
         super(SingleBe, self).__init__()
         self.sBfile = sBfile
 
-        hs = 15                     # header size
-        f0 = open(sBfile).read().split('\n')
+        hs = 15  # header size
+        f0 = open(sBfile).read().split("\n")
         f0 = f0[:-1]
-        nsnaps = (len(f0) - hs + 1) / 9   # number of snapshots
+        nsnaps = (len(f0) - hs + 1) / 9  # number of snapshots
         self.nsnaps = nsnaps
         line0 = f0[0].split()
 
-        alpha = float(line0[0])       # constant alpha parameter
+        alpha = float(line0[0])  # constant alpha parameter
         self.alpha = alpha
-        teff = float(line0[1])        # stellar effective temperature in K
+        teff = float(line0[1])  # stellar effective temperature in K
         self.teff = teff
-        tdisk = float(line0[3])       # disk temperature in K
+        tdisk = float(line0[3])  # disk temperature in K
         self.tdisk = tdisk
-        cs = float(line0[4])          # "sound speed" in cm/s
+        cs = float(line0[4])  # "sound speed" in cm/s
         self.cs = cs
-        mstar = float(line0[5])       # mass of the star, in solar masses
+        mstar = float(line0[5])  # mass of the star, in solar masses
         self.mstar = mstar
-        req = float(line0[6])         # equatorial radius, in solar units
+        req = float(line0[6])  # equatorial radius, in solar units
         self.req = req
-        omega0 = float(line0[8])      # disk angular vel at equator in rad/s?
+        omega0 = float(line0[8])  # disk angular vel at equator in rad/s?
         self.omega0 = omega0
-        rho0 = float(line0[13])       # g cm-3
+        rho0 = float(line0[13])  # g cm-3
         self.rho0 = rho0
-        sigma0 = float(line0[14])     # g cm-2
+        sigma0 = float(line0[14])  # g cm-2
         self.sigma0 = sigma0
-        rin = float(line0[15])        # internal radius of the disk (in req?)
+        rin = float(line0[15])  # internal radius of the disk (in req?)
         self.rin = rin
-        rout = float(line0[16])       # external radius of the disk (in req?)
+        rout = float(line0[16])  # external radius of the disk (in req?)
         self.rout = rout
-        rinject = float(line0[17])    # injection radius in the disk (in req?)
+        rinject = float(line0[17])  # injection radius in the disk (in req?)
         self.rinject = rinject
-        n = int(line0[18])            # number of radial cells
+        n = int(line0[18])  # number of radial cells
         self.nrad = n
-        kinject = int(line0[19])      # cell of mass injection
+        kinject = int(line0[19])  # cell of mass injection
         self.kinject = kinject
-        dt = float(line0[24])         # ?
+        dt = float(line0[24])  # ?
         self.dt = dt
         tauintval = float(line0[26])  # time steps (in rad)
         self.tauintval = tauintval
 
         # BLOCKS
-        ltau = _np.array(f0[hs + 0::9]).astype(float)     # tauintval in rad
+        ltau = _np.array(f0[hs + 0 :: 9]).astype(float)  # tauintval in rad
         self.ltau = ltau
-        ltausec = _np.array(f0[hs + 1::9]).astype(float)  # tausec in seconds
+        ltausec = _np.array(f0[hs + 1 :: 9]).astype(float)  # tausec in seconds
         self.ltausec = ltausec
-        lsinject = _np.array(f0[hs + 2::9]).astype(float)  # `sinject` ?
+        lsinject = _np.array(f0[hs + 2 :: 9]).astype(float)  # `sinject` ?
         self.lsinject = lsinject
         # alpha(r)
-        lalpha_r = _np.array([j.split() for j in f0[hs + 3::9]]).astype(float) 
+        lalpha_r = _np.array([j.split() for j in f0[hs + 3 :: 9]]).astype(float)
         self.lalpha_r = lalpha_r
         # s1(r) = sig/sig0 ?
-        ls1_r = _np.array([j.split() for j in f0[hs + 4::9]]).astype(float)
+        ls1_r = _np.array([j.split() for j in f0[hs + 4 :: 9]]).astype(float)
         self.ls1_r = ls1_r
         # sigma(r)
-        lsig_r = _np.array([j.split() for j in f0[hs + 5::9]]).astype(float)
+        lsig_r = _np.array([j.split() for j in f0[hs + 5 :: 9]]).astype(float)
         self.lsig_r = lsig_r
         # maxr = maximmum non-zero cell
-        lmaxr = _np.array(f0[hs + 6::9]).astype(float)            
+        lmaxr = _np.array(f0[hs + 6 :: 9]).astype(float)
         self.lmaxr = lmaxr
         # vel_rad/cs ?  ##VARIABLE SIZE = not read
-        # lvr_cs  =  _np.array([l.split() for l in f0[hs+7::9]]).astype(float)  
+        # lvr_cs  =  _np.array([l.split() for l in f0[hs+7::9]]).astype(float)
         # Decretion rate (units?)  ##VARIABLE SIZE = not read
-        # ldecrr =  _np.array([l.split() for l in f0[hs+8::9]]).astype(float)   
+        # ldecrr =  _np.array([l.split() for l in f0[hs+8::9]]).astype(float)
 
         tauintvaldays = tauintval / omega0 / 24 / 3600  # time steps in days
         self.tauintvaldays = tauintvaldays
@@ -1085,65 +1211,64 @@ class SingleBe(object):
 
     def readSBeBlock(lines):
         """ """
-        tau = _np.array(lines[0]).astype(float)              # tauintval in rad
-        tausec = _np.array(lines[1]).astype(float)           # tausec in rad
-        sinject = _np.array(lines[2]).astype(float)          # `sinject` ?
+        tau = _np.array(lines[0]).astype(float)  # tauintval in rad
+        tausec = _np.array(lines[1]).astype(float)  # tausec in rad
+        sinject = _np.array(lines[2]).astype(float)  # `sinject` ?
         alpha_r = _np.array(lines[3].split()).astype(float)  # alpha(r)
-        s1_r = _np.array(lines[4].split()).astype(
-            float)    # s1(r) = sig/sig0 ?
-        sig_r = _np.array(lines[5].split()).astype(float)   # sigma(r)
-        maxr = _np.array(lines[6]).astype(float)            # maxr = maximmum
-                                                            # non-zero cell
-        vr_cs = _np.array(lines[7].split()).astype(float)   # vel_rad/cs ?
-        decrr = _np.array(lines[8].split()).astype(float)   # Decretion rate
-                                                            # (units?)
+        s1_r = _np.array(lines[4].split()).astype(float)  # s1(r) = sig/sig0 ?
+        sig_r = _np.array(lines[5].split()).astype(float)  # sigma(r)
+        maxr = _np.array(lines[6]).astype(float)  # maxr = maximmum
+        # non-zero cell
+        vr_cs = _np.array(lines[7].split()).astype(float)  # vel_rad/cs ?
+        decrr = _np.array(lines[8].split()).astype(float)  # Decretion rate
+        # (units?)
         return (tau, tausec, sinject, alpha_r, s1_r, sig_r, maxr, vr_cs, decrr)
 
 
 def readSingleBe(sBfile):
-    """ Read the singleBe output
+    """Read the singleBe output
 
     OUTPUT = rgrid, lsig_r, nsnaps, simdays, alpha
     """
-    hs = 15                     # header size
-    f0 = open(sBfile).read().split('\n')
+    hs = 15  # header size
+    f0 = open(sBfile).read().split("\n")
     f0 = f0[:-1]
-    nsnaps = (len(f0) - hs + 1) / 9   # number of snapshots
+    nsnaps = (len(f0) - hs + 1) / 9  # number of snapshots
     line0 = f0[0].split()
 
-    alpha = float(line0[0])       # constant alpha parameter
-    teff = float(line0[1])        # stellar effective temperature in K
-    tdisk = float(line0[3])       # disk temperature in K
-    cs = float(line0[4])          # "sound speed" in cm/s
-    mstar = float(line0[5])       # mass of the star, in solar masses
-    req = float(line0[6])         # equatorial radius, in solar units
-    omega0 = float(line0[8])      # disk angular velocity at equator in rad/s?
-    rho0 = float(line0[13])       # g cm-3
-    sigma0 = float(line0[14])     # g cm-2
-    rin = float(line0[15])        # internal radius of the disk (in req?)
-    rout = float(line0[16])       # external radius of the disk (in req?)
-    rinject = float(line0[17])    # radius of injection in the disk (in req?)
-    n = int(line0[18])            # number of radial cells
-    kinject = int(line0[19])      # cell of mass injection
-    dt = float(line0[24])         # ?
+    alpha = float(line0[0])  # constant alpha parameter
+    teff = float(line0[1])  # stellar effective temperature in K
+    tdisk = float(line0[3])  # disk temperature in K
+    cs = float(line0[4])  # "sound speed" in cm/s
+    mstar = float(line0[5])  # mass of the star, in solar masses
+    req = float(line0[6])  # equatorial radius, in solar units
+    omega0 = float(line0[8])  # disk angular velocity at equator in rad/s?
+    rho0 = float(line0[13])  # g cm-3
+    sigma0 = float(line0[14])  # g cm-2
+    rin = float(line0[15])  # internal radius of the disk (in req?)
+    rout = float(line0[16])  # external radius of the disk (in req?)
+    rinject = float(line0[17])  # radius of injection in the disk (in req?)
+    n = int(line0[18])  # number of radial cells
+    kinject = int(line0[19])  # cell of mass injection
+    dt = float(line0[24])  # ?
     tauintval = float(line0[26])  # time steps (in rad)
 
     # BLOCKS
-    ltau = _np.array(f0[hs + 0::9]).astype(float)     # tauintval in rad
-    ltausec = _np.array(f0[hs + 1::9]).astype(float)  # tausec in seconds
-    lsinject = _np.array(f0[hs + 2::9]).astype(float)  # `sinject` ?
+    ltau = _np.array(f0[hs + 0 :: 9]).astype(float)  # tauintval in rad
+    ltausec = _np.array(f0[hs + 1 :: 9]).astype(float)  # tausec in seconds
+    lsinject = _np.array(f0[hs + 2 :: 9]).astype(float)  # `sinject` ?
     # alpha(r)
-    lalpha_r = _np.array([l.split() for l in f0[hs + 3::9]]).astype(float) 
+    lalpha_r = _np.array([l.split() for l in f0[hs + 3 :: 9]]).astype(float)
     # s1(r) = sig/sig0 ?
-    ls1_r = _np.array([l.split() for l in f0[hs + 4::9]]).astype(float)
+    ls1_r = _np.array([l.split() for l in f0[hs + 4 :: 9]]).astype(float)
     # sigma(r)
-    lsig_r = _np.array([l.split() for l in f0[hs + 5::9]]).astype(float)
+    lsig_r = _np.array([l.split() for l in f0[hs + 5 :: 9]]).astype(float)
     # maxr = maximmum non-zero cell
-    lmaxr = _np.array(f0[hs + 6::9]).astype(float)            
+    lmaxr = _np.array(f0[hs + 6 :: 9]).astype(float)
     # vel_rad/cs ?  ##VARIABLE SIZE = not read
-    # lvr_cs  =  _np.array([l.split() for l in f0[hs+7::9]]).astype(float)  
+    # lvr_cs  =  _np.array([l.split() for l in f0[hs+7::9]]).astype(float)
     # Decretion rate (units?)  ##VARIABLE SIZE = not read
-    # ldecrr =  _np.array([l.split() for l in f0[hs+8::9]]).astype(float)   
+    # ldecrr =  _np.array([l.split() for l in f0[hs+8::9]]).astype(float)
 
     tauintvaldays = tauintval / omega0 / 24 / 3600  # time steps in days
     rgrid = _np.array(f0[4].split()).astype(float)  # radial grid values
@@ -1154,9 +1279,18 @@ def readSingleBe(sBfile):
 
 
 # Hdust useful
-def plotdust(tfiles, mulist=[0], philist=[0], typelist=[0], alist=None, 
-    axis=[1., 1e2, 90., 2200.], interpola=False, fmt=['png'], figname=None, 
-    title=''):
+def plotdust(
+    tfiles,
+    mulist=[0],
+    philist=[0],
+    typelist=[0],
+    alist=None,
+    axis=[1.0, 1e2, 90.0, 2200.0],
+    interpola=False,
+    fmt=["png"],
+    figname=None,
+    title="",
+):
     """
     :Example:
     >>> import pyhdust as phc
@@ -1169,7 +1303,7 @@ def plotdust(tfiles, mulist=[0], philist=[0], typelist=[0], alist=None,
     'philist' = phi values
     'typelist' = grain type index
     'alist' = grain size values
-    'axis' = boundaries of the image, x in stellar radius, y in K 
+    'axis' = boundaries of the image, x in stellar radius, y in K
     `figname` = prefix of the output images
     `fmts` = format of the output images.
     If interpol==True, what will be plotted is the population along rays of
@@ -1187,13 +1321,31 @@ def plotdust(tfiles, mulist=[0], philist=[0], typelist=[0], alist=None,
     for i in range(len(tfiles)):
         rtfile = tfiles[i]
         print(rtfile)
-        ncr,ncmu,ncphi,ntip,na,Rstar,Ra,NdustShells,Rdust,Tdestruction,Tdust,pcrc,\
-                            pcmuc,pcphic,pcr,pcmu,pcphi,lacentro = readdust(rtfile)
+        (
+            ncr,
+            ncmu,
+            ncphi,
+            ntip,
+            na,
+            Rstar,
+            Ra,
+            NdustShells,
+            Rdust,
+            Tdestruction,
+            Tdust,
+            pcrc,
+            pcmuc,
+            pcphic,
+            pcr,
+            pcmu,
+            pcphi,
+            lacentro,
+        ) = readdust(rtfile)
 
-        x = pcrc/Rdust[0]
+        x = pcrc / Rdust[0]
         y = _np.zeros(x.shape)
 
-        if alist is None:    
+        if alist is None:
             sizes = [lacentro[0], lacentro[-1]]
         else:
             sizes = alist
@@ -1211,20 +1363,27 @@ def plotdust(tfiles, mulist=[0], philist=[0], typelist=[0], alist=None,
 
                             y[icr] = Tdust[icphi, icmu, icr, ia, tip]
 
-                            if (interpola and y[icr] != 0.):
-                                if(icmu == ncmu-1): icmu = icmu - 1
-                                f = (mu - muarr[icmu])/(muarr[icmu+1]-muarr[icmu])
-                                y[icr] = (1.-f)*Tdust[icphi,icmu,icr,ia,tip] + \
-                                                f*Tdust[icphi,icmu+1,icr,ia,tip]
+                            if interpola and y[icr] != 0.0:
+                                if icmu == ncmu - 1:
+                                    icmu = icmu - 1
+                                f = (mu - muarr[icmu]) / (muarr[icmu + 1] - muarr[icmu])
+                                y[icr] = (1.0 - f) * Tdust[
+                                    icphi, icmu, icr, ia, tip
+                                ] + f * Tdust[icphi, icmu + 1, icr, ia, tip]
 
-                        _plt.loglog(x, y, label=f'type={tip} a={lacentro[ia, tip]} phi={pcphic[icphi]} mu={muarr[icmu]}', base=10)
+                        _plt.loglog(
+                            x,
+                            y,
+                            label=f"type={tip} a={lacentro[ia, tip]} phi={pcphic[icphi]} mu={muarr[icmu]}",
+                            base=10,
+                        )
 
-        _plt.xlabel(r'$r/R_{dust}}$', fontsize=15)
-        _plt.ylabel('Dust Temperature (K)', fontsize=15)
+        _plt.xlabel(r"$r/R_{dust}}$", fontsize=15)
+        _plt.ylabel("Dust Temperature (K)", fontsize=15)
         _plt.axis(axis)  # [xmin,xmax,ymin,ymax]
         _plt.subplots_adjust(bottom=0.15, left=0.15, right=0.92, top=0.92)
-        _plt.legend(loc='best', fancybox=True, framealpha=0.5)
-        _plt.title(f'{title} file={rtfile}')
+        _plt.legend(loc="best", fancybox=True, framealpha=0.5)
+        _plt.title(f"{title} file={rtfile}")
         _phc.savefig(fig, figname=figname, fmt=fmt)
         _plt.close()
 
@@ -1232,7 +1391,7 @@ def plotdust(tfiles, mulist=[0], philist=[0], typelist=[0], alist=None,
 
 
 def gentemplist(tfile, tfrange=None, avg=True):
-    """ Generate a list of *.temp files.
+    """Generate a list of *.temp files.
 
     `tfile` = file name or file prefix to be plotted. If `tfrange` (e.g.,
     tfrange=[20,24] is present, it you automatically plot the interval.
@@ -1242,31 +1401,31 @@ def gentemplist(tfile, tfrange=None, avg=True):
     OUTPUT = file list, label list
     """
     if tfrange is None:
-        tfrange = [int(tfile.replace('.temp', '')[-2:])]
+        tfrange = [int(tfile.replace(".temp", "")[-2:])]
     ltfile = []
     ltlabel = []
     for tn in range(int(tfrange[0]), int(tfrange[-1]) + 1):
-        if tfile.find('.temp') > 0:
-            ltfile += [tfile.replace(tfile[-7:-5], '{0:02d}'.format(tn))]
+        if tfile.find(".temp") > 0:
+            ltfile += [tfile.replace(tfile[-7:-5], "{0:02d}".format(tn))]
         else:
-            ltfile += [tfile + '{0:02d}.temp'.format(tn)]
+            ltfile += [tfile + "{0:02d}.temp".format(tn)]
         ltlabel += [str(tn)]
-    tfile = ltfile[-1].replace('.temp', '_avg.temp')
+    tfile = ltfile[-1].replace(".temp", "_avg.temp")
     if _os.path.exists(tfile) and avg:
         ltfile += [tfile]
-        ltlabel += ['Avg.']
+        ltlabel += ["Avg."]
     return ltfile, ltlabel
 
 
 def genlog(proj=None, mods=None):
-    """ Generate a log of the runned simulations. 
-    """
+    """Generate a log of the runned simulations."""
     if proj is None:
         proj = _os.getcwd()
     modfld = mods
     if mods is None:
-        modfld = [f for f in _os.listdir(proj) if (f.startswith('mod') and 
-            _os.path.isdir(f))]
+        modfld = [
+            f for f in _os.listdir(proj) if (f.startswith("mod") and _os.path.isdir(f))
+        ]
     modfld.sort()
 
     basedir = _os.getcwd()
@@ -1274,58 +1433,60 @@ def genlog(proj=None, mods=None):
     allmods = [[], [], [], []]
     for modn in modfld:
         _os.chdir(_os.path.join(proj, modn))
-        modn_list = _glob(modn+'*.txt')
+        modn_list = _glob(modn + "*.txt")
         allmods[0].extend(modn_list)
         for imodn in modn_list:
             suf = list(_os.path.splitext(imodn))[0]
             #
-            tmp = sorted(_glob(suf+'[0-9][0-9].temp'))
+            tmp = sorted(_glob(suf + "[0-9][0-9].temp"))
             if len(tmp) > 0:
-                allmods[1].append( list(_os.path.splitext(tmp[-1]))[0][-2:] )
+                allmods[1].append(list(_os.path.splitext(tmp[-1]))[0][-2:])
             else:
-                allmods[1].append( '' )
+                allmods[1].append("")
             #
-            tmp = [s2[:s2.find(suf)] for s2 in 
-                sorted(_glob('*'+suf+'*.sed2'))]
+            tmp = [s2[: s2.find(suf)] for s2 in sorted(_glob("*" + suf + "*.sed2"))]
             if len(tmp) > 0:
-                allmods[2].append( ' '.join(tmp) )
-            else: 
-                allmods[2].append( '' )
-            #
-            tmp = [mp[:mp.find(suf)] for mp in 
-                sorted(_glob('*'+suf+'*.map*'))]
-            if len(tmp) > 0:
-                allmods[3].append( ' '.join(tmp) )
+                allmods[2].append(" ".join(tmp))
             else:
-                allmods[3].append( '' )
+                allmods[2].append("")
+            #
+            tmp = [mp[: mp.find(suf)] for mp in sorted(_glob("*" + suf + "*.map*"))]
+            if len(tmp) > 0:
+                allmods[3].append(" ".join(tmp))
+            else:
+                allmods[3].append("")
         _os.chdir(basedir)
 
-    glout = 'genlog_{0}.txt'.format(_time.strftime('%y%m%d'))
-    f0 = open(_os.path.join(proj, glout), 'w')
+    glout = "genlog_{0}.txt".format(_time.strftime("%y%m%d"))
+    f0 = open(_os.path.join(proj, glout), "w")
     f0.writelines(_tab(_np.array(allmods).T, tablefmt="tsv"))
-    print('# Generated {0} !'.format(_os.path.join(proj, glout)))
+    print("# Generated {0} !".format(_os.path.join(proj, glout)))
     f0.close()
     return _np.array(allmods)
 
 
 def printN0(modn):
-    """ Print the n0 of the model inside modn folder. It does a grep of `n_0` 
+    """Print the n0 of the model inside modn folder. It does a grep of `n_0`
     of all *.txt files of the folder.
 
     Warning: max(M)==14.6Msun (instead of 20.0Msun).
 
     INPUT: string
 
-    OUTPUT: figures written. 
+    OUTPUT: figures written.
     """
     # generate and print n_0
-    _os.system('grep n_0 mod{0}/*.txt > n0_mod{0}.txt'.format(modn))
+    _os.system("grep n_0 mod{0}/*.txt > n0_mod{0}.txt".format(modn))
     # n0file = _np.genfromtxt('n0_mod01.txt', delimiter = (6,3,3,4,4,2,3,3,5,\
-    # 5,5,3,4), usecols=(4,10,12), dtype=None) 
+    # 5,5,3,4), usecols=(4,10,12), dtype=None)
     # cols = (0#, 1type, 2typeVal, 3#, 4sig, 5#, 6h, 7#, 8Rd, 9#, 10M, 11#,
     # 12ob, 13#)
-    n0file = _np.genfromtxt('n0_mod{0}.txt'.format(modn), delimiter=(
-        22, 4, 18, 5, 3, 4, 35, 8), usecols=(1, 3, 5, 7), dtype=None)
+    n0file = _np.genfromtxt(
+        "n0_mod{0}.txt".format(modn),
+        delimiter=(22, 4, 18, 5, 3, 4, 35, 8),
+        usecols=(1, 3, 5, 7),
+        dtype=None,
+    )
     # cols = (sig0, M, ob, n0)
 
     sig0s = []
@@ -1343,47 +1504,43 @@ def printN0(modn):
     _plt.clf()
     for item in obs:
         idx = _np.where(n0file[:, 2] == item)
-        _plt.title(
-            'Sig0 range: [{0}, {1}] (g cm-2)'.format(sig0s[0], sig0s[-1]))
-        _plt.plot(n0file[:, 0][idx], n0file[:, 3][idx], 'o')
-        _plt.yscale('log')
-        _plt.xscale('log')
-        _plt.ylabel('n0 (# cm-3)')
-        _plt.xlabel('sig0 (g cm-2)')
-    _plt.savefig('n0_vs_sig0.png')
-    _plt.savefig('n0_vs_sig0.pdf')
+        _plt.title("Sig0 range: [{0}, {1}] (g cm-2)".format(sig0s[0], sig0s[-1]))
+        _plt.plot(n0file[:, 0][idx], n0file[:, 3][idx], "o")
+        _plt.yscale("log")
+        _plt.xscale("log")
+        _plt.ylabel("n0 (# cm-3)")
+        _plt.xlabel("sig0 (g cm-2)")
+    _plt.savefig("n0_vs_sig0.png")
+    _plt.savefig("n0_vs_sig0.pdf")
 
-    Btp = ['B0.5', 'B1', 'B1.5', 'B2', 'B2.5',
-        'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9']
+    Btp = ["B0.5", "B1", "B1.5", "B2", "B2.5", "B3", "B4", "B5", "B6", "B7", "B8", "B9"]
     _plt.clf()
     for item in obs:
         idx = _np.where(n0file[:, 2] == item)
-        _plt.title(
-            'Sig0 range: [{0}, {1}] (g cm-2)'.format(sig0s[0], sig0s[-1]))
-        _plt.plot(n0file[:, 1][idx], n0file[:, 3][idx], 'o')
-        _plt.plot([3.4, 14.6], [1e13, 1e14], 'r-')
-        _plt.plot([3.4, 14.6], [1e12, 1e12], 'r-')
+        _plt.title("Sig0 range: [{0}, {1}] (g cm-2)".format(sig0s[0], sig0s[-1]))
+        _plt.plot(n0file[:, 1][idx], n0file[:, 3][idx], "o")
+        _plt.plot([3.4, 14.6], [1e13, 1e14], "r-")
+        _plt.plot([3.4, 14.6], [1e12, 1e12], "r-")
         _plt.xlim([16, 2])
-        _plt.yscale('log')
-        _plt.ylabel('n0 (# cm-3)')
-        _plt.xlabel('mass (Solar units)')
+        _plt.yscale("log")
+        _plt.ylabel("n0 (# cm-3)")
+        _plt.xlabel("mass (Solar units)")
     for i in range(len(Btp)):
         _plt.text(Ms[::-1][i], 4e14, Btp[i])
-    _plt.savefig('n0_vs_M.png')
-    _plt.savefig('n0_vs_M.pdf')
+    _plt.savefig("n0_vs_M.png")
+    _plt.savefig("n0_vs_M.pdf")
 
     _plt.clf()
     for item in obs:
         idx = _np.where(n0file[:, 2] == item)
-        _plt.title(
-            'Sig0 range: [{0}, {1}] (g cm-2)'.format(sig0s[0], sig0s[-1]))
-        _plt.plot(n0file[:, 2][idx], n0file[:, 3][idx], 'o')
-        _plt.yscale('log')
-        _plt.ylabel('n0 (# cm-3)')
-        _plt.xlabel('radii ratio (Req/Rp)')
+        _plt.title("Sig0 range: [{0}, {1}] (g cm-2)".format(sig0s[0], sig0s[-1]))
+        _plt.plot(n0file[:, 2][idx], n0file[:, 3][idx], "o")
+        _plt.yscale("log")
+        _plt.ylabel("n0 (# cm-3)")
+        _plt.xlabel("radii ratio (Req/Rp)")
         _plt.xlim([1.0, 1.5])
-    _plt.savefig('n0_vs_ob.png')
-    _plt.savefig('n0_vs_ob.pdf')
+    _plt.savefig("n0_vs_ob.png")
+    _plt.savefig("n0_vs_ob.pdf")
     return
 
 
@@ -1402,11 +1559,11 @@ def printN0(modn):
 #     for col in cols:
 #         nans, x = _phc.nan_helper(f2mtx[:, col])
 #         if refcol is None:
-#             f2mtx[:, col][nans] = _np.interp(x(nans), 
+#             f2mtx[:, col][nans] = _np.interp(x(nans),
 #                 x(~nans), f2mtx[:, col][~nans])
 #         else:
 #             _warn.warn('# The output must be checked!')
-#             f2mtx[:, col][nans] = _np.interp(f2mtx[:, refcol][nans], 
+#             f2mtx[:, col][nans] = _np.interp(f2mtx[:, refcol][nans],
 #                 f2mtx[:, refcol][~nans], f2mtx[:, col][~nans])
 #     #
 #     oldf = open(fsed2).read().split('\n')
@@ -1427,13 +1584,21 @@ def printN0(modn):
 #     return
 
 
-def plottemp(tfiles, philist=[0], interpol=False, xax=0, fmt=['png'],
-    figname=None, tlabels=None, title=None):
+def plottemp(
+    tfiles,
+    philist=[0],
+    interpol=False,
+    xax=0,
+    fmt=["png"],
+    figname=None,
+    tlabels=None,
+    title=None,
+):
     """
     :Example:
 
     >>> import pyhdust as hdt
-    >>> tfiles, tlabels = hdt.gentemplist('bestar2.02/mod01/mod01b33.temp', 
+    >>> tfiles, tlabels = hdt.gentemplist('bestar2.02/mod01/mod01b33.temp',
         tfrange=[30,33])
     >>> hdt.plottemp(tfiles, tlabels=tlabels)
 
@@ -1463,9 +1628,9 @@ def plottemp(tfiles, philist=[0], interpol=False, xax=0, fmt=['png'],
     if title is None:
         title = tfiles[-1]
     if interpol:
-        raise NotImplementedError('# Interpol option not yet available.')
+        raise NotImplementedError("# Interpol option not yet available.")
     if xax not in [0, 1, 2]:
-        raise ValueError('# Invalid `xax` option. Try again.')
+        raise ValueError("# Invalid `xax` option. Try again.")
     #
     fig, axs = _plt.subplots(1, 1)  # , figsize=(21./3,29.7/3), sharex=True)
     lev = 0
@@ -1473,45 +1638,65 @@ def plottemp(tfiles, philist=[0], interpol=False, xax=0, fmt=['png'],
     rplus = 0
     for i in range(len(tfiles)):
         rtfile = tfiles[i]
-        ncr, ncmu, ncphi, nLTE, nNLTE, Rstar, Ra, beta, data, pcr, pcmu, pcphi\
-            = readtemp(rtfile, quiet=True)
+        (
+            ncr,
+            ncmu,
+            ncphi,
+            nLTE,
+            nNLTE,
+            Rstar,
+            Ra,
+            beta,
+            data,
+            pcr,
+            pcmu,
+            pcphi,
+        ) = readtemp(rtfile, quiet=True)
         for phiidx in range(0, len(philist)):
             icphi = philist[phiidx]
             x = data[0, :, 0, icphi]
-            if (xax == 0):
-                x = _np.log10(x / Rstar - 1.)
-                xtitle = r'$\log_{10}(r/R_*-1)$'
-            elif (xax == 1):
+            if xax == 0:
+                x = _np.log10(x / Rstar - 1.0)
+                xtitle = r"$\log_{10}(r/R_*-1)$"
+            elif xax == 1:
                 x = x / Rstar
-                xtitle = r'$r/R_*$'
-            elif (xax == 2):
-                x = 1. - Rstar / x
-                xtitle = r'$1-R_*/r$'
+                xtitle = r"$r/R_*$"
+            elif xax == 2:
+                x = 1.0 - Rstar / x
+                xtitle = r"$1-R_*/r$"
             y = data[3 + lev, :, ncmu // 2 + np + rplus, icphi]
-            y = y / 1000.
-            mk = 'o:'
-            if rtfile.find('avg') > 0:
-                mk = 'o-'
+            y = y / 1000.0
+            mk = "o:"
+            if rtfile.find("avg") > 0:
+                mk = "o-"
             if tlabels is not None:
                 axs.plot(x, y, mk, label=tlabels[i])
             else:
                 axs.plot(x, y, mk)
     #
-    axs.legend(loc='best', fancybox=True, framealpha=0.5)
+    axs.legend(loc="best", fancybox=True, framealpha=0.5)
     axs.set_title(title)
     axs.set_xlabel(xtitle)
-    axs.set_ylabel(r'Temperature (10$^3$ K)')
+    axs.set_ylabel(r"Temperature (10$^3$ K)")
     _phc.savefig(fig, figname=figname, fmt=fmt)
     return
 
 
-def plotdens(tfiles, philist=[0], interpol=False, xax=0, fmt=['png'],
-    outpref=None, tlabels=None, title=None):
+def plotdens(
+    tfiles,
+    philist=[0],
+    interpol=False,
+    xax=0,
+    fmt=["png"],
+    outpref=None,
+    tlabels=None,
+    title=None,
+):
     """
     VARIABLES:
-        interpol: 
+        interpol:
             - True: What will be plotted is the population along rays of a
-                given latitude. The latitudes are defined in array muplot 
+                given latitude. The latitudes are defined in array muplot
                 below.
             - False: What will be plotted is the population for a given mu
                 index as a function of radius, starting with index
@@ -1523,7 +1708,7 @@ def plotdens(tfiles, philist=[0], interpol=False, xax=0, fmt=['png'],
 
     :Example:
         >>> import pyhdust as hdt
-        >>> tfiles, tlabels = hdt.gentemplist('bestar2.02/mod01/mod01b33.temp', 
+        >>> tfiles, tlabels = hdt.gentemplist('bestar2.02/mod01/mod01b33.temp',
                 tfrange=[30,33])
         >>> hdt.plottemp(tfiles, tlabels=tlabels)
             .. image:: _static/hdt_plottemp.png
@@ -1539,133 +1724,163 @@ def plotdens(tfiles, philist=[0], interpol=False, xax=0, fmt=['png'],
     if title is None:
         title = tfiles[-1]
     if interpol:
-        raise NotImplementedError('# Interpol option not available.')
+        raise NotImplementedError("# Interpol option not available.")
     if xax not in [0, 1, 2, 3]:
-        raise ValueError('# Invalid `xax` option. Try again.')
+        raise ValueError("# Invalid `xax` option. Try again.")
     #
     fig, axs = _plt.subplots(1, 1)  # , figsize=(21./3,29.7/3), sharex=True)
     np = 0
     rplus = 0
     for i in range(len(tfiles)):
         rtfile = tfiles[i]
-        ncr, ncmu, ncphi, nLTE, nNLTE, Rstar, Ra, beta, data, pcr, pcmu, \
-            pcphi = readtemp(rtfile, quiet=True)
+        (
+            ncr,
+            ncmu,
+            ncphi,
+            nLTE,
+            nNLTE,
+            Rstar,
+            Ra,
+            beta,
+            data,
+            pcr,
+            pcmu,
+            pcphi,
+        ) = readtemp(rtfile, quiet=True)
         # print(rtfile, nLTE, nNLTE)
         for phiidx in range(0, len(philist)):
             icphi = philist[phiidx]
             x = data[0, :, 0, icphi]
-            if (xax == 0):
-                x = _np.log10(x / Rstar - 1.)
-                xtitle = r'$\log_{10}(r/R_*-1)$'
-            elif (xax == 1):
+            if xax == 0:
+                x = _np.log10(x / Rstar - 1.0)
+                xtitle = r"$\log_{10}(r/R_*-1)$"
+            elif xax == 1:
                 x = x / Rstar
-                xtitle = r'$r/R_*$'
-            elif (xax == 2):
-                x = 1. - Rstar / x
-                xtitle = r'$1-R_*/r$'
-            elif (xax == 3):
+                xtitle = r"$r/R_*$"
+            elif xax == 2:
+                x = 1.0 - Rstar / x
+                xtitle = r"$1-R_*/r$"
+            elif xax == 3:
                 x = _np.log10(x / Rstar)
-                xtitle = r'$\log_{10}(r/R_*)$'
+                xtitle = r"$\log_{10}(r/R_*)$"
             # despo: number density numbers appear at column 5
             #        temperature is at lev+3
-            y = data[5+nLTE, :, ncmu / 2 + np + rplus, icphi]
+            y = data[5 + nLTE, :, ncmu / 2 + np + rplus, icphi]
             y = _np.log10(y)  # /.6/mp)
-            mk = 'o:'
-            if rtfile.find('avg') > 0:
-                mk = 'o-'
+            mk = "o:"
+            if rtfile.find("avg") > 0:
+                mk = "o-"
             if tlabels is not None:
                 axs.plot(x, y, mk, label=tlabels[i])
             else:
                 axs.plot(x, y, mk)
     #
-    axs.legend(loc='best', fancybox=True, framealpha=0.5)
+    axs.legend(loc="best", fancybox=True, framealpha=0.5)
     axs.set_title(title)
     axs.set_xlabel(xtitle)
-    axs.set_ylabel(r'$\log_{10}(n)$')
+    axs.set_ylabel(r"$\log_{10}(n)$")
     _phc.savefig(fig, figname=outpref, fmt=fmt)
     return
 
 
-def plottemp2d(tfile, figname=None, fmt=['png'], icphi=0, itype='linear',
-    nimg=128, Rmax=None, trange=None, hres=False):
-    """ itype = 'nearest', linear' or 'cubic'
+def plottemp2d(
+    tfile,
+    figname=None,
+    fmt=["png"],
+    icphi=0,
+    itype="linear",
+    nimg=128,
+    Rmax=None,
+    trange=None,
+    hres=False,
+):
+    """itype = 'nearest', linear' or 'cubic'
 
     ``xax`` = 0: log10(r/R-1), 1: r/R; 2: 1-R/r
     """
     xax = 1
     if xax not in [0, 1, 2]:
-        raise ValueError('# Invalid `xax` option. Try again.')
+        raise ValueError("# Invalid `xax` option. Try again.")
     lev = 0
-    ncr, ncmu, ncphi, nLTE, nNLTE, Rstar, Ra, beta, data, pcr, pcmu, pcphi\
-        = readtemp(tfile)
+    ncr, ncmu, ncphi, nLTE, nNLTE, Rstar, Ra, beta, data, pcr, pcmu, pcphi = readtemp(
+        tfile
+    )
     #
     fig, ax = _plt.subplots()
     # pcmu[0, :] = 2*pcmu[1, :] - pcmu[2, :]
     # pcmu[-1, :] = 2*pcmu[-2, :] - pcmu[-3, :]
-    ccmu = _np.arccos(pcmu[:-1] + _np.diff(pcmu, axis=0)/2.).flatten()
-    ccr = _np.tile(pcr[:-1] + _np.diff(pcr)/2., ncmu)
+    ccmu = _np.arccos(pcmu[:-1] + _np.diff(pcmu, axis=0) / 2.0).flatten()
+    ccr = _np.tile(pcr[:-1] + _np.diff(pcr) / 2.0, ncmu)
     tmp = _phc.sph2cart(ccr, _np.zeros(len(ccr)), th=ccmu)
     x = tmp[0]
     y = tmp[2]
     #
-    if (xax == 0):
+    if xax == 0:
         idx = _np.where(y > Rstar)
-        x = _np.log10(x[idx]/Rstar - 1.)
-        y = _np.log10(y[idx]/Rstar - 1.)
-        idata = data[3+lev, :, :, icphi].T.flatten()[idx]/1e3
-        xtitle = r'$\log_{10}(r/R_*-1)$'
-    elif (xax == 1):
-        idata = data[3+lev, :, :, icphi].T.flatten()/1e3
-        idx = _np.where(idata < data[3+lev, 0, 0, icphi]/1e3)
+        x = _np.log10(x[idx] / Rstar - 1.0)
+        y = _np.log10(y[idx] / Rstar - 1.0)
+        idata = data[3 + lev, :, :, icphi].T.flatten()[idx] / 1e3
+        xtitle = r"$\log_{10}(r/R_*-1)$"
+    elif xax == 1:
+        idata = data[3 + lev, :, :, icphi].T.flatten() / 1e3
+        idx = _np.where(idata < data[3 + lev, 0, 0, icphi] / 1e3)
         idata = idata[idx]
-        x = x[idx]/Rstar
-        y = y[idx]/Rstar
-        xtitle = r'$r/R_*$'
-    elif (xax == 2):
+        x = x[idx] / Rstar
+        y = y[idx] / Rstar
+        xtitle = r"$r/R_*$"
+    elif xax == 2:
         idx = _np.where(y > Rstar)
-        x = 1.-Rstar/x[idx]
-        y = 1.-Rstar/y[idx]
-        idata = data[3+lev, :, :, icphi].T.flatten()[idx]/1e3
-        xtitle = r'$1-R_*/r$'
+        x = 1.0 - Rstar / x[idx]
+        y = 1.0 - Rstar / y[idx]
+        idata = data[3 + lev, :, :, icphi].T.flatten()[idx] / 1e3
+        xtitle = r"$1-R_*/r$"
     if Rmax is None:
         xmax = _np.max(x)
     else:
-        if xax == 0: 
-            xmax = _np.log10(Rmax - 1.)
+        if xax == 0:
+            xmax = _np.log10(Rmax - 1.0)
         elif xax == 1:
             xmax = Rmax
         elif xax == 2:
-            xmax = 1-1./Rmax
+            xmax = 1 - 1.0 / Rmax
     #
-    ymax = (xmax-_np.min(x))/2.
+    ymax = (xmax - _np.min(x)) / 2.0
     #
     coords = _np.column_stack((x, y))
     ax.set_xlim([_np.min(x), xmax])
     ax.set_ylim([-ymax, ymax])
-    # xo, yo = _np.meshgrid( _np.linspace(_np.min(x), _np.max(x), nimg), 
+    # xo, yo = _np.meshgrid( _np.linspace(_np.min(x), _np.max(x), nimg),
     #     _np.linspace(_np.min(y), _np.max(y), nimg) )
-    xo, yo = _np.meshgrid( _np.linspace(_np.min(x), xmax, nimg), 
-        _np.linspace(-ymax, ymax, nimg)[::-1] )
+    xo, yo = _np.meshgrid(
+        _np.linspace(_np.min(x), xmax, nimg), _np.linspace(-ymax, ymax, nimg)[::-1]
+    )
     msgri = _np.column_stack((xo.flatten(), yo.flatten()))
     # xo = _np.linspace(_np.min(ccr), _np.max(ccr), 21)
-    # yo = _np.linspace(_np.min(ccmu), _np.max(ccmu), 21) 
+    # yo = _np.linspace(_np.min(ccmu), _np.max(ccmu), 21)
     vmin = _np.min(idata)
     vmax = _np.max(idata)
     if trange is not None:
         vmin = trange[0]
-        vmax = trange[-1]        
+        vmax = trange[-1]
     if hres:
-        img = _interpolate.griddata(coords, idata, msgri, 
-            method=itype).reshape((nimg, nimg))
+        img = _interpolate.griddata(coords, idata, msgri, method=itype).reshape(
+            (nimg, nimg)
+        )
     else:
         img = _phc.baricent_map(x, y, idata)
-    cax = ax.imshow(img, origin='lower', extent=[_np.min(x), xmax, -ymax, 
-        ymax], vmin=vmin, vmax=vmax, cmap='gist_heat', 
-        interpolation='bilinear')
+    cax = ax.imshow(
+        img,
+        origin="lower",
+        extent=[_np.min(x), xmax, -ymax, ymax],
+        vmin=vmin,
+        vmax=vmax,
+        cmap="gist_heat",
+        interpolation="bilinear",
+    )
     ax.set_title(_os.path.basename(tfile))
     ax.set_xlabel(xtitle)
     ax.set_ylabel(xtitle)
-    cbar = fig.colorbar(cax, label=r'Temp. (10$^3$ K)')  
+    cbar = fig.colorbar(cax, label=r"Temp. (10$^3$ K)")
     # , orientation='horizontal')
     # cbar.ax.set_yticklabels(['< -1', '0', '> 1'])  # vertically colorbar
     # if Rmax is None:
@@ -1676,14 +1891,24 @@ def plottemp2d(tfile, figname=None, fmt=['png'], icphi=0, itype='linear',
     # ax.set_xlim([1, Rmax/Rstar])
     # ax.set_ylim([-ymax, ymax])
     # ax.set_aspect(abs(xmax-_np.min(x))/abs(ymax-(-ymax)))
-    ax.set_aspect('equal')
+    ax.set_aspect("equal")
     _phc.savefig(fig, figname=figname, fmt=fmt)
     return
 
 
-def plotdens2d(tfile, figname=None, fmt=['png'], icphi=0, itype='linear',
-    nimg=128, Rmax=None, trange=None, hres=False, zlim=None):
-    """ itype = 'nearest', linear' or 'cubic'
+def plotdens2d(
+    tfile,
+    figname=None,
+    fmt=["png"],
+    icphi=0,
+    itype="linear",
+    nimg=128,
+    Rmax=None,
+    trange=None,
+    hres=False,
+    zlim=None,
+):
+    """itype = 'nearest', linear' or 'cubic'
 
     :param hres: high-resolution mode
     :param zlim: limits the z-axis (color) scale. Ex.: `[6, 13]` sets the log
@@ -1691,61 +1916,63 @@ def plotdens2d(tfile, figname=None, fmt=['png'], icphi=0, itype='linear',
     """
     xax = 1
     if xax not in [0, 1, 2]:
-        raise ValueError('# Invalid `xax` option. Try again.')
-    ncr, ncmu, ncphi, nLTE, nNLTE, Rstar, Ra, beta, data, pcr, pcmu, pcphi\
-        = readtemp(tfile)
-    lev = nLTE+2
+        raise ValueError("# Invalid `xax` option. Try again.")
+    ncr, ncmu, ncphi, nLTE, nNLTE, Rstar, Ra, beta, data, pcr, pcmu, pcphi = readtemp(
+        tfile
+    )
+    lev = nLTE + 2
     #
     fig, ax = _plt.subplots()
     # pcmu[0, :] = 2*pcmu[1, :] - pcmu[2, :]
     # pcmu[-1, :] = 2*pcmu[-2, :] - pcmu[-3, :]
-    ccmu = _np.arccos(pcmu[:-1] + _np.diff(pcmu, axis=0)/2.).flatten()
-    ccr = _np.tile(pcr[:-1] + _np.diff(pcr)/2., ncmu)
+    ccmu = _np.arccos(pcmu[:-1] + _np.diff(pcmu, axis=0) / 2.0).flatten()
+    ccr = _np.tile(pcr[:-1] + _np.diff(pcr) / 2.0, ncmu)
     tmp = _phc.sph2cart(ccr, ccmu)
     x = tmp[1]
     y = tmp[0]
     #
-    if (xax == 0):
+    if xax == 0:
         idx = _np.where(y > Rstar)
-        x = _np.log10(x[idx]/Rstar - 1.)
-        y = _np.log10(y[idx]/Rstar - 1.)
-        idata = data[3+lev, :, :, icphi].T.flatten()[idx]
-        xtitle = r'$\log_{10}(r/R_*-1)$'
-    elif (xax == 1):
-        idata = ( data[3+lev, :, :, icphi].T.flatten() )
-        idx = _np.where(idata > data[3+lev, 0, 0, icphi])
+        x = _np.log10(x[idx] / Rstar - 1.0)
+        y = _np.log10(y[idx] / Rstar - 1.0)
+        idata = data[3 + lev, :, :, icphi].T.flatten()[idx]
+        xtitle = r"$\log_{10}(r/R_*-1)$"
+    elif xax == 1:
+        idata = data[3 + lev, :, :, icphi].T.flatten()
+        idx = _np.where(idata > data[3 + lev, 0, 0, icphi])
         idata = _np.log10(idata[idx])
-        x = x[idx]/Rstar
-        y = y[idx]/Rstar
-        xtitle = r'$r/R_*$'
-    elif (xax == 2):
+        x = x[idx] / Rstar
+        y = y[idx] / Rstar
+        xtitle = r"$r/R_*$"
+    elif xax == 2:
         idx = _np.where(y > Rstar)
-        x = 1.-Rstar/x[idx]
-        y = 1.-Rstar/y[idx]
-        idata = data[3+lev, :, :, icphi].T.flatten()[idx]
-        xtitle = r'$1-R_*/r$'
+        x = 1.0 - Rstar / x[idx]
+        y = 1.0 - Rstar / y[idx]
+        idata = data[3 + lev, :, :, icphi].T.flatten()[idx]
+        xtitle = r"$1-R_*/r$"
     if Rmax is None:
         xmax = _np.max(x)
     else:
-        if xax == 0: 
-            xmax = _np.log10(Rmax - 1.)
+        if xax == 0:
+            xmax = _np.log10(Rmax - 1.0)
         elif xax == 1:
             xmax = Rmax
         elif xax == 2:
-            xmax = 1-1./Rmax
+            xmax = 1 - 1.0 / Rmax
     #
-    ymax = (xmax-_np.min(x))/2.
+    ymax = (xmax - _np.min(x)) / 2.0
     #
     coords = _np.column_stack((x, y))
     ax.set_xlim([_np.min(x), xmax])
     ax.set_ylim([-ymax, ymax])
-    # xo, yo = _np.meshgrid( _np.linspace(_np.min(x), _np.max(x), nimg), 
+    # xo, yo = _np.meshgrid( _np.linspace(_np.min(x), _np.max(x), nimg),
     #     _np.linspace(_np.min(y), _np.max(y), nimg) )
-    xo, yo = _np.meshgrid( _np.linspace(_np.min(x), xmax, nimg), 
-        _np.linspace(-ymax, ymax, nimg)[::-1] )
+    xo, yo = _np.meshgrid(
+        _np.linspace(_np.min(x), xmax, nimg), _np.linspace(-ymax, ymax, nimg)[::-1]
+    )
     msgri = _np.column_stack((xo.flatten(), yo.flatten()))
     # xo = _np.linspace(_np.min(ccr), _np.max(ccr), 21)
-    # yo = _np.linspace(_np.min(ccmu), _np.max(ccmu), 21) 
+    # yo = _np.linspace(_np.min(ccmu), _np.max(ccmu), 21)
     vmin = _np.min(idata)
     vmax = _np.max(idata)
     if zlim is not None:
@@ -1754,17 +1981,24 @@ def plotdens2d(tfile, figname=None, fmt=['png'], icphi=0, itype='linear',
         vmin = trange[0]
         vmax = trange[-1]
     if hres:
-        img = _interpolate.griddata(coords, idata, msgri, 
-            method=itype).reshape((nimg, nimg))
+        img = _interpolate.griddata(coords, idata, msgri, method=itype).reshape(
+            (nimg, nimg)
+        )
     else:
         img = _phc.baricent_map(x, y, idata, fullrange=False)
-    cax = ax.imshow(img, origin='lower', 
-        extent=[_np.min(x), xmax, -ymax, ymax], vmin=vmin, 
-        vmax=vmax, cmap='gist_heat', interpolation='bilinear')
+    cax = ax.imshow(
+        img,
+        origin="lower",
+        extent=[_np.min(x), xmax, -ymax, ymax],
+        vmin=vmin,
+        vmax=vmax,
+        cmap="gist_heat",
+        interpolation="bilinear",
+    )
     ax.set_title(_os.path.basename(tfile))
     ax.set_xlabel(xtitle)
     ax.set_ylabel(xtitle)
-    cbar = fig.colorbar(cax, label=r'$\log_{10}(d)$ (cm$^{-3}$)')  
+    cbar = fig.colorbar(cax, label=r"$\log_{10}(d)$ (cm$^{-3}$)")
     # , orientation='horizontal')
     # cbar.ax.set_yticklabels(['< -1', '0', '> 1'])  # vertically colorbar
     # if Rmax is None:
@@ -1774,13 +2008,13 @@ def plotdens2d(tfile, figname=None, fmt=['png'], icphi=0, itype='linear',
     # ymax = abs(Rmax/Rstar-1)/2
     # ax.set_xlim([1, Rmax/Rstar])
     # ax.set_ylim([-ymax, ymax])
-    ax.set_aspect(abs(xmax-_np.min(x))/abs(ymax-(-ymax)))
+    ax.set_aspect(abs(xmax - _np.min(x)) / abs(ymax - (-ymax)))
     _phc.savefig(fig, figname=figname, fmt=fmt)
     return
 
 
-def bin_sed2(sfile, nbins=25, new_pref='BIN_'):
-    """ Bin SED each `n` bins (lambda). 
+def bin_sed2(sfile, nbins=25, new_pref="BIN_"):
+    """Bin SED each `n` bins (lambda).
 
     It AUTOMATICALLY removes the `NaN` entries.
     """
@@ -1794,54 +2028,68 @@ def bin_sed2(sfile, nbins=25, new_pref='BIN_'):
 
     for j in range(int(nobs)):
         for i in range(ncols):
-            outsed2[j, :, i] = _phc.bindata(range(int(nlbd)), 
-                sed2data[j, :, i], nbins=nbins, interp=True)[1]
-    outsed2 = outsed2.reshape((int(nobs*n), -1))
+            outsed2[j, :, i] = _phc.bindata(
+                range(int(nlbd)), sed2data[j, :, i], nbins=nbins, interp=True
+            )[1]
+    outsed2 = outsed2.reshape((int(nobs * n), -1))
     hd = "    {0}    {1}    {2}    {3}\n".format(n, nobs, Rstar, Rwind)
     outfile = hd + _tab(outsed2, tablefmt="plain")
-    f0 = open(new_pref+sfile[sfile.find('_')+1:], 'w')
-    f0.writelines(outfile + sfile[sfile.find('_'):])
+    f0 = open(new_pref + sfile[sfile.find("_") + 1 :], "w")
+    f0.writelines(outfile + sfile[sfile.find("_") :])
     f0.close()
-    print('# {} saved!!'.format(new_pref+sfile[sfile.find('_')+1:]))
-    return 
+    print("# {} saved!!".format(new_pref + sfile[sfile.find("_") + 1 :]))
+    return
 
 
 # Be quantities convertions
 def rho2sig(Req, rho0, cs, M):
-    """ Equation A.8, Faes (2015) 
+    """Equation A.8, Faes (2015)
 
     All values in cgs units!
     """
-    sig = (2*_np.pi)**.5 * cs / (_phc.G.cgs * M / Req)** .5 * Req * rho0
+    sig = (2 * _np.pi) ** 0.5 * cs / (_phc.G.cgs * M / Req) ** 0.5 * Req * rho0
     return sig
 
 
 def rho2Mdot(Req, alpha, cs, M, rho0, R0):
-    """ Equation A.12 Faes (2015) 
+    """Equation A.12 Faes (2015)
 
     All values in cgs units!
     """
-    Mdot = 3*_np.pi * (2*_np.pi)**.5 * alpha * cs**3. * rho0 * Req**3. / \
-        (_phc.G.cgs*M) * ((R0 / Req)** .5 - 1)**-1.
+    Mdot = (
+        3
+        * _np.pi
+        * (2 * _np.pi) ** 0.5
+        * alpha
+        * cs**3.0
+        * rho0
+        * Req**3.0
+        / (_phc.G.cgs * M)
+        * ((R0 / Req) ** 0.5 - 1) ** -1.0
+    )
     return Mdot
 
 
 def Mdot2sig(Req, Mdot, alpha, cs, M, R0):
-    """ Equation A.2 Faes (2015)
+    """Equation A.2 Faes (2015)
 
-    All values in cgs units! 
+    All values in cgs units!
     """
-    sig = Mdot * (_phc.G.cgs*M/Req)**.5 / \
-        (3. * _np.pi * alpha * cs**2 * Req) * ((R0 / Req)**.5 - 1)
+    sig = (
+        Mdot
+        * (_phc.G.cgs * M / Req) ** 0.5
+        / (3.0 * _np.pi * alpha * cs**2 * Req)
+        * ((R0 / Req) ** 0.5 - 1)
+    )
     return sig
 
 
 def diskcalcs(M, Req, T, alpha, R0, mu, n0, Rd):
-    """ Do the equivalence of disk density for different quantities.
+    """Do the equivalence of disk density for different quantities.
 
     Note that they all depend of specific stellar quantities!!!
 
-    INPUT: 
+    INPUT:
     M = 10.3065*Msun,
     R = 7*Rsun, (Req)
     Tpole = 26025.,
@@ -1854,65 +2102,81 @@ def diskcalcs(M, Req, T, alpha, R0, mu, n0, Rd):
 
     OUTPUT: printed status
     """
-    a = (_phc.kB.cgs * T / mu / _phc.mH.cgs)**.5
+    a = (_phc.kB.cgs * T / mu / _phc.mH.cgs) ** 0.5
     rho0 = n0 * mu * _phc.mH.cgs
     sigp = rho2sig(Req, rho0, a, M)
-    rho0p = sigp / (2 * _np.pi)** .5 / a * (_phc.G.cgs * M / Req) ** .5 / Req
+    rho0p = sigp / (2 * _np.pi) ** 0.5 / a * (_phc.G.cgs * M / Req) ** 0.5 / Req
     Mdot = rho2Mdot(Req, alpha, a, M, rho0, R0)
     sig = Mdot2sig(Req, Mdot, alpha, a, M, R0)
 
-    Mdisk = 2*_np.pi*Req**2*sig*_np.log(Rd/Req)
-    Mdisk1 = 2*Mdot*_np.sqrt(_phc.G.cgs*M)/(3*alpha*a**3)*(_np.sqrt(R0)*
-        _np.log(Rd/Req)+2*(_np.sqrt(Req)-_np.sqrt(R0)))
+    Mdisk = 2 * _np.pi * Req**2 * sig * _np.log(Rd / Req)
+    Mdisk1 = (
+        2
+        * Mdot
+        * _np.sqrt(_phc.G.cgs * M)
+        / (3 * alpha * a**3)
+        * (_np.sqrt(R0) * _np.log(Rd / Req) + 2 * (_np.sqrt(Req) - _np.sqrt(R0)))
+    )
 
-    print('R0/R  = {0:.1f}'.format(R0 / Req))
-    print('Valid sigma (1)?: {0}'.format(round(sigp / sig) == 1))
-    print('Valid sigma (2)?: {0}'.format(round(rho0 / rho0p) == 1))
-    print('rho0  = {0:.2e} g/cm3'.format(rho0))
-    print('sigma0= {0:.4f} g/cm2'.format(sig))
-    print('Mdot  = {0:.2e} Msun/yr'.format(Mdot / _phc.Msun.cgs * _phc.yr.cgs))
-    print('Mdisk0~ {0:.2e} Msun [#from sig0, A.13]'.format(Mdisk / 
-        _phc.Msun.cgs))
-    print('Mdisk = {0:.2e} Msun [#from Mdot, A.15, wrong!]'.format(Mdisk1 / 
-        _phc.Msun.cgs))
-    print('# PS: Mdisk for isothermal H(r)')
+    print("R0/R  = {0:.1f}".format(R0 / Req))
+    print("Valid sigma (1)?: {0}".format(round(sigp / sig) == 1))
+    print("Valid sigma (2)?: {0}".format(round(rho0 / rho0p) == 1))
+    print("rho0  = {0:.2e} g/cm3".format(rho0))
+    print("sigma0= {0:.4f} g/cm2".format(sig))
+    print("Mdot  = {0:.2e} Msun/yr".format(Mdot / _phc.Msun.cgs * _phc.yr.cgs))
+    print("Mdisk0~ {0:.2e} Msun [#from sig0, A.13]".format(Mdisk / _phc.Msun.cgs))
+    print(
+        "Mdisk = {0:.2e} Msun [#from Mdot, A.15, wrong!]".format(Mdisk1 / _phc.Msun.cgs)
+    )
+    print("# PS: Mdisk for isothermal H(r)")
     return
 
 
 def n0toSigma0(n0, M, Req, f, Tp, mu):
-    """ VDD Steady-State conversion between `n0` ([ionized] particles/volume) 
+    """VDD Steady-State conversion between `n0` ([ionized] particles/volume)
     to `Sigma0`.
 
     INPUT: n0 (float), M, Req (mass and equatorial radius, Solar units),
     fraction and polar temperature ([0-1], Kelvin) and mu molecular weight
     [0.5-2.0].
 
-    OUTPUT: float (g cm-2) """
+    OUTPUT: float (g cm-2)"""
     rho0 = n0 * mu * _phc.mH.cgs
-    a = (_phc.kB.cgs * f * Tp / mu / _phc.mH.cgs) ** .5
-    sig0 = (2 * _np.pi) ** .5 * a / (_phc.G.cgs * M * _phc.Msun.cgs / (Req *
-        _phc.Rsun.cgs)) ** .5 * Req * _phc.Rsun.cgs * rho0
+    a = (_phc.kB.cgs * f * Tp / mu / _phc.mH.cgs) ** 0.5
+    sig0 = (
+        (2 * _np.pi) ** 0.5
+        * a
+        / (_phc.G.cgs * M * _phc.Msun.cgs / (Req * _phc.Rsun.cgs)) ** 0.5
+        * Req
+        * _phc.Rsun.cgs
+        * rho0
+    )
     return sig0
 
 
 def sig0_to_n0(sig0, M, Req, f, Tp, mu=0.5):
-    """ VDD Steady-State conversion between `Sigma0` [g/cm2] to `n0` 
+    """VDD Steady-State conversion between `Sigma0` [g/cm2] to `n0`
     ([ionized] particles/volume) .
 
     INPUT: sig0 (float), M, Req (mass and equatorial radius, Solar units),
     fraction and polar temperature ([0-1], Kelvin) and mu molecular weight
     [0.5-2.0].
 
-    OUTPUT: n0 (particles cm-3) """
+    OUTPUT: n0 (particles cm-3)"""
     muH = mu * _phc.mH.cgs
-    a = (_phc.kB.cgs * f * Tp / muH) ** .5
-    n0 = sig0 / muH * (_phc.G.cgs * M * _phc.Msun.cgs / 2 / _np.pi )**.5 / a *\
-        (Req * _phc.Rsun.cgs)**(-1.5)
+    a = (_phc.kB.cgs * f * Tp / muH) ** 0.5
+    n0 = (
+        sig0
+        / muH
+        * (_phc.G.cgs * M * _phc.Msun.cgs / 2 / _np.pi) ** 0.5
+        / a
+        * (Req * _phc.Rsun.cgs) ** (-1.5)
+    )
     return int(n0)
 
 
 def n0toMdot(n0, M, Req, f, Tp, mu, alpha, R0):
-    """ VDD Steady-State conversion between `n0` to `Mdot`.
+    """VDD Steady-State conversion between `n0` to `Mdot`.
 
     INPUT: n0 (float), M, Req (mass and equatorial radius, Solar units),
     fraction and polar temperature ([0-1], Kelvin), mu molecular weight
@@ -1923,9 +2187,18 @@ def n0toMdot(n0, M, Req, f, Tp, mu, alpha, R0):
     R0 = R0 * _phc.Rsun.cgs
     M = M * _phc.Msun.cgs
     rho0 = n0 * mu * _phc.mH.cgs
-    a = (_phc.kB.cgs * f * Tp / mu / _phc.mH.cgs) ** .5
-    Mdot = 3 * _np.pi * (2 * _np.pi) ** .5 * alpha * a ** 3. / (_phc.G.cgs *
-        M / Req) * rho0 * Req ** 2. * ((R0 / Req) ** .5 - 1) ** -1.
+    a = (_phc.kB.cgs * f * Tp / mu / _phc.mH.cgs) ** 0.5
+    Mdot = (
+        3
+        * _np.pi
+        * (2 * _np.pi) ** 0.5
+        * alpha
+        * a**3.0
+        / (_phc.G.cgs * M / Req)
+        * rho0
+        * Req**2.0
+        * ((R0 / Req) ** 0.5 - 1) ** -1.0
+    )
     return Mdot / _phc.Msun.cgs * _phc.yr.cgs
 
 
@@ -1943,34 +2216,34 @@ def calcTeff(lum, size, M=None):
     if M is None:
         Rp = size * _phc.Rsun.cgs
     else:
-        Rp = (M * _phc.Msun.cgs * _phc.G.cgs / 10 ** size) ** .5
+        Rp = (M * _phc.Msun.cgs * _phc.G.cgs / 10**size) ** 0.5
     L = lum * _phc.Lsun.cgs
     # Lum = 4*_np.pi*Rp**2*_phc.sigma*Teff**4
-    Teff = (L / (4 * _np.pi * Rp ** 2 * _phc.sigma.cgs)) ** .25
+    Teff = (L / (4 * _np.pi * Rp**2 * _phc.sigma.cgs)) ** 0.25
     return Teff
 
 
 def calclogg(M, R):
     """
-    Calculate log(g) for the non-rotating case. 
+    Calculate log(g) for the non-rotating case.
 
     INPUT: Radius and Mass in Solar units.
 
     OUTPUT: log(g) in cgs units.
     """
     R = R * _phc.Rsun.cgs
-    logg = _np.log10(_phc.G.cgs * M * _phc.Msun.cgs / R ** 2)
+    logg = _np.log10(_phc.G.cgs * M * _phc.Msun.cgs / R**2)
     return logg
 
 
 # Astro Useful and Plots
 def loadfits(filename, hdu=0):
-    """ Load a generic FITS. This function is different of the function as 
+    """Load a generic FITS. This function is different of the function as
     pyhdust.spectools.
 
     if `hdu` is not a integer, it returns a list with all headers and data.
 
-    OUTPUT: header, data 
+    OUTPUT: header, data
     """
     fits = _pf.open(filename)
     if isinstance(hdu, int):
@@ -1985,7 +2258,7 @@ def loadfits(filename, hdu=0):
 
 
 def obsCalc():
-    """ Obs. Calculation
+    """Obs. Calculation
 
     INPUT:
 
@@ -2021,8 +2294,13 @@ def obsCalc():
         """
         MJD0 = 2400000.5  # 1858 November 17, 00:00:00 hours
 
-        year, month, day, hour, minute = \
-            int(year), int(month), int(day), int(hour), int(minute)
+        year, month, day, hour, minute = (
+            int(year),
+            int(month),
+            int(day),
+            int(hour),
+            int(minute),
+        )
 
         if month <= 2:
             month += 12
@@ -2031,17 +2309,22 @@ def obsCalc():
         modf = _math.modf
         # Julian calendar on or before 1582 October 4 and Gregorian calendar
         # afterwards.
-        if ((int(10000) * year + int(100) * month + day) <= int(15821004)):
+        if (int(10000) * year + int(100) * month + day) <= int(15821004):
             b = -2 + int(modf((year + 4716) / 4)[1]) - 1179
         else:
-            b = int(modf(year / 400)[1]) - int(modf(year / 100)[1]) + \
-                int(modf(year / 4)[1])
+            b = (
+                int(modf(year / 400)[1])
+                - int(modf(year / 100)[1])
+                + int(modf(year / 4)[1])
+            )
 
-        mjdmidnight = int(365) * year - int(679004) + \
-            b + int(30.6001 * (month + 1)) + day
+        mjdmidnight = (
+            int(365) * year - int(679004) + b + int(30.6001 * (month + 1)) + day
+        )
 
-        fracofday = base60_to_decimal(
-            " ".join([str(hour), str(minute), str(second)])) / 24.0
+        fracofday = (
+            base60_to_decimal(" ".join([str(hour), str(minute), str(second)])) / 24.0
+        )
 
         return MJD0 + mjdmidnight + fracofday
 
@@ -2056,29 +2339,29 @@ def obsCalc():
         if hmin > hnas + cor and hpoe > hmin:
             hnas = hmin
             if debug:
-                print('ok0')
+                print("ok0")
         elif hmin > hnas + cor and hmax > hpoe and (hpoe - hmin) < -12:
             hnas = hmin
             if debug:
-                print('ok0')
+                print("ok0")
         elif hmin > hnas + cor and hmax < hpoe and hnas < hmax:
             hnas = hmin
             if debug:
-                print('ok1')
+                print("ok1")
         elif hmin < hnas + cor and hmax < hpoe and hnas < hmax:
             hpoe = hmax
             if debug:
-                print('ok2')
+                print("ok2")
         elif hmin < hnas + cor and hmax < hpoe and (hnas - hmax) > 12:
             hpoe = hmax
             if debug:
-                print('ok2a')
+                print("ok2a")
         elif hmin < hnas + cor and hmax > hpoe and (hpoe - hmin) < -12:
             if debug:
-                print('ok3')
+                print("ok3")
         elif hmin < hnas + cor and hmax > hpoe and hpoe > hmin:
             if debug:
-                print('ok4')
+                print("ok4")
         else:
             if debug:
                 print(hmin, hnas, hmax, hpoe)
@@ -2090,7 +2373,7 @@ def obsCalc():
 
     # Input: dia gregoriano (dg), para dia juliano (dj) as 0h local
     # +3 do UT #OPD@LNA
-    ut = -3.
+    ut = -3.0
 
     print("# Programa de planejamento de alvos BEACON\n#")
     print("# Horas em UT=%d ! (horario de 'inverno' de Brasilia)" % (ut))
@@ -2109,8 +2392,8 @@ def obsCalc():
         dg = dg + [now.day]
 
     dg = _np.array(dg, dtype=float)
-    dj = julian_date(dg[0], dg[1], dg[2] + 1, 0 + ut, 0, 0.)
-    # dj = julian_date(now.year, now.month, now.day, now.hour, now.minute, 
+    dj = julian_date(dg[0], dg[1], dg[2] + 1, 0 + ut, 0, 0.0)
+    # dj = julian_date(now.year, now.month, now.day, now.hour, now.minute,
     #     now.second)
 
     # dias/ano passados do solsticio de verao (ndays)
@@ -2148,26 +2431,29 @@ def obsCalc():
     # dmax = julian_date(dg[0],dg[1],dg[2]+1,3+6,0,-rt/2) #seg. so' >0!!!
 
     # carrega lista de alvos
-    alvos = _np.genfromtxt('{0}refs/obs_alvos.txt'.format(hdtpath()), 
-        dtype=str, delimiter='\t')
+    alvos = _np.genfromtxt(
+        "{0}refs/obs_alvos.txt".format(hdtpath()), dtype=str, delimiter="\t"
+    )
     # carrega tempo das declinacoes
-    obsdec = _np.loadtxt(
-        '{0}refs/obs_dec.txt'.format(hdtpath()), delimiter='\t')
+    obsdec = _np.loadtxt("{0}refs/obs_dec.txt".format(hdtpath()), delimiter="\t")
     # carrega efemerides
-    if _os.path.exists('{0}refs/obs_ef.txt'.format(hdtpath())):
-        ef_alvos = _np.genfromtxt('{0}refs/obs_ef.txt'.format(hdtpath()),
-                               delimiter='\t', dtype=str)
+    if _os.path.exists("{0}refs/obs_ef.txt".format(hdtpath())):
+        ef_alvos = _np.genfromtxt(
+            "{0}refs/obs_ef.txt".format(hdtpath()), delimiter="\t", dtype=str
+        )
         ef_alvos = ef_alvos.T
 
-    print("\n# Info. da noite: %2d %2d %4d" % ( dg[2], dg[1], dg[0]) )
-    print(  "Tempo sideral no anoitecer : %2d %2d" %
-          ( int(hmin), int((hmin - int(hmin)) * 60) )  )
-    print(  "Tempo sideral 'a meia noite: %2d %2d" %
-          ( int(hz), int((hz - int(hz)) * 60) )  )
-    print(  "Tempo sideral no amanhecer : %2d %2d" %
-          ( int(hmax), int((hmax - int(hmax)) * 60) )  )
-    print(  "Dif. de observ. ao inverno : -%d %2d" %
-          ( int(rt), int((rt - int(rt)) * 60) )  )
+    print("\n# Info. da noite: %2d %2d %4d" % (dg[2], dg[1], dg[0]))
+    print(
+        "Tempo sideral no anoitecer : %2d %2d"
+        % (int(hmin), int((hmin - int(hmin)) * 60))
+    )
+    print("Tempo sideral 'a meia noite: %2d %2d" % (int(hz), int((hz - int(hz)) * 60)))
+    print(
+        "Tempo sideral no amanhecer : %2d %2d"
+        % (int(hmax), int((hmax - int(hmax)) * 60))
+    )
+    print("Dif. de observ. ao inverno : -%d %2d" % (int(rt), int((rt - int(rt)) * 60)))
     print("\nALVO\tINICIO\tFIM\tMERID.\tF_INI\tF_FIM")
 
     outfile = "ALVO\tINICIO\tFIM\tMERID.\tF_INI\tF_FIM\n"
@@ -2175,8 +2461,7 @@ def obsCalc():
         print(alvos[i])
         # calcula a ascencao reta (ra) e declinacao (dec)
         ra = float(alvos[i][2][:2]) + float(alvos[i][2][3:5]) / 60
-        dec = float(alvos[i][3][:3]) + \
-            float(alvos[i][3][0] + alvos[i][3][4:6]) / 60
+        dec = float(alvos[i][3][:3]) + float(alvos[i][3][0] + alvos[i][3][4:6]) / 60
         # calcula tempo observavel na declinacao (to)
         j = odmin = odmax = 0
         while odmax == 0:
@@ -2187,8 +2472,9 @@ def obsCalc():
                 odmax = obsdec[j + 1][1]
             j = j + 1
 
-        to = (abs(dec - decmax) * odmin + abs(dec - decmin) * odmax) / \
-            (abs(dec - decmin) + abs(dec - decmax))
+        to = (abs(dec - decmax) * odmin + abs(dec - decmin) * odmax) / (
+            abs(dec - decmin) + abs(dec - decmax)
+        )
 
         # calcula para cada alvo o tempo de observacao
         # hora de inicio da observacao ('nascer')
@@ -2207,14 +2493,13 @@ def obsCalc():
             dt = dt + 24
         if dt > 12:
             dt = dt - 24
-        if dt < 3 / 4.:
+        if dt < 3 / 4.0:
             hnas = _np.NaN
             hpoe = _np.NaN
 
         # procura posicao nas efemerides (pef)
-        if _os.path.exists('{0}refs/obs_ef.txt'.format(hdtpath())):
-            pef = [k for k, x in enumerate(
-                ef_alvos[1]) if x.find(alvos[i][1]) > -1]
+        if _os.path.exists("{0}refs/obs_ef.txt".format(hdtpath())):
+            pef = [k for k, x in enumerate(ef_alvos[1]) if x.find(alvos[i][1]) > -1]
         else:
             pef = []
         if len(pef) == 1 and hnas > 0:
@@ -2233,13 +2518,13 @@ def obsCalc():
                 hour = hnas - hz + ut + cor
                 minute = (hour - int(hour)) * 60
                 hour = int(hour)
-                djnas = julian_date(dg[0], dg[1], dg[2], hour, minute, 0.)
+                djnas = julian_date(dg[0], dg[1], dg[2], hour, minute, 0.0)
             else:
                 j = 2
                 hour = hnas - hz + ut + cor
                 minute = (hour - int(hour)) * 60
                 hour = int(hour)
-                djnas = julian_date(dg[0], dg[1], dg[2] + 1, hour, minute, 0.)
+                djnas = julian_date(dg[0], dg[1], dg[2] + 1, hour, minute, 0.0)
             # print(j,hour,djnas)
             j = 0
             if hpoe - hz + ut + cor < 0:
@@ -2247,19 +2532,19 @@ def obsCalc():
                 hour = hpoe - hz + ut + cor
                 minute = (hour - int(hour)) * 60
                 hour = int(hour)
-                djpoe = julian_date(dg[0], dg[1], dg[2], hour, minute, 0.)
+                djpoe = julian_date(dg[0], dg[1], dg[2], hour, minute, 0.0)
             else:
                 j = 2
                 hour = hpoe - hz + ut + cor
                 minute = (hour - int(hour)) * 60
                 hour = int(hour)
-                djpoe = julian_date(dg[0], dg[1], dg[2] + 1, hour, minute, 0.)
+                djpoe = julian_date(dg[0], dg[1], dg[2] + 1, hour, minute, 0.0)
             # print(j,hour,djpoe)
             # Warnings
             # if T0 == 0.:
-                # print("WARNING: No 'T0' is available for this star!!!")
+            # print("WARNING: No 'T0' is available for this star!!!")
             # if per == 1.:
-                # print("WARNING: No Period is available for this star!!!")
+            # print("WARNING: No Period is available for this star!!!")
             # print("# A fase atual e' "+str( (j-T0)%Per/Per )+"\n" )
             fase_inc = ((djnas - T0) % per) / per
             fase_fim = ((djpoe - T0) % per) / per
@@ -2279,44 +2564,84 @@ def obsCalc():
             hmer = hmer + 24
 
         if hlmin > 0:
-            print("%s\t%2d %2d\t%2d %2d\t%2d %2d\t%.2f\t%.2f" % (
-                alvos[i][0][:7], int(hlmin), int((hlmin - int(hlmin)) * 60), 
-                int(hlmax), int((hlmax - int(hlmax)) * 60), int(hmer), 
-                int((hmer - int(hmer)) * 60), fase_inc, fase_fim) )
-            outfile = outfile + ("%s\t%2d %2d\t%2d %2d\t%2d %2d\t%.2f\t%.2f" %
-                (alvos[i][0][:7], int(hlmin), int((hlmin - int(hlmin)) * 60), 
-                int(hlmax), int((hlmax - int(hlmax)) * 60), int(hmer), 
-                int((hmer - int(hmer)) * 60), fase_inc, fase_fim) ) + '\n'
+            print(
+                "%s\t%2d %2d\t%2d %2d\t%2d %2d\t%.2f\t%.2f"
+                % (
+                    alvos[i][0][:7],
+                    int(hlmin),
+                    int((hlmin - int(hlmin)) * 60),
+                    int(hlmax),
+                    int((hlmax - int(hlmax)) * 60),
+                    int(hmer),
+                    int((hmer - int(hmer)) * 60),
+                    fase_inc,
+                    fase_fim,
+                )
+            )
+            outfile = (
+                outfile
+                + (
+                    "%s\t%2d %2d\t%2d %2d\t%2d %2d\t%.2f\t%.2f"
+                    % (
+                        alvos[i][0][:7],
+                        int(hlmin),
+                        int((hlmin - int(hlmin)) * 60),
+                        int(hlmax),
+                        int((hlmax - int(hlmax)) * 60),
+                        int(hmer),
+                        int((hmer - int(hmer)) * 60),
+                        fase_inc,
+                        fase_fim,
+                    )
+                )
+                + "\n"
+            )
         else:
-            print("%s\t-- --\t-- --\t-- --\t-.--\t-.--" % (alvos[i][0][:7]) )
-            outfile = outfile + ("%s\t-- --\t-- --\t-- --\t-.--\t-.--" %
-                 (alvos[i][0][:7]) ) + '\n'
+            print("%s\t-- --\t-- --\t-- --\t-.--\t-.--" % (alvos[i][0][:7]))
+            outfile = (
+                outfile
+                + ("%s\t-- --\t-- --\t-- --\t-.--\t-.--" % (alvos[i][0][:7]))
+                + "\n"
+            )
 
     wfile = _phc.user_input("\nDeseja salvar a lista?(Sim/outro): ")
-    if wfile in ['s', 'sim', 'Sim', 'S', 'y', 'yes', 'Yes', 'Y']:
-        f0 = open('obs_%2d_%2d_%4d.txt' % (dg[2], dg[1], dg[0]), 'w')
+    if wfile in ["s", "sim", "Sim", "S", "y", "yes", "Yes", "Y"]:
+        f0 = open("obs_%2d_%2d_%4d.txt" % (dg[2], dg[1], dg[0]), "w")
         f0.writelines(outfile)
         f0.close()
     return
 
 
-def plot_obs(observ_dates=[], legend=[], civcfg=[1, 'm'], civdt=None,  
-    fmt=['png'], addsuf=None, colors=None, ls=None, markers=None, 
-    mjdlims=None, alpha=1.0, graymjds=[], dolines=False, mincivcfg=[10, 'd']):
-    """ Plot observations as done in Faes+2016. 
+def plot_obs(
+    observ_dates=[],
+    legend=[],
+    civcfg=[1, "m"],
+    civdt=None,
+    fmt=["png"],
+    addsuf=None,
+    colors=None,
+    ls=None,
+    markers=None,
+    mjdlims=None,
+    alpha=1.0,
+    graymjds=[],
+    dolines=False,
+    mincivcfg=[10, "d"],
+):
+    """Plot observations as done in Faes+2016.
 
-    INPUT: `observ_dates` in a list of arrays. Each array contains the dates of 
+    INPUT: `observ_dates` in a list of arrays. Each array contains the dates of
     a given observation. Dates, in principle (TODO), must be in MJD.
 
     `legend` is a list of names, one for each array.
 
-    `civcfg` = [step, 'd'|'m'|'y'] 
+    `civcfg` = [step, 'd'|'m'|'y']
 
     `civdt` = starting date at the Civil Date axis (MJD?).
 
     if `addsuf` is None, a date-time string will be added to the filename.
 
-    `colors` = colors for each observ_dates array. If `None`, then 
+    `colors` = colors for each observ_dates array. If `None`, then
     phc.cycles(ctype='cor').
 
     `ls` same as above, for linestyle.
@@ -2331,11 +2656,11 @@ def plot_obs(observ_dates=[], legend=[], civcfg=[1, 'm'], civdt=None,
         civdt = _dt.datetime(civdt[0], civdt[1], civdt[2]).date()
     k = len(observ_dates)
     if colors is None:
-        colors = [_phc.cycles(c, 'cor') for c in range(k)]
+        colors = [_phc.cycles(c, "cor") for c in range(k)]
     if ls is None:
-        ls = [_phc.cycles(c, 'ls') for c in range(k)]
+        ls = [_phc.cycles(c, "ls") for c in range(k)]
     if markers is None:
-        mk = [_phc.cycles(c, 'mk') for c in range(k)]
+        mk = [_phc.cycles(c, "mk") for c in range(k)]
     #
     fig, ax = _plt.subplots(figsize=(8, 3))
     ys = _np.linspace(0, 1, len(observ_dates) + 2)
@@ -2345,54 +2670,63 @@ def plot_obs(observ_dates=[], legend=[], civcfg=[1, 'm'], civdt=None,
             if dolines:
                 ax.plot([dt, dt], [0, 1], color=colors[i], ls=ls[i], alpha=0.1)
             if j == 0:
-                ax.scatter([dt], [ys[k-i]], color=colors[i], 
-                    marker=mk[i], s=12, label=legend[i], alpha=alpha)
+                ax.scatter(
+                    [dt],
+                    [ys[k - i]],
+                    color=colors[i],
+                    marker=mk[i],
+                    s=12,
+                    label=legend[i],
+                    alpha=alpha,
+                )
             else:
-                ax.scatter([dt], [ys[k-i]], color=colors[i], 
-                    marker=mk[i], s=12, alpha=alpha)
+                ax.scatter(
+                    [dt], [ys[k - i]], color=colors[i], marker=mk[i], s=12, alpha=alpha
+                )
     for g in graymjds:
-        rect = _mpatches.Rectangle([g[0], 0], g[1]-g[0], 1., ec="gray", 
-            fc='gray', alpha=0.5, zorder=1)
+        rect = _mpatches.Rectangle(
+            [g[0], 0], g[1] - g[0], 1.0, ec="gray", fc="gray", alpha=0.5, zorder=1
+        )
         ax.add_patch(rect)
-    # 
+    #
     flatdataes = [item for sublist in observ_dates for item in sublist]
     mjd0, mjd1 = (_np.min(flatdataes), _np.max(flatdataes))
-    civvals = {'Y': 365, 'M': 30, 'D': 1}
-    extratick = civcfg[0]*civvals[civcfg[1][0].upper()]
+    civvals = {"Y": 365, "M": 30, "D": 1}
+    extratick = civcfg[0] * civvals[civcfg[1][0].upper()]
     ax.set_ylim([0, 1])
     # ax.set_title('Title')
-    ax.legend(fontsize=10, loc='lower left', fancybox=True, scatterpoints=1)
-    ax.set_xlabel('Julian date - 2400000.5')
-    dtticks = _phc.gentkdates(mjd0, mjd1+extratick, civcfg[0], civcfg[1], 
-        dtstart=civdt)
-    mjdticks = [_jdcal.gcal2jd(date.year, date.month, date.day)[1] for date in 
-        dtticks]
+    ax.legend(fontsize=10, loc="lower left", fancybox=True, scatterpoints=1)
+    ax.set_xlabel("Julian date - 2400000.5")
+    dtticks = _phc.gentkdates(
+        mjd0, mjd1 + extratick, civcfg[0], civcfg[1], dtstart=civdt
+    )
+    mjdticks = [_jdcal.gcal2jd(date.year, date.month, date.day)[1] for date in dtticks]
     for pair in zip(dtticks, mjdticks):
         print(pair)
     # ax.plot([mjdticks[-1], mjdticks[-1]], [0, 1], alpha=0)
     # xlim = [mjdticks[0], ax.get_xlim()[-1]]
     if mjdlims is None:
-        xlim = [mjd0, mjd1+extratick]
+        xlim = [mjd0, mjd1 + extratick]
     else:
         xlim = mjdlims
     # print xlim
     ax.minorticks_on()
     # ax.set_xlim(limits)
     ax2 = ax.twiny()
-    ax2.spines['top'].set_position(('axes', 1.1))
+    ax2.spines["top"].set_position(("axes", 1.1))
     ax2.minorticks_on()
-    ax2.set_xlabel('Civil date')
+    ax2.set_xlabel("Civil date")
     dtminticks = _phc.gentkdates(xlim[0], xlim[1], mincivcfg[0], mincivcfg[1])
     i = 1
     while dtticks[0] not in dtminticks:
-        dtminticks = _phc.gentkdates(xlim[0]+i, xlim[1], mincivcfg[0], 
-            mincivcfg[1])
+        dtminticks = _phc.gentkdates(xlim[0] + i, xlim[1], mincivcfg[0], mincivcfg[1])
         i += 1
-    minjdticks = [_jdcal.gcal2jd(date.year, date.month, date.day)[1] for date 
-        in dtminticks]
+    minjdticks = [
+        _jdcal.gcal2jd(date.year, date.month, date.day)[1] for date in dtminticks
+    ]
     ax2.set_xticks(mjdticks)
-    xlabs = [date.strftime('%Y-%m-%d') for date in dtticks]
-    xlabs[1::2] = ['']*len(xlabs[1::2])
+    xlabs = [date.strftime("%Y-%m-%d") for date in dtticks]
+    xlabs[1::2] = [""] * len(xlabs[1::2])
     ax2.set_xticklabels(xlabs)  # , fontsize=10)
     ax2.set_xticks(minjdticks, minor=True)
     # ax2.set_xticklabels([date.strftime("%Y/%M/%d") for date in dtticks])
@@ -2400,16 +2734,15 @@ def plot_obs(observ_dates=[], legend=[], civcfg=[1, 'm'], civdt=None,
     ax.set_xlim(xlim)
     ax2.set_xlim(xlim)
     # ax.xaxis.set_minor_locator(_ML(50))
-    ax.xaxis.set_ticks_position('both')
+    ax.xaxis.set_ticks_position("both")
     ax.xaxis.set_tick_params(length=8, width=1.5)
-    ax.xaxis.set_tick_params(length=6, which='minor')
-    ax2.xaxis.set_tick_params(length=4, which='minor')
+    ax.xaxis.set_tick_params(length=6, which="minor")
+    ax2.xaxis.set_tick_params(length=4, which="minor")
     ax2.xaxis.set_tick_params(length=8, width=1.5)
-    _plt.setp( ax2.xaxis.get_majorticklabels(), rotation=0 )
+    _plt.setp(ax2.xaxis.get_majorticklabels(), rotation=0)
     # ax2.fmt_xdata = mdates.DateFormatter('%Y-%m-%d')
     # fig.autofmt_xdate()
-    _plt.subplots_adjust(left=0.02, right=0.98, top=0.67, bottom=0.16, 
-        hspace=.15)
+    _plt.subplots_adjust(left=0.02, right=0.98, top=0.67, bottom=0.16, hspace=0.15)
     if addsuf is None:
         addsuf = _phc.dtflag()
     # for f in fmt:
@@ -2435,8 +2768,8 @@ def plotMJDdates(spec=None, pol=None, interf=None, limits=None):
     if spec is not None:
         spJD = _np.loadtxt(spec)
         spJD = spJD[:, 0]
-        y = [0. for JD in spJD]
-        ax.plot(spJD, y, marker='d', color='lightgray', ls='')
+        y = [0.0 for JD in spJD]
+        ax.plot(spJD, y, marker="d", color="lightgray", ls="")
         # yerr = [ [1. for JD in spJD], [1. for JD in spJD] ]
         # ax.errorbar(spJD, y, yerr, marker='o', color='blue', ls='')
 
@@ -2444,143 +2777,142 @@ def plotMJDdates(spec=None, pol=None, interf=None, limits=None):
         polJD = _np.genfromtxt(pol, dtype=str)
         polJD = polJD[:, 9]
         polJD = _np.array(polJD, dtype=float) - 2400000.5
-        y = [-.5 for JD in polJD]
-        ax.plot(polJD, y, marker='o', color='gray', ls='')
+        y = [-0.5 for JD in polJD]
+        ax.plot(polJD, y, marker="o", color="gray", ls="")
         # yerr = [ [.5 for JD in polJD], [1.5 for JD in polJD] ]
         # ax.errorbar(polJD, y, yerr, marker='x', color='green', ls='')
 
     if interf is not None:
-        intJD = _np.genfromtxt(interf, dtype=str, delimiter=',', skiprows=1)
+        intJD = _np.genfromtxt(interf, dtype=str, delimiter=",", skiprows=1)
         intJD = _np.array(intJD[:, -2], dtype=float)
-        y = [.5 for JD in intJD]
-        ax.plot(intJD, y, marker='s', color='darkgrey', ls='')
+        y = [0.5 for JD in intJD]
+        ax.plot(intJD, y, marker="s", color="darkgrey", ls="")
         # yerr = [ [1.5 for JD in intJD], [.5 for JD in intJD] ]
         # ax.errorbar(intJD, y, yerr, marker='s', color='red', ls='')
 
-    limits = (56100., 56750.)
+    limits = (56100.0, 56750.0)
     if limits is None:
         mjd0, mjd1 = ax.get_xlim()
     else:
         mjd0, mjd1 = limits
         ax.set_xlim(limits)
-    ticks = _phc.gentkdates(mjd0, mjd1, 3, 'm', dtstart=_dt.datetime(2012, 7,
-        1).date())
-    mjdticks = [_jdcal.gcal2jd(date.year, date.month, date.day)[1] for date in
-                ticks]
+    ticks = _phc.gentkdates(mjd0, mjd1, 3, "m", dtstart=_dt.datetime(2012, 7, 1).date())
+    mjdticks = [_jdcal.gcal2jd(date.year, date.month, date.day)[1] for date in ticks]
     ax2 = ax.twiny()
     ax2.set_xlim(limits)
     ax2.set_xticks(mjdticks)
-    ax2.set_xlabel('Civil date')
+    ax2.set_xlabel("Civil date")
     ax2.set_xticklabels([date.strftime("%d %b %y") for date in ticks])
     _plt.setp(ax2.xaxis.get_majorticklabels(), rotation=45)
     ax.set_yticklabels([])
-    ax.set_xlabel('MJD')
+    ax.set_xlabel("MJD")
     return
 
 
-def plot_gal(ra, dec, addsuf=None, fmt=['png']):
-    """ Plot in "Galatic Coordinates" (i.e., Mollweide projection).
+def plot_gal(ra, dec, addsuf=None, fmt=["png"]):
+    """Plot in "Galatic Coordinates" (i.e., Mollweide projection).
 
     Input: RA and DEC arrays in RADIANS (fraction)
 
-    Output: Saved images """
+    Output: Saved images"""
 
     fig = _plt.figure()  # figsize=(8,6))
     ax = fig.add_subplot(111, projection="mollweide")
-    ax.set_xticklabels(['14h', '16h', '18h', '20h', '22h', '0h', '2h', '4h', 
-        '6h', '8h', '10h'])
+    ax.set_xticklabels(
+        ["14h", "16h", "18h", "20h", "22h", "0h", "2h", "4h", "6h", "8h", "10h"]
+    )
     ax.scatter(ra, dec)
 
     if addsuf is None:
         addsuf = _phc.dtflag()
     for f in fmt:
-        print('# Saved plot_gal{0}.{1}'.format(addsuf, f))
-        _plt.savefig('plot_gal{0}.{1}'.format(addsuf, f), transparent=True)
+        print("# Saved plot_gal{0}.{1}".format(addsuf, f))
+        _plt.savefig("plot_gal{0}.{1}".format(addsuf, f), transparent=True)
     _plt.close()
     return
 
 
 # Filters tools
 def doFilterConvPol(x0, intens, pol, filt):
-    r""" Return the convolved filter total flux for a given flux profile 
+    r"""Return the convolved filter total flux for a given flux profile
     `intens`, with polarized intensities `pol`, at wavelengths `x0`.
 
     where `filt` is the filter curve response (usually in Angstroms).
 
-    Following Ramos (2016), ``intens`` should be multipled by the detector QE 
+    Following Ramos (2016), ``intens`` should be multipled by the detector QE
     curve.
 
-    INPUT: x0 lambda array (**Angstroms**), intens flux array, filter (string, 
+    INPUT: x0 lambda array (**Angstroms**), intens flux array, filter (string,
     uppercase for standard filters)
 
     OUTPUT: *zero point level* (**polarimetry**)
     """
-    fpath = _os.path.join(hdtpath(), 'refs', 'filters', filt+'.dat')
+    fpath = _os.path.join(hdtpath(), "refs", "filters", filt + ".dat")
     fdat = _np.loadtxt(fpath, skiprows=1)
     #
     fdintp = _np.interp(x0, fdat[:, 0], fdat[:, 1], left=0, right=0)
-    return _np.trapz(fdintp*intens*pol, x0)/_np.trapz(fdintp*intens, x0)
+    return _np.trapz(fdintp * intens * pol, x0) / _np.trapz(fdintp * intens, x0)
 
 
 def doFilterConv(x0, y0, filt, zeropt=False):
-    r""" Return the convolved filter total flux for a given flux profile y0,
+    r"""Return the convolved filter total flux for a given flux profile y0,
     at wavelengths x0.
 
     .. math::
 
         \text{zero}_{\rm pt} = \frac{\int F(\lambda) Sp(\lambda)\,d\lambda}
-        {\int F(\lambda)\,d\lambda} 
+        {\int F(\lambda)\,d\lambda}
 
     where :math:`F(\lambda)` is the filter curve response.
 
     The difference from this function to `doFilterConvPol` is that the later
     accepts a intensity curve of the CCD response.
 
-    INPUT: x0 lambda array (**Angstroms**), y0 flux array, filter (string, 
+    INPUT: x0 lambda array (**Angstroms**), y0 flux array, filter (string,
     uppercase for standard filters)
 
-    OUTPUT: summed flux (y0 units; default) or *zero point level* 
+    OUTPUT: summed flux (y0 units; default) or *zero point level*
     """
-    fpath = _os.path.join(hdtpath(), 'refs', 'filters', filt+'.dat')
+    fpath = _os.path.join(hdtpath(), "refs", "filters", filt + ".dat")
     fdat = _np.loadtxt(fpath, skiprows=1)
     #
     fdintp = _np.interp(x0, fdat[:, 0], fdat[:, 1], left=0, right=0)
     if not zeropt:
         return _np.trapz(fdintp * y0, x0)
     else:
-        return _np.trapz(fdintp * y0, x0)/_np.trapz(fdintp, x0)
+        return _np.trapz(fdintp * y0, x0) / _np.trapz(fdintp, x0)
 
 
 def doFilterConvLb(x0, y0, filt, zeropt=False):
-    r""" Return the convolved filter total flux for a given flux profile y0,
+    r"""Return the convolved filter total flux for a given flux profile y0,
     at wavelengths x0.
 
     .. math::
 
         \text{zero}_{\rm pt} = \frac{\int F(\lambda) Sp(\lambda)\,d\lambda}
-        {\int F(\lambda)\,d\lambda} 
+        {\int F(\lambda)\,d\lambda}
 
     where :math:`F(\lambda)` is the filter curve response.
 
     The difference from this function to `doFilterConvPol` is that the later
     accepts a intensity curve of the CCD response.
 
-    INPUT: x0 lambda array (**Angstroms**), y0 flux array, filter (string, 
+    INPUT: x0 lambda array (**Angstroms**), y0 flux array, filter (string,
     uppercase for standard filters)
 
-    OUTPUT: summed flux (y0 units; default) or *zero point level* 
+    OUTPUT: summed flux (y0 units; default) or *zero point level*
     """
-    fpath = _os.path.join(hdtpath(), 'refs', 'filters', filt+'.dat')
+    fpath = _os.path.join(hdtpath(), "refs", "filters", filt + ".dat")
     fdat = _np.loadtxt(fpath, skiprows=1)
     #
     fdintp = _np.interp(x0, fdat[:, 0], fdat[:, 1], left=0, right=0)
     if not zeropt:
         return _np.trapz(x0 * fdintp * y0, x0)
     else:
-        return _np.trapz(x0 *fdintp * y0, x0)/_np.trapz(x0 * fdintp, x0)
+        return _np.trapz(x0 * fdintp * y0, x0) / _np.trapz(x0 * fdintp, x0)
 
 
-def doPlotFilter(obs, filter, fsed2data, pol=False, addsuf=None, fmt=['png']):
+def doPlotFilter(obs, filter, fsed2data, pol=False, addsuf=None, fmt=["png"]):
     """
     obs = integer; filter = single string
 
@@ -2592,12 +2924,12 @@ def doPlotFilter(obs, filter, fsed2data, pol=False, addsuf=None, fmt=['png']):
     else:
         y0 = fsed2data[obs, :, 3] / x0
 
-    fdat = _np.loadtxt('{0}filters/{1}.dat'.format(hdtpath(), filter.lower()),
-                       skiprows=1)
-    fdat[:, 0] /= 10000.
+    fdat = _np.loadtxt(
+        "{0}filters/{1}.dat".format(hdtpath(), filter.lower()), skiprows=1
+    )
+    fdat[:, 0] /= 10000.0
     # interpfunc = interpolate.interp1d(fdat[:,0], fdat[:,1], kind='linear')
-    interpfunc = _interpolate.InterpolatedUnivariateSpline(
-        fdat[:, 0], fdat[:, 1])
+    interpfunc = _interpolate.InterpolatedUnivariateSpline(fdat[:, 0], fdat[:, 1])
 
     idx = _np.where((x0 >= fdat[0, 0]) & (x0 <= fdat[-1, 0]))
     x0 = x0[idx]
@@ -2605,21 +2937,21 @@ def doPlotFilter(obs, filter, fsed2data, pol=False, addsuf=None, fmt=['png']):
     # y = interpfunc(x0) * y0  # /_np.sum( interpfunc(x0) )
 
     fig, ax = _plt.subplots()
-    ax.plot(x0, y0, label='SED')
+    ax.plot(x0, y0, label="SED")
     # ax.plot(fdat[:,0], fdat[:,1], label='Filter')
-    ax.plot(x0, interpfunc(x0) * y0, label='Convolved')
-    ax.plot(fdat[:, 0], fdat[:, 1] * _np.max(y0), label='Filter (eff.)')
+    ax.plot(x0, interpfunc(x0) * y0, label="Convolved")
+    ax.plot(fdat[:, 0], fdat[:, 1] * _np.max(y0), label="Filter (eff.)")
     if addsuf is not None:
         ax.set_title(addsuf)
-    ax.legend(loc='best', fancybox=True, framealpha=0.5)
+    ax.legend(loc="best", fancybox=True, framealpha=0.5)
 
     if addsuf is None:
         addsuf = _phc.dtflag()
         if pol:
-            addsuf += '_pol'
+            addsuf += "_pol"
     for f in fmt:
-        print('# Saved doPlotFilter{0}.{1}'.format(addsuf, f))
-        _plt.savefig('doPlotFilter{0}.{1}'.format(addsuf, f), transparent=True)
+        print("# Saved doPlotFilter{0}.{1}".format(addsuf, f))
+        _plt.savefig("doPlotFilter{0}.{1}".format(addsuf, f), transparent=True)
     _plt.close()
 
     return
@@ -2627,8 +2959,7 @@ def doPlotFilter(obs, filter, fsed2data, pol=False, addsuf=None, fmt=['png']):
 
 def plot_hdt_filters(outname=None):
     "Plot all filters available in PyHdust"
-    filters = _glob( _os.path.join(hdtpath(), 'refs', 'filters', 
-        '*.dat') )
+    filters = _glob(_os.path.join(hdtpath(), "refs", "filters", "*.dat"))
     fig, axs = _plt.subplots(3, 1)
     for f in filters:
         data = _np.loadtxt(f)
@@ -2638,99 +2969,103 @@ def plot_hdt_filters(outname=None):
             i = 1
         else:
             i = 2
-        axs[i].plot(data[:, 0], data[:, 1], label=list(_os.path.split(f))[1].
-            replace('.dat', ''))
+        axs[i].plot(
+            data[:, 0], data[:, 1], label=list(_os.path.split(f))[1].replace(".dat", "")
+        )
     for i in range(len(axs)):
         axs[i].legend(fontsize=6)
-    axs[i].set_xlabel(r'Wavelength ($\AA$)')
+    axs[i].set_xlabel(r"Wavelength ($\AA$)")
     _phc.savefig(fig, figname=outname)
     # print('# Filtres ploted in file {0}'.format(outname))
-    return 
+    return
 
 
-def readphotxdr(xdrfile='kur_ap00k0.xdr', quiet=False):
-    """ doc """
-    f = open(xdrfile, 'rb').read()
+def readphotxdr(xdrfile="kur_ap00k0.xdr", quiet=False):
+    """doc"""
+    f = open(xdrfile, "rb").read()
     ixdr = 0
-    ixdr, arr = _phc.readpck(4, 'l', ixdr, f)
+    ixdr, arr = _phc.readpck(4, "l", ixdr, f)
     _, nlin, nlbd, nmod = arr
 
-    ixdr, _ = _phc.readpck(1, 'l', ixdr, f)
-    ixdr, lbdcentr = _phc.readpck(nlin, 'f', ixdr, f)
+    ixdr, _ = _phc.readpck(1, "l", ixdr, f)
+    ixdr, lbdcentr = _phc.readpck(nlin, "f", ixdr, f)
 
-    ixdr, _ = _phc.readpck(1, 'l', ixdr, f)
-    ixdr, ltemp = _phc.readpck(nmod, 'f', ixdr, f)
+    ixdr, _ = _phc.readpck(1, "l", ixdr, f)
+    ixdr, ltemp = _phc.readpck(nmod, "f", ixdr, f)
 
-    ixdr, _ = _phc.readpck(1, 'l', ixdr, f)
-    ixdr, llogg = _phc.readpck(nmod, 'f', ixdr, f)
+    ixdr, _ = _phc.readpck(1, "l", ixdr, f)
+    ixdr, llogg = _phc.readpck(nmod, "f", ixdr, f)
 
     lambdas = _np.zeros((nlin, nlbd))
     for i in range(nlin):
-        _ = _struct.unpack('>l', f[ixdr:ixdr+ 4])
+        _ = _struct.unpack(">l", f[ixdr : ixdr + 4])
         ixdr += 4
-        istr = '>{0:d}f'.format(nlbd)
-        lambdas[i] = _struct.unpack(istr, f[ixdr:ixdr+ 4*nlbd])
-        ixdr += 4*nlbd
+        istr = ">{0:d}f".format(nlbd)
+        lambdas[i] = _struct.unpack(istr, f[ixdr : ixdr + 4 * nlbd])
+        ixdr += 4 * nlbd
 
     profiles = _np.zeros((nmod, nlin, nlbd))
     for i, j in _itprod(range(nmod), range(nlin)):
-        _ = _struct.unpack('>l', f[ixdr:ixdr+ 4])
+        _ = _struct.unpack(">l", f[ixdr : ixdr + 4])
         ixdr += 4
-        istr = '>{0:d}f'.format(nlbd)
-        profiles[i, j] = _struct.unpack(istr, f[ixdr:ixdr+ 4*nlbd])
-        ixdr += 4*nlbd
+        istr = ">{0:d}f".format(nlbd)
+        profiles[i, j] = _struct.unpack(istr, f[ixdr : ixdr + 4 * nlbd])
+        ixdr += 4 * nlbd
 
     if ixdr == len(f):
         if not quiet:
-            print('# XDR {0} completely read!'.format(xdrfile))
+            print("# XDR {0} completely read!".format(xdrfile))
     else:
-        _warn.warn('# XDR {0} not completely read!\n# length difference is '
-            '{1}'.format(xdrfile, (len(f) - ixdr) / 4 ) )
+        _warn.warn(
+            "# XDR {0} not completely read!\n# length difference is "
+            "{1}".format(xdrfile, (len(f) - ixdr) / 4)
+        )
 
     return lbdcentr, ltemp, llogg, lambdas, profiles
 
+
 # def chkObsLog(path=None, nights=None, badweath=None):
-    # """ Check if there is data for all nights with observations.
+# """ Check if there is data for all nights with observations.
 
-    # If not, check if the night is in the list of night lost due to bad 
-    #     weather.
+# If not, check if the night is in the list of night lost due to bad
+#     weather.
 
-    # If no data and no bad weather info is registered, prints an error.
+# If no data and no bad weather info is registered, prints an error.
 
-    # If the night is included as bad weather and is not in night list, prints
-    # a warning.
-    # """
-    # if path == None:
-    #     path = _os.getcwd()
-    # if nights == None:
-    #     nights = '{0}pyhdust/refs/noites.txt'.format(hdtpath())
-    # lnights = _np.loadtxt(nights, dtype=str)
-    # if badweath == None:
-    #     badweath = '{0}pyhdust/refs/maltempo.txt'.format(hdtpath())
-    # lbadweath = _np.loadtxt(badweath, dtype=str)
-    # for night in lnights:
-    #     if night in lbadweath:
-    #         pass
-    #     elif not _os.path.exists(night):
-    #         print('# ERROR! {0} has no data and was not lost for bad' +\
-    #             'weather!'.format(night))
-    # flds = [fld for fld in _os.listdir('{0}'.format(path)) if \
-    #         _os.path.isdir(_os.path.join('{0}'.format(path), fld))]
-    # for fld in flds:
-    #     if fld not in lnights:
-    #         print('# Warning! Night {0} is not recorded as OPD night!'. \
-    #             format(fld))
-    #         print('# Update the file {0}'.format(nights))
-    # for night in lbadweath:
-    #     if night not in lnights:
-    #         print('# Warning! Bad weather {0} is not recorded as OPD ' +\
-    #             'night!'.format(night))
-    #         print('# Probably it is a spec night.')
-    # return
+# If the night is included as bad weather and is not in night list, prints
+# a warning.
+# """
+# if path == None:
+#     path = _os.getcwd()
+# if nights == None:
+#     nights = '{0}pyhdust/refs/noites.txt'.format(hdtpath())
+# lnights = _np.loadtxt(nights, dtype=str)
+# if badweath == None:
+#     badweath = '{0}pyhdust/refs/maltempo.txt'.format(hdtpath())
+# lbadweath = _np.loadtxt(badweath, dtype=str)
+# for night in lnights:
+#     if night in lbadweath:
+#         pass
+#     elif not _os.path.exists(night):
+#         print('# ERROR! {0} has no data and was not lost for bad' +\
+#             'weather!'.format(night))
+# flds = [fld for fld in _os.listdir('{0}'.format(path)) if \
+#         _os.path.isdir(_os.path.join('{0}'.format(path), fld))]
+# for fld in flds:
+#     if fld not in lnights:
+#         print('# Warning! Night {0} is not recorded as OPD night!'. \
+#             format(fld))
+#         print('# Update the file {0}'.format(nights))
+# for night in lbadweath:
+#     if night not in lnights:
+#         print('# Warning! Bad weather {0} is not recorded as OPD ' +\
+#             'night!'.format(night))
+#         print('# Probably it is a spec night.')
+# return
 
 
 def tefflum_dJN(s, b):
-    """ Calculate the Teff and Lum from *s* and *b* variables from de Jager & 
+    """Calculate the Teff and Lum from *s* and *b* variables from de Jager &
     Niewuwenhuijzen (1987).
 
     return log10_T, log10_L (in Solar and Kelvin units)
@@ -2761,7 +3096,7 @@ def tefflum_dJN(s, b):
     Ia+        0.0
     ========== ========
 
-    The calcs are made based on Chebyshev polynomials. 
+    The calcs are made based on Chebyshev polynomials.
     """
     cij = [
         [+3.82573, -2.13868, -0.46357, +0.02076, -0.11937],
@@ -2769,7 +3104,8 @@ def tefflum_dJN(s, b):
         [+1.05165, +0.42330, -0.94379, -0.07438],
         [-0.01663, -0.20024, -0.18552],
         [-0.07576, -0.10934],
-        [+0.11008]]
+        [+0.11008],
+    ]
 
     dij = [
         [+3.96105, +0.03165, -0.02963, +0.01307, -0.01172],
@@ -2777,46 +3113,47 @@ def tefflum_dJN(s, b):
         [+0.14370, -0.00977, -0.03265, +0.01649],
         [+0.00791, +0.00076, -0.03006],
         [+0.00723, -0.02621],
-        [+0.02755]]
+        [+0.02755],
+    ]
 
     def Tk(k, x):
-        if not isinstance( k, ( int ) ):
-            _warn.warn('# Wrong Tk call! Invalid k')
+        if not isinstance(k, (int)):
+            _warn.warn("# Wrong Tk call! Invalid k")
             return
         if k == 0:
             return 1
         if k == 1:
             return x
-        return 2*x*Tk(k-1, x) - Tk(k-2, x)
+        return 2 * x * Tk(k - 1, x) - Tk(k - 2, x)
 
     logL = 0
     for n in range(5):
-        for i in range(n+1):
-            j = n-i
-            logL += cij[i][j]*Tk(i, (s-4.25)/4.25)*Tk(j, (b-2.5)/2.5)
+        for i in range(n + 1):
+            j = n - i
+            logL += cij[i][j] * Tk(i, (s - 4.25) / 4.25) * Tk(j, (b - 2.5) / 2.5)
     logT = 0
     for n in range(5):
-        for i in range(n+1):
-            j = n-i
-            logT += dij[i][j]*Tk(i, (s-4.25)/4.25)*Tk(j, (b-2.5)/2.5)
+        for i in range(n + 1):
+            j = n - i
+            logT += dij[i][j] * Tk(i, (s - 4.25) / 4.25) * Tk(j, (b - 2.5) / 2.5)
     return logT, logL
 
 
-def masslum_OB(logL, classL='V'):
-    """ Mass determination based on luminosity and class (Claret 2004). 
+def masslum_OB(logL, classL="V"):
+    """Mass determination based on luminosity and class (Claret 2004).
 
     Warning! Valid only for late O to late B range (ie., Be stars).
 
     return log10_M (solar units)
     """
     cs = [0.1997, 0.0844, 0.0312]
-    if classL.upper() == 'IV':
+    if classL.upper() == "IV":
         cs = [0.2055, 0.0746, 0.0322]
-    elif classL.upper() == 'III':
+    elif classL.upper() == "III":
         cs = [0.2084, 0.0643, 0.0325]
-    elif classL.upper() != 'V':
+    elif classL.upper() != "V":
         _warn.warn('# Invalid "classL". Assuming "V" for masslum_OB...')
-    return cs[0] + cs[1]*logL + cs[2]*logL**2
+    return cs[0] + cs[1] * logL + cs[2] * logL**2
 
 
 # MAIN ###
