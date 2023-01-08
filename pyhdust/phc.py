@@ -1891,7 +1891,10 @@ def lawkep(M=None, m=None, P=None, a=None):
     """
     Gc = G.cgs
     pi2_4 = 4 * _np.pi**2
-    if M is None:
+    if sum([v is None for v in (M, m, P, a)]):
+        print("# Wrong call of phc.lawkep! Only one `None` argument is allowed.")
+        return None
+    elif M is None:
         m *= Msun.cgs
         P *= yr.cgs
         a *= au.cgs

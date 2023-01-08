@@ -63,7 +63,7 @@ if sys.argv[-1] == "publish":
 
 setup(
     name="pyhdust",
-    version="1.5.7",
+    version="1.5.7-1",
     description=(
         "Analysis tools for multi-technique astronomical data and " "hdust models"
     ),
@@ -79,7 +79,10 @@ setup(
     ],
     packages=find_packages(exclude=["build", "docs", "*egg*", "dist", "scripts"]),
     # include=recfiles('refs'),
-    package_data={"pyhdust": recfiles("pyhdust", "refs") + ["LICENSE", "README.rst"]},
+    package_data={
+        "pyhdust": recfiles("pyhdust", "refs")
+        + ["LICENSE", "README.rst", "requirements.txt"]
+    },
     include_package_data=True,
     # data_files = [('refs/*', 'stmodels/*')],
     # package_dir = {'../'},

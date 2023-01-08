@@ -7,6 +7,7 @@ History
 v1.5.7 @ 2022-11-17
 --------------------
 - New format!
+- Post1: fixed "requirements.txt" in ``setup.py``
 
 v1.5.5 @ 2022-03-xx
 --------------------
