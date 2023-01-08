@@ -5,8 +5,8 @@ import os
 import sys
 
 
-if sys.version_info[:2] < (3, 3):
-    raise RuntimeError("Python version >= 3.4 required.")
+# if sys.version_info[:2] < (3, 3):
+#     raise RuntimeError("Python version >= 3.4 required.")
 
 try:
     from setuptools import setup, find_packages
@@ -38,8 +38,11 @@ except ImportError:
                 packages.update(find_packages(dir, module_name))
         return packages
 
+# cwd = os.path.dirname(os.path.abspath(__file__))
+
 
 def rd(filename):
+    # f = open(os.path.join(cwd, filename))
     f = open(filename)
     r = f.read()
     f.close()
@@ -63,7 +66,7 @@ if sys.argv[-1] == "publish":
 
 setup(
     name="pyhdust",
-    version="1.5.7-1",
+    version="1.5.8",
     description=(
         "Analysis tools for multi-technique astronomical data and " "hdust models"
     ),
@@ -81,14 +84,14 @@ setup(
     # include=recfiles('refs'),
     package_data={
         "pyhdust": recfiles("pyhdust", "refs")
-        + ["LICENSE", "README.rst", "requirements.txt"]
+        + ["LICENSE", "README.rst"]
     },
     include_package_data=True,
     # data_files = [('refs/*', 'stmodels/*')],
     # package_dir = {'../'},
     zip_safe=False,
-    install_requires=rd("requirements.txt").split("\n"),
-    long_description=rd("README.rst"),
+    python_requires='>=3.4',
+    install_requires=["numpy>=1.18.2", "six<=1.16.0", "astropy<=5.1.1", "python-dateutil<=2.8.1"],
     classifiers=[
         # "Development Status :: 4 - Beta",
         "Development Status :: 5 - Production/Stable",

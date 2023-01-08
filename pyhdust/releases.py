@@ -4,10 +4,15 @@
 
 History
 ============
+v1.5.8 @ 2023-01-08
+--------------------
+- fixed "requirements.txt" in ``setup.py``
+- moved "roadmap.TODO" to root folder
+
 v1.5.7 @ 2022-11-17
 --------------------
 - New format!
-- Post1: fixed "requirements.txt" in ``setup.py``
+- Post++: try to fix "requirements.txt" in ``setup.py``
 
 v1.5.5 @ 2022-03-xx
 --------------------
@@ -161,6 +166,15 @@ __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
 
 
+def rd_reqs(reqsfile):
+    # f = open(os.path.join(cwd, filename))
+    f = open(reqsfile)
+    r = f.read()
+    f.close()
+    r = [req for req in r.split('\n') if req != ""]
+    return '    install_requires=["'+'", "'.join(r)+'"],\n'
+
+
 def setRelease():
     """Read the version values from __init__.py and write it to the setup.py
     and doc files."""
@@ -179,6 +193,9 @@ def setRelease():
     else:
         oldver = verline.split('"')[1]
     lines[i] = lines[i].replace(oldver, str(__version__))
+    i = [lines.index(x) for x in lines if x.find("install_requires=") > -1][0]
+    reqs = rd_reqs("requirements.txt")
+    lines[i] = reqs
     f0 = open(os.path.join(os.path.split(hdtpath()[:-1])[0], "setup.py"), "w")
     f0.writelines(lines)
     f0.close()
