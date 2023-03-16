@@ -171,8 +171,8 @@ def rd_reqs(reqsfile):
     f = open(reqsfile)
     r = f.read()
     f.close()
-    r = [req for req in r.split('\n') if req != ""]
-    return '    install_requires=["'+'", "'.join(r)+'"],\n'
+    r = [req for req in r.split("\n") if req != ""]
+    return '    install_requires=["' + '", "'.join(r) + '"],\n'
 
 
 def setRelease():
@@ -182,22 +182,26 @@ def setRelease():
     import re
     from pyhdust import __version__, hdtpath
 
+    init = open(os.path.join(hdtpath(), "__init__.py")).read()
+    setup = open(os.path.join(os.path.split(hdtpath()[:-1])[0], "setup.py")).read()
+    reqfile = open(
+        os.path.join(os.path.split(hdtpath()[:-1])[0], "requirements.txt")
+    ).read()
     #
-    f0 = open(os.path.join(os.path.split(hdtpath()[:-1])[0], "setup.py"))
-    lines = f0.readlines()
-    f0.close()
-    i = [lines.index(x) for x in lines if x.find("version=") > -1][0]
-    verline = lines[i]
-    if len(verline.split("'")) == 3:
-        oldver = verline.split("'")[1]
-    else:
-        oldver = verline.split('"')[1]
-    lines[i] = lines[i].replace(oldver, str(__version__))
-    i = [lines.index(x) for x in lines if x.find("install_requires=") > -1][0]
-    reqs = rd_reqs("requirements.txt")
-    lines[i] = reqs
+    in_rule = r"__version__\s{0,}=\s{0,}[\"|'](.*)[\"|']"
+    set_rule = r"(version\s{0,}=\s{0,}[\"|'])(.*)([\"|'])"
+    new_ver = re.findall(in_rule, init)[0]
+    setup = re.sub(set_rule, rf"\g<1>{new_ver}\g<3>", setup)
+    #
+    reqs = reqfile.split()
+    reqs = '", "'.join(reqs)
+    reqs = f'"{reqs}"'
+    req_rule = r"(install_requires=\[)(.*?)(\])"
+    old_reqs = re.findall(req_rule, setup, re.DOTALL)[0][1]
+    setup = setup.replace(old_reqs, reqs)
+    #
     f0 = open(os.path.join(os.path.split(hdtpath()[:-1])[0], "setup.py"), "w")
-    f0.writelines(lines)
+    f0.writelines(setup)
     f0.close()
     print("# ../setup.py file updated!")
     #
@@ -214,14 +218,6 @@ def setRelease():
     print("# docs/index.rst file updated!")
     os.chdir(os.path.join(os.path.split(hdtpath()[:-1])[0], "docs"))
     os.system("make html")
-    # os.system('rsync -rP _build/html/ astroweb:/www/moser/www/doc')
-    # os.system('rsync -rP _build/html/ /data/Dropbox/Public/doc')
-    # print('# From version {0} to {1}'.format(oldver, __version__))
-    # os.system(
-    # 'firefox https://dl.dropboxusercontent.com/u/6569986/doc/index.html &')
-    # os.chdir('../..')
-    # os.system('git push')
-    #  os.system('disown')
     return
 
 
