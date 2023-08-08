@@ -1594,7 +1594,7 @@ def civil_ticks(
     return ax2
 
 
-def savefig(fig, figname=None, fmt=["png"], keeppt=False, dpi=80, transp=True):
+def savefig(fig, figname=None, fmt=["png"], keeppt=False, dpi=150, transp=True):
     """Standard way of saving a figure in PyHdust."""
     if figname is None or figname == "":
         figname = dtflag(ms=True)

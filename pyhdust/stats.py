@@ -75,7 +75,7 @@ def cdf(x, xlim=None, savefig=False):
     ax.set_ylim([0, 1])
     if savefig:
         _phc.savefig(fig)  # figname='outname')
-    return
+    return fig, ax
 
 
 def means(inarr, wtharr=None, quiet=False):
