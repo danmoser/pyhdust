@@ -8,4 +8,5 @@ build:
       - pip install -r requirements.txt
       - python3 setup.py install
 # More at https://docs.readthedocs.io/en/stable/build-customization.html
+# https://docs.readthedocs.io/en/stable/config-file/v2.html
 # Warning: readthedocs still uses sphinx 1.8.6 as of Nov2022

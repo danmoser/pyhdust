@@ -328,21 +328,21 @@ def createBAsed(
     WARNING: The file names must be in this format:
     `mod01_PLn3.5_sig0.00_h072_Rd000.0_Be_M14.60_ob1.45_H0.77_Z0.014_bE_Ell`
 
-    | The file structure:
-    | -n_quantities, n_lbd, n_models,
-    | -n_qt_vals1, n_qt_vals2, .. n_qt_valsn
-    | -quantities values =  M, ob(W), Z, H, sig, Rd, h, *n*, cos(i).
-    | -(Unique) lbd array
-    | -Loop:
-    |   * model values
-    |   * model SED
+    The file structure:
 
-    | Definitions:
-    | -photospheric models: sig0 = 0.00
-    | -Parametric disk model default (`param` == True)
-    | -VDD-ST models: n excluded (alpha and R0 fixed. Confirm?)
-    | -The flux will be given in ergs/s/um2/um. If ignorelum==True, the usual
-    |   F_lbda/F_bol unit will be given.
+    -n_quantities, n_lbd, n_models,
+    -n_qt_vals1, n_qt_vals2, .. n_qt_valsn
+    -quantities values =  M, ob(W), Z, H, sig, Rd, h, *n*, cos(i).
+    -(Unique) lbd array
+    -Loop: model values
+    -Loop: model SED
+
+    Definitions:
+
+    - photospheric models: sig0 = 0.00
+    - Parametric disk model default (`param` == True)
+    - VDD-ST models: n excluded (alpha and R0 fixed. Confirm?)
+    - The flux will be given in ergs/s/um2/um. If ignorelum==True, the usual F_lbda/F_bol unit will be given.
 
     Since the grid is not symmetric, there is no index to jump directly to the
     desired model. So the suggestion is to use the index matrix, or read the
@@ -350,17 +350,18 @@ def createBAsed(
 
     :Example:
 
-        def genxdr(xdrname='PL.xdr', param=True, pol=False):
-            fs2l = glob('fullsed/*.sed2')
-            print('# Using {0} as reference!'.format(fs2l[0]))
-            lbdarr = hdt.readfullsed2(fs2l[0])
-            lbdarr = lbdarr[0, :, 2]
-            nm, listpar = bat.fsedList(fs2l)
-            bat.createBAsed(fs2l, xdrname, lbdarr, param=param, savetxt=False,
-                pol=pol, saveextra=xdrname.replace('xdr', 'txt'))
-        return
+        >>> def genxdr(xdrname='PL.xdr', param=True, pol=False):
+        >>>     fs2l = glob('fullsed/*.sed2')
+        >>>     print('# Using {0} as reference!'.format(fs2l[0]))
+        >>>     lbdarr = hdt.readfullsed2(fs2l[0])
+        >>>     lbdarr = lbdarr[0, :, 2]
+        >>>     nm, listpar = bat.fsedList(fs2l)
+        >>>     bat.createBAsed(fs2l, xdrname, lbdarr, param=param, savetxt=False,
+        >>>         pol=pol, saveextra=xdrname.replace('xdr', 'txt'))
+        >>> return
+        >>> 
+        >>> genxdr(xdrname='Yudin_PL.xdr')
 
-        genxdr(xdrname='Yudin_PL.xdr')
     """
     fsedlist.sort()
     nq = 9

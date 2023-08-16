@@ -10,17 +10,15 @@ import os as _os
 import re as _re
 import numpy as _np
 from pyhdust import hdtpath as _hdtpath
-from scipy.interpolate import griddata as _griddata
 import pyhdust.phc as _phc
 import pyhdust.spectools as _spt
 import tarfile as _tarfile
 import warnings as _warn
 
-# try:
-#     import matplotlib.pyplot as _plt
-#     from scipy import interpolate as _interpolate
-# except:
-#     print('# Warning! matplotlib and/or scipy module not installed!!!')
+try:
+    from scipy.interpolate import griddata as _griddata
+except ImportError:
+    print('# Warning! scipy module not installed!!!')
 
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
