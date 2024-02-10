@@ -60,7 +60,7 @@ if sys.argv[-1] == "publish":
 
 setup(
     name="pyhdust",
-    version="1.5.9-1",
+    version="1.5.9-2",
     description=(
         "Analysis tools for multi-technique astronomical data and hdust models"
     ),
@@ -82,7 +82,12 @@ setup(
     # package_dir = {'../'},
     zip_safe=False,
     python_requires=">=3.6",
-    install_requires=["numpy>=1.18.2", "six<=1.16.0", "astropy<=5.1.1", "python-dateutil<=2.8.1"],
+    install_requires=[
+        "numpy>=1.18.2",
+        "six<=1.16.0",
+        "astropy<=5.1.1",
+        "python-dateutil<=2.8.1",
+    ],
     long_description=rd("README.rst"),
     classifiers=[
         # "Development Status :: 4 - Beta",

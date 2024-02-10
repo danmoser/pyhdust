@@ -560,7 +560,7 @@ def convnorm(x, arr, pattern):
         x = _np.linspace(x0[0], x0[-1], len(x0) - 1)
         pattern = _np.interp(x, x0, pattern0)
     dx = (x[-1] - x[0]) / (len(x) - 1.0)
-    cut = len(x) / 2
+    cut = len(x) // 2
     return _np.convolve(pattern, arr)[cut:-cut] * dx
 
 
