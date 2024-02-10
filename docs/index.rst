@@ -4,12 +4,11 @@ Welcome to **pyhdust** documentation!
 =============================================================
 **Analysis tools for multi-technique astronomical data and** *hdust* **models**. About the *hdust* code, see Carciofi & Bjorkman (`2006 <http://adsabs.harvard.edu/abs/2006ApJ...639.1081C>`_, `2008 <http://adsabs.harvard.edu/abs/2008ApJ...684.1374C>`_).
 
-Pyhdust is currently at **version 1.5.10**.
-
-Package contents:
+Pyhdust is currently at **version 1.5.10-1**.
 
 .. toctree::
     :maxdepth: 2
+    :caption: Package contents:
 
     pyhdust
     bcd
