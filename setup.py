@@ -60,7 +60,7 @@ if sys.argv[-1] == "publish":
 
 setup(
     name="pyhdust",
-    version="1.5.9-2",
+    version="1.5.10",
     description=(
         "Analysis tools for multi-technique astronomical data and hdust models"
     ),
@@ -87,6 +87,7 @@ setup(
         "six<=1.16.0",
         "astropy<=5.1.1",
         "python-dateutil<=2.8.1",
+        "sphinx-rtd-theme",
     ],
     long_description=rd("README.rst"),
     classifiers=[
