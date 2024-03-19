@@ -4,10 +4,12 @@ Welcome to **pyhdust** documentation!
 =============================================================
 **Analysis tools for multi-technique astronomical data and** *hdust* **models**. About the *hdust* code, see Carciofi & Bjorkman (`2006 <http://adsabs.harvard.edu/abs/2006ApJ...639.1081C>`_, `2008 <http://adsabs.harvard.edu/abs/2008ApJ...684.1374C>`_).
 
-Pyhdust is currently at **version 1.5.10-1**.
+Pyhdust is currently at **version 1.5.11**.
+
+**pyhdust** should be independent of plataform (Linux, Mac, Windows) and compatible with any version of Python (3.6+).
 
 .. toctree::
-    :maxdepth: 2
+    :titlesonly:
     :caption: Package contents:
 
     pyhdust
@@ -30,9 +32,6 @@ Pyhdust is currently at **version 1.5.10-1**.
     stats
     tabulate
     triangle
-
-**pyhdust** should be independent of plataform (Linux, Mac, Windows) and compatible with any version of Python (3.6+).
-
 
 How to install/uninstall
 --------------------------
@@ -133,10 +132,9 @@ The code is free, available under the terms of the `GNU GPL v3.0 license`_.
 .. _GNU GPL v3.0 license:
 	https://github.com/danmoser/pyhdust/blob/master/LICENSE
 
-
 .. raw:: html
 
     <a href="http://github.com/danmoser/pyhdust/" target="_blank"><img
     style="position: fixed; top: 0; right: 0; border: 0;"
-    src="http://s3.amazonaws.com/github/ribbons/forkme_right_orange_ff7600.png"
+    src="https://github.blog/wp-content/uploads/2008/12/forkme_right_orange_ff7600.png"
     alt="Fork me on GitHub"></a>
