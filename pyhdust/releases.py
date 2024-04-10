@@ -4,6 +4,11 @@
 
 History
 ============
+v1.5.12 @ 2024-04-10
+---------------------
+- oifits compatible w/ Python3.8+
+- pytest structure
+
 v1.5.8 @ 2023-01-08
 --------------------
 - fixed "requirements.txt" in ``setup.py``
