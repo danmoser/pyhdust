@@ -23,10 +23,10 @@ jobs:
       # You can test your matrix by printing the current Python version
       - name: Install dependencies
         run: |
-        python -c "import sys; print(sys.version)"
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        python setup.py install
+          python -c "import sys; print(sys.version)"
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          python setup.py install
       - name: Test with pytest
         run: |
           pip install pytest pytest-cov
