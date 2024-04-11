@@ -12,3 +12,6 @@ import pyhdust.singscat as sst
 import pyhdust.spectools as spt
 import pyhdust.stats as stt
 
+
+def test_dummy():
+    pass
