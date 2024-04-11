@@ -18,25 +18,39 @@ __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
 
 
-class MyParser(ArgumentParser): 
+class MyParser(ArgumentParser):
     def error(self, message):
-        sys.stderr.write('# ERROR! %s\n' % message)
+        sys.stderr.write("# ERROR! %s\n" % message)
         self.print_help()
         sys.exit(2)
 
 
 parser = MyParser(description=__doc__)
-parser.add_argument('--version', action='version', 
-    version='%(prog)s {0}'.format(__version__))
-parser.add_argument("-n", action="store", dest="n", 
-    help=("Number of cores to be used [default: %(default)s]"), 
-    type=int, default=2)
+parser.add_argument(
+    "--version", action="version", version="%(prog)s {0}".format(__version__)
+)
+parser.add_argument(
+    "-n",
+    action="store",
+    dest="n",
+    help=("Number of cores to be used [default: %(default)s]"),
+    type=int,
+    default=2,
+)
 
-group2 = parser.add_argument_group('other arguments')
-group2.add_argument("-c", "--check", action="store_true", dest="chk", 
-    help=("If this flag is enabled, it does not make new compressed files. It "
+group2 = parser.add_argument_group("other arguments")
+group2.add_argument(
+    "-c",
+    "--check",
+    action="store_true",
+    dest="chk",
+    help=(
+        "If this flag is enabled, it does not make new compressed files. It "
         "will only removed the *.map* file if the "
-        "*.map.bz2 file exists"), default=False)
+        "*.map.bz2 file exists"
+    ),
+    default=False,
+)
 
 args = parser.parse_args()
 
@@ -44,23 +58,23 @@ args = parser.parse_args()
 def compact(fp):
     if os.path.exists(fp):
         # print('# Creating '+fpnew)
-        fpnew = fp+'.bz2'
+        fpnew = fp + ".bz2"
         # fpnew = fp+'.gz'
         # with gzip.open(fpnew, 'wb') as fout:
-        with bz2.BZ2File(fpnew, 'wb', compresslevel=1) as fout:
-            fout.write(open(fp, 'rb').read())
+        with bz2.BZ2File(fpnew, "wb", compresslevel=1) as fout:
+            fout.write(open(fp, "rb").read())
         if os.path.exists(fpnew):
             if os.path.getsize(fpnew) > 40000:
                 os.remove(fp)
-        print('# Processed '+fp)
+        print("# Processed " + fp)
         return 0
     else:
-        print('# {0} was not found!'.format(fp))
+        print("# {0} was not found!".format(fp))
         return 1
 
 
-if __name__ == '__main__':
-    extensions = ['.tau', '.map']
+if __name__ == "__main__":
+    extensions = [".tau", ".map"]
 
     path = "."
     if len(sys.argv) == 2:
@@ -75,18 +89,18 @@ if __name__ == '__main__':
                 if not args.chk:
                     clist.append(fp)
                 else:
-                    fpnew = fp+'.bz2'
+                    fpnew = fp + ".bz2"
                     if os.path.exists(fpnew):
                         if os.path.getsize(fpnew) > 40000:
                             os.remove(fp)
-                            print('# Removing '+fp)
+                            print("# Removing " + fp)
 
     if not args.chk and args.n > 1:
         pool = Pool(processes=args.n)
         # for result in pool.imap_unordered(compact, clist):
         result = pool.map(compact, clist)
-        print('# DONE!')
+        print("# DONE!")
     if not args.chk and args.n == 1:
         for c in clist:
             compact(c)
-        print('# DONE!')
+        print("# DONE!")

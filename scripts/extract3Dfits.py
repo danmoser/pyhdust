@@ -7,28 +7,30 @@
 import sys
 from argparse import ArgumentParser
 import os
-import pyfits as pf
+import astropy.io.fits as pf
 
-__version__ = "0.91"
+__version__ = "0.92"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
 
 
-class MyParser(ArgumentParser): 
+class MyParser(ArgumentParser):
     def error(self, message):
-        sys.stderr.write('# ERROR! %s\n' % message)
+        sys.stderr.write("# ERROR! %s\n" % message)
         self.print_help()
         sys.exit(2)
 
+
 parser = MyParser(description=__doc__)
-parser.add_argument('--version', action='version', 
-    version='%(prog)s {0}'.format(__version__))
+parser.add_argument(
+    "--version", action="version", version="%(prog)s {0}".format(__version__)
+)
 parser.add_argument("INPUT", help=("Filename of the 3D FITS cube"), type=str)
 
 args = parser.parse_args()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     fname = args.INPUT
     fits = pf.open(fname)
@@ -39,6 +41,7 @@ if __name__ == '__main__':
         hdulist[0].header = fits[0].header
         path, oname = os.path.split(fname)
         pref, ext = os.path.splitext(oname)
-        hdu.writeto(os.path.join(path, pref+"_{0:04d}".format(i)+ext), 
-            overwrite=True)
-    print('# Saved {0} 2D images from {1}'.format(nimgs, oname))
+        hdu.writeto(
+            os.path.join(path, pref + "_{0:04d}".format(i) + ext), overwrite=True
+        )
+    print("# Saved {0} 2D images from {1}".format(nimgs, oname))
