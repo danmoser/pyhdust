@@ -4,7 +4,10 @@ Welcome to **pyhdust** documentation!
 =============================================================
 **Analysis tools for multi-technique astronomical data and** *hdust* **models**. About the *hdust* code, see Carciofi & Bjorkman (`2006 <http://adsabs.harvard.edu/abs/2006ApJ...639.1081C>`_, `2008 <http://adsabs.harvard.edu/abs/2008ApJ...684.1374C>`_).
 
-Pyhdust is currently at **version 1.5.12-1**.
+Pyhdust is currently at **version 1.5.12-1**. |Tests| 
+
+.. |Tests| image:: https://github.com/danmoser/pyhdust/actions/workflows/main.yaml/badge.svg
+   :target: https://github.com/danmoser/pyhdust/actions/workflows/main.yaml
 
 **pyhdust** should be independent of plataform (Linux, Mac, Windows) and compatible with any version of Python (3.6+).
 

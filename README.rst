@@ -2,6 +2,11 @@ pyhdust
 ========
 **Analysis tools for multi-technique astronomical data and** *hdust* **models**.
 
+|Tests| 
+
+.. |Tests| image:: https://github.com/danmoser/pyhdust/actions/workflows/main.yaml/badge.svg
+   :target: https://github.com/danmoser/pyhdust/actions/workflows/main.yaml
+
 Full documentation at `pyhdust.readthedocs.io <http://pyhdust.readthedocs.io>`_.
 
 About *hdust* code: Carciofi & Bjorkman (`2006 <http://adsabs.harvard.edu/abs/2006ApJ...639.1081C>`_, `2008 <http://adsabs.harvard.edu/abs/2008ApJ...684.1374C>`_).
