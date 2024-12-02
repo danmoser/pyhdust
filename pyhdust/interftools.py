@@ -2022,14 +2022,14 @@ def plot_phi3_res(
         ax.set_xlim(xlim)
     # ymax = _np.max(_np.abs(ax5.get_ylim()))
     # ax5.set_ylim([-1.05 * ymax, 1.05 * ymax])
-    ax.set_xlabel("B$_{proj}$/$\lambda$")
-    ax.set_ylabel("$\phi_{123}$ (deg.)")
+    ax.set_xlabel(r"B$_{proj}$/$\lambda$")
+    ax.set_ylabel(r"$\phi_{123}$ (deg.)")
     ax.grid(b=True, linestyle=":", alpha=alp)
     ax2.yaxis.tick_right()
     ax2.yaxis.set_label_position("right")
     ax2.set_ylim([-6, 6])
-    ax2.set_xlabel("B$_{proj}$/$\lambda$")
-    ax2.set_ylabel("$\phi_{123}$(data-mod)/err")
+    ax2.set_xlabel(r"B$_{proj}$/$\lambda$")
+    ax2.set_ylabel(r"$\phi_{123}$(data-mod)/err")
     ax2.grid(b=True, linestyle=":", alpha=alp)
     return ax, ax2
 
@@ -2387,7 +2387,7 @@ def plot_uv_old(
         zorder=1,
     )
     ax.plot([-y, y], [-x, x], color="gray", ls="--")
-    ax.set_ylabel("B$_{proj}$/$\lambda$")
+    ax.set_ylabel(r"B$_{proj}$/$\lambda$")
     # ax2 = ax.twiny()
     if xlim is not None:
         ax.set_xlim(xlim)
@@ -2443,7 +2443,7 @@ def plot_pionier_old(
     # ax1.xaxis.tick_top()
     # ax1.xaxis.set_major_formatter(mtick.FormatStrFormatter('%.2e'))
     # names = list(_np.unique(names))
-    ax1.set_ylabel("B$_{proj}$/$\lambda$")
+    ax1.set_ylabel(r"B$_{proj}$/$\lambda$")
     ax1.axis("equal")
     _plt.grid(b=True, linestyle=":", alpha=alp)
     # if legend: ax1.legend(prop={'size':8},numpoints=1,bbox_to_
@@ -2694,11 +2694,11 @@ def plot_pionier_old(
     ymax = _np.max(_np.abs(ax5.get_ylim()))
     ax5.set_ylim([-1.05 * ymax, 1.05 * ymax])
     ax6.set_ylim([-1.05 * ymax, 1.05 * ymax])
-    ax5.set_xlabel("B$_{proj}$/$\lambda$")
-    ax5.set_ylabel("$\phi_{123}$ (deg.)")
+    ax5.set_xlabel(r"B$_{proj}$/$\lambda$")
+    ax5.set_ylabel(r"$\phi_{123}$ (deg.)")
     ax5.grid(b=True, linestyle=":", alpha=alp)
-    ax6.set_xlabel("$PA$ (deg.)")
-    ax6.set_ylabel("$\phi_{123}$ (deg.)")
+    ax6.set_xlabel(r"$PA$ (deg.)")
+    ax6.set_ylabel(r"$\phi_{123}$ (deg.)")
     ax6.grid(b=True, linestyle=":", alpha=alp)
     # SAVING
     dir, name = _phc.trimpathname(ffile)
@@ -2882,7 +2882,7 @@ def plot_oifits(
         )
         ax3.set_ylim(yrange)
         ax3.set_xlim(xlim)
-        ax3.set_ylabel("$\phi$ (deg.)")
+        ax3.set_ylabel(r"$\phi$ (deg.)")
         names.append(vis.target.target)
         names = list(_np.unique(names))
         # title = names.pop()
@@ -2920,8 +2920,8 @@ def plot_oifits(
         ax5.set_ylim(yrange)
         names.append(t3.target.target)
         names = list(_np.unique(names))
-    ax5.set_ylabel("Closure $\phi$ (deg.)")
-    ax5.set_xlabel("Wavelength ($\mu$m)")
+    ax5.set_ylabel(r"Closure $\phi$ (deg.)")
+    ax5.set_xlabel(r"Wavelength ($\mu$m)")
     _plt.setp(ax5.xaxis.get_majorticklabels(), rotation=-35)
     _plt.grid(b=True, linestyle=":", alpha=alp)
     # ax4 = visibilities, LEFT COLUMN
@@ -2983,7 +2983,7 @@ def plot_oifits(
             colorid = _np.mod(colorid + 1, len(colors))
             # [-u,u] = W > E
             # [u,-u] = E < W
-        ax1.set_xlabel("Wavelength ($\mu$m)")
+        ax1.set_xlabel(r"Wavelength ($\mu$m)")
         ax1.set_xlim(xlim)
         ax1.set_ylabel("Norm. flux")
         _plt.setp(ax1.xaxis.get_majorticklabels(), rotation=-35)
@@ -3081,7 +3081,7 @@ def plot_pionier_res(
     # ax1.xaxis.tick_top()
     # ax1.xaxis.set_major_formatter(mtick.FormatStrFormatter('%.2e'))
     # names = list(_np.unique(names))
-    ax1.set_ylabel("B$_{proj}$/$\lambda$")
+    ax1.set_ylabel(r"B$_{proj}$/$\lambda$")
     ax1.axis("equal")
     _plt.grid(b=True, linestyle=":", alpha=alp)
     # if legend: ax1.legend(prop={'size':8},numpoints=1,bbox_to_anchor=(-0.25,
@@ -3434,13 +3434,13 @@ def plot_pionier_res(
     ymax = _np.max(_np.abs(ax5.get_ylim()))
     ax5.set_ylim([-1.05 * ymax, 1.05 * ymax])
     ax6.set_ylim([-6, 6])
-    ax5.set_xlabel("B$_{proj}$/$\lambda$")
-    ax5.set_ylabel("$\phi_{123}$ (deg.)")
+    ax5.set_xlabel(r"B$_{proj}$/$\lambda$")
+    ax5.set_ylabel(r"$\phi_{123}$ (deg.)")
     if xlim is not None:
         ax5.set_xlim(xlim)
     ax5.grid(b=True, linestyle=":", alpha=alp)
-    ax6.set_xlabel("B$_{proj}$/$\lambda$")
-    ax6.set_ylabel("$\phi_{123}$(data-mod)/err")
+    ax6.set_xlabel(r"B$_{proj}$/$\lambda$")
+    ax6.set_ylabel(r"$\phi_{123}$(data-mod)/err")
     if xlim is not None:
         ax6.set_xlim(xlim)
     ax6.grid(b=True, linestyle=":", alpha=alp)

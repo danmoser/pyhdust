@@ -3502,7 +3502,7 @@ def incrPlotLineSeries(
                 )
             else:
                 ax.plot(x, y + 0.1 * i, color=_phc.colors[_np.mod(i, len(_phc.colors))])
-        ax.set_title("lbc = {0:.5f} $\mu$m".format(lbc))
+        ax.set_title(r"lbc = {0:.5f} $\mu$m".format(lbc))
         ax.legend(loc="best", fancybox=True, framealpha=0.5)
         figname = outpath + "modsincr_lbc{1:.4f}_obs{0:02.1f}{2}".format(
             obsdegs[k], lbc, addsuf
@@ -3609,7 +3609,7 @@ def diffPlotLineSeries(
                 )
             else:
                 ax.plot(x, y - flx, color=_phc.colors[_np.mod(i, len(_phc.colors))])
-        ax.set_title("lbc = {0:.5f} $\mu$m".format(lbc))
+        ax.set_title(r"lbc = {0:.5f} $\mu$m".format(lbc))
         ax.set_ylabel("Difference spectra (spec - ref.)")
         ax.legend(fontsize=8, loc="best", fancybox=True, framealpha=0.5)
         figname = outpath + "modsdiff_lbc{1:.4f}_obs{0:02.1f}{2}".format(
@@ -3735,7 +3735,7 @@ def diffPlotLineObs(
                 label="{0:02.1f} deg.".format(obsdegs[i]),
                 color=_phc.colors[_np.mod(i, len(_phc.colors))],
             )
-        ax.set_title("lbc={0:.5f}$\mu$m, {1}".format(lbc, _phc.trimpathname(file)[1]))
+        ax.set_title(r"lbc={0:.5f}$\mu$m, {1}".format(lbc, _phc.trimpathname(file)[1]))
         ax.set_ylabel("Difference spectra (spec - ref.)")
         ax.legend(fontsize=8, loc="best", fancybox=True, framealpha=0.5)
         figname = outpath + "modsdiff_lbc{1:.4f}{0}".format(addsuf, lbc)

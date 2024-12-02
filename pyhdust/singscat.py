@@ -251,7 +251,7 @@ def blobsdiskmodel_geo(
 def blobsmodel_geo(
     phi0, Req=_phc.Rsun.cgs, rb=1 / 3.0, db=2.0, bres=3, nb=8e11, beta=0.0
 ):
-    """Doc
+    r"""Doc
 
     :param overlap: disk and blob overlap each other? Default is `False`.
     Warning: only :math:`\phi` direction is checked (ie., coplanar overlap).

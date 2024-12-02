@@ -158,7 +158,7 @@ def _latex_line_begin_tabular(colwidths, colaligns, booktabs=False):
     return "\n".join(
         [
             "\\begin{tabular}{" + tabular_columns_fmt + "}",
-            "\\toprule" if booktabs else "\hline",
+            "\\toprule" if booktabs else r"\hline",
         ]
     )
 
@@ -999,7 +999,7 @@ def tabulate(
      spam &  41.9999 \\\\
      eggs & 451      \\\\
     \\bottomrule
-    \end{tabular}
+    \\end{tabular}
     """
     if tabular_data is None:
         tabular_data = []
