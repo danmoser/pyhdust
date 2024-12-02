@@ -124,12 +124,12 @@ class Spec(object):
         flux=None,
         lbc=None,
         hwidth=1000.0,
-        EW=_np.NaN,
-        EC=_np.NaN,
-        VR=_np.NaN,
-        peaksep=_np.NaN,
-        depthcent=_np.NaN,
-        F0=_np.NaN,
+        EW=_np.nan,
+        EC=_np.nan,
+        VR=_np.nan,
+        peaksep=_np.nan,
+        depthcent=_np.nan,
+        F0=_np.nan,
         dateobs="",
         MJD=0.0,
         datereduc="",
@@ -159,12 +159,12 @@ class Spec(object):
         """Reset the class parameters"""
         self.wl = None
         self.flux = None
-        self.EW = _np.NaN
-        self.EC = _np.NaN
-        self.VR = _np.NaN
-        self.peaksep = _np.NaN
-        self.depthcent = _np.NaN
-        self.F0 = _np.NaN
+        self.EW = _np.nan
+        self.EC = _np.nan
+        self.VR = _np.nan
+        self.peaksep = _np.nan
+        self.depthcent = _np.nan
+        self.F0 = _np.nan
         self.file = ""
         self.datereduc = ""
         self.dateobs = ""
@@ -813,11 +813,11 @@ def ECcalc(vels, flux, ssize=0.05, gaussfit=False, doublegf=True):
     #     vels = vels[idx]
     #     flux = flux[idx]
     if len(flux) < 5:
-        return _np.NaN, 0.0
+        return _np.nan, 0.0
     if not gaussfit:
         idx = _np.where(_np.max(flux) == flux)
         if flux[idx][0] < 1:
-            return _np.NaN, 0.0
+            return _np.nan, 0.0
         if len(idx[0]) > 1:
             idx = idx[0][0]
         return flux[idx][0], vels[idx][0]
@@ -829,7 +829,7 @@ def ECcalc(vels, flux, ssize=0.05, gaussfit=False, doublegf=True):
         contmax = _np.max(_np.append(flux[:ssize], flux[-ssize:]))
         fluxmax = _np.max(flux)
         if fluxmax < 1.01 * contmax:
-            return _np.NaN, 0.0
+            return _np.nan, 0.0
 
         # Define model function to be used to fit to the data above
         def gauss(x, *p):
@@ -856,7 +856,7 @@ def ECcalc(vels, flux, ssize=0.05, gaussfit=False, doublegf=True):
                     vel = coeff1[1]
                 return EC, vel
             except ValueError:
-                return _np.NaN, 0.0
+                return _np.nan, 0.0
         else:
             try:
                 p0 = [1.0, 0, 40.0]
@@ -864,7 +864,7 @@ def ECcalc(vels, flux, ssize=0.05, gaussfit=False, doublegf=True):
                 EC = coeff0[0] + 1.0
                 return EC, coeff0[1]
             except ValueError:
-                return _np.NaN, 0.0
+                return _np.nan, 0.0
 
 
 def VRcalc(vels, flux, vw=1000, gaussfit=False, ssize=0.05):
@@ -878,7 +878,7 @@ def VRcalc(vels, flux, vw=1000, gaussfit=False, ssize=0.05):
     # faz o teste de tamanho
     if len(vels) < 5:
         vw = 0
-        ew0, ew1 = (_np.NaN, _np.NaN)
+        ew0, ew1 = (_np.nan, _np.nan)
         return ew0, ew1, vc
     # corta em vw
     idx = _np.where(_np.abs(vels) <= vw)
@@ -935,7 +935,7 @@ def PScalc(vels, flux, vc=0.0, ssize=0.05, gaussfit=False):
     contmax = _np.max(_np.append(flux[:ssize], flux[-ssize:]))
     fluxmax = _np.max(flux)
     if fluxmax < 1.01 * contmax:
-        return _np.NaN, _np.NaN
+        return _np.nan, _np.nan
     vels += vc
     ivc = _np.abs(vels - 0).argmin()
     i0 = _np.abs(flux[:ivc] - _np.max(flux[:ivc])).argmin()
@@ -968,7 +968,7 @@ def FWHM(vels, flux, halfmax, vmax=350.0, flxincr=0.01):
     TODO: Gaussfit"""
     if len(vels) < 5 or len(flux) < 5:
         _warn.warn("# No valid line profile for FHWM")
-        return _np.NaN
+        return _np.nan
     vels = _np.array(vels)
     flux = _np.array(flux)
     # remove vels bigger than maxvel
@@ -1007,7 +1007,7 @@ def DCcalc(vels, flux, vmax=None, vc=0.0, ssize=0.05):
     Depth of the central reversal is `flux[ivmax] - flux[ivc]`.
     """
     if len(flux) < 5:
-        return _np.NaN, _np.NaN
+        return _np.nan, _np.nan
     vels += vc
     ivc = _np.abs(vels - 0).argmin()
     # check if there is a peak
@@ -1056,7 +1056,7 @@ def analline(lbd, flux, lbdc, hwidth=1000, verb=True, gaussfit=False, doublegf=T
     if vels[0] > -hwidth * 0.95 or vels[-1] < hwidth * 0.95:
         if verb:
             _warn.warn("spec out of range (wavelength)! Check hwidth!")
-        return _np.NaN, _np.NaN, _np.NaN, _np.NaN, _np.NaN, _np.NaN
+        return _np.nan, _np.nan, _np.nan, _np.nan, _np.nan, _np.nan
 
     idx = _np.where(_np.abs(vels) <= hwidth)
     vels = vels[idx]
@@ -1067,16 +1067,16 @@ def analline(lbd, flux, lbdc, hwidth=1000, verb=True, gaussfit=False, doublegf=T
     EW = EWcalc(vels, flux, vw=hwidth)
     EC, velEC = ECcalc(vels, flux, gaussfit=gaussfit, doublegf=doublegf)
     ew0, ew1, vc = VRcalc(vels, flux, vw=hwidth, gaussfit=gaussfit)
-    if ew1 == 0 or EC is _np.NaN:
+    if ew1 == 0 or EC is _np.nan:
         VR = 1
     else:
         VR = ew0 / ew1
-    if EC is _np.NaN:
-        peaksep = _np.NaN
+    if EC is _np.nan:
+        peaksep = _np.nan
     else:
         vel0, vel1 = PScalc(vels, flux, gaussfit=gaussfit)
         peaksep = vel1 - vel0
-    if peaksep is _np.NaN:
+    if peaksep is _np.nan:
         EC = peaksep
         VR = peaksep
     EC2, F0 = DCcalc(vels, flux, vmax=velEC)
@@ -1907,11 +1907,11 @@ def plot_spec_info(speclist, dtb_obs, mAEW=False, mgray=None):
         ax.set_xticklabels([])
     # Legend
     for i in range(len(instm)):
-        # axs[0].plot([np.NaN], [np.NaN], label=instm[i], color=phc.cycles(i),
+        # axs[0].plot([np.nan], [np.nan], label=instm[i], color=phc.cycles(i),
         # marker=phc.cycles(i, 'mk'), ls='')
         axs[0].plot(
-            [_np.NaN],
-            [_np.NaN],
+            [_np.nan],
+            [_np.nan],
             label=instm[i],
             color=cores[i],
             marker=_phc.cycles(i, "mk"),
@@ -2327,7 +2327,7 @@ def din_spec(
                 if refspec is not None:
                     fluxes[:, i] = fluxes[:, i] - refflx
         if all(fluxes[:, i] == baselevel):
-            fluxes[:, i] = _np.NaN
+            fluxes[:, i] = _np.nan
     # Create image
     img = _np.empty((pxsize * len(interv), len(wl0)))
     for i in range(len(interv)):
@@ -2714,7 +2714,7 @@ def extractfromsplot(file, splot):
     """Ce = center; Co = core
     #LcCe, LcCo, lcGW, lcEW, lvCe, lcCo, lvEW, lrCe, LrCo, lrEW
     """
-    out = _np.array(10 * [_np.NaN])
+    out = _np.array(10 * [_np.nan])
     readflag = False
     for line in splot:
         if line.find("]:") > 0 and readflag:

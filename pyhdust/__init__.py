@@ -38,7 +38,7 @@ try:
 except ImportError:
     _warn.warn("# matplotlib and/or scipy module not installed!!")
 
-__version__ = "1.5.12-1"
+__version__ = "1.6.0"
 __release__ = "Stable"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"
@@ -2366,7 +2366,7 @@ def obsCalc():
         else:
             if debug:
                 print(hmin, hnas, hmax, hpoe)
-            hnas = hpoe = _np.NaN
+            hnas = hpoe = _np.nan
         return (hnas, hpoe)
 
     # equinocio set 2011 (djsol)
@@ -2495,8 +2495,8 @@ def obsCalc():
         if dt > 12:
             dt = dt - 24
         if dt < 3 / 4.0:
-            hnas = _np.NaN
-            hpoe = _np.NaN
+            hnas = _np.nan
+            hpoe = _np.nan
 
         # procura posicao nas efemerides (pef)
         if _os.path.exists("{0}refs/obs_ef.txt".format(hdtpath())):
@@ -2550,8 +2550,8 @@ def obsCalc():
             fase_inc = ((djnas - T0) % per) / per
             fase_fim = ((djpoe - T0) % per) / per
         else:
-            fase_inc = _np.NaN
-            fase_fim = _np.NaN
+            fase_inc = _np.nan
+            fase_fim = _np.nan
 
         # tempos locais
         hlmin = hnas - hz

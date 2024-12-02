@@ -43,7 +43,7 @@ try:
     import matplotlib.pyplot as _plt
     from matplotlib.transforms import offset_copy as _offset_copy
     from scipy.optimize import curve_fit as _curve_fit
-    from scipy.integrate import simps as _simps
+    from scipy.integrate import simpson as _simps
     from scipy.interpolate import interp1d as _interp1d
     import matplotlib as _mpl
 

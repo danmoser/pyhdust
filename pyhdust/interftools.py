@@ -82,7 +82,7 @@ def log_transform(im):
                 _np.log(imax) - _np.log(imin)
             )
             idx = _np.where(im == 0)
-            im[idx] = _np.NaN
+            im[idx] = _np.nan
             return im
     except:
         _warn.warn("# Warning! Wrong input at log_transform !!!")
@@ -865,7 +865,7 @@ class oiClass(object):
                 )
                 tlist.extend([v**2])
             self.v2 = _np.array(tlist)
-            self.v2e = _np.zeros(_np.shape(tlist)) * _np.NaN
+            self.v2e = _np.zeros(_np.shape(tlist)) * _np.nan
             #
             tlist = []
             for i in range(len(self.t3B1)):
@@ -881,7 +881,7 @@ class oiClass(object):
                 )
                 tlist.extend([p])
             self.t3p = _np.array(tlist)
-            self.t3pe = _np.zeros(_np.shape(tlist)) * _np.NaN
+            self.t3pe = _np.zeros(_np.shape(tlist)) * _np.nan
         #
         elif self.oitype.upper().startswith("AMB"):
             if lbm is not None:
@@ -902,9 +902,9 @@ class oiClass(object):
                 tlist_v.extend([v])
                 tlist_vp.extend([vp])
             self.v = _np.array(tlist_v)
-            self.ve = _np.zeros(_np.shape(tlist_v)) * _np.NaN
+            self.ve = _np.zeros(_np.shape(tlist_v)) * _np.nan
             self.vp = _np.array(tlist_vp)
-            self.vpe = _np.zeros(_np.shape(tlist_vp)) * _np.NaN
+            self.vpe = _np.zeros(_np.shape(tlist_vp)) * _np.nan
         return
 
 

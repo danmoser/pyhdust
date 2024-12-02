@@ -510,7 +510,7 @@ bestarsBeAtlas = [
     # H = 0.3 core
     # For ob=1.10, i.e., one *CAN'T* apply 4*pi*R^2...
     # SpType Tpole    Teff    Mass   Rp    Lum
-    ["B0.0", _np.NaN, _np.NaN, _np.NaN, _np.NaN, _np.NaN],
+    ["B0.0", _np.nan, _np.nan, _np.nan, _np.nan, _np.nan],
     ["B0.5", 28905.8, 26765.7, 14.6, 7.50, 31183.26],
     ["B1.0", 26945.8, 24950.9, 12.5, 6.82, 19471.38],
     ["B1.5", 25085.2, 23228.2, 10.8, 6.23, 12204.70],
@@ -540,7 +540,7 @@ bestarsBeAtlas_N = [
     ["B6.0", 14300.3, 13241.6, 04.2, 3.72, 00459.55],
     ["B7.0", 13329.9, 12343.0, 03.8, 3.55, 00315.96],
     ["B8.0", 12307.1, 11395.9, 03.4, 3.37, 00206.89],
-    ["B9.0", _np.NaN, _np.NaN, _np.NaN, _np.NaN, _np.NaN],
+    ["B9.0", _np.nan, _np.nan, _np.nan, _np.nan, _np.nan],
 ]
 
 

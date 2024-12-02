@@ -22,6 +22,13 @@ I strongly suggest users to use the ``pip`` plataform:
 
     pip install pyhdust
 
+**pyhdust** dependencies are constantly evolving. If you face an installation problem, 
+check the `versioning page <https://pyhdust.readthedocs.io/alternative.html>`_. To install a specify version (for example, *1.5.12*):
+
+.. code:: bash
+
+    pip install "pyhdust==1.5.12"
+
 If your are not the root of the system, add the flag ``--user`` to the command above. Dependencies (as filters efficiency and stellar evolution models) are included in the subdirectories.
 
 .. warning::

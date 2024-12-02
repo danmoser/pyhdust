@@ -121,7 +121,7 @@ def find_nearest_pt(x0, y0, x, y, z, case=1):
             _np.average(d[idx]),
         )
     else:
-        return _np.NaN, _np.NaN, _np.NaN, _np.NaN
+        return _np.nan, _np.nan, _np.nan, _np.nan
 
 
 def baricent_calc(x0, y0, x, y, z, fullrange=False):
@@ -171,7 +171,7 @@ def baricent_calc(x0, y0, x, y, z, fullrange=False):
         ds = _np.array([d1, d2, d3, d4])[idx][:3]
         return _np.sum(zs / ds) / _np.sum(1 / ds)
     else:
-        return _np.NaN
+        return _np.nan
 
 
 def baricent_map(x, y, z, res=100, fullrange=False, xfact=1.0, yfact=1.0):
@@ -426,9 +426,9 @@ def interLinND(X, X0, X1, Fx, disablelog=False):
     F = 0
     for prod in _product(*DX):
         if disablelog:
-            F += Fx[i] * _np.product(prod)
+            F += Fx[i] * _np.prod(prod)
         else:
-            F += _np.log(Fx[i]) * _np.product(prod)
+            F += _np.log(Fx[i]) * _np.prod(prod)
         i += 1
     #
     if not disablelog:
@@ -812,7 +812,7 @@ def fltTxtOccur(s, lines, n=1, seq=1, after=True, asstr=False):
         occur = [x[x.find(s) + len(s) :] for x in lines if x.find(s) > -1]
     else:
         occur = [x for x in lines if x.find(s) > -1]
-    out = _np.NaN
+    out = _np.nan
     if len(occur) >= n:
         occur = occur[n - 1]
         out = _re.findall(fltregex, occur)[seq - 1]
@@ -1846,8 +1846,8 @@ def gbf(T, lbd):
     else:
         i = _np.where(
             vals[:, 0] == find_nearest(vals[:, 0], _np.log10(T), bigger=False)
-        )[0]
-        # print i, vals[i,0]
+        )[0][0]
+        # print(i, vals, type(i), type(vals))
         g0 = interLinND(
             [_np.log10(T)], [vals[i, 0]], [vals[i + 1, 0]], vals[i : i + 2, 1]
         )

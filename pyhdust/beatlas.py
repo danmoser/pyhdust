@@ -802,7 +802,7 @@ def interpolBA(params, ctrlarr, lparams, minfo, models, param=True):
 
     | -params = from emcee minimization
     | -ctrlarr = the fixed value of M, ob(W), Z, H, sig, Rd, h, *n*, cos(i).
-    |            If it is not fixed, use np.NaN.
+    |            If it is not fixed, use np.nan.
     | -Parametric disk model default (`param` == True).
 
     This function always returns a valid result (i.e., extrapolations from the
@@ -823,7 +823,7 @@ def interpolBA(params, ctrlarr, lparams, minfo, models, param=True):
     parlims = _np.zeros((len(params), 2))
     j = 0
     for i in range(nq):
-        if ctrlarr[i] is _np.NaN:
+        if ctrlarr[i] is _np.nan:
             parlims[j] = [
                 _phc.find_nearest(lparams[i], params[j], bigger=False),
                 _phc.find_nearest(lparams[i], params[j], bigger=True),

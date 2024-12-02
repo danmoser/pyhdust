@@ -3188,7 +3188,7 @@ def fitSerk(
             ),  #                            truths=[p_mcmc[0], l_mcmc[0]], \
             #                            extents=[(p_range[0],l_range[0]),(p_range[1],l_range[1])], \
             quantiles=[0.16075, 0.50, 0.83925],
-            labels=["$P_{max}\,($%$)$", "$\lambda_{max}\,(\mu m)$"],
+            labels=[r"$P_{max}\,($%$)$", r"$\lambda_{max}\,(\mu m)$"],
             verbose=False,
         )
         fig.savefig("{0}_correl.{1}".format(star, extens))
@@ -3199,7 +3199,7 @@ def fitSerk(
             ),  #                            truths=[p_mcmc[0], l_mcmc[0]], \
             #                            extents=[(p_range[0],l_range[0]),(p_range[1],l_range[1])], \
             quantiles=[0.16075, 0.50, 0.83925],
-            labels=["$P_{max}\,($%$)$", "$\lambda_{max}\,(\mu m)$"],
+            labels=[r"$P_{max}\,($%$)$", r"$\lambda_{max}\,(\mu m)$"],
             verbose=False,
         )
         fig1.show()
@@ -3379,7 +3379,7 @@ def fitSerk(
                 ),  #                                 truths=[p_mcmc[0], l_mcmc[0]], \
                 #                                 extents=[(p_range[0],l_range[0]),(p_range[1],l_range[1])], \
                 quantiles=[0.16075, 0.50, 0.83925],
-                labels=["$P_{max}\,($%$)$", "$\lambda_{max}\,(\mu m)$"],
+                labels=[r"$P_{max}\,($%$)$", r"$\lambda_{max}\,(\mu m)$"],
                 verbose=False,
             )
             fig.savefig("{0}_correl_cut.{1}".format(star, extens))
@@ -3401,7 +3401,7 @@ def fitSerk(
         Plot two figures with the histograms
         """
         samples = [sampler.flatchain[:, i] for i in (0, 1)]
-        par = ["$P_{max}$", "$\lambda_{max}$"]
+        par = ["$P_{max}$", r"$\lambda_{max}$"]
 
         fig = []
         for i, sample in enumerate(samples):
@@ -3426,7 +3426,7 @@ def fitSerk(
         axes[1].plot(sampler.chain[:, :, 1].T, color="k", alpha=0.4)
         axes[1].yaxis.set_major_locator(MaxNLocator(5))
         axes[1].axhline(param[1], color="#888888", lw=2)
-        axes[1].set_ylabel("$\lambda_{max}$")
+        axes[1].set_ylabel(r"$\lambda_{max}$")
         axes[1].set_xlabel("Step number")
 
         fig.tight_layout(h_pad=0.0)
