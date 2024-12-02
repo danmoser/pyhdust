@@ -23,7 +23,7 @@ I strongly suggest users to use the ``pip`` plataform:
     pip install pyhdust
 
 **pyhdust** dependencies are constantly evolving. If you face an installation problem, 
-check the `versioning page <https://pyhdust.readthedocs.io/alternative.html>`_. To install a specify version (for example, *1.5.12*):
+check the `versioning page <https://pyhdust.readthedocs.io/versioning.html>`_. To install a specify version (for example, *1.5.12*):
 
 .. code:: bash
 
