@@ -11,7 +11,7 @@ Full documentation at `pyhdust.readthedocs.io <http://pyhdust.readthedocs.io>`_.
 
 **pyhdust** should be independent of plataform (Linux, Mac, Windows) and compatible with Python3 (3.6+).
 
-If you make use of **pyhdust** in your work, please cite Section 2.1.4 my thesis (Faes 2015: `arXiv <https://arxiv.org/abs/1512.06094>`_, `ADS <https://ui.adsabs.harvard.edu/abs/2015PhDT........60F>`_, `BibTeX <https://ui.adsabs.harvard.edu/abs/2015PhDT........60F/exportcitation>`_).
+If you make use of **pyhdust** in your work, please cite Section 2.1.4 of my thesis (Faes 2015: `arXiv <https://arxiv.org/abs/1512.06094>`_, `ADS <https://ui.adsabs.harvard.edu/abs/2015PhDT........60F>`_, `BibTeX <https://ui.adsabs.harvard.edu/abs/2015PhDT........60F/exportcitation>`_).
 
 
 How to install/uninstall

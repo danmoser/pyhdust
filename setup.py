@@ -60,7 +60,7 @@ if sys.argv[-1] == "publish":
 
 setup(
     name="pyhdust",
-    version="1.6.0",
+    version="1.6.1",
     description=(
         "Analysis tools for multi-technique astronomical data and hdust models"
     ),
