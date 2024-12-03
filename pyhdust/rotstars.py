@@ -196,6 +196,32 @@ def ellips_th(th, rf):
     return _np.sqrt(_np.cos(th) ** 2 + (rf * _np.sin(th)) ** 2)
 
 
+def ellipsoidarea(rf, th_res=5001):
+    """Ellipsoid area, brute force.
+
+    :param rt: radius fraction (Req/Rp >= 1)
+    """
+    ths = _phc.range_centered(_np.pi/2, 0, th_res)
+    a = 0.0
+    for i in range(len(ths)):
+        a = a + 2 * _np.pi * ellips_th(ths[i], rf) ** 2 * _np.sin(ths[i])
+    return 2 * a * ths[-2]
+
+
+def ellipsoidarea2(rf):
+    """Ellipsoid area (approx), from Wikipedia.
+
+    :param rt: radius fraction (Req/Rp >= 1)
+    """
+    p = 1.6075
+    a = rf
+    # b = rf
+    # c = 1
+    # arg = (a**p*b**p + a**p*c**p + b**p*c**p)/3
+    arg = (2 * a**p + a**(2*p)) / 3
+    return 4 * _np.pi * arg ** (1 / p)
+
+
 def rt(th, wfrac):
     """Roche Rpole normalized radius as function of wfrac.
 
@@ -207,7 +233,7 @@ def rt(th, wfrac):
     """
     if wfrac == 0:
         wfrac = 1e-9
-    if th == 0:
+    if (isinstance(th, float) or isinstance(th, int)) and th == 0:
         r = 1.0
     else:
         r = (-3.0 * _np.cos((_np.arccos(wfrac * _np.sin(th)) + 4 * _np.pi) / 3)) / (
@@ -217,11 +243,9 @@ def rt(th, wfrac):
 
 
 def area(wfrac, th_res=5001):
-    """Roche star area. This is an brute force alternative to ``rochearea``
-    function (from Cranmer 1996). This function return **smaller values**.
-    The reason for the differences are TBD.
+    """Roche star area. This is an brute force alternative to Cranmer (1996). 
     """
-    ths = _np.linspace(_np.pi / 2, 0, th_res)
+    ths = _phc.range_centered(_np.pi/2, 0, th_res)
     a = 0.0
     for i in range(len(ths)):
         a = a + 2 * _np.pi * rt(ths[i], wfrac) ** 2 * _np.sin(ths[i])
@@ -253,32 +277,6 @@ def rochearea(wfrac, isW=False):
             + 4.6631 * w**12
         )
     )
-
-
-def ellipsoidarea(rf, th_res=5001):
-    """Ellipsoid area, brute force.
-
-    :param rt: radius fraction (Req/Rp >= 1)
-    """
-    ths = _np.linspace(_np.pi / 2, 0, th_res)
-    a = 0.0
-    for i in range(len(ths)):
-        a = a + 2 * _np.pi * ellips_th(ths[i], rf) ** 2 * _np.sin(ths[i])
-    return 2 * a * ths[-2]
-
-
-def ellipsoidarea2(rf):
-    """Ellipsoid area, from Wikipedia.
-
-    :param rt: radius fraction (Req/Rp >= 1)
-    """
-    p = 1.6075
-    a = rf
-    # b = rf
-    # c = 1
-    # arg = (a**p*b**p + a**p*c**p + b**p*c**p)/3
-    arg = (4 * a**p) / 3
-    return 4 * _np.pi * (arg) ** (1 / p)
 
 
 def rotStar(

@@ -9,9 +9,9 @@ pyhdust
 
 Full documentation at `pyhdust.readthedocs.io <http://pyhdust.readthedocs.io>`_.
 
-About *hdust* code: Carciofi & Bjorkman (`2006 <http://adsabs.harvard.edu/abs/2006ApJ...639.1081C>`_, `2008 <http://adsabs.harvard.edu/abs/2008ApJ...684.1374C>`_).
+**pyhdust** should be independent of plataform (Linux, Mac, Windows) and compatible with Python3 (3.6+).
 
-**pyhdust** should be independent of plataform (Linux, Mac, Windows) and compatible with any version of Python (superior or equal to 3.4).
+If you make use of **pyhdust** in your work, please cite Section 2.1.4 my thesis (Faes 2015: `arXiv <https://arxiv.org/abs/1512.06094>`_, `ADS <https://ui.adsabs.harvard.edu/abs/2015PhDT........60F>`_, `BibTeX <https://ui.adsabs.harvard.edu/abs/2015PhDT........60F/exportcitation>`_).
 
 
 How to install/uninstall
@@ -22,12 +22,7 @@ I strongly suggest users to use the ``pip`` plataform:
 
     pip install pyhdust
 
-**pyhdust** dependencies are constantly evolving. If you face an installation problem, 
-check the `versioning page <https://pyhdust.readthedocs.io/versioning.html>`_. To install a specify version (for example, *1.5.12*):
-
-.. code:: bash
-
-    pip install "pyhdust==1.5.12"
+**pyhdust** dependencies are constantly evolving. If you face an installation problem, check the `versioning page <https://pyhdust.readthedocs.io/versioning.html>`_.
 
 If your are not the root of the system, add the flag ``--user`` to the command above. Dependencies (as filters efficiency and stellar evolution models) are included in the subdirectories.
 

@@ -4,6 +4,10 @@
 
 History
 ============
+v.1.6.1 @ 2024-12-02
+---------------------
+- doc minor fixes and rotstars improvements
+
 v.1.6.0 @ 2024-12-02
 ---------------------
 - numpy v2 + Py3.11+ support 

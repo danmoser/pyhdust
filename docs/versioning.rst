@@ -1,13 +1,22 @@
 Versioning
 =========================================
+ To install a specify version (for example, *1.5.12*):
+
+.. code:: bash
+
+    pip install "pyhdust==1.5.12"
+
+For a short description of changes, see the :doc:`releases page <releases>`.
+
+
 Legacy versions
 ------------------
 For *numpy < 2*, use *pyhdust < 1.6*.
 
 
-Version 1.6.0
+Version 1.6.x
 --------------
-**pyhdust** 1.6.0 was tested with the following modules:
+**pyhdust** 1.6.x was tested with the following modules:
 
 .. code::
 

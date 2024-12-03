@@ -38,7 +38,7 @@ try:
 except ImportError:
     _warn.warn("# matplotlib and/or scipy module not installed!!")
 
-__version__ = "1.6.0"
+__version__ = "1.6.1"
 __release__ = "Stable"
 __author__ = "Daniel Moser"
 __email__ = "dmfaes@gmail.com"

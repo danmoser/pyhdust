@@ -2,14 +2,16 @@
 
 Welcome to **pyhdust** documentation!
 =============================================================
-**Analysis tools for multi-technique astronomical data and** *hdust* **models**. About the *hdust* code, see Carciofi & Bjorkman (`2006 <http://adsabs.harvard.edu/abs/2006ApJ...639.1081C>`_, `2008 <http://adsabs.harvard.edu/abs/2008ApJ...684.1374C>`_).
+**Analysis tools for multi-technique astronomical data and** *hdust* **models**.
 
 Pyhdust is currently at **version 1.6.0**. |Tests| 
 
 .. |Tests| image:: https://github.com/danmoser/pyhdust/actions/workflows/main.yaml/badge.svg
    :target: https://github.com/danmoser/pyhdust/actions/workflows/main.yaml
 
-**pyhdust** should be independent of plataform (Linux, Mac, Windows) and compatible with any version of Python (3.6+).
+**pyhdust** should be independent of plataform (Linux, Mac, Windows) and compatible with Python3 (3.6+).
+
+If you make use of **pyhdust** in your work, please cite Section 2.1.4 my thesis (Faes 2015: `arXiv <https://arxiv.org/abs/1512.06094>`_, `ADS <https://ui.adsabs.harvard.edu/abs/2015PhDT........60F>`_, `BibTeX <https://ui.adsabs.harvard.edu/abs/2015PhDT........60F/exportcitation>`_).
 
 .. toctree::
     :titlesonly:
@@ -45,11 +47,7 @@ I strongly suggest users to use the ``pip`` plataform:
     pip install pyhdust
 
 **pyhdust** dependencies are constantly evolving. If you face an installation problem, 
-check the :doc:`versioning <versioning>` page. To install a specify version (for example, *1.5.12*):
-
-.. code:: bash
-
-    pip install "pyhdust==1.5.12"
+check the :doc:`versioning page <versioning>`.
 
 If your are not the root of the system, add the flag ``--user`` to the command above. Dependencies (as filters efficiency and stellar evolution models) are included in the subdirectories.
 
