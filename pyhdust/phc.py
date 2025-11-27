@@ -513,7 +513,7 @@ def range_centered(xi, xf, n):
     """To get the edges of the range, just do ``np.linspace(xi, xf, n+1)``.
     """
     dx_2 = (xf - xi)/2
-    return np.linspace(xi+dx_2/n, xf-dx_2/n, n)
+    return _np.linspace(xi+dx_2/n, xf-dx_2/n, n)
 
 
 # Convolution functions
