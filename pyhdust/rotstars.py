@@ -233,7 +233,7 @@ def rt(th, wfrac):
     """
     if wfrac == 0:
         wfrac = 1e-9
-    if (isinstance(th, float) or isinstance(th, int)) and th == 0:
+    if (isinstance(th, float) or isinstance(th, int)) and (th == 0 or th == _np.pi):
         r = 1.0
     else:
         r = (-3.0 * _np.cos((_np.arccos(wfrac * _np.sin(th)) + 4 * _np.pi) / 3)) / (
